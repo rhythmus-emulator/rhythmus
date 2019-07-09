@@ -1,0 +1,21 @@
+#include <stdint.h>
+#include <string>
+
+class Game
+{
+public:
+  static Game& getInstance();
+  bool Load();
+  bool Save();
+  void set_setting_path(const std::string& path);
+  uint16_t get_window_width() const;
+  uint16_t get_window_height() const;
+
+private:
+  Game();
+  ~Game();
+  static Game game_;
+
+  std::string setting_path_;
+  uint16_t width_, height_;
+};
