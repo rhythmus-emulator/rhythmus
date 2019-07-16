@@ -2,14 +2,12 @@
 # include <tchar.h>
 # include <Windows.h>
 #endif
-#include <GLFW/glfw3.h>
-#include <iostream>
+#include "Graphic.h"
 #include "Game.h"
+#include "SceneManager.h"
+#include <iostream>
 
-static void error_callback(int error, const char* description)
-{
-  std::cerr << "Error: " << description << std::endl;
-}
+using namespace rhythmus;
 
 #if WIN32
 int APIENTRY _tWinMain(
@@ -32,44 +30,32 @@ int main(int argc, char **argv)
 {
 #endif
 
-  GLFWwindow* window;
-  glfwSetErrorCallback(error_callback);
-  if (!glfwInit())
+  /**
+   * Initialization
+   */
+  Graphic &graphic = Graphic::getInstance();
+  Game &game = Game::getInstance();
+
+  // Load/Set settings first before initialize other objects
+  game.LoadOrDefault();
+  // TODO: start logger here.
+  graphic.Initialize();
+  SceneManager::getInstance().Initialize();
+
+  /**
+   * Main game loop
+   */
+  graphic.LoopRendering();
+
+  /**
+   * Cleanup
+   */
+  graphic.Cleanup();
+  if (!game.Save())
   {
-    std::cerr << "Failed to init GLFW." << std::endl;
-    exit(EXIT_FAILURE);
+    std::cerr << "Settings not saved." << std::endl;
   }
+  // TODO: exit logger here.
 
-  Game& g = Game::getInstance();
-  if (!g.Load())
-  {
-    std::cerr << "Failed to load game setting file. use default settings." << std::endl;
-  }
-
-  window = glfwCreateWindow(
-    g.get_window_width(),
-    g.get_window_height(),
-    "Hello world!", NULL, NULL
-  );
-  if (!window)
-  {
-    std::cerr << "Failed to create window." << std::endl;
-    glfwTerminate();
-    exit(EXIT_FAILURE);
-  }
-
-  int fwidth, fheight;
-  while (!glfwWindowShouldClose(window))
-  {
-    glfwGetFramebufferSize(window, &fwidth, &fheight);
-    glViewport(0, 0, fwidth, fheight);
-    glClear(GL_COLOR_BUFFER_BIT);
-
-    glfwSwapBuffers(window);
-    glfwPollEvents();
-  }
-
-  glfwDestroyWindow(window);
-  glfwTerminate();
   exit(EXIT_SUCCESS);
 }
