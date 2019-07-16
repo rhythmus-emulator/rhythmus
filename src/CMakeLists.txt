@@ -34,6 +34,7 @@ include_directories(
 include_directories(SYSTEM
     ${OPENGL_INCLUDE_DIR}
     ${GLFW_INCLUDE_DIR}
+    ${GLEW_INCLUDE_DIR}
     ${FREEIMAGE_INCLUDE_DIR}
     )
 
@@ -46,5 +47,6 @@ endif ()
 target_link_libraries(rhythmus_bin
     ${OPENGL_LIBRARIES}
 	${GLFW_LIBRARY}
+	${GLEW_LIBRARY}
     ${FREEIMAGE_LIBRARY}
 	)

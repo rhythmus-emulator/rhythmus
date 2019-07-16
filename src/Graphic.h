@@ -13,7 +13,7 @@ namespace rhythmus
 class Graphic
 {
 public:
-  bool Initialize();
+  void Initialize();
   void Cleanup();
   void LoopRendering();
 

@@ -1,3 +1,5 @@
+#define GLEW_STATIC
+#include <GL/glew.h>
 #include "Graphic.h"
 #include "Game.h"
 #include "SceneManager.h"
@@ -12,7 +14,7 @@ static void error_callback(int error, const char* description)
 }
 
 
-bool Graphic::Initialize()
+void Graphic::Initialize()
 {
   Game &game = Game::getInstance();
 
@@ -35,18 +37,31 @@ bool Graphic::Initialize()
     exit(EXIT_FAILURE);
   }
 
+  glfwMakeContextCurrent(window);
+  if (glewInit() != GLEW_OK)
+  {
+    std::cerr << "Failed glewInit()." << std::endl;
+    glfwTerminate();
+    exit(EXIT_FAILURE);
+  }
 }
 
 void Graphic::LoopRendering()
 {
-  int fwidth, fheight;
+  int fw, fh;
   while (!glfwWindowShouldClose(window))
   {
-    glfwGetFramebufferSize(window, &fwidth, &fheight);
-    glViewport(0, 0, fwidth, fheight);
+    glfwGetFramebufferSize(window, &fw, &fh);
+    glViewport(0, 0, fw, fh);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, fw, fh, 0, -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+
     SceneManager::getInstance().Render();
+    glFlush();
 
     glfwSwapBuffers(window);
     glfwPollEvents();

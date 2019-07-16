@@ -25,6 +25,7 @@ void TestScene::Render()
 void TestScene::LoadScene()
 {
   img_ = ResourceManager::getInstance().LoadImage("test.png");
+  img_->CommitImage();
 }
 
 void TestScene::CloseScene()

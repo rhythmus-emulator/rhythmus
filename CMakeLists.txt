@@ -46,6 +46,7 @@ find_package(ZIP)
 find_package(OpenSSL)
 find_package(OpenGL)
 find_package(GLFW)
+find_package(GLEW)
 find_package(FreeImage)
 
 add_subdirectory(src)

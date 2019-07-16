@@ -15,7 +15,7 @@ private:
   SceneManager();
   ~SceneManager();
 
-  Scene* scene_current_;
+  Scene* current_scene_;
 };
 
 /* singleton object. */

@@ -59,6 +59,12 @@ void Image::CommitImage(bool delete_data)
   }
 
   glGenTextures(1, &textureID);
+  if (textureID == 0)
+  {
+    GLenum err = glGetError();
+    std::cerr << "Allocating textureID failed: " << (int)err << std::endl;
+    return;
+  }
   glBindTexture(GL_TEXTURE_2D, textureID);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
     GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data_ptr_);
@@ -74,7 +80,7 @@ void Image::Unload()
 {
   if (bitmap_ctx_)
   {
-    free(bitmap_ctx_);
+    FreeImage_Unload((FIBITMAP*)bitmap_ctx_);
     bitmap_ctx_ = 0;
   }
   if (textureID)
