@@ -1,6 +1,6 @@
 #pragma once
+#include "Graphic.h"
 #include <string>
-#include <GLFW/glfw3.h>
 
 namespace rhythmus
 {

@@ -1,5 +1,3 @@
-#define GLEW_STATIC
-#include <GL/glew.h>
 #include "Graphic.h"
 #include "Game.h"
 #include "SceneManager.h"
@@ -48,16 +46,20 @@ void Graphic::Initialize()
 
 void Graphic::LoopRendering()
 {
-  int fw, fh;
+  int fw = 640, fh = 480;
+
+  //glfwGetFramebufferSize(window, &fw, &fh);
+  //glViewport(0, 0, fw, fh);
+  glClearColor(0, 0, 0, 1);
+  glMatrixMode(GL_PROJECTION);
+  glOrtho(0, fw, fh, 0, -1, 1);
+
   while (!glfwWindowShouldClose(window))
   {
-    glfwGetFramebufferSize(window, &fw, &fh);
-    glViewport(0, 0, fw, fh);
     glClear(GL_COLOR_BUFFER_BIT);
+    glEnable(GL_TEXTURE_2D);
 
-    glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0, fw, fh, 0, -1, 1);
     glMatrixMode(GL_MODELVIEW);
 
     SceneManager::getInstance().Render();
