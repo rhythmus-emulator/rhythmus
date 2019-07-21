@@ -24,7 +24,6 @@ private:
   struct {
     float sx, sy, sx2, sy2, dx, dy, dx2, dy2;
   } rframe_;
-  const char* hlsl_;
   struct hlsl_vert_s {
     float x, y, z;
     float sx, sy;

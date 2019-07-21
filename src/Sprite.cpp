@@ -29,17 +29,6 @@ void Sprite::SetImage(ImageAuto img)
   img_ = img;
 
 #if RENDER_WITH_HLSL
-  /* Generate HLSL */
-  hlsl_ = "#version 330 core\n"
-		"in vec3 positionAttribute;"
-		"in vec3 colorAttribute;"
-		"out vec3 passColorAttribute;"
-		"void main()"
-		"{"
-		"gl_Position = vec4(positionAttribute, 1.0);"
-    "passColorAttribute = colorAttribute;"
-    "}";
-
   hlsl_vert_[0].r = hlsl_vert_[0].g = hlsl_vert_[0].b = hlsl_vert_[0].a = 1.0f;
   hlsl_vert_[1].r = hlsl_vert_[1].g = hlsl_vert_[1].b = hlsl_vert_[1].a = 1.0f;
   hlsl_vert_[2].r = hlsl_vert_[2].g = hlsl_vert_[2].b = hlsl_vert_[2].a = 1.0f;
@@ -65,18 +54,55 @@ void Sprite::SetImage(ImageAuto img)
   static GLuint vprog = 0;
   if (!is_shader_compiled)
   {
+    /* Generate GLSL */
+    const char* hlsl_vertex =
+      "#version 330 core\n"
+      "in vec3 positionAttribute;"
+      "in vec4 colorAttribute;"
+      "in vec2 texCoordinate;"
+      "out vec4 passColorAttribute;"
+      "out vec2 passTextureCoordinateAttribute;"
+      "void main()"
+      "{"
+      "gl_Position = vec4(positionAttribute, 1.0);"
+      "passColorAttribute = colorAttribute;"
+      "passTextureCoordinateAttribute = texCoordinate;"
+      "}";
+
+    const char* hlsl_fragment =
+      "#version 330 core\n"
+      "in vec4 passColorAttribute;"
+      "in vec2 passTextureCoordinateAttribute;"
+      "uniform sampler2D tex;"
+      "out vec4 fragmentColor;"
+      "void main()"
+      "{"
+      "fragmentColor = texture(tex, passTextureCoordinateAttribute) * passColorAttribute;"
+      "}";
+
     GLint result;
 
     // shader compile
     GLuint vshader = glCreateShader(GL_VERTEX_SHADER);
-    ASSERT(vshader);
-    glShaderSource(vshader, 1, &hlsl_, NULL);
+    glShaderSource(vshader, 1, &hlsl_vertex, NULL);
     glCompileShader(vshader);
     glGetShaderiv(vshader, GL_COMPILE_STATUS, &result);
     if (!result)
     {
       char errorLog[512];
       glGetShaderInfoLog(vshader, 512, NULL, errorLog);
+      std::cerr << "ERROR: vertex shader compile failed : " << errorLog << std::endl;
+      return;
+    }
+
+    GLuint vfrag = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(vfrag, 1, &hlsl_fragment, NULL);
+    glCompileShader(vfrag);
+    glGetShaderiv(vfrag, GL_COMPILE_STATUS, &result);
+    if (!result)
+    {
+      char errorLog[512];
+      glGetShaderInfoLog(vfrag, 512, NULL, errorLog);
       std::cerr << "ERROR: fragment shader compile failed : " << errorLog << std::endl;
       return;
     }
@@ -84,8 +110,10 @@ void Sprite::SetImage(ImageAuto img)
     // shader linking
     vprog = glCreateProgram();
     glAttachShader(vprog, vshader);
+    glAttachShader(vprog, vfrag);
     glLinkProgram(vprog);
     glDeleteShader(vshader);
+    glDeleteShader(vfrag);
     glGetProgramiv(vprog, GL_LINK_STATUS, &result);
     if (!result)
     {
@@ -119,10 +147,23 @@ void Sprite::SetImage(ImageAuto img)
   if (vclr == -1)
   {
     std::cerr << "Sprite: glGetAttribLocation (colorAttribute) failed." << std::endl;
-  } else
+  }
+  else
   {
     glVertexAttribPointer(vclr, 4, GL_FLOAT, GL_FALSE, sizeof(hlsl_vert_s), (void*)offsetof(hlsl_vert_s, r));
     glEnableVertexAttribArray(vclr);
+    ASSERT_GL_VAL(errcode);
+  }
+
+  GLint vtex = glGetAttribLocation(vertex_prog_, "texCoordinate");
+  if (vtex == -1)
+  {
+    std::cerr << "Sprite: glGetAttribLocation (texCoordinate) failed." << std::endl;
+  }
+  else
+  {
+    glVertexAttribPointer(vtex, 2, GL_FLOAT, GL_FALSE, sizeof(hlsl_vert_s), (void*)offsetof(hlsl_vert_s, sx));
+    glEnableVertexAttribArray(vtex);
     ASSERT_GL_VAL(errcode);
   }
 
@@ -159,38 +200,43 @@ void Sprite::InvalidateRFrame()
   rframe_.sx2 = rframe_.sx + frame_.src.w / iw;
   rframe_.sy2 = rframe_.sy + frame_.src.h / ih;
   rframe_.dx = frame_.dstpos.x / ww;
-  rframe_.dy = frame_.dstpos.y / wh;
+  rframe_.dy = 1.0 - frame_.dstpos.y / wh;
   rframe_.dx2 = rframe_.dx + frame_.dst.w / ww;
-  rframe_.dy2 = rframe_.dy + frame_.dst.h / wh;
+  rframe_.dy2 = rframe_.dy - frame_.dst.h / wh;
 
-  if (frame_.src.w == -1) rframe_.sx2 = 1.0;
-  if (frame_.src.h == -1) rframe_.sy2 = 1.0;
+  if (frame_.src.w == -1) rframe_.sx = 0.0, rframe_.sx2 = 1.0;
+  if (frame_.src.h == -1) rframe_.sy = 0.0, rframe_.sy2 = 1.0;
 
   // apply to HLSL
 #if RENDER_WITH_HLSL
-  hlsl_vert_[0].x = rframe_.dx;
-  hlsl_vert_[0].y = rframe_.dy;
+#define NDC(x) (2*(x)-1)
+  hlsl_vert_[0].x = NDC(rframe_.dx);
+  hlsl_vert_[0].y = NDC(rframe_.dy);
   hlsl_vert_[0].z = 0;
   hlsl_vert_[0].sx = rframe_.sx;
   hlsl_vert_[0].sy = rframe_.sy;
 
-  hlsl_vert_[1].x = rframe_.dx2;
-  hlsl_vert_[1].y = rframe_.dy;
+  hlsl_vert_[1].x = NDC(rframe_.dx2);
+  hlsl_vert_[1].y = NDC(rframe_.dy);
   hlsl_vert_[1].z = 0;
   hlsl_vert_[1].sx = rframe_.sx2;
   hlsl_vert_[1].sy = rframe_.sy;
 
-  hlsl_vert_[2].x = rframe_.dx2;
-  hlsl_vert_[2].y = rframe_.dy2;
+  hlsl_vert_[2].x = NDC(rframe_.dx2);
+  hlsl_vert_[2].y = NDC(rframe_.dy2);
   hlsl_vert_[2].z = 0;
   hlsl_vert_[2].sx = rframe_.sx2;
   hlsl_vert_[2].sy = rframe_.sy2;
 
-  hlsl_vert_[3].x = rframe_.dx;
-  hlsl_vert_[3].y = rframe_.dy2;
+  hlsl_vert_[3].x = NDC(rframe_.dx);
+  hlsl_vert_[3].y = NDC(rframe_.dy2);
   hlsl_vert_[3].z = 0;
   hlsl_vert_[3].sx = rframe_.sx;
   hlsl_vert_[3].sy = rframe_.sy2;
+
+  glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer_);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(hlsl_vert_), hlsl_vert_, GL_STATIC_DRAW);
+#undef NDC
 #endif
 }
 
@@ -210,9 +256,11 @@ void Sprite::Render()
   glBindTexture(GL_TEXTURE_2D, img_->get_texture_ID());
 
 #if RENDER_WITH_HLSL
+  int errcode;
   glUseProgram(vertex_prog_);
   glBindVertexArray(vertex_array_);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  ASSERT_GL_VAL(errcode);
 #else
   RenderDepreciated();
 #endif
@@ -223,15 +271,17 @@ void Sprite::RenderDepreciated()
   // XXX: Render with depreciated method using glBegin ~ glEnd.
   //      Just for some test purpose ...
   //      Some rendering details might not work! (e.g. color blending)
+  //
+  // XXX: why sy is inversed ...?
 
   glBegin(GL_QUADS);
-  glTexCoord2d(rframe_.sx, rframe_.sy);   // TL
+  glTexCoord2d(rframe_.sx, rframe_.sy2);  // TL
   glVertex3f(rframe_.dx, rframe_.dy, 0.0f);
-  glTexCoord2d(rframe_.sx2, rframe_.sy);  // TR
+  glTexCoord2d(rframe_.sx2, rframe_.sy2); // TR
   glVertex3f(rframe_.dx2, rframe_.dy, 0.0f);
-  glTexCoord2d(rframe_.sx2, rframe_.sy2); // BR
+  glTexCoord2d(rframe_.sx2, rframe_.sy);  // BR
   glVertex3f(rframe_.dx2, rframe_.dy2, 0.0f);
-  glTexCoord2d(rframe_.sx, rframe_.sy2);  // BL
+  glTexCoord2d(rframe_.sx, rframe_.sy);   // BL
   glVertex3f(rframe_.dx, rframe_.dy2, 0.0f);
   glEnd();
 }
