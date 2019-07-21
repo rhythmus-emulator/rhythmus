@@ -1,6 +1,6 @@
 #pragma once
 #include "Scene.h"
-#include "../Image.h"
+#include "Sprite.h"
 
 namespace rhythmus
 {
@@ -13,8 +13,7 @@ public:
   virtual void CloseScene();
   virtual void Render();
 private:
-  ImageAuto img_;
-  GLuint vertex_buffer, vertex_array;
+  Sprite spr_;
 };
 
 }

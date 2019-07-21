@@ -8,18 +8,18 @@ namespace rhythmus
 
 Image::Image()
   : bitmap_ctx_(0), data_ptr_(nullptr), width_(0), height_(0),
-  textureID(0)
+    textureID_(0)
 {
 }
 
 Image::~Image()
 {
-  Unload();
+  UnloadAll();
 }
 
 void Image::LoadFromPath(const std::string& path)
 {
-  Unload();
+  UnloadAll();
 
   FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path.c_str());
   FIBITMAP *bitmap, *temp;
@@ -35,7 +35,7 @@ void Image::LoadFromPath(const std::string& path)
 
 void Image::LoadFromData(uint8_t* p, size_t len)
 {
-  Unload();
+  UnloadAll();
 
   FIMEMORY *memstream = FreeImage_OpenMemory(p, len);
   FREE_IMAGE_FORMAT fmt = FreeImage_GetFileTypeFromMemory(memstream);
@@ -58,41 +58,61 @@ void Image::CommitImage(bool delete_data)
     return;
   }
 
-  glGenTextures(1, &textureID);
-  if (textureID == 0)
+  glGenTextures(1, &textureID_);
+  if (textureID_ == 0)
   {
     GLenum err = glGetError();
     std::cerr << "Allocating textureID failed: " << (int)err << std::endl;
     return;
   }
-  glBindTexture(GL_TEXTURE_2D, textureID);
+  glBindTexture(GL_TEXTURE_2D, textureID_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
     GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data_ptr_);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
   if (delete_data)
   {
-    Unload();
+    UnloadBitmap();
   }
 }
 
-void Image::Unload()
+void Image::UnloadAll()
+{
+  UnloadBitmap();
+  UnloadTexture();
+}
+
+void Image::UnloadBitmap()
 {
   if (bitmap_ctx_)
   {
     FreeImage_Unload((FIBITMAP*)bitmap_ctx_);
     bitmap_ctx_ = 0;
   }
-  if (textureID)
+}
+
+void Image::UnloadTexture()
+{
+  if (textureID_)
   {
-    glDeleteTextures(1, &textureID);
-    textureID = 0;
+    glDeleteTextures(1, &textureID_);
+    textureID_ = 0;
   }
 }
 
-GLuint Image::GetTextureID()
+GLuint Image::get_texture_ID() const
 {
-  return textureID;
+  return textureID_;
+}
+
+uint16_t Image::get_width() const
+{
+  return width_;
+}
+
+uint16_t Image::get_height() const
+{
+  return height_;
 }
 
 }

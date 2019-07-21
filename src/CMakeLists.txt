@@ -8,6 +8,8 @@ endif (MSVC)
 set (RHYTHMUS_SOURCES
     ResourceManager.cpp
     Image.cpp
+	Sprite.cpp
+	Animation.cpp
     Game.cpp
     Graphic.cpp
     main.cpp
@@ -20,6 +22,8 @@ set (RHYTHMUS_SOURCES
 set (RHYTHMUS_HEADERS
     ResourceManager.h
     Image.h
+	Sprite.h
+	Animation.h
     Game.h
     Graphic.h
 
@@ -29,6 +33,7 @@ set (RHYTHMUS_HEADERS
     )
 
 include_directories(
+	${PROJECT_SOURCE_DIR}
     )
 
 include_directories(SYSTEM
