@@ -24,15 +24,9 @@ private:
   struct {
     float sx, sy, sx2, sy2, dx, dy, dx2, dy2;
   } rframe_;
-  struct hlsl_vert_s {
-    float x, y, z;
-    float sx, sy;
-    float r, g, b, a;
-  } hlsl_vert_[4];
-  GLuint vertex_buffer_, vertex_array_, vertex_prog_;
+  VertexInfo hlsl_vert_[4];
 
   void InvalidateRFrame();
-  void RenderDepreciated();
 };
 
 }

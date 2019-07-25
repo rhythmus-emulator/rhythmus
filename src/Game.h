@@ -18,6 +18,7 @@ public:
   uint16_t get_window_width() const;
   uint16_t get_window_height() const;
   std::string get_window_title() const;
+  float GetAspect() const;
 
 private:
   Game();

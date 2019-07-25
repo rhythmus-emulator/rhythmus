@@ -20,7 +20,7 @@ void TestScene::LoadScene()
   img_->CommitImage();
 
   spr_.SetImage(img_);
-  spr_.SetPos(50, 50);
+  spr_.SetPos(50, 150);
   spr_.SetSize(100, 100);
 }
 

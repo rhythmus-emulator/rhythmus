@@ -61,3 +61,8 @@ std::string Game::get_window_title() const
 {
   return "Rhythmus 190700";
 }
+
+float Game::GetAspect() const
+{
+  return (float)width_ / height_;
+}
