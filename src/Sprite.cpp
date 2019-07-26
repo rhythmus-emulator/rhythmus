@@ -29,7 +29,8 @@ void Sprite::SetImage(ImageAuto img)
   hlsl_vert_[0].r = hlsl_vert_[0].g = hlsl_vert_[0].b = hlsl_vert_[0].a = 1.0f;
   hlsl_vert_[1].r = hlsl_vert_[1].g = hlsl_vert_[1].b = hlsl_vert_[1].a = 1.0f;
   hlsl_vert_[2].r = hlsl_vert_[2].g = hlsl_vert_[2].b = hlsl_vert_[2].a = 1.0f;
-  hlsl_vert_[3].r = hlsl_vert_[3].g = hlsl_vert_[3].b = hlsl_vert_[3].a = 1.0f;
+  hlsl_vert_[3].r = hlsl_vert_[3].g = hlsl_vert_[3].b = hlsl_vert_[3].a = 0.0f;
+  hlsl_vert_[3].r = 1.0f;
 }
 
 void Sprite::SetPos(int x, int y)

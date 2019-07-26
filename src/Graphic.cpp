@@ -91,6 +91,7 @@ void Graphic::Initialize()
   glMatrixMode(GL_PROJECTION);
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -156,25 +157,25 @@ bool Graphic::CompileShader()
     "in vec3 positionAttribute;"
     "in vec4 colorAttribute;"
     "in vec2 texCoordinate;"
-    "out vec4 passColorAttribute;"
-    "out vec2 passTextureCoordinateAttribute;"
+    "out vec4 passColor;"
+    "out vec2 passTextureCoord;"
     "uniform mat4 projection;"
     "void main()"
     "{"
     "gl_Position = projection * vec4(positionAttribute, 1.0);"
-    "passColorAttribute = colorAttribute;"
-    "passTextureCoordinateAttribute = texCoordinate;"
+    "passColor = colorAttribute;"
+    "passTextureCoord = texCoordinate;"
     "}";
 
   quad_shader_.frag_shader =
     "#version 330 core\n"
-    "in vec4 passColorAttribute;"
-    "in vec2 passTextureCoordinateAttribute;"
+    "in vec4 passColor;"
+    "in vec2 passTextureCoord;"
     "uniform sampler2D tex;"
     "out vec4 fragmentColor;"
     "void main()"
     "{"
-    "fragmentColor = texture(tex, passTextureCoordinateAttribute);"
+    "fragmentColor = texture(tex, passTextureCoord) * passColor;"
     "}";
 
   if (!CompileShaderInfo(quad_shader_))
