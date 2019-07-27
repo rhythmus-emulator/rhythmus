@@ -1,0 +1,1 @@
+Config file with game system / user is saved in this folder.

@@ -12,6 +12,8 @@ set (RHYTHMUS_SOURCES
 	Animation.cpp
     Game.cpp
     Graphic.cpp
+	Logger.cpp
+	Timer.cpp
     main.cpp
 
     SceneManager.cpp
@@ -25,7 +27,10 @@ set (RHYTHMUS_HEADERS
 	Sprite.h
 	Animation.h
     Game.h
+	Logger.h
+	Timer.h
     Graphic.h
+	Error.h
 
     SceneManager.h
     scene/Scene.h

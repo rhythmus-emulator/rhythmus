@@ -10,3 +10,5 @@ CMakeFiles
 test/lib/
 test/rutil/test
 test/out_*
+log/*.txt
+config/*.xml

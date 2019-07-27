@@ -3,10 +3,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <assert.h> /* TODO: move it to Error.h */
-#define ASSERT(x) assert(x)
-#define ASSERT_GL() ASSERT(glGetError() == 0)
-#define ASSERT_GL_VAL(x) ASSERT((x = glGetError()) == 0)
+#include "Error.h"
 
 namespace rhythmus
 {

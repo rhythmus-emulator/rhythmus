@@ -2,8 +2,10 @@
 # include <tchar.h>
 # include <Windows.h>
 #endif
+#include "Logger.h"
 #include "Graphic.h"
 #include "Game.h"
+#include "Timer.h"
 #include "SceneManager.h"
 #include <iostream>
 
@@ -38,9 +40,13 @@ int main(int argc, char **argv)
 
   // Load/Set settings first before initialize other objects
   game.LoadOrDefault();
-  // TODO: start logger here.
+
+  Logger::getInstance().StartLogging();
+  Logger::getInstance().HookStdOut();
   graphic.Initialize();
   SceneManager::getInstance().Initialize();
+  Timer::Initialize();
+  
 
   /**
    * Main game loop
@@ -55,7 +61,7 @@ int main(int argc, char **argv)
   {
     std::cerr << "Settings not saved." << std::endl;
   }
-  // TODO: exit logger here.
+  Logger::getInstance().FinishLogging();
 
   exit(EXIT_SUCCESS);
 }

@@ -1,6 +1,8 @@
 #include "Graphic.h"
 #include "Game.h"
 #include "SceneManager.h"
+#include "Timer.h"
+#include "Logger.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
@@ -115,19 +117,23 @@ void Graphic::LoopRendering()
     glViewport(0, 0, sWidth, sHeight);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // XXX: "Some" objects might want to be drawn as perspective ...
-    // XXX: should pass projection matrix to shader using glUniformMatrix4fv, or bindbufferdata() ...
-    glMatrixMode(GL_PROJECTION);
     SetProjOrtho();
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    /* Update main timer in graphic(main) thread. */
+    Timer::Update();
 
+    /* Process cached events in main thread. */
+    Game::getInstance().ProcessEvent();
+
+    /* Main Rendering */
     SceneManager::getInstance().Render();
     glFlush();
 
     glfwSwapBuffers(window_);
     glfwPollEvents();
+
+    /* Flush stdout into log message */
+    Logger::getInstance().Flush();
   }
 }
 
@@ -331,6 +337,7 @@ void Graphic::SetProjOrtho()
   if (current_proj_mode_ == 1) return;
   current_proj_mode_ = 1;
 
+  glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glOrtho(
     0,
@@ -339,6 +346,7 @@ void Graphic::SetProjOrtho()
     0,
     -1, 1
   );
+  glMatrixMode(GL_MODELVIEW);
 }
 
 void Graphic::SetProjPerspective()
@@ -346,8 +354,10 @@ void Graphic::SetProjPerspective()
   if (current_proj_mode_ == 2) return;
   current_proj_mode_ = 2;
 
+  glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   gluPerspective(60, Game::getInstance().GetAspect(), 1.0, 2000.0);
+  glMatrixMode(GL_MODELVIEW);
 }
 
 void Graphic::RenderQuad(const VertexInfo* vi)
