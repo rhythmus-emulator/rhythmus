@@ -8,13 +8,25 @@
 namespace rhythmus
 {
 
-/**
- * @brief Rendering vertex info.
- */
+/* @brief Rendering vertex info. */
 struct VertexInfo {
   float x, y, z;
   float sx, sy;
   float r, g, b, a;
+};
+
+/* @brief Projection info for each object. */
+struct ProjectionInfo
+{
+  float rotx, roty, rotz;
+  float tx, ty;   // translation center, which means center of rotation.
+};
+
+/* @brief Total info required for rendering a object. */
+struct DrawInfo
+{
+  VertexInfo vi[4];
+  ProjectionInfo pi;
 };
 
 /**
@@ -49,6 +61,7 @@ public:
   static Graphic& getInstance();
 
   static void RenderQuad(const VertexInfo* vi);
+  static void RenderQuad(const DrawInfo& di);
 private:
   Graphic();
   ~Graphic();

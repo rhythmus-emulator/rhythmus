@@ -20,13 +20,7 @@ public:
 private:
   ImageAuto img_;
   SpriteAnimation ani_;
-  SpriteFrame frame_;
-  struct {
-    float sx, sy, sx2, sy2, dx, dy, dx2, dy2;
-  } rframe_;
-  VertexInfo hlsl_vert_[4];
-
-  void InvalidateRFrame();
+  DrawInfo di_;
 };
 
 }

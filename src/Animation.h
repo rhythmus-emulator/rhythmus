@@ -1,26 +1,44 @@
 #pragma once
 
-#include <vector>
+#include "Graphic.h"
+#include <list>
 
 namespace rhythmus
 {
 
-struct Position
+struct TweenInfo
 {
-  int x, y;
+  float x, y, w, h;         // general object position
+  float r, g, b;            // alpha masking
+  float aTL, aTR, aBR, aBL; // alpha fade
+  float sx, sy, sw, sh;     // texture src crop
+  ProjectionInfo pi;
 };
 
-struct Size
+enum TweenTypes
 {
-  int w, h;
+  kTweenTypeNone,
+  kTweenTypeLinear,
+  kTweenTypeEaseIn,
+  kTweenTypeEaseOut,
+  kTweenTypeEaseInOut,
+  kTweenTypeEaseInOutBack,
 };
 
-struct SpriteFrame
+struct Tween
 {
-  Position srcpos;
-  Size src;
-  Position dstpos;
-  Size dst;
+  TweenInfo ti;
+  uint32_t time_original;
+  uint32_t time_eclipsed;
+  bool loop;
+  int ease_type;            // tween ease type
+};
+
+struct AnimatedTexture
+{
+  int divx, divy, cnt;
+  int interval;
+  int idx, eclipsed_time;
 };
 
 class SpriteAnimation
@@ -28,11 +46,23 @@ class SpriteAnimation
 public:
   SpriteAnimation();
   ~SpriteAnimation();
-  bool IsActive();
+  bool IsActive() const;
   void Tick(int delta_ms);
-  void GetFrame(SpriteFrame& f) const;
+  void AddTween(const Tween& tween);
+  Tween& GetLastTween();
+  const Tween& GetLastTween() const;
+  const TweenInfo& GetCurrentTweenInfo() const;
+  void GetVertexInfo(VertexInfo* vi);
+  void GetDrawInfo(DrawInfo& di);
+
+  void SetPosition(float x, float y);
+  void SetSize(float w, float h);
 private:
-  std::vector<SpriteFrame> motions_;
+  std::list<Tween> tweens_;
+  TweenInfo current_tween_;
+  AnimatedTexture ani_texture_;
+
+  void UpdateTween();
 };
 
 }

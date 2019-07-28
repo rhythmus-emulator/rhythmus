@@ -27,6 +27,8 @@ public:
 
   static double GetUncachedGameTime();
   static double GetGameTime();
+  static double GetGameTimeDelta();
+  static uint32_t GetGameTimeDeltaInMillisecond();
   static uint32_t GetGameTimeInMillisecond();
   static void Initialize();
   static void Update();

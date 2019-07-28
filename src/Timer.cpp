@@ -8,7 +8,7 @@ namespace rhythmus
 constexpr double TickRateUpdateRate = 0.2;
 
 struct {
-  std::atomic<double> game_current_time_;
+  std::atomic<double> game_current_time_, game_prev_time_;
 } GlobalTimerContext;
 
 /**
@@ -108,15 +108,28 @@ uint32_t Timer::GetGameTimeInMillisecond()
   return static_cast<uint32_t>(GetGameTime() * 1000);
 }
 
+double Timer::GetGameTimeDelta()
+{
+  return GlobalTimerContext.game_current_time_.load() -
+    GlobalTimerContext.game_prev_time_.load();
+}
+
+uint32_t Timer::GetGameTimeDeltaInMillisecond()
+{
+  return static_cast<uint32_t>(GetGameTimeDelta() * 1000);
+}
+
 /* Should be thread-safe. Use atomic store here. */
 void Timer::Update()
 {
+  GlobalTimerContext.game_prev_time_ = GlobalTimerContext.game_current_time_.load();
   GlobalTimerContext.game_current_time_ = glfwGetTime();
 }
 
 void Timer::Initialize()
 {
   glfwSetTime(0);
+  GlobalTimerContext.game_prev_time_ = 0;
   GlobalTimerContext.game_current_time_ = 0;
 }
 

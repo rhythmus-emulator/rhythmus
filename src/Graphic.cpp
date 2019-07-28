@@ -332,6 +332,12 @@ void Graphic::RenderQuad(const VertexInfo* vi)
   glBindVertexArray(g.quad_shader_.VAO_id);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 }
+
+void Graphic::RenderQuad(const DrawInfo& di)
+{
+  // TODO: Set projection matrix(rotation) before rendering
+  RenderQuad(di.vi);
+}
 #else
 bool Graphic::CompileShader()
 {
