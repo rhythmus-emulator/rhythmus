@@ -28,6 +28,12 @@ void SceneManager::Render()
     current_scene_->Render();
 }
 
+void SceneManager::SendEvent(const GameEvent& e)
+{
+  if (current_scene_)
+    current_scene_->ProcessEvent(e);
+}
+
 SceneManager& SceneManager::getInstance()
 {
   static SceneManager scenemanager_;

@@ -28,4 +28,13 @@ void TestScene::CloseScene()
 {
 }
 
+void TestScene::ProcessEvent(const GameEvent& e)
+{
+  if (IsEventKeyPress(e))
+  {
+    if (GetKeycode(e) == GLFW_KEY_ESCAPE)
+      Graphic::getInstance().ExitRendering();
+  }
+}
+
 }

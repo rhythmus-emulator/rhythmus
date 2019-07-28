@@ -28,20 +28,25 @@ void on_resize(GLFWwindow* w, GLint width, GLint height)
 
 void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
 {
-
+  if (action == GLFW_PRESS)
+    Game::SendKeyDownEvent(key);
+  else if (action == GLFW_RELEASE)
+    Game::SendKeyUpEvent(key);
 }
 
-void on_text(GLFWwindow *w, unsigned int codepoint)
+void on_text(GLFWwindow *w, uint32_t codepoint)
 {
-
+  Game::SendTextEvent(codepoint);
 }
 
 void on_cursormove(GLFWwindow *w, double xpos, double ypos)
 {
+  Game::SendCursorMoveEvent((int)xpos, (int)ypos);
 }
 
 void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
 {
+  Game::SendCursorClickEvent(button);
 }
 
 void on_joystick_conn(int jid, int event)
@@ -135,6 +140,12 @@ void Graphic::LoopRendering()
     /* Flush stdout into log message */
     Logger::getInstance().Flush();
   }
+}
+
+/* Just send close message to system */
+void Graphic::ExitRendering()
+{
+  glfwSetWindowShouldClose(window_, 1);
 }
 
 void Graphic::Cleanup()

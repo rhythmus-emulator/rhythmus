@@ -1,5 +1,6 @@
 #pragma once
 #include "scene/Scene.h"
+#include "Game.h"
 
 namespace rhythmus
 {
@@ -9,6 +10,7 @@ class SceneManager
 public:
   void Initialize();
   void Render();
+  void SendEvent(const GameEvent& e);
 
   static SceneManager& getInstance();
 private:

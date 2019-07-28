@@ -40,8 +40,9 @@ class Graphic
 {
 public:
   void Initialize();
-  void Cleanup();
   void LoopRendering();
+  void ExitRendering();
+  void Cleanup();
   void SetProjOrtho();
   void SetProjPerspective();
 
