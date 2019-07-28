@@ -10,6 +10,8 @@
 namespace rhythmus
 {
 
+constexpr const char* kSettingPath = "../config/config.xml";
+
 Game Game::game_;
 
 Game& Game::getInstance()
@@ -18,7 +20,7 @@ Game& Game::getInstance()
 }
 
 Game::Game()
-  : fps_(0)
+  : fps_(0), setting_path_(kSettingPath)
 {
 }
 
@@ -107,7 +109,7 @@ bool Game::Save()
 
 void Game::Default()
 {
-  setting_path_ = "../config/config.xml";
+  setting_path_ = kSettingPath;
   width_ = 640;
   height_ = 480;
   log_path_ = "../log/log.txt";
