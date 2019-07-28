@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "Timer.h"
 #include "Logger.h"
+#include "tinyxml2.h"
 #include <iostream>
 
 namespace rhythmus
@@ -22,19 +23,88 @@ Game::~Game()
 {
 }
 
+/* macro to deal with save/load properties */
+/* (var_name, xml_attr_name, type, default value) */
+#define XML_SETTINGS \
+  XMLATTR(width_, "width", uint16_t) \
+  XMLATTR(height_, "height", uint16_t) \
+  XMLATTR(do_logging_, "logging", bool) \
+
+template<typename A>
+A GetValueConverted(const char* v);
+
+template<>
+uint16_t GetValueConverted(const char* v)
+{
+  return static_cast<uint16_t>(atoi(v));
+}
+
+template<>
+int GetValueConverted(const char* v)
+{
+  return atoi(v);
+}
+
+template<>
+float GetValueConverted(const char* v)
+{
+  return static_cast<float>(atof(v));
+}
+
+template<>
+double GetValueConverted(const char* v)
+{
+  return atof(v);
+}
+
+template<>
+bool GetValueConverted(const char* v)
+{
+  return stricmp(v, "true") == 0;
+}
+
 bool Game::Load()
 {
-  return false;
+  using namespace tinyxml2;
+  XMLDocument doc;
+  XMLError errcode;
+  if ((errcode = doc.LoadFile(setting_path_.c_str())) != XML_SUCCESS)
+  {
+    std::cerr << "Game settings reading failed, TinyXml2 ErrorCode: " << errcode << std::endl;
+    return false;
+  }
+  XMLElement* settings = doc.RootElement();
+
+  // Set default value - in case of key is not existing.
+  Default();
+
+#define XMLATTR(var, attrname, type) \
+{ XMLElement *e = settings->FirstChildElement(attrname); \
+  if (e) { var = GetValueConverted<type>(e->GetText()); } }
+  XML_SETTINGS;
+#undef XMLATTR
+
+  return true;
 }
 
 bool Game::Save()
 {
-  return false;
+  using namespace tinyxml2;
+  XMLDocument doc;
+  XMLElement* settings = doc.NewElement("Settings");
+
+#define XMLATTR(var, attrname, type) \
+{ XMLElement* e = doc.NewElement(attrname); e->SetText(var); settings->LinkEndChild(e); }
+  XML_SETTINGS;
+#undef XMLATTR
+
+  doc.LinkEndChild(settings);
+  return doc.SaveFile(setting_path_.c_str()) == XML_SUCCESS;
 }
 
 void Game::Default()
 {
-  setting_path_ = "../config/config.json";
+  setting_path_ = "../config/config.xml";
   width_ = 640;
   height_ = 480;
   log_path_ = "../log/log.txt";

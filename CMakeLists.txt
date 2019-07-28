@@ -49,4 +49,7 @@ find_package(GLFW)
 find_package(GLEW)
 find_package(FreeImage)
 
+add_subdirectory("${PROJECT_SOURCE_DIR}/../rhythmus-lib/src/tinyxml2"
+                 "${PROJECT_SOURCE_DIR}/build/lib")
+
 add_subdirectory(src)

@@ -46,6 +46,7 @@ include_directories(SYSTEM
     ${GLFW_INCLUDE_DIR}
     ${GLEW_INCLUDE_DIR}
     ${FREEIMAGE_INCLUDE_DIR}
+    ${TINYXML2_INCLUDE_DIR}
     )
 
 if (WIN32)
@@ -59,4 +60,5 @@ target_link_libraries(rhythmus_bin
 	${GLFW_LIBRARY}
 	${GLEW_LIBRARY}
     ${FREEIMAGE_LIBRARY}
+    tinyxml2
 	)
