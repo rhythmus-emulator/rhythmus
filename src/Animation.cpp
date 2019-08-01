@@ -133,6 +133,7 @@ void SpriteAnimation::GetVertexInfo(VertexInfo* vi)
 void SpriteAnimation::GetDrawInfo(DrawInfo& di)
 {
   GetVertexInfo(di.vi);
+  di.pi = current_tween_.pi;
 }
 
 #define TWEEN_ATTRS \

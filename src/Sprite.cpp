@@ -17,17 +17,17 @@ Sprite::Sprite()
 
   // XXX: test animation
   ani_.AddTween({ {
-      10, 10, 100, 100,
+      0, 0, 0.3, 0.3,
       1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+      0.0f, 0.0f, 0.0f, 0.15f, 0.15f
     }, 1000, 0, true, TweenTypes::kTweenTypeEaseOut
     });
   ani_.AddTween({ {
-      100, 100, 110, 110,
+      0, 0, 0.33, 0.33,
       1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+      0.0f, 0.0f, 3.14f / 8, 0.16f, 0.16f
     }, 1500, 0, true, TweenTypes::kTweenTypeEaseOut
     });
 }

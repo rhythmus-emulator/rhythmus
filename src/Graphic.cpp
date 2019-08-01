@@ -122,8 +122,6 @@ void Graphic::LoopRendering()
     glViewport(0, 0, sWidth, sHeight);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    SetProjOrtho();
-
     /* Update main timer in graphic(main) thread. */
     Timer::Update();
 
@@ -177,9 +175,11 @@ bool Graphic::CompileShader()
     "out vec4 passColor;"
     "out vec2 passTextureCoord;"
     "uniform mat4 projection;"
+    "uniform mat4 model;"
+    ""
     "void main()"
     "{"
-    "gl_Position = projection * vec4(positionAttribute, 1.0);"
+    "gl_Position = projection * model * vec4(positionAttribute, 1.0);"
     "passColor = colorAttribute;"
     "passTextureCoord = texCoordinate;"
     "}";
@@ -278,20 +278,19 @@ bool Graphic::CompileShaderInfo(ShaderInfo& shader)
  */
 void Graphic::SetProjOrtho()
 {
-  if (current_proj_mode_ == 1) return;
+  if (current_proj_mode_ == 1)
+    return;
+
   current_proj_mode_ = 1;
 
-  projection_ = glm::ortho(
-    0.f,
-    (float)Game::getInstance().get_window_width(),
-    (float)Game::getInstance().get_window_height(),
-    0.f
+  m_projection_ = glm::ortho(
+    -(float)Game::getInstance().GetAspect(),
+    (float)Game::getInstance().GetAspect(),
+    -1.0f, 1.0f,
+    -1.0f, 1.0f
   );
-
-  GLint matID = glGetUniformLocation(quad_shader_.prog_id, "projection");
   glUseProgram(quad_shader_.prog_id);
-  glUniformMatrix4fv(matID, 1, GL_FALSE, &projection_[0][0]);
-  ASSERT_GL_VAL(errorcode_);
+  glUniformMatrix4fv(0, 1, GL_FALSE, &m_projection_[0][0]);
 }
 
 /**
@@ -300,17 +299,48 @@ void Graphic::SetProjOrtho()
  */
 void Graphic::SetProjPerspective()
 {
-  if (current_proj_mode_ == 2) return;
+  if (current_proj_mode_ == 2)
+    return;
+
   current_proj_mode_ = 2;
 
-  projection_ = glm::perspective(
+  m_projection_ = glm::perspective(
     60.0f,
     (float)Game::getInstance().GetAspect(),
     1.0f, 2000.0f
   );
+  glUseProgram(quad_shader_.prog_id);
+  glUniformMatrix4fv(0, 1, GL_FALSE, &m_projection_[0][0]);
+}
 
-  GLuint matID = glGetUniformLocation(quad_shader_.prog_id, "projection");
-  glUniformMatrix4fv(matID, 1, GL_FALSE, &projection_[0][0]);
+void Graphic::SetModelIdentity()
+{
+  m_model_ = glm::mat4(1.0f);
+}
+
+void Graphic::SetModelRotation(const ProjectionInfo& pi)
+{
+  SetModelIdentity();
+
+  if (pi.rotx == 0 && pi.roty == 0 && pi.rotz == 0)
+    return;
+
+  m_model_ = glm::translate(m_model_, { pi.tx, pi.ty, 0.0f });
+
+  if (pi.rotx != 0)
+    m_model_ = glm::rotate(m_model_, pi.rotx, { 1.0f, 0.0f, 0.0f });
+
+  if (pi.roty != 0)
+    m_model_ = glm::rotate(m_model_, pi.roty, { 0.0f, 1.0f, 0.0f });
+
+  if (pi.rotz != 0)
+    m_model_ = glm::rotate(m_model_, pi.rotz, { 0.0f, 0.0f, 1.0f });
+
+  // TODO: glm::radians
+  m_model_ = glm::translate(m_model_, { -pi.tx, -pi.ty, 0.0f });
+
+  glUseProgram(quad_shader_.prog_id);
+  glUniformMatrix4fv(1, 1, GL_FALSE, &m_model_[0][0]);
 }
 
 /**
@@ -335,7 +365,9 @@ void Graphic::RenderQuad(const VertexInfo* vi)
 
 void Graphic::RenderQuad(const DrawInfo& di)
 {
-  // TODO: Set projection matrix(rotation) before rendering
+  Graphic &g = Graphic::getInstance();
+  g.SetProjOrtho(); // TODO: in case of perspective?
+  g.SetModelRotation(di.pi);
   RenderQuad(di.vi);
 }
 #else
@@ -356,6 +388,7 @@ void Graphic::SetProjOrtho()
 
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
+  //glLoadMatrixf
   glOrtho(
     0,
     Game::getInstance().get_window_width(),

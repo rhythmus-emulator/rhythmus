@@ -57,6 +57,8 @@ public:
   void Cleanup();
   void SetProjOrtho();
   void SetProjPerspective();
+  void SetModelIdentity();
+  void SetModelRotation(const ProjectionInfo& pi);
 
   static Graphic& getInstance();
 
@@ -71,7 +73,7 @@ private:
   GLFWwindow* window_;
   ShaderInfo quad_shader_;
   int current_proj_mode_;
-  glm::mat4 projection_;
+  glm::mat4 m_projection_, m_view_, m_model_;
 };
 
 }
