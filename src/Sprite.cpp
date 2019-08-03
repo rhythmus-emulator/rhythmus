@@ -10,24 +10,19 @@ Sprite::Sprite()
 {
   memset(&di_, 0, sizeof(di_));
 
-  di_.vi[0].r = di_.vi[0].g = di_.vi[0].b = di_.vi[0].a = 1.0f;
-  di_.vi[1].r = di_.vi[1].g = di_.vi[1].b = di_.vi[1].a = 1.0f;
-  di_.vi[2].r = di_.vi[2].g = di_.vi[2].b = di_.vi[2].a = 1.0f;
-  di_.vi[3].r = di_.vi[3].g = di_.vi[3].b = di_.vi[3].a = 1.0f;
-
   // XXX: test animation
   ani_.AddTween({ {
       0, 0, 100, 100,
       1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, 0.0f, 0.0f, 50, 50
+      0.0f, 0.0f, 0.0f, 50, 50, 100, 100
     }, 1000, 0, true, TweenTypes::kTweenTypeEaseOut
     });
   ani_.AddTween({ {
       0, 0, 110, 110,
-      1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
+      1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, 0.0f, glm::radians(90.0f), 55, 55
+      0.0f, 0.0f, glm::radians(90.0f), 55, 55, 100, 200
     }, 1500, 0, true, TweenTypes::kTweenTypeEaseOut
     });
 }

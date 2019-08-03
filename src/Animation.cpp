@@ -110,24 +110,40 @@ void SpriteAnimation::GetVertexInfo(VertexInfo* vi)
   vi[0].z = 0;
   vi[0].sx = sx1;
   vi[0].sy = sy2;
+  vi[0].r = ti.r;
+  vi[0].g = ti.g;
+  vi[0].b = ti.b;
+  vi[0].a = ti.aTL;
 
   vi[1].x = x1;
   vi[1].y = y2;
   vi[1].z = 0;
   vi[1].sx = sx1;
   vi[1].sy = sy1;
+  vi[1].r = ti.r;
+  vi[1].g = ti.g;
+  vi[1].b = ti.b;
+  vi[1].a = ti.aBL;
 
   vi[2].x = x2;
   vi[2].y = y2;
   vi[2].z = 0;
   vi[2].sx = sx2;
   vi[2].sy = sy1;
+  vi[2].r = ti.r;
+  vi[2].g = ti.g;
+  vi[2].b = ti.b;
+  vi[2].a = ti.aBR;
 
   vi[3].x = x2;
   vi[3].y = y1;
   vi[3].z = 0;
   vi[3].sx = sx2;
   vi[3].sy = sy2;
+  vi[3].r = ti.r;
+  vi[3].g = ti.g;
+  vi[3].b = ti.b;
+  vi[3].a = ti.aTR;
 }
 
 void SpriteAnimation::GetDrawInfo(DrawInfo& di)
@@ -153,6 +169,8 @@ void SpriteAnimation::GetDrawInfo(DrawInfo& di)
   TWEEN(pi.rotz) \
   TWEEN(pi.tx) \
   TWEEN(pi.ty) \
+  TWEEN(pi.x) \
+  TWEEN(pi.y)
 
 void SpriteAnimation::UpdateTween()
 {

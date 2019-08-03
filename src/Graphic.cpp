@@ -342,7 +342,8 @@ void Graphic::SetModelRotation(const ProjectionInfo& pi)
   if (pi.rotx == 0 && pi.roty == 0 && pi.rotz == 0)
     return;
 
-  m_model_ = glm::translate(m_model_, { pi.tx, pi.ty, 0.0f });
+  // NOTE: matrix is multiplied in reversed order.
+  m_model_ = glm::translate(m_model_, { pi.tx + pi.x, pi.ty + pi.y, 0.0f });
 
   if (pi.rotx != 0)
     m_model_ = glm::rotate(m_model_, pi.rotx, { 1.0f, 0.0f, 0.0f });

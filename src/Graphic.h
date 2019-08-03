@@ -20,6 +20,7 @@ struct ProjectionInfo
 {
   float rotx, roty, rotz;
   float tx, ty;   // translation center, which means center of rotation.
+  float x, y;     // rendering center
 };
 
 /* @brief Total info required for rendering a object. */
