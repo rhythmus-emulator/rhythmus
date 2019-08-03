@@ -169,17 +169,19 @@ bool Graphic::CompileShader()
 
   quad_shader_.vertex_shader =
     "#version 330 core\n"
+    "#extension GL_ARB_explicit_uniform_location : require\n"
     "in vec3 positionAttribute;"
     "in vec4 colorAttribute;"
     "in vec2 texCoordinate;"
     "out vec4 passColor;"
     "out vec2 passTextureCoord;"
-    "uniform mat4 projection;"
-    "uniform mat4 model;"
+    "layout (location=0) uniform mat4 projection;"
+    "layout (location=1) uniform mat4 view;"
+    "layout (location=2) uniform mat4 model;"
     ""
     "void main()"
     "{"
-    "gl_Position = projection * model * vec4(positionAttribute, 1.0);"
+    "gl_Position = projection * view * model * vec4(positionAttribute, 1.0);"
     "passColor = colorAttribute;"
     "passTextureCoord = texCoordinate;"
     "}";
@@ -284,13 +286,13 @@ void Graphic::SetProjOrtho()
   current_proj_mode_ = 1;
 
   m_projection_ = glm::ortho(
-    -(float)Game::getInstance().GetAspect(),
-    (float)Game::getInstance().GetAspect(),
-    -1.0f, 1.0f,
+    0.0f, (float)Game::getInstance().get_window_width(),
+    (float)Game::getInstance().get_window_height(), 0.0f,
     -1.0f, 1.0f
   );
   glUseProgram(quad_shader_.prog_id);
   glUniformMatrix4fv(0, 1, GL_FALSE, &m_projection_[0][0]);
+  SetView();  // TODO: temp
 }
 
 /**
@@ -311,6 +313,21 @@ void Graphic::SetProjPerspective()
   );
   glUseProgram(quad_shader_.prog_id);
   glUniformMatrix4fv(0, 1, GL_FALSE, &m_projection_[0][0]);
+  SetView();  // TODO: temp
+}
+
+void Graphic::SetView()
+{
+  m_view_ = glm::lookAt(
+    glm::vec3{ 0.0f, 0.0f, 1.0f },
+    glm::vec3{ 0.0f, 0.0f, 0.0f },
+    glm::vec3{ 0.0f, 1.0f, 0.0f }
+    );
+
+  //m_view_ = glm::mat4(1.0f);
+
+  glUseProgram(quad_shader_.prog_id);
+  glUniformMatrix4fv(1, 1, GL_FALSE, &m_view_[0][0]);
 }
 
 void Graphic::SetModelIdentity()
@@ -340,7 +357,7 @@ void Graphic::SetModelRotation(const ProjectionInfo& pi)
   m_model_ = glm::translate(m_model_, { -pi.tx, -pi.ty, 0.0f });
 
   glUseProgram(quad_shader_.prog_id);
-  glUniformMatrix4fv(1, 1, GL_FALSE, &m_model_[0][0]);
+  glUniformMatrix4fv(2, 1, GL_FALSE, &m_model_[0][0]);
 }
 
 /**

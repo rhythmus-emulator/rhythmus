@@ -57,6 +57,7 @@ public:
   void Cleanup();
   void SetProjOrtho();
   void SetProjPerspective();
+  void SetView();
   void SetModelIdentity();
   void SetModelRotation(const ProjectionInfo& pi);
 
