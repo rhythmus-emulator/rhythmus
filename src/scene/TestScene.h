@@ -1,6 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include "Sprite.h"
+#include "Font.h"
 
 namespace rhythmus
 {
@@ -16,6 +17,7 @@ public:
 private:
   Sprite spr_;
   Sprite spr2_;
+  Font font_;
 };
 
 }

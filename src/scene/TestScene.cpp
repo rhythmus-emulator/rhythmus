@@ -43,6 +43,10 @@ void TestScene::LoadScene()
   spr2_.SetImage(img2_);
   spr2_.SetPos(200, 350);
   spr2_.SetSize(120, 120);
+
+  FontAttributes attr;
+  attr.size = 12;
+  font_.LoadFont("../gyeonggi.ttf", attr);
 }
 
 void TestScene::CloseScene()

@@ -10,6 +10,7 @@ set (RHYTHMUS_SOURCES
     Image.cpp
 	Sprite.cpp
 	Animation.cpp
+	Font.cpp
     Game.cpp
     Graphic.cpp
 	Logger.cpp
@@ -26,6 +27,7 @@ set (RHYTHMUS_HEADERS
     Image.h
 	Sprite.h
 	Animation.h
+	Font.h
     Game.h
 	Logger.h
 	Timer.h
@@ -60,5 +62,6 @@ target_link_libraries(rhythmus_bin
 	${GLFW_LIBRARY}
 	${GLEW_LIBRARY}
     ${FREEIMAGE_LIBRARY}
+	${FREETYPE_LIBRARY}
     tinyxml2
 	)
