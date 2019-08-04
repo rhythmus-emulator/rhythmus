@@ -46,7 +46,7 @@ void TestScene::LoadScene()
 
   FontAttributes attr;
   attr.size = 12;
-  font_.LoadFont("../gyeonggi.ttf", attr);
+  font_.LoadFont("gyeonggi.ttf", attr);
 }
 
 void TestScene::CloseScene()

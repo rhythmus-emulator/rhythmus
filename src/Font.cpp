@@ -152,8 +152,8 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
     uint32_t* bitmap = (uint32_t*)malloc(g.width * g.height * sizeof(uint32_t));
     for (int x = 0; x < g.width; ++x) {
       for (int y = 0; y < g.height; ++y) {
-        char a = ftface->glyph->bitmap.buffer[x + y * g.height];
-        bitmap[x + y * g.height] = a << 24;
+        char a = ftface->glyph->bitmap.buffer[x + y * g.width];
+        bitmap[x + y * g.width] = a << 24;
       }
     }
     auto* cache = GetWritableBitmapCache(g.width, g.height);
