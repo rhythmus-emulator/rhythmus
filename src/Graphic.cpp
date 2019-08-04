@@ -368,22 +368,27 @@ void Graphic::SetModelRotation(const ProjectionInfo& pi)
   SetModelIdentity();
 
   if (pi.rotx == 0 && pi.roty == 0 && pi.rotz == 0)
-    return;
+  {
+    /* Just do translation */
+    m_model_ = glm::translate(m_model_, { pi.x, pi.y, 0.0f });
+  }
+  else
+  {
+    // NOTE: matrix is multiplied in reversed order.
+    m_model_ = glm::translate(m_model_, { pi.tx + pi.x, pi.ty + pi.y, 0.0f });
 
-  // NOTE: matrix is multiplied in reversed order.
-  m_model_ = glm::translate(m_model_, { pi.tx + pi.x, pi.ty + pi.y, 0.0f });
+    if (pi.rotx != 0)
+      m_model_ = glm::rotate(m_model_, pi.rotx, { 1.0f, 0.0f, 0.0f });
 
-  if (pi.rotx != 0)
-    m_model_ = glm::rotate(m_model_, pi.rotx, { 1.0f, 0.0f, 0.0f });
+    if (pi.roty != 0)
+      m_model_ = glm::rotate(m_model_, pi.roty, { 0.0f, 1.0f, 0.0f });
 
-  if (pi.roty != 0)
-    m_model_ = glm::rotate(m_model_, pi.roty, { 0.0f, 1.0f, 0.0f });
+    if (pi.rotz != 0)
+      m_model_ = glm::rotate(m_model_, pi.rotz, { 0.0f, 0.0f, 1.0f });
 
-  if (pi.rotz != 0)
-    m_model_ = glm::rotate(m_model_, pi.rotz, { 0.0f, 0.0f, 1.0f });
-
-  // TODO: glm::radians
-  m_model_ = glm::translate(m_model_, { -pi.tx, -pi.ty, 0.0f });
+    // TODO: glm::radians
+    m_model_ = glm::translate(m_model_, { -pi.tx, -pi.ty, 0.0f });
+  }
 
   glUseProgram(quad_shader_.prog_id);
   glUniformMatrix4fv(2, 1, GL_FALSE, &m_model_[0][0]);

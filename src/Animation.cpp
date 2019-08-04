@@ -7,6 +7,8 @@ SpriteAnimation::SpriteAnimation()
 {
   memset(&current_tween_, 0, sizeof(current_tween_));
   current_tween_.sw = current_tween_.sh = 1.0f;
+  SetRGB(1.0f, 1.0f, 1.0f);
+  SetAlpha(1.0f);
 
   ani_texture_.cnt = 1;
   ani_texture_.divx = 1;
@@ -92,8 +94,8 @@ void SpriteAnimation::GetVertexInfo(VertexInfo* vi)
   // image width / height (for ratio)
   float iw = 1.0f, ih = 1.0f;
 
-  x1 = ti.x / ww;
-  y1 = ti.y / wh;
+  x1 = 0; // ti.x / ww;
+  y1 = 0; // ti.y / wh;
   x2 = x1 + ti.w / ww;
   y2 = y1 + ti.h / wh;
   sx1 = ti.sx / iw;
@@ -266,14 +268,29 @@ void SpriteAnimation::UpdateTween()
 
 void SpriteAnimation::SetPosition(float x, float y)
 {
-  current_tween_.x = x;
-  current_tween_.y = y;
+  current_tween_.pi.x = x;
+  current_tween_.pi.y = y;
 }
 
 void SpriteAnimation::SetSize(float w, float h)
 {
   current_tween_.w = w;
   current_tween_.h = h;
+}
+
+void SpriteAnimation::SetAlpha(float a)
+{
+  current_tween_.aBL =
+    current_tween_.aBR =
+    current_tween_.aTL =
+    current_tween_.aTR = a;
+}
+
+void SpriteAnimation::SetRGB(float r, float g, float b)
+{
+  current_tween_.r = r;
+  current_tween_.g = g;
+  current_tween_.b = b;
 }
 
 }

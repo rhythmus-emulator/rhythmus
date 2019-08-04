@@ -15,6 +15,8 @@ public:
   void SetImage(ImageAuto img);
   void SetPos(int x, int y);
   void SetSize(int w, int h);
+  void SetAlpha(float a);
+  void SetRGB(float r, float g, float b);
   void Render();
 
 private:

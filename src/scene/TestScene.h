@@ -15,6 +15,7 @@ public:
   virtual void ProcessEvent(const GameEvent& e);
 private:
   Sprite spr_;
+  Sprite spr2_;
 };
 
 }

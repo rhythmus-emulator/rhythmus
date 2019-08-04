@@ -57,6 +57,8 @@ public:
 
   void SetPosition(float x, float y);
   void SetSize(float w, float h);
+  void SetRGB(float r, float g, float b);
+  void SetAlpha(float a);
 private:
   std::list<Tween> tweens_;
   TweenInfo current_tween_;
