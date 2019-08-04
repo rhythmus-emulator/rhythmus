@@ -57,8 +57,8 @@ public:
   void ExitRendering();
   void Cleanup();
   void SetProjOrtho();
-  void SetProjPerspective();
-  void SetView();
+  void SetProjPerspective(float cx, float cy);
+  void SetProjPerspectiveCenter();
   void SetModelIdentity();
   void SetModelRotation(const ProjectionInfo& pi);
 
@@ -71,6 +71,7 @@ private:
   ~Graphic();
   bool CompileShader();
   bool CompileShaderInfo(ShaderInfo& shader);
+  void SetView(float x, float y, float dist);
 
   GLFWwindow* window_;
   ShaderInfo quad_shader_;

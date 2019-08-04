@@ -292,41 +292,69 @@ void Graphic::SetProjOrtho()
   );
   glUseProgram(quad_shader_.prog_id);
   glUniformMatrix4fv(0, 1, GL_FALSE, &m_projection_[0][0]);
-  SetView();  // TODO: temp
+  SetView(.0f, .0f, .01f);
+}
+
+/*
+ * @brief Set projection mode 
+ */
+void Graphic::SetProjPerspectiveCenter()
+{
+  SetProjPerspective(Game::getInstance().get_window_width() / 2.0f,
+                     Game::getInstance().get_window_height() / 2.0f);
 }
 
 /**
- * @brief Set projection mode as perspective.
- *        No effect if it is already perspective.
+ * @brief Set projection mode as frustrum (perspective)
+ *        cx, cy : Center of the perspective
  */
-void Graphic::SetProjPerspective()
+void Graphic::SetProjPerspective(float cx, float cy)
 {
-  if (current_proj_mode_ == 2)
-    return;
+  // force refresh as different cx/cy might come.
+  //
+  //if (current_proj_mode_ == 2)
+  //  return;
 
   current_proj_mode_ = 2;
 
+#if 0
   m_projection_ = glm::perspective(
     60.0f,
     (float)Game::getInstance().GetAspect(),
     1.0f, 2000.0f
   );
+#endif
+
+  const float fWidth = Game::getInstance().get_window_width();
+  const float fHeight = Game::getInstance().get_window_height();
+  const float fVanishPointX = cx;
+  const float fVanishPointY = cy;
+  //float fovRadians = glm::radians(30.0f);
+  //float theta = fovRadians / 2;
+  //float fDistCameraFromImage = fWidth / 2 / std::tan(theta);
+  float fDistCameraFromImage = 1000.0f;
+
+  m_projection_ = glm::frustum(
+    (fVanishPointX - fWidth) / fDistCameraFromImage,
+    fVanishPointX / fDistCameraFromImage,
+    fVanishPointY / fDistCameraFromImage,
+    (fVanishPointY - fHeight) / fDistCameraFromImage,
+    1.0f, 2000.0f
+  );
+
   glUseProgram(quad_shader_.prog_id);
   glUniformMatrix4fv(0, 1, GL_FALSE, &m_projection_[0][0]);
-  SetView();  // TODO: temp
+  SetView(fVanishPointX, fVanishPointY, fDistCameraFromImage);
 }
 
-void Graphic::SetView()
+void Graphic::SetView(float x, float y, float dist)
 {
   m_view_ = glm::lookAt(
-    glm::vec3{ 0.0f, 0.0f, 1.0f },
-    glm::vec3{ 0.0f, 0.0f, 0.0f },
+    glm::vec3{ x, y, dist },
+    glm::vec3{ x, y, 0.0f },
     glm::vec3{ 0.0f, 1.0f, 0.0f }
     );
 
-  //m_view_ = glm::mat4(1.0f);
-
-  glUseProgram(quad_shader_.prog_id);
   glUniformMatrix4fv(1, 1, GL_FALSE, &m_view_[0][0]);
 }
 
@@ -384,7 +412,8 @@ void Graphic::RenderQuad(const VertexInfo* vi)
 void Graphic::RenderQuad(const DrawInfo& di)
 {
   Graphic &g = Graphic::getInstance();
-  g.SetProjOrtho(); // TODO: in case of perspective?
+  g.SetProjOrtho();
+  //g.SetProjPerspectiveCenter();
   g.SetModelRotation(di.pi);
   RenderQuad(di.vi);
 }

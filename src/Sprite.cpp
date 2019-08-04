@@ -22,7 +22,7 @@ Sprite::Sprite()
       0, 0, 110, 110,
       1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, 0.0f, glm::radians(90.0f), 55, 55, 100, 200
+      0.0f, glm::radians(90.0f), 0.0f, 55, 55, 100, 200
     }, 1500, 0, true, TweenTypes::kTweenTypeEaseOut
     });
 }
