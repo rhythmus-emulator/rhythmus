@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Animation.h"
+#include "Sprite.h"
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -18,6 +18,7 @@ struct FontGlyph
   uint32_t codepoint;
   int width, height;
   int texidx, srcx, srcy;
+  float sx1, sy1, sx2, sy2;
 };
 
 class FontBitmap
@@ -25,7 +26,7 @@ class FontBitmap
 public:
   FontBitmap(int w, int h);
   ~FontBitmap();
-  void Write(uint32_t* bitmap, int w, int h);
+  void Write(uint32_t* bitmap, int w, int h, FontGlyph &glyph_out);
   void Update();
   bool IsWritable(int w, int h) const;
   GLuint get_texid() const;
@@ -37,9 +38,11 @@ private:
   int cur_line_height_;
   int cur_x_, cur_y_;
   bool committed_;
+
+  void GetGlyphTexturePos(FontGlyph &glyph_out);
 };
 
-class Font
+class Font : public Sprite
 {
 public:
   Font();
@@ -53,13 +56,13 @@ public:
   const FontGlyph* GetGlyph(uint32_t chr) const;
   bool IsNullGlyph(const FontGlyph* g) const;
   void SetNullGlyphAsCodePoint(uint32_t chr);
-  SpriteAnimation& get_animation();
   float GetTextWidth(const std::string& s);
   void SetText(const std::string& s);
-  void Render();
 
   void ClearGlyph();
   void ReleaseFont();
+
+  virtual void Render();
 
 private:
   // FT_Face type
@@ -74,9 +77,6 @@ private:
 
   // current font attributes
   FontAttributes fontattr_;
-
-  // rendering animation
-  SpriteAnimation ani_;
 
   // text to be rendered
   std::string text_;

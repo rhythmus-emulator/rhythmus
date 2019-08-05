@@ -13,6 +13,7 @@ void TestScene::Render()
 {
   spr_.Render();
   spr2_.Render();
+  font_.Render();
 }
 
 void TestScene::LoadScene()
@@ -36,7 +37,7 @@ void TestScene::LoadScene()
       0, 0, 110, 110,
       1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, glm::radians(90.0f), 0.0f, 55, 55, 100, 200
+      0.0f, 0.0f, glm::radians(90.0f), 55, 55, 100, 200
     }, 1500, 0, true, TweenTypes::kTweenTypeEaseOut
     });
 
@@ -47,6 +48,10 @@ void TestScene::LoadScene()
   FontAttributes attr;
   attr.size = 12;
   font_.LoadFont("gyeonggi.ttf", attr);
+  //font_.PrepareGlyph ...
+  font_.Commit();
+  font_.SetText("Hello World!");
+  font_.SetPos(10, 10);
 }
 
 void TestScene::CloseScene()

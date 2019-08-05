@@ -27,10 +27,25 @@ FontBitmap::FontBitmap(int w, int h)
   cur_line_height_ = 0;
 
   bitmap_ = (uint32_t*)malloc(width_ * height_ * sizeof(uint32_t));
+  ASSERT(bitmap_);
+
+  glGenTextures(1, &texid_);
+  if (texid_ == 0)
+  {
+    GLenum err = glGetError();
+    std::cerr << "Font - Allocating textureID failed: " << (int)err << std::endl;
+    return;
+  }
 }
 
 FontBitmap::~FontBitmap()
 {
+  if (texid_)
+  {
+    glDeleteTextures(1, &texid_);
+    texid_ = 0;
+  }
+
   if (bitmap_)
   {
     free(bitmap_);
@@ -38,7 +53,7 @@ FontBitmap::~FontBitmap()
   }
 }
 
-void FontBitmap::Write(uint32_t* bitmap, int w, int h)
+void FontBitmap::Write(uint32_t* bitmap, int w, int h, FontGlyph &glyph_out)
 {
   // writable?
   if (!IsWritable(w, h)) return;
@@ -51,23 +66,48 @@ void FontBitmap::Write(uint32_t* bitmap, int w, int h)
     cur_line_height_ = 0;
   }
 
+  // TODO: cut too big height
+
   // update new max height
-  if (h > cur_line_height_) h = cur_line_height_;
+  if (cur_line_height_ < h) cur_line_height_ = h;
 
   // write bitmap to destination
   for (int x = 0; x < w; ++x)
-    for (int y = 0; y < h; ++h)
+    for (int y = 0; y < h; ++y)
       bitmap_[(y + cur_y_)*width_ + x + cur_x_] = bitmap[w*y + x];
+
+  // set texture pos before updating x pos
+  GetGlyphTexturePos(glyph_out);
+
+  // update x pos
+  cur_x_ += w;
 
   // clear commit flag
   committed_ = false;
+}
+
+/* Get designated area(current x, y with given width / height) as texture position. */
+void FontBitmap::GetGlyphTexturePos(FontGlyph &glyph_out)
+{
+  const int w = glyph_out.width;
+  const int h = glyph_out.height;
+  glyph_out.sx1 = (float)cur_x_ / width_;
+  glyph_out.sx2 = (float)(cur_x_ + w) / width_;
+  glyph_out.sy1 = (float)cur_y_ / height_;
+  glyph_out.sy2 = (float)(cur_y_ + h) / height_;
 }
 
 void FontBitmap::Update()
 {
   if (committed_ || !bitmap_) return;
 
-  // TODO: commit bitmap from memory
+  for (int i = 0; i < defFontCacheWidth * defFontCacheHeight; ++i)
+    bitmap_[i] = (uint32_t)rand();
+
+  // commit bitmap from memory
+  glBindTexture(GL_TEXTURE_2D, texid_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
+    GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap_);
 
   committed_ = true;
 }
@@ -153,11 +193,11 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
     for (int x = 0; x < g.width; ++x) {
       for (int y = 0; y < g.height; ++y) {
         char a = ftface->glyph->bitmap.buffer[x + y * g.width];
-        bitmap[x + y * g.width] = a << 24;
+        bitmap[x + y * g.width] = 0xffffffff;//a << 24 | 0x00ffffff;
       }
     }
     auto* cache = GetWritableBitmapCache(g.width, g.height);
-    cache->Write(bitmap, g.width, g.height);
+    cache->Write(bitmap, g.width, g.height, g);
     g.texidx = cache->get_texid();
     free(bitmap);
 
@@ -196,11 +236,6 @@ void Font::SetNullGlyphAsCodePoint(uint32_t chr)
   const FontGlyph* g = GetGlyph(chr);
   if (!IsNullGlyph(g))
     null_glyph_ = *g;
-}
-
-SpriteAnimation& Font::get_animation()
-{
-  return ani_;
 }
 
 float Font::GetTextWidth(const std::string& s)
@@ -250,7 +285,75 @@ FontBitmap* Font::GetWritableBitmapCache(int w, int h)
 
 void Font::Render()
 {
-  // TODO
+  // TODO: check animation is in motion
+
+  // TODO: Set Proj / View matrix
+  Graphic::getInstance().SetProjOrtho();
+  Graphic::getInstance().SetModelIdentity();
+
+  // Draw vertex by given quad
+  VertexInfo vi[4];
+  int cur_x = 0, cur_y = 0;
+  for (const auto* g : textglyph_)
+  {
+    vi[0].r = vi[0].g = vi[0].b = vi[0].a = 1.0f;
+    vi[0].x = cur_x;
+    vi[0].y = cur_y;
+    vi[0].z = .0f;
+    vi[0].sx = g->sx1;
+    vi[0].sy = g->sy1;
+
+    vi[1].r = vi[1].g = vi[1].b = vi[1].a = 1.0f;
+    vi[1].x = cur_x + g->width;
+    vi[1].y = cur_y;
+    vi[1].z = .0f;
+    vi[1].sx = g->sx2;
+    vi[1].sy = g->sy1;
+
+    vi[2].r = vi[2].g = vi[2].b = vi[2].a = 1.0f;
+    vi[2].x = cur_x + g->width;
+    vi[2].y = cur_y + g->height;
+    vi[2].z = .0f;
+    vi[2].sx = g->sx2;
+    vi[2].sy = g->sy2;
+
+    vi[3].r = vi[3].g = vi[3].b = vi[3].a = 1.0f;
+    vi[3].x = cur_x;
+    vi[3].y = cur_y + g->height;
+    vi[3].z = .0f;
+    vi[3].sx = g->sx1;
+    vi[3].sy = g->sy2;
+
+    cur_x += g->width;
+
+    glBindTexture(GL_TEXTURE_2D, g->texidx);
+    Graphic::RenderQuad(vi);
+  }
+
+#if 0
+  glBindTexture(GL_TEXTURE_2D, 2);
+  vi[0].x = 10;
+  vi[0].y = 10;
+  vi[0].sx = .0f;
+  vi[0].sy = .0f;
+
+  vi[1].x = 200;
+  vi[1].y = 10;
+  vi[1].sx = 1.0f;
+  vi[1].sy = .0f;
+
+  vi[2].x = 200;
+  vi[2].y = 200;
+  vi[2].sx = 1.0f;
+  vi[2].sy = 1.0f;
+
+  vi[3].x = 10;
+  vi[3].y = 200;
+  vi[3].sx = .0f;
+  vi[3].sy = 1.0f;
+
+  Graphic::RenderQuad(vi);
+#endif
 }
 
 void Font::ClearGlyph()
