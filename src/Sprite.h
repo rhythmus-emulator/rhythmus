@@ -10,7 +10,8 @@ class Sprite
 {
 public:
   Sprite();
-  ~Sprite();
+  virtual ~Sprite();
+
   SpriteAnimation& get_animation();
   void SetImage(ImageAuto img);
   void SetPos(int x, int y);

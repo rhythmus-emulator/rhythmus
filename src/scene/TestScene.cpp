@@ -9,6 +9,10 @@ TestScene::TestScene()
 {
 }
 
+TestScene::~TestScene()
+{
+}
+
 void TestScene::Render()
 {
   spr_.Render();

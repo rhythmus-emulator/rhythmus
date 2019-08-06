@@ -10,6 +10,8 @@ class TestScene : public Scene
 {
 public:
   TestScene();
+  virtual ~TestScene();
+
   virtual void LoadScene();
   virtual void CloseScene();
   virtual void Render();

@@ -331,7 +331,7 @@ void Font::Render()
   }
 
 #if 0
-  glBindTexture(GL_TEXTURE_2D, 2);
+  glBindTexture(GL_TEXTURE_2D, textglyph_[0]->texidx);
   vi[0].x = 10;
   vi[0].y = 10;
   vi[0].sx = .0f;
