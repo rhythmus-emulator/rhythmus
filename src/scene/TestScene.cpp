@@ -50,6 +50,7 @@ void TestScene::LoadScene()
   spr2_.SetSize(120, 120);
 
   FontAttributes attr;
+  memset(&attr, 0, sizeof(attr));
   attr.size = 12;
   font_.LoadFont("gyeonggi.ttf", attr);
   //font_.PrepareGlyph ...

@@ -10,17 +10,35 @@ namespace rhythmus
 
 struct FontAttributes
 {
+  /* font size in pt. (multiplied by 4) */
   int size;
+
+  /* height of baseline. set internally if zero */
+  int baseline_offset;
 };
 
 struct FontGlyph
 {
+  /* codepoint of the glyph */
   uint32_t codepoint;
+
+  /* bitmap spec */
   int width, height;
+
+  /* glyph pos relative to baseline */
+  int pos_x, pos_y;
+
+  /* advancing pos x for next character (pixel) */
+  int adv_x;
+
+  /* texture index(glew) and srcx, srcy */
   int texidx, srcx, srcy;
+
+  /* texture position in float (for rendering) */
   float sx1, sy1, sx2, sy2;
 };
 
+/* Font bitmap cache */
 class FontBitmap
 {
 public:
@@ -34,7 +52,10 @@ public:
 private:
   uint32_t* bitmap_;
   GLuint texid_;
+
+  /* width / height of font bitmap cache */
   int width_, height_;
+
   int cur_line_height_;
   int cur_x_, cur_y_;
   bool committed_;
@@ -48,7 +69,7 @@ public:
   Font();
   ~Font();
 
-  bool LoadFont(const char* ttfpath, FontAttributes& attrs);
+  bool LoadFont(const char* ttfpath, const FontAttributes& attrs);
   bool LoadLR2Font(const char* lr2fontpath);
   void PrepareGlyph(uint32_t *chrs, int count);
   void Commit();

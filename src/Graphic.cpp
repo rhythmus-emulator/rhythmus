@@ -361,11 +361,14 @@ void Graphic::SetView(float x, float y, float dist)
 void Graphic::SetModelIdentity()
 {
   m_model_ = glm::mat4(1.0f);
+
+  glUseProgram(quad_shader_.prog_id);
+  glUniformMatrix4fv(2, 1, GL_FALSE, &m_model_[0][0]);
 }
 
 void Graphic::SetModelRotation(const ProjectionInfo& pi)
 {
-  SetModelIdentity();
+  m_model_ = glm::mat4(1.0f);
 
   if (pi.rotx == 0 && pi.roty == 0 && pi.rotz == 0)
   {

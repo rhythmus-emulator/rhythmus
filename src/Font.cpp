@@ -28,6 +28,7 @@ FontBitmap::FontBitmap(int w, int h)
 
   bitmap_ = (uint32_t*)malloc(width_ * height_ * sizeof(uint32_t));
   ASSERT(bitmap_);
+  memset(bitmap_, 0, width_ * height_ * sizeof(uint32_t));
 
   glGenTextures(1, &texid_);
   if (texid_ == 0)
@@ -61,7 +62,7 @@ void FontBitmap::Write(uint32_t* bitmap, int w, int h, FontGlyph &glyph_out)
   // need to break line?
   if (cur_x_ + w > width_)
   {
-    cur_y_ += cur_line_height_;
+    cur_y_ += cur_line_height_ + 1 /* padding */;
     cur_x_ = 0;
     cur_line_height_ = 0;
   }
@@ -80,7 +81,7 @@ void FontBitmap::Write(uint32_t* bitmap, int w, int h, FontGlyph &glyph_out)
   GetGlyphTexturePos(glyph_out);
 
   // update x pos
-  cur_x_ += w;
+  cur_x_ += w + 1 /* padding */;
 
   // clear commit flag
   committed_ = false;
@@ -101,13 +102,12 @@ void FontBitmap::Update()
 {
   if (committed_ || !bitmap_) return;
 
-  for (int i = 0; i < defFontCacheWidth * defFontCacheHeight; ++i)
-    bitmap_[i] = (uint32_t)rand();
-
   // commit bitmap from memory
   glBindTexture(GL_TEXTURE_2D, texid_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
     GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap_);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   committed_ = true;
 }
@@ -147,8 +147,16 @@ Font::~Font()
   ReleaseFont();
 }
 
-bool Font::LoadFont(const char* ttfpath, FontAttributes& attrs)
+bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
 {
+  /* invalid font ... */
+  if (fontattr_.size == 0)
+  {
+    std::cerr << "Invalid font size (0)" << std::endl;
+    return false;
+  }
+
+  /* Read freetype font */
   int r = FT_New_Face(ftLib, ttfpath, 0, (FT_Face*)&ftface_);
   if (r)
   {
@@ -159,7 +167,17 @@ bool Font::LoadFont(const char* ttfpath, FontAttributes& attrs)
   FT_Face ftface = (FT_Face)ftface_;
 
   // Set size to load glyphs as
-  FT_Set_Pixel_Sizes(ftface, 0, fontattr_.size * 4);
+  const int fntsize_pixel = fontattr_.size * 4;
+  FT_Set_Pixel_Sizes(ftface, 0, fntsize_pixel);
+
+  /* Set fontattributes in advance */
+
+  // Set font baseline
+  if (fontattr_.baseline_offset == 0)
+  {
+    //fontattr_.baseline_offset = fntsize_pixel;
+    fontattr_.baseline_offset = fntsize_pixel * (1.0f + (float)ftface->descender / ftface->height);
+  }
 
   // Prepare some basic glyphs at first ...
   uint32_t glyph_init[128];
@@ -187,13 +205,16 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
     g.codepoint = chrs[i];
     g.width = ftface->glyph->bitmap.width;
     g.height = ftface->glyph->bitmap.rows;
+    g.pos_x = ftface->glyph->bitmap_left;
+    g.pos_y = ftface->glyph->bitmap_top;
+    g.adv_x = ftface->glyph->advance.x >> 6;
 
     // XXX: generate writable bitmap instantly
     uint32_t* bitmap = (uint32_t*)malloc(g.width * g.height * sizeof(uint32_t));
     for (int x = 0; x < g.width; ++x) {
       for (int y = 0; y < g.height; ++y) {
         char a = ftface->glyph->bitmap.buffer[x + y * g.width];
-        bitmap[x + y * g.width] = 0xffffffff;//a << 24 | 0x00ffffff;
+        bitmap[x + y * g.width] = a << 24 | 0x00ffffff;
       }
     }
     auto* cache = GetWritableBitmapCache(g.width, g.height);
@@ -296,6 +317,9 @@ void Font::Render()
   int cur_x = 0, cur_y = 0;
   for (const auto* g : textglyph_)
   {
+    cur_x += g->pos_x;
+    cur_y = fontattr_.baseline_offset - g->pos_y;
+
     vi[0].r = vi[0].g = vi[0].b = vi[0].a = 1.0f;
     vi[0].x = cur_x;
     vi[0].y = cur_y;
@@ -324,7 +348,7 @@ void Font::Render()
     vi[3].sx = g->sx1;
     vi[3].sy = g->sy2;
 
-    cur_x += g->width;
+    cur_x += g->adv_x - g->pos_x;
 
     glBindTexture(GL_TEXTURE_2D, g->texidx);
     Graphic::RenderQuad(vi);

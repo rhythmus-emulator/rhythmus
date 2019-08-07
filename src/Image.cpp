@@ -68,7 +68,14 @@ void Image::CommitImage(bool delete_data)
   glBindTexture(GL_TEXTURE_2D, textureID_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
     GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data_ptr_);
+
+  /* do not render outside texture, clamp it. */
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+  /* prevent font mumbling when minimized, prevent cracking when magnified. */
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   if (delete_data)
   {
