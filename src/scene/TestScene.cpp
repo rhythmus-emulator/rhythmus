@@ -15,6 +15,10 @@ TestScene::~TestScene()
 
 void TestScene::Render()
 {
+  spr_.Update();
+  spr2_.Update();
+  font_.Update();
+
   spr_.Render();
   spr2_.Render();
   font_.Render();
@@ -34,14 +38,14 @@ void TestScene::LoadScene()
       0, 0, 100, 100,
       1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, 0.0f, 0.0f, 50, 50, 100, 100
+      0.0f, 0.0f, 0.0f, 50, 50, 100, 100, 1.0f, 1.0f
     }, 1000, 0, true, TweenTypes::kTweenTypeEaseOut
     });
   spr_.get_animation().AddTween({ {
       0, 0, 110, 110,
       1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, 0.0f, glm::radians(90.0f), 55, 55, 100, 200
+      0.0f, 0.0f, glm::radians(90.0f), 55, 55, 100, 200, 1.0f, 1.5f
     }, 1500, 0, true, TweenTypes::kTweenTypeEaseOut
     });
 
@@ -56,7 +60,8 @@ void TestScene::LoadScene()
   //font_.PrepareGlyph ...
   font_.Commit();
   font_.SetText("Hello World!");
-  font_.SetPos(10, 10);
+  font_.SetPos(30, 10);
+  font_.SetScale(1.0f, 1.0f);
 }
 
 void TestScene::CloseScene()

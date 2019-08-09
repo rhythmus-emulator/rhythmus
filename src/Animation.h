@@ -59,6 +59,7 @@ public:
   void SetSize(float w, float h);
   void SetRGB(float r, float g, float b);
   void SetAlpha(float a);
+  void SetScale(float x, float y);
 private:
   std::list<Tween> tweens_;
   TweenInfo current_tween_;

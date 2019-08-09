@@ -9,6 +9,7 @@ SpriteAnimation::SpriteAnimation()
   current_tween_.sw = current_tween_.sh = 1.0f;
   SetRGB(1.0f, 1.0f, 1.0f);
   SetAlpha(1.0f);
+  SetScale(1.0f, 1.0f);
 
   ani_texture_.cnt = 1;
   ani_texture_.divx = 1;
@@ -172,7 +173,9 @@ void SpriteAnimation::GetDrawInfo(DrawInfo& di)
   TWEEN(pi.tx) \
   TWEEN(pi.ty) \
   TWEEN(pi.x) \
-  TWEEN(pi.y)
+  TWEEN(pi.y) \
+  TWEEN(pi.sx) \
+  TWEEN(pi.sy)
 
 void SpriteAnimation::UpdateTween()
 {
@@ -291,6 +294,12 @@ void SpriteAnimation::SetRGB(float r, float g, float b)
   current_tween_.r = r;
   current_tween_.g = g;
   current_tween_.b = b;
+}
+
+void SpriteAnimation::SetScale(float x, float y)
+{
+  current_tween_.pi.sx = x;
+  current_tween_.pi.sy = y;
 }
 
 }

@@ -366,7 +366,7 @@ void Graphic::SetModelIdentity()
   glUniformMatrix4fv(2, 1, GL_FALSE, &m_model_[0][0]);
 }
 
-void Graphic::SetModelRotation(const ProjectionInfo& pi)
+void Graphic::SetModel(const ProjectionInfo& pi)
 {
   m_model_ = glm::mat4(1.0f);
 
@@ -374,20 +374,27 @@ void Graphic::SetModelRotation(const ProjectionInfo& pi)
   {
     /* Just do translation */
     m_model_ = glm::translate(m_model_, { pi.x, pi.y, 0.0f });
+
+    /* scale if necessary. */
+    if (pi.sx != 1.0f || pi.sy != 1.0f)
+      m_model_ = glm::scale(m_model_, { pi.sx, pi.sy, 0.0f });
   }
   else
   {
     // NOTE: matrix is multiplied in reversed order.
     m_model_ = glm::translate(m_model_, { pi.tx + pi.x, pi.ty + pi.y, 0.0f });
 
+    // rotation for each axis
     if (pi.rotx != 0)
       m_model_ = glm::rotate(m_model_, pi.rotx, { 1.0f, 0.0f, 0.0f });
-
     if (pi.roty != 0)
       m_model_ = glm::rotate(m_model_, pi.roty, { 0.0f, 1.0f, 0.0f });
-
     if (pi.rotz != 0)
       m_model_ = glm::rotate(m_model_, pi.rotz, { 0.0f, 0.0f, 1.0f });
+
+    /* scale if necessary. */
+    if (pi.sx != 1.0f || pi.sy != 1.0f)
+      m_model_ = glm::scale(m_model_, { pi.sx, pi.sy, 0.0f });
 
     // TODO: glm::radians
     m_model_ = glm::translate(m_model_, { -pi.tx, -pi.ty, 0.0f });
@@ -419,12 +426,23 @@ void Graphic::RenderQuad(const VertexInfo* vi)
 
 void Graphic::RenderQuad(const DrawInfo& di)
 {
-  Graphic &g = Graphic::getInstance();
-  g.SetProjOrtho();
-  //g.SetProjPerspectiveCenter();
-  g.SetModelRotation(di.pi);
+  SetProj(di.pi);
   RenderQuad(di.vi);
 }
+
+void Graphic::SetProj(const ProjectionInfo& pi)
+{
+  Graphic &g = Graphic::getInstance();
+
+  /* Prefer Ortho projection if not rotX / rotY */
+  if (pi.rotx == .0f && pi.roty == .0f)
+    g.SetProjOrtho();
+  else
+    g.SetProjPerspectiveCenter();
+
+  g.SetModel(pi);
+}
+
 #else
 bool Graphic::CompileShader()
 {

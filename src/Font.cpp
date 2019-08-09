@@ -279,41 +279,19 @@ float Font::GetTextWidth(const std::string& s)
 void Font::SetText(const std::string& s)
 {
   textglyph_.clear();
+  textvertex_.clear();
 
   uint32_t s32[1024];
   int s32len = 0;
   ConvertStringToCodepoint(s, s32, s32len, 1024);
 
+  // create textglyph
   for (int i = 0; i < s32len; ++i)
     textglyph_.push_back(GetGlyph(s32[i]));
-}
 
-void Font::ConvertStringToCodepoint(const std::string& s, uint32_t *s32, int& lenout, int maxlen)
-{
-  if (maxlen < 0)
-    maxlen = 0x7fffffff;
-
-  // TODO: convert string to uint32 completely
-  for (int i = 0; i < s.size() && i < maxlen; ++i) s32[i] = s[i], lenout++;
-}
-
-FontBitmap* Font::GetWritableBitmapCache(int w, int h)
-{
-  if (fontbitmap_.empty() || !fontbitmap_.back()->IsWritable(w, h))
-    fontbitmap_.push_back(new FontBitmap(defFontCacheWidth, defFontCacheHeight));
-  return fontbitmap_.back();
-}
-
-void Font::Render()
-{
-  // TODO: check animation is in motion
-
-  // TODO: Set Proj / View matrix
-  Graphic::getInstance().SetProjOrtho();
-  Graphic::getInstance().SetModelIdentity();
-
-  // Draw vertex by given quad
-  VertexInfo vi[4];
+  // create textvertex
+  TextVertexInfo tvi;
+  VertexInfo* vi = tvi.vi;
   int cur_x = 0, cur_y = 0;
   for (const auto* g : textglyph_)
   {
@@ -349,11 +327,43 @@ void Font::Render()
     vi[3].sy = g->sy2;
 
     cur_x += g->adv_x - g->pos_x;
+    tvi.texid = g->texidx;
 
-    glBindTexture(GL_TEXTURE_2D, g->texidx);
-    Graphic::RenderQuad(vi);
+    textvertex_.push_back(tvi);
+  }
+}
+
+void Font::ConvertStringToCodepoint(const std::string& s, uint32_t *s32, int& lenout, int maxlen)
+{
+  if (maxlen < 0)
+    maxlen = 0x7fffffff;
+
+  // TODO: convert string to uint32 completely
+  for (int i = 0; i < s.size() && i < maxlen; ++i) s32[i] = s[i], lenout++;
+}
+
+FontBitmap* Font::GetWritableBitmapCache(int w, int h)
+{
+  if (fontbitmap_.empty() || !fontbitmap_.back()->IsWritable(w, h))
+    fontbitmap_.push_back(new FontBitmap(defFontCacheWidth, defFontCacheHeight));
+  return fontbitmap_.back();
+}
+
+void Font::Render()
+{
+  // Set Proj / View matrix
+  Graphic::getInstance().SetProjOrtho();
+  Graphic::getInstance().SetModel(get_drawinfo().pi);
+
+  // Draw vertex by given quad
+  // XXX: is it better to cache vertex?
+  for (const TextVertexInfo& tvi: textvertex_)
+  {
+    glBindTexture(GL_TEXTURE_2D, tvi.texid);
+    Graphic::RenderQuad(tvi.vi);
   }
 
+  /* TESTCODE for rendering whole glyph texture */
 #if 0
   glBindTexture(GL_TEXTURE_2D, textglyph_[0]->texidx);
   vi[0].x = 10;

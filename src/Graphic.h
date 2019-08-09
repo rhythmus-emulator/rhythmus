@@ -10,17 +10,30 @@ namespace rhythmus
 
 /* @brief Rendering vertex info. */
 struct VertexInfo {
+  // vertex pos
   float x, y, z;
+
+  // texture pos
   float sx, sy;
+
+  // color blending
   float r, g, b, a;
 };
 
 /* @brief Projection info for each object. */
 struct ProjectionInfo
 {
+  // rotation for each axis
   float rotx, roty, rotz;
-  float tx, ty;   // translation center, which means center of rotation.
-  float x, y;     // rendering center
+
+  // center of rotation
+  float tx, ty;
+
+  // translation offset
+  float x, y;
+
+  // scale x / y
+  float sx, sy;
 };
 
 /* @brief Total info required for rendering a object. */
@@ -60,12 +73,13 @@ public:
   void SetProjPerspective(float cx, float cy);
   void SetProjPerspectiveCenter();
   void SetModelIdentity();
-  void SetModelRotation(const ProjectionInfo& pi);
+  void SetModel(const ProjectionInfo& pi);
 
   static Graphic& getInstance();
 
   static void RenderQuad(const VertexInfo* vi);
   static void RenderQuad(const DrawInfo& di);
+  static void SetProj(const ProjectionInfo& pi);
 private:
   Graphic();
   ~Graphic();
