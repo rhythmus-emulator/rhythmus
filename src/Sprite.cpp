@@ -20,7 +20,12 @@ SpriteAnimation& Sprite::get_animation()
   return ani_;
 }
 
-const DrawInfo& Sprite::get_drawinfo()
+const DrawInfo& Sprite::get_drawinfo() const
+{
+  return di_;
+}
+
+DrawInfo& Sprite::get_drawinfo()
 {
   return di_;
 }

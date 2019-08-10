@@ -13,7 +13,6 @@ public:
   virtual ~Sprite();
 
   SpriteAnimation& get_animation();
-  const DrawInfo& get_drawinfo();
   void SetImage(ImageAuto img);
   void SetPos(int x, int y);
   void SetSize(int w, int h);
@@ -28,6 +27,10 @@ public:
 
   /* Render based on updated information */
   virtual void Render();
+
+protected:
+  const DrawInfo& get_drawinfo() const;
+  DrawInfo& get_drawinfo();
 
 private:
   ImageAuto img_;

@@ -2,6 +2,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include <iostream>
+#include <algorithm>
 
 namespace rhythmus
 {
@@ -143,6 +144,7 @@ Font::Font()
 
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
+  text_render_ctx_.width = text_render_ctx_.height = .0f;
 }
 
 Font::~Font()
@@ -172,6 +174,7 @@ bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
 
   // Set size to load glyphs as
   const int fntsize_pixel = fontattr_.size * 4;
+  fontattr_.height = fntsize_pixel;
   FT_Set_Pixel_Sizes(ftface, 0, fntsize_pixel);
 
   /* Set fontattributes in advance */
@@ -282,8 +285,8 @@ float Font::GetTextWidth(const std::string& s)
 
 void Font::SetText(const std::string& s)
 {
-  textglyph_.clear();
-  textvertex_.clear();
+  text_render_ctx_.textglyph.clear();
+  text_render_ctx_.textvertex.clear();
 
   uint32_t s32[1024];
   int s32len = 0;
@@ -291,13 +294,13 @@ void Font::SetText(const std::string& s)
 
   // create textglyph
   for (int i = 0; i < s32len; ++i)
-    textglyph_.push_back(GetGlyph(s32[i]));
+    text_render_ctx_.textglyph.push_back(GetGlyph(s32[i]));
 
   // create textvertex
   TextVertexInfo tvi;
   VertexInfo* vi = tvi.vi;
   int cur_x = 0, cur_y = 0, line_y = 0;
-  for (const auto* g : textglyph_)
+  for (const auto* g : text_render_ctx_.textglyph)
   {
     // line-breaking
     if (g->codepoint == '\n')
@@ -305,7 +308,7 @@ void Font::SetText(const std::string& s)
       if (do_line_breaking_)
       {
         cur_x = 0;
-        line_y += fontattr_.size * 4 /* XXX: need pixel size? */;
+        line_y += fontattr_.height;
       }
       continue;
     }
@@ -344,10 +347,15 @@ void Font::SetText(const std::string& s)
     cur_x += g->adv_x - g->pos_x;
     tvi.texid = g->texidx;
 
-    textvertex_.push_back(tvi);
+    text_render_ctx_.textvertex.push_back(tvi);
+
+    text_render_ctx_.width = std::max(text_render_ctx_.width, (float)cur_x);
   }
+
+  text_render_ctx_.height = line_y + fontattr_.height;
 }
 
+// XXX: Font alignment to right won't work when text is multiline.
 void Font::SetAlignment(FontAlignments align)
 {
   font_alignment_ = align;
@@ -362,8 +370,45 @@ void Font::Update()
 {
   Sprite::Update();
 
-  // check and set alignment
-
+  // set alignment-related options
+  if (get_animation().GetCurrentTweenInfo().w >= 0)
+  {
+    const float w = get_animation().GetCurrentTweenInfo().w;
+    float ratio = 1.0f;
+    switch (font_alignment_)
+    {
+    case FontAlignments::kFontAlignLeft:
+      break;
+    case FontAlignments::kFontAlignFitMaxsize:
+      ratio = std::min(1.0f, w / text_render_ctx_.width);
+      get_drawinfo().pi.sx *= ratio;
+      break;
+    case FontAlignments::kFontAlignCenter:
+      if (text_render_ctx_.width < w)
+        get_drawinfo().pi.x += (text_render_ctx_.width - w) / 2;
+      break;
+    case FontAlignments::kFontAlignCenterFitMaxsize:
+      ratio = std::min(1.0f, w / text_render_ctx_.width);
+      get_drawinfo().pi.sx *= ratio;
+      if (ratio >= 1.0f)
+        get_drawinfo().pi.x += (w - text_render_ctx_.width) / 2;
+      break;
+    case FontAlignments::kFontAlignRight:
+      if (text_render_ctx_.width < w)
+        get_drawinfo().pi.x += text_render_ctx_.width - w;
+      break;
+    case FontAlignments::kFontAlignRightFitMaxsize:
+      ratio = std::min(1.0f, w / text_render_ctx_.width);
+      get_drawinfo().pi.sx *= ratio;
+      if (ratio >= 1.0f)
+        get_drawinfo().pi.x += w - text_render_ctx_.width;
+      break;
+    case FontAlignments::kFontAlignStretch:
+      ratio = w / text_render_ctx_.width;
+      get_drawinfo().pi.sx *= ratio;
+      break;
+    }
+  }
 }
 
 void Font::ConvertStringToCodepoint(const std::string& s, uint32_t *s32, int& lenout, int maxlen)
@@ -390,7 +435,7 @@ void Font::Render()
 
   // Draw vertex by given quad
   // XXX: is it better to cache vertex?
-  for (const TextVertexInfo& tvi: textvertex_)
+  for (const TextVertexInfo& tvi: text_render_ctx_.textvertex)
   {
     glBindTexture(GL_TEXTURE_2D, tvi.texid);
     Graphic::RenderQuad(tvi.vi);
@@ -432,7 +477,8 @@ void Font::ClearGlyph()
   fontbitmap_.clear();
 
   // release glyph & text cache
-  textglyph_.clear();
+  text_render_ctx_.textglyph.clear();
+  text_render_ctx_.textvertex.clear();
   glyph_.clear();
   text_.clear();
   

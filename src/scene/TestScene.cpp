@@ -63,6 +63,8 @@ void TestScene::LoadScene()
   font_.SetPos(30, 10);
   font_.SetScale(0.8f, 1.0f);
   font_.SetRotation(0, 0, 0.3);
+  font_.SetSize(200, 300);
+  font_.SetAlignment(FontAlignments::kFontAlignStretch);
 }
 
 void TestScene::CloseScene()
