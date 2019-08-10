@@ -59,7 +59,7 @@ void TestScene::LoadScene()
   font_.LoadFont("gyeonggi.ttf", attr);
   //font_.PrepareGlyph ...
   font_.Commit();
-  font_.SetText("Hello World!");
+  font_.SetText("Hello World!\nWith Line breaking");
   font_.SetPos(30, 10);
   font_.SetScale(0.8f, 1.0f);
   font_.SetRotation(0, 0, 0.3);

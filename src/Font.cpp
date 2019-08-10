@@ -129,7 +129,8 @@ GLuint FontBitmap::get_texid() const
 // --------------------------------- class Font
 
 Font::Font()
-  : ftface_(0)
+  : ftface_(0), font_alignment_(FontAlignments::kFontAlignLeft),
+    do_line_breaking_(true)
 {
   if (ftLibCnt++ == 0)
   {
@@ -139,6 +140,9 @@ Font::Font()
       return;
     }
   }
+
+  alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
+  alignment_attrs_.tx = alignment_attrs_.ty = .0f;
 }
 
 Font::~Font()
@@ -292,11 +296,22 @@ void Font::SetText(const std::string& s)
   // create textvertex
   TextVertexInfo tvi;
   VertexInfo* vi = tvi.vi;
-  int cur_x = 0, cur_y = 0;
+  int cur_x = 0, cur_y = 0, line_y = 0;
   for (const auto* g : textglyph_)
   {
+    // line-breaking
+    if (g->codepoint == '\n')
+    {
+      if (do_line_breaking_)
+      {
+        cur_x = 0;
+        line_y += fontattr_.size * 4 /* XXX: need pixel size? */;
+      }
+      continue;
+    }
+
     cur_x += g->pos_x;
-    cur_y = fontattr_.baseline_offset - g->pos_y;
+    cur_y = line_y + fontattr_.baseline_offset - g->pos_y;
 
     vi[0].r = vi[0].g = vi[0].b = vi[0].a = 1.0f;
     vi[0].x = cur_x;
@@ -331,6 +346,24 @@ void Font::SetText(const std::string& s)
 
     textvertex_.push_back(tvi);
   }
+}
+
+void Font::SetAlignment(FontAlignments align)
+{
+  font_alignment_ = align;
+}
+
+void Font::SetLineBreaking(bool line_break)
+{
+  do_line_breaking_ = line_break;
+}
+
+void Font::Update()
+{
+  Sprite::Update();
+
+  // check and set alignment
+
 }
 
 void Font::ConvertStringToCodepoint(const std::string& s, uint32_t *s32, int& lenout, int maxlen)
