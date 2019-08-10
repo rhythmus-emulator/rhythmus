@@ -302,4 +302,17 @@ void SpriteAnimation::SetScale(float x, float y)
   current_tween_.pi.sy = y;
 }
 
+void SpriteAnimation::SetRotation(float x, float y, float z)
+{
+  current_tween_.pi.rotx = x;
+  current_tween_.pi.roty = y;
+  current_tween_.pi.rotz = z;
+}
+
+void SpriteAnimation::SetCenter(float x, float y)
+{
+  current_tween_.pi.tx = x;
+  current_tween_.pi.ty = y;
+}
+
 }

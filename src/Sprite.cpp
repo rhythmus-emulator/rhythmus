@@ -57,6 +57,16 @@ void Sprite::SetScale(float x, float y)
   ani_.SetScale(x, y);
 }
 
+void Sprite::SetRotation(float x, float y, float z)
+{
+  ani_.SetRotation(x, y, z);
+}
+
+void Sprite::SetCenter(float x, float y)
+{
+  ani_.SetCenter(x, y);
+}
+
 void Sprite::Render()
 {
   // Render with given frame

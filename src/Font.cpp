@@ -150,7 +150,7 @@ Font::~Font()
 bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
 {
   /* invalid font ... */
-  if (fontattr_.size == 0)
+  if (attrs.size <= 0)
   {
     std::cerr << "Invalid font size (0)" << std::endl;
     return false;
@@ -365,6 +365,7 @@ void Font::Render()
 
   /* TESTCODE for rendering whole glyph texture */
 #if 0
+  VertexInfo vi[4];
   glBindTexture(GL_TEXTURE_2D, textglyph_[0]->texidx);
   vi[0].x = 10;
   vi[0].y = 10;

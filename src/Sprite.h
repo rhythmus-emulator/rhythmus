@@ -20,6 +20,8 @@ public:
   void SetAlpha(float a);
   void SetRGB(float r, float g, float b);
   void SetScale(float x, float y);
+  void SetRotation(float x, float y, float z);
+  void SetCenter(float x, float y);
 
   /* Update before rendering */
   virtual void Update();

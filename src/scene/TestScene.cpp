@@ -54,14 +54,15 @@ void TestScene::LoadScene()
   spr2_.SetSize(120, 120);
 
   FontAttributes attr;
-  memset(&attr, 0, sizeof(attr));
+  memset(&attr, 0, sizeof(FontAttributes));
   attr.size = 12;
   font_.LoadFont("gyeonggi.ttf", attr);
   //font_.PrepareGlyph ...
   font_.Commit();
   font_.SetText("Hello World!");
   font_.SetPos(30, 10);
-  font_.SetScale(1.0f, 1.0f);
+  font_.SetScale(0.8f, 1.0f);
+  font_.SetRotation(0, 0, 0.3);
 }
 
 void TestScene::CloseScene()
