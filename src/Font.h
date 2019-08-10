@@ -136,8 +136,8 @@ public:
   void ReleaseFont();
 
 private:
-  // FT_Face type
-  void *ftface_;
+  // FT_Face, FT_Stroker type
+  void *ftface_, *ftstroker_;
 
   // cached glyph
   std::vector<FontGlyph> glyph_;

@@ -1,6 +1,7 @@
 #include "Font.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_STROKER_H
 #include <iostream>
 #include <algorithm>
 
@@ -169,7 +170,7 @@ bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
     return false;
   }
 
-  /* Read freetype font */
+  /* Create freetype font */
   int r = FT_New_Face(ftLib, ttfpath, 0, (FT_Face*)&ftface_);
   if (r)
   {
@@ -178,6 +179,17 @@ bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
   }
   fontattr_ = attrs;
   FT_Face ftface = (FT_Face)ftface_;
+
+  /* Create freetype stroker (if necessary) */
+  if (fontattr_.outline_width > 0)
+  {
+    FT_Stroker stroker;
+    FT_Stroker_New(ftLib, &stroker);
+    FT_Stroker_Set(stroker, fontattr_.outline_width * 32 /* XXX: is it good enough? */,
+      FT_STROKER_LINECAP_ROUND, FT_STROKER_LINEJOIN_ROUND, 0);
+    ftstroker_ = stroker;
+  }
+  else ftstroker_ = 0;
 
   // Set size to load glyphs as
   const int fntsize_pixel = fontattr_.size * 4;
@@ -207,34 +219,103 @@ bool Font::LoadLR2Font(const char* lr2fontpath)
   return false;
 }
 
+#define BLEND_RGBA
+#ifdef BLEND_RGBA
+inline void __blend(unsigned char result[4], unsigned char fg[4], unsigned char bg[4])
+{
+  unsigned int alpha = fg[3] + 1;
+  unsigned int inv_alpha = 256 - fg[3];
+  result[0] = (unsigned char)((alpha * fg[0] + inv_alpha * bg[0]) >> 8);
+  result[1] = (unsigned char)((alpha * fg[1] + inv_alpha * bg[1]) >> 8);
+  result[2] = (unsigned char)((alpha * fg[2] + inv_alpha * bg[2]) >> 8);
+  result[3] = bg[3];
+}
+#else
+inline void __blend(unsigned char result[4], unsigned char fg[4], unsigned char bg[4])
+{
+  unsigned int alpha = fg[0] + 1;
+  unsigned int inv_alpha = 256 - fg[0];
+  result[1] = (unsigned char)((alpha * fg[1] + inv_alpha * bg[1]) >> 8);
+  result[2] = (unsigned char)((alpha * fg[2] + inv_alpha * bg[2]) >> 8);
+  result[3] = (unsigned char)((alpha * fg[3] + inv_alpha * bg[3]) >> 8);
+  result[0] = bg[0];
+}
+#endif
+
 void Font::PrepareGlyph(uint32_t *chrs, int count)
 {
   FT_Face ftface = (FT_Face)ftface_;
+  FT_Stroker ftStroker = (FT_Stroker)ftstroker_;
+  FT_Glyph glyph;
+  FT_BitmapGlyph bglyph;
   FontGlyph g;
   for (int i = 0; i < count; ++i)
   {
-    /* just ignore failed character */
-    if (FT_Load_Char(ftface, chrs[i], FT_LOAD_RENDER))
+    /* Use FT_Load_Char, which calls and find Glyph index internally ... */
+    /* and... just ignore failed character. */
+    if (FT_Load_Char(ftface, chrs[i], FT_LOAD_NO_BITMAP))
       continue;
-    g.codepoint = chrs[i];
-    g.width = ftface->glyph->bitmap.width;
-    g.height = ftface->glyph->bitmap.rows;
-    g.pos_x = ftface->glyph->bitmap_left;
-    g.pos_y = ftface->glyph->bitmap_top;
-    g.adv_x = ftface->glyph->advance.x >> 6;
 
-    // XXX: generate writable bitmap instantly
-    uint32_t* bitmap = (uint32_t*)malloc(g.width * g.height * sizeof(uint32_t));
-    for (int x = 0; x < g.width; ++x) {
-      for (int y = 0; y < g.height; ++y) {
-        char a = ftface->glyph->bitmap.buffer[x + y * g.width];
-        bitmap[x + y * g.width] = a << 24 | (0x00ffffff & fontattr_.color);
+    FT_Get_Glyph(ftface->glyph, &glyph);
+    FT_Glyph_To_Bitmap(&glyph, FT_RENDER_MODE_NORMAL, 0, 1);
+    bglyph = (FT_BitmapGlyph)glyph;
+
+    g.codepoint = chrs[i];
+    g.width = bglyph->bitmap.width;
+    g.height = bglyph->bitmap.rows;
+    g.pos_x = bglyph->left;
+    g.pos_y = bglyph->top;
+    g.adv_x = ftface->glyph->advance.x >> 6;
+    g.srcx = g.srcy = g.texidx = 0;
+
+    /* generate bitmap only when size is valid */
+    if (ftface->glyph->bitmap.width > 0)
+    {
+      // generate foreground bitmap instantly
+      // XXX: need texture option
+      uint32_t* bitmap = (uint32_t*)malloc(g.width * g.height * sizeof(uint32_t));
+      for (int x = 0; x < g.width; ++x) {
+        for (int y = 0; y < g.height; ++y) {
+          char a = bglyph->bitmap.buffer[x + y * g.width];
+          bitmap[x + y * g.width] = a << 24 | (0x00ffffff & fontattr_.color);
+        }
       }
+      FT_Done_Glyph(glyph);
+
+      // create outline if necessary.
+      // XXX: need to check error code
+      if (ftStroker)
+      {
+        FT_Get_Glyph(ftface->glyph, &glyph);
+        FT_Glyph_Stroke(&glyph, ftStroker, 1);
+        FT_Glyph_To_Bitmap(&glyph, FT_RENDER_MODE_NORMAL, 0, 1);
+        bglyph = (FT_BitmapGlyph)glyph;
+
+        // blending to bitmap
+        // XXX: it's quite corpse code, but ... it works! anyway.
+        uint32_t bit_, fgbit_;
+        int border_offset_x = g.pos_x - bglyph->left;
+        int border_offset_y = bglyph->top - g.pos_y;
+        for (int x = 0; x < bglyph->bitmap.width && x - border_offset_x < g.width; ++x) {
+          for (int y = 0; y < bglyph->bitmap.rows && y - border_offset_y < g.height; ++y) {
+            if (x < border_offset_x || y < border_offset_y) continue;
+            char a = bglyph->bitmap.buffer[x + y * bglyph->bitmap.width];
+            fgbit_ = a << 24 | (0x00ffffff & fontattr_.outline_color);
+            const size_t bitmap_offset = x - border_offset_x + (y - border_offset_y) * g.width;
+            __blend((unsigned char*)&bit_, (unsigned char*)&fgbit_, (unsigned char*)&bitmap[bitmap_offset]);
+            bitmap[bitmap_offset] = bit_;
+          }
+        }
+
+        FT_Done_Glyph(glyph);
+      }
+
+      /* upload bitmap to cache */
+      auto* cache = GetWritableBitmapCache(g.width, g.height);
+      cache->Write(bitmap, g.width, g.height, g);
+      g.texidx = cache->get_texid();
+      free(bitmap);
     }
-    auto* cache = GetWritableBitmapCache(g.width, g.height);
-    cache->Write(bitmap, g.width, g.height, g);
-    g.texidx = cache->get_texid();
-    free(bitmap);
 
     glyph_.push_back(g);
   }
@@ -320,6 +401,10 @@ void Font::GetTextVertexInfo(const std::string& s,
       continue;
     }
 
+    // no-size glyph is ignored
+    if (g->codepoint == 0)
+      continue;
+
     cur_x += g->pos_x;
     cur_y = line_y + fontattr_.baseline_offset - g->pos_y;
 
@@ -395,6 +480,13 @@ void Font::ClearGlyph()
 
 void Font::ReleaseFont()
 {
+  if (ftstroker_)
+  {
+    FT_Stroker ftstroker = (FT_Stroker)ftstroker_;
+    FT_Stroker_Done(ftstroker);
+    ftstroker_ = 0;
+  }
+
   if (ftface_)
   {
     FT_Face ft = (FT_Face)ftface_;

@@ -56,9 +56,9 @@ void TestScene::LoadScene()
   FontAttributes attr;
   memset(&attr, 0, sizeof(FontAttributes));
   attr.size = 12;
-  attr.outline_width = 2;
+  attr.outline_width = 3;
   attr.color = 0xfffffff;
-  attr.outline_color = 0xff333333;
+  attr.outline_color = 0xffffcccc;
   font_.LoadFont("gyeonggi.ttf", attr);
   //font_.PrepareGlyph ...
   font_.Commit();
@@ -66,8 +66,8 @@ void TestScene::LoadScene()
   text_.SetFont(&font_);
   text_.SetText("Hello World!\nWith Line breaking");
   text_.SetPos(30, 10);
-  text_.SetScale(0.8f, 1.0f);
-  text_.SetRotation(0, 0, 0.3);
+  //text_.SetScale(0.8f, 1.0f);
+  //text_.SetRotation(0, 0, 0.3);
   //text_.SetSize(200, 300);
   text_.SetAlignment(FontAlignments::kFontAlignStretch);
 }
