@@ -125,6 +125,18 @@ GLuint FontBitmap::get_texid() const
   return texid_;
 }
 
+void FontBitmap::SetToReadOnly()
+{
+  // update before remove cache
+  Update();
+
+  if (bitmap_)
+  {
+    free(bitmap_);
+    bitmap_ = 0;
+  }
+}
+
 
 
 // --------------------------------- class Font
@@ -359,7 +371,11 @@ void Font::ConvertStringToCodepoint(const std::string& s,
 FontBitmap* Font::GetWritableBitmapCache(int w, int h)
 {
   if (fontbitmap_.empty() || !fontbitmap_.back()->IsWritable(w, h))
+  {
+    if (!fontbitmap_.empty())
+      fontbitmap_.back()->SetToReadOnly();
     fontbitmap_.push_back(new FontBitmap(defFontCacheWidth, defFontCacheHeight));
+  }
   return fontbitmap_.back();
 }
 

@@ -93,6 +93,12 @@ public:
   bool IsWritable(int w, int h) const;
   GLuint get_texid() const;
 
+  /**
+   * Delete memory cache and set as read-only.
+   * Texture remains, so we can still use font texture while saving memory.
+   */
+  void SetToReadOnly();
+
 private:
   uint32_t* bitmap_;
   GLuint texid_;
