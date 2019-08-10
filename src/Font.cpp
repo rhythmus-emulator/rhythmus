@@ -130,8 +130,7 @@ GLuint FontBitmap::get_texid() const
 // --------------------------------- class Font
 
 Font::Font()
-  : ftface_(0), font_alignment_(FontAlignments::kFontAlignLeft),
-    do_line_breaking_(true)
+  : ftface_(0)
 {
   if (ftLibCnt++ == 0)
   {
@@ -141,10 +140,6 @@ Font::Font()
       return;
     }
   }
-
-  alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
-  alignment_attrs_.tx = alignment_attrs_.ty = .0f;
-  text_render_ctx_.width = text_render_ctx_.height = .0f;
 }
 
 Font::~Font()
@@ -221,7 +216,7 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
     for (int x = 0; x < g.width; ++x) {
       for (int y = 0; y < g.height; ++y) {
         char a = ftface->glyph->bitmap.buffer[x + y * g.width];
-        bitmap[x + y * g.width] = a << 24 | 0x00ffffff;
+        bitmap[x + y * g.width] = a << 24 | (0x00ffffff & fontattr_.color);
       }
     }
     auto* cache = GetWritableBitmapCache(g.width, g.height);
@@ -283,29 +278,29 @@ float Font::GetTextWidth(const std::string& s)
   return r;
 }
 
-void Font::SetText(const std::string& s)
+void Font::GetTextVertexInfo(const std::string& s,
+  std::vector<TextVertexInfo>& vtvi,
+  bool do_line_breaking) const
 {
-  text_render_ctx_.textglyph.clear();
-  text_render_ctx_.textvertex.clear();
-
   uint32_t s32[1024];
   int s32len = 0;
   ConvertStringToCodepoint(s, s32, s32len, 1024);
 
   // create textglyph
+  std::vector<const FontGlyph*> textglyph;
   for (int i = 0; i < s32len; ++i)
-    text_render_ctx_.textglyph.push_back(GetGlyph(s32[i]));
+    textglyph.push_back(GetGlyph(s32[i]));
 
   // create textvertex
   TextVertexInfo tvi;
   VertexInfo* vi = tvi.vi;
   int cur_x = 0, cur_y = 0, line_y = 0;
-  for (const auto* g : text_render_ctx_.textglyph)
+  for (const auto* g : textglyph)
   {
     // line-breaking
     if (g->codepoint == '\n')
     {
-      if (do_line_breaking_)
+      if (do_line_breaking)
       {
         cur_x = 0;
         line_y += fontattr_.height;
@@ -347,31 +342,131 @@ void Font::SetText(const std::string& s)
     cur_x += g->adv_x - g->pos_x;
     tvi.texid = g->texidx;
 
-    text_render_ctx_.textvertex.push_back(tvi);
+    vtvi.push_back(tvi);
+  }
+}
 
-    text_render_ctx_.width = std::max(text_render_ctx_.width, (float)cur_x);
+void Font::ConvertStringToCodepoint(const std::string& s,
+  uint32_t *s32, int& lenout, int maxlen) const
+{
+  if (maxlen < 0)
+    maxlen = 0x7fffffff;
+
+  // TODO: convert string to uint32 completely
+  for (int i = 0; i < s.size() && i < maxlen; ++i) s32[i] = s[i], lenout++;
+}
+
+FontBitmap* Font::GetWritableBitmapCache(int w, int h)
+{
+  if (fontbitmap_.empty() || !fontbitmap_.back()->IsWritable(w, h))
+    fontbitmap_.push_back(new FontBitmap(defFontCacheWidth, defFontCacheHeight));
+  return fontbitmap_.back();
+}
+
+void Font::ClearGlyph()
+{
+  // release texture and bitmap
+  for (auto *b : fontbitmap_)
+    delete b;
+  fontbitmap_.clear();
+
+  // release glyph cache
+  glyph_.clear();
+  
+  // reset null_glyph_ codepoint
+  null_glyph_.codepoint = 0;
+}
+
+void Font::ReleaseFont()
+{
+  if (ftface_)
+  {
+    FT_Face ft = (FT_Face)ftface_;
+    FT_Done_Face(ft);
+    ftface_ = 0;
   }
 
-  text_render_ctx_.height = line_y + fontattr_.height;
+  if (--ftLibCnt == 0)
+    FT_Done_FreeType(ftLib);
+}
+
+
+
+// --------------------------------- class Text
+
+Text::Text()
+  : font_alignment_(FontAlignments::kFontAlignLeft), do_line_breaking_(true)
+{
+  alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
+  alignment_attrs_.tx = alignment_attrs_.ty = .0f;
+  text_render_ctx_.width = text_render_ctx_.height = .0f;
+  SetFont(nullptr);
+}
+
+Text::Text(Font* font)
+  : font_alignment_(FontAlignments::kFontAlignLeft), do_line_breaking_(true)
+{
+  alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
+  alignment_attrs_.tx = alignment_attrs_.ty = .0f;
+  text_render_ctx_.width = text_render_ctx_.height = .0f;
+  SetFont(font);
+}
+
+Text::~Text()
+{
+}
+
+float Text::GetTextWidth()
+{
+  return text_render_ctx_.width;
+}
+
+void Text::SetFont(Font* font)
+{
+  font_ = font;
+}
+
+void Text::SetText(const std::string& s)
+{
+  if (!font_) return;
+
+  Clear();
+  
+  text_ = s;
+  font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
+
+  for (const auto& tvi : text_render_ctx_.textvertex)
+  {
+    text_render_ctx_.width = std::max(text_render_ctx_.width, (float)tvi.vi[2].x);
+    text_render_ctx_.height = std::max(text_render_ctx_.height, (float)tvi.vi[2].y);
+  }
 }
 
 // XXX: Font alignment to right won't work when text is multiline.
-void Font::SetAlignment(FontAlignments align)
+void Text::SetAlignment(FontAlignments align)
 {
   font_alignment_ = align;
 }
 
-void Font::SetLineBreaking(bool line_break)
+void Text::SetLineBreaking(bool enable_line_break)
 {
-  do_line_breaking_ = line_break;
+  do_line_breaking_ = enable_line_break;
 }
 
-void Font::Update()
+void Text::Clear()
+{
+  text_render_ctx_.textvertex.clear();
+  text_render_ctx_.height = text_render_ctx_.width = 0;
+  text_.clear();
+}
+
+void Text::Update()
 {
   Sprite::Update();
 
   // set alignment-related options
-  if (get_animation().GetCurrentTweenInfo().w >= 0)
+  if (get_animation().GetCurrentTweenInfo().w > 0
+    && text_render_ctx_.width > 0 && text_render_ctx_.height > 0)
   {
     const float w = get_animation().GetCurrentTweenInfo().w;
     float ratio = 1.0f;
@@ -411,23 +506,7 @@ void Font::Update()
   }
 }
 
-void Font::ConvertStringToCodepoint(const std::string& s, uint32_t *s32, int& lenout, int maxlen)
-{
-  if (maxlen < 0)
-    maxlen = 0x7fffffff;
-
-  // TODO: convert string to uint32 completely
-  for (int i = 0; i < s.size() && i < maxlen; ++i) s32[i] = s[i], lenout++;
-}
-
-FontBitmap* Font::GetWritableBitmapCache(int w, int h)
-{
-  if (fontbitmap_.empty() || !fontbitmap_.back()->IsWritable(w, h))
-    fontbitmap_.push_back(new FontBitmap(defFontCacheWidth, defFontCacheHeight));
-  return fontbitmap_.back();
-}
-
-void Font::Render()
+void Text::Render()
 {
   // Set Proj / View matrix
   Graphic::getInstance().SetProjOrtho();
@@ -435,7 +514,7 @@ void Font::Render()
 
   // Draw vertex by given quad
   // XXX: is it better to cache vertex?
-  for (const TextVertexInfo& tvi: text_render_ctx_.textvertex)
+  for (const TextVertexInfo& tvi : text_render_ctx_.textvertex)
   {
     glBindTexture(GL_TEXTURE_2D, tvi.texid);
     Graphic::RenderQuad(tvi.vi);
@@ -444,7 +523,7 @@ void Font::Render()
   /* TESTCODE for rendering whole glyph texture */
 #if 0
   VertexInfo vi[4];
-  glBindTexture(GL_TEXTURE_2D, textglyph_[0]->texidx);
+  glBindTexture(GL_TEXTURE_2D, text_render_ctx_.textvertex[0].texid);
   vi[0].x = 10;
   vi[0].y = 10;
   vi[0].sx = .0f;
@@ -467,36 +546,6 @@ void Font::Render()
 
   Graphic::RenderQuad(vi);
 #endif
-}
-
-void Font::ClearGlyph()
-{
-  // release texture and bitmap
-  for (auto *b : fontbitmap_)
-    delete b;
-  fontbitmap_.clear();
-
-  // release glyph & text cache
-  text_render_ctx_.textglyph.clear();
-  text_render_ctx_.textvertex.clear();
-  glyph_.clear();
-  text_.clear();
-  
-  // reset null_glyph_ codepoint
-  null_glyph_.codepoint = 0;
-}
-
-void Font::ReleaseFont()
-{
-  if (ftface_)
-  {
-    FT_Face ft = (FT_Face)ftface_;
-    FT_Done_Face(ft);
-    ftface_ = 0;
-  }
-
-  if (--ftLibCnt == 0)
-    FT_Done_FreeType(ftLib);
 }
 
 }

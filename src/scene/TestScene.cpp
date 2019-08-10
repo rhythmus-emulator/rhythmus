@@ -17,11 +17,11 @@ void TestScene::Render()
 {
   spr_.Update();
   spr2_.Update();
-  font_.Update();
+  text_.Update();
 
   spr_.Render();
   spr2_.Render();
-  font_.Render();
+  text_.Render();
 }
 
 void TestScene::LoadScene()
@@ -56,15 +56,20 @@ void TestScene::LoadScene()
   FontAttributes attr;
   memset(&attr, 0, sizeof(FontAttributes));
   attr.size = 12;
+  attr.outline_width = 2;
+  attr.color = 0xfffffff;
+  attr.outline_color = 0xff333333;
   font_.LoadFont("gyeonggi.ttf", attr);
   //font_.PrepareGlyph ...
   font_.Commit();
-  font_.SetText("Hello World!\nWith Line breaking");
-  font_.SetPos(30, 10);
-  font_.SetScale(0.8f, 1.0f);
-  font_.SetRotation(0, 0, 0.3);
-  font_.SetSize(200, 300);
-  font_.SetAlignment(FontAlignments::kFontAlignStretch);
+
+  text_.SetFont(&font_);
+  text_.SetText("Hello World!\nWith Line breaking");
+  text_.SetPos(30, 10);
+  text_.SetScale(0.8f, 1.0f);
+  text_.SetRotation(0, 0, 0.3);
+  //text_.SetSize(200, 300);
+  text_.SetAlignment(FontAlignments::kFontAlignStretch);
 }
 
 void TestScene::CloseScene()

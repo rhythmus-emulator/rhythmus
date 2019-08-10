@@ -20,6 +20,7 @@ private:
   Sprite spr_;
   Sprite spr2_;
   Font font_;
+  Text text_;
 };
 
 }
