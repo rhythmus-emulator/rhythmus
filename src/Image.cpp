@@ -263,9 +263,6 @@ void Image::Update()
 
       while ((decode_ret = avcodec_receive_frame(fctx->context, frame)) >= 0)
       {
-        std::cout << "FT" << cur_frame << ",";
-        //if (frame_time >= (int)Timer::GetGameTime()) break; // TODO: fix eclipsed time
-
         // convert frame to RGB24
         SwsContext* mod_ctx;
         mod_ctx = sws_getContext(frame->width, frame->height, (AVPixelFormat) frame->format,
