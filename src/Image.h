@@ -16,6 +16,7 @@ public:
   void UnloadAll();
   void UnloadTexture();
   void UnloadBitmap();
+  void Update();
   GLuint get_texture_ID() const;
   uint16_t get_width() const;
   uint16_t get_height() const;
@@ -25,6 +26,12 @@ private:
   uint8_t *data_ptr_;
   uint16_t width_, height_;
   GLuint textureID_;
+
+  /*
+   * Context used for ffmpeg playing.
+   * Must call Update() method to update movie.
+   */
+  void *ffmpeg_ctx_;
 };
 
 using ImageAuto = std::shared_ptr<Image>;

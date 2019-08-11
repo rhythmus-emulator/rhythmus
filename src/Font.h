@@ -202,7 +202,6 @@ private:
 
   // is line-breaking enabled?
   bool do_line_breaking_;
-
 };
 
 }

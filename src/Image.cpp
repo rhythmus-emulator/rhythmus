@@ -3,13 +3,50 @@
 #include <FreeImage.h>
 #include <iostream>
 
+/* ffmpeg */
+extern "C"
+{
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
+#include <libswresample/swresample.h>
+#include <libswscale/swscale.h>
+#include <libavutil/opt.h>
+}
+
+/* rutil for some string functions */
+#include "rutil.h"
+
 namespace rhythmus
 {
 
+/* ffmpeg context declaration */
+struct FFmpegContext
+{
+  AVCodec* codec;
+  AVCodecContext* context;
+  AVFormatContext* formatctx;
+};
+
+/* check whether open file as movie or image */
+bool IsFileMovie(const std::string& path)
+{
+  std::string ext = rutil::upper(rutil::GetExtension(path));
+  return ext == "MPEG" || ext == "AVI" || ext == "MP4" || ext == "MPG";
+}
+
+// -------------------------------- class Image
+
 Image::Image()
   : bitmap_ctx_(0), data_ptr_(nullptr), width_(0), height_(0),
-    textureID_(0)
+    textureID_(0), ffmpeg_ctx_(0)
 {
+  /* ffmpeg initialization */
+  static bool is_ffmpeg_initialized_ = false;
+  if (!is_ffmpeg_initialized_)
+  {
+    av_register_all();
+    is_ffmpeg_initialized_ = true;
+  }
 }
 
 Image::~Image()

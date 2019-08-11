@@ -51,7 +51,18 @@ find_package(FreeImage)
 find_package(FreeType)
 find_package(FFmpeg)
 
+#
+# Tinyxml2
+#
 add_subdirectory("${PROJECT_SOURCE_DIR}/../rhythmus-lib/src/tinyxml2"
                  "${PROJECT_SOURCE_DIR}/build/lib")
+
+# #######################
+# Add rparser           #
+#########################
+add_subdirectory("${CMAKE_SOURCE_DIR}/../rparser/src"
+                 "${CMAKE_SOURCE_DIR}/build/rparser"
+                 EXCLUDE_FROM_ALL)
+set (RPARSER_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../rparser/src")
 
 add_subdirectory(src)

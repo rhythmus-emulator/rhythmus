@@ -26,8 +26,8 @@ void TestScene::Render()
 
 void TestScene::LoadScene()
 {
-  ImageAuto img_ = ResourceManager::getInstance().LoadImage("test.png");
-  ImageAuto img2_ = ResourceManager::getInstance().LoadImage("test2.png");
+  ImageAuto img_ = ResourceManager::getInstance().LoadImage("../test/test.png");
+  ImageAuto img2_ = ResourceManager::getInstance().LoadImage("../test/test2.png");
   img_->CommitImage();
   img2_->CommitImage();
 
@@ -59,7 +59,7 @@ void TestScene::LoadScene()
   attr.outline_width = 3;
   attr.color = 0xfffffff;
   attr.outline_color = 0xffffcccc;
-  font_.LoadFont("gyeonggi.ttf", attr);
+  font_.LoadFont("../test/gyeonggi.ttf", attr);
   //font_.PrepareGlyph ...
   font_.Commit();
 
