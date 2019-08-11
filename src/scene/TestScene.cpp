@@ -15,10 +15,15 @@ TestScene::~TestScene()
 
 void TestScene::Render()
 {
+  /* TODO: movie image should be updated automatically ..? */
+  img_movie_->Update();
+
+  spr_bg_.Update();
   spr_.Update();
   spr2_.Update();
   text_.Update();
 
+  spr_bg_.Render();
   spr_.Render();
   spr2_.Render();
   text_.Render();
@@ -28,8 +33,10 @@ void TestScene::LoadScene()
 {
   ImageAuto img_ = ResourceManager::getInstance().LoadImage("../test/test.png");
   ImageAuto img2_ = ResourceManager::getInstance().LoadImage("../test/test2.png");
+  img_movie_ = ResourceManager::getInstance().LoadImage("../test/msel.mpg");
   img_->CommitImage();
   img2_->CommitImage();
+  img_movie_->CommitImage(); /* tex id create & an black image would committed */
 
   spr_.SetImage(img_);
 
@@ -70,6 +77,10 @@ void TestScene::LoadScene()
   //text_.SetRotation(0, 0, 0.3);
   //text_.SetSize(200, 300);
   text_.SetAlignment(FontAlignments::kFontAlignStretch);
+
+  spr_bg_.SetImage(img_movie_);
+  spr_bg_.SetPos(0, 0);
+  spr_bg_.SetSize(800, 480);
 }
 
 void TestScene::CloseScene()

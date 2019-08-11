@@ -19,8 +19,10 @@ public:
 private:
   Sprite spr_;
   Sprite spr2_;
+  Sprite spr_bg_;
   Font font_;
   Text text_;
+  ImageAuto img_movie_;
 };
 
 }
