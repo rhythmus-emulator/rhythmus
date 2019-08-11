@@ -21,6 +21,7 @@ public:
   GLuint get_texture_ID() const;
   uint16_t get_width() const;
   uint16_t get_height() const;
+  void SetLoopMovie(bool loop = true);
 
 private:
   void* bitmap_ctx_;
@@ -33,6 +34,9 @@ private:
    * Must call Update() method to update movie.
    */
   void *ffmpeg_ctx_;
+
+  /* loop in case of movie */
+  bool loop_movie_;
 
   void LoadImageFromPath(const std::string& path);
   void LoadMovieFromPath(const std::string& path);

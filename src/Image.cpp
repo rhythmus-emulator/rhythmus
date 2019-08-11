@@ -1,5 +1,6 @@
 #include "ResourceManager.h"
 #include "Image.h"
+#include "Timer.h"
 #include <FreeImage.h>
 #include <iostream>
 
@@ -214,7 +215,8 @@ void Image::CommitImage(bool delete_data)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-  if (delete_data)
+  /* movie type: won't remove bitmap (need to update continously) */
+  if (delete_data && ffmpeg_ctx_ == 0)
   {
     UnloadBitmap();
   }
@@ -224,21 +226,93 @@ void Image::Update()
 {
   if (ffmpeg_ctx_)
   {
-    AVPacket packet;
-    AVFrame *frame = av_frame_alloc();
     FFmpegContext *fctx = (FFmpegContext*)ffmpeg_ctx_;
+    double sec_per_frame = av_q2d(fctx->context->time_base);
+    int cur_time = (int)(Timer::GetGameTime() * 1000) /* TODO */;
+    int cur_frame;
+    if (sec_per_frame > 0)
+      cur_frame = cur_time / sec_per_frame / 1000;
+    else cur_frame = 0;
 
-    while (av_read_frame(fctx->formatctx, &packet) == 0)
+    // check whether is it necessary to decode frame by counting frame
+    if (fctx->context->frame_number > cur_frame)
+      return;
+
+
+    // --- decoding start ---
+
+    AVPacket *packet = av_packet_alloc();
+    AVFrame *frame = av_frame_alloc();
+    AVFrame *frame_conv = av_frame_alloc();
+    uint8_t* frame_conv_buf = (uint8_t *)av_malloc(width_ * height_ * sizeof(uint8_t) * 3);
+    int read_ret, decode_ret;
+    bool frame_updated = false;
+    avpicture_fill((AVPicture*)frame_conv, frame_conv_buf, AV_PIX_FMT_RGB24, width_, height_);
+
+    while ((read_ret = av_read_frame(fctx->formatctx, packet)) == 0)
     {
-      // only decode video packet here ...
-      if (packet.stream_index != fctx->video_stream_idx)
+      // only decode video packet here ... not audio.
+      if (packet->stream_index != fctx->video_stream_idx)
         continue;
 
-      // TODO
+      if (avcodec_send_packet(fctx->context, packet) < 0)
+      {
+        // packet sending failure
+        break;
+      }
+
+      while ((decode_ret = avcodec_receive_frame(fctx->context, frame)) >= 0)
+      {
+        std::cout << "FT" << cur_frame << ",";
+        //if (frame_time >= (int)Timer::GetGameTime()) break; // TODO: fix eclipsed time
+
+        // convert frame to RGB24
+        SwsContext* mod_ctx;
+        mod_ctx = sws_getContext(frame->width, frame->height, (AVPixelFormat) frame->format,
+          width_, height_, AV_PIX_FMT_RGB24, SWS_BICUBIC, 0, 0, 0);
+        sws_scale(mod_ctx, frame->data, frame->linesize, 0, frame->height,
+          frame_conv->data, frame_conv->linesize);
+        sws_freeContext(mod_ctx);
+
+        // copy converted frame buffer to image buffer
+        for (int i = 0; i < frame->width * frame->height; ++i)
+        {
+          data_ptr_[i * 4] = frame_conv_buf[i * 3];
+          data_ptr_[i * 4 + 1] = frame_conv_buf[i * 3 + 1];
+          data_ptr_[i * 4 + 2] = frame_conv_buf[i * 3 + 2];
+          data_ptr_[i * 4 + 3] = 0xff;
+        }
+
+        // texture update done; exit loop
+        frame_updated = true;
+        break;
+      }
+
+      // once video packet is processed, exit loop
+      if (frame_updated) break;
     }
 
+    // Update texture
+    if (frame_updated)
+    {
+      glBindTexture(GL_TEXTURE_2D, textureID_);
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
+        GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data_ptr_);
+    }
+
+    av_free(frame_conv_buf);
     av_frame_free(&frame);
-    av_packet_unref(&packet);
+    av_frame_free(&frame_conv);
+    av_packet_unref(packet);
+    av_packet_free(&packet);
+
+    // rewind if necessary
+    if (read_ret == (int)AVERROR_EOF && loop_movie_)
+    {
+      int flags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
+      av_seek_frame(fctx->formatctx, fctx->video_stream_idx, 0, flags);
+      avcodec_flush_buffers(fctx->context);
+    }
   }
 }
 
@@ -301,6 +375,11 @@ uint16_t Image::get_width() const
 uint16_t Image::get_height() const
 {
   return height_;
+}
+
+void Image::SetLoopMovie(bool loop)
+{
+  loop_movie_ = loop;
 }
 
 }

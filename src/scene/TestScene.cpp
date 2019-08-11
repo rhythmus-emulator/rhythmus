@@ -37,6 +37,7 @@ void TestScene::LoadScene()
   img_->CommitImage();
   img2_->CommitImage();
   img_movie_->CommitImage(); /* tex id create & an black image would committed */
+  img_movie_->SetLoopMovie(true);
 
   spr_.SetImage(img_);
 
@@ -63,9 +64,9 @@ void TestScene::LoadScene()
   FontAttributes attr;
   memset(&attr, 0, sizeof(FontAttributes));
   attr.size = 12;
-  attr.outline_width = 3;
+  attr.outline_width = 2;
   attr.color = 0xfffffff;
-  attr.outline_color = 0xffffcccc;
+  attr.outline_color = 0xff666666;
   font_.LoadFont("../test/gyeonggi.ttf", attr);
   //font_.PrepareGlyph ...
   font_.Commit();
