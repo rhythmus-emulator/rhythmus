@@ -174,6 +174,7 @@ Font::Font()
     if (FT_Init_FreeType(&ftLib))
     {
       std::cerr << "ERROR: Could not init FreeType Library." << std::endl;
+      ftLibCnt = 0;
       return;
     }
   }
@@ -183,6 +184,10 @@ Font::~Font()
 {
   ClearGlyph();
   ReleaseFont();
+
+  // Freetype done is only called when Font object releasing.
+  if (--ftLibCnt == 0)
+    FT_Done_FreeType(ftLib);
 }
 
 bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
@@ -193,6 +198,15 @@ bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
     std::cerr << "Invalid font size (0)" << std::endl;
     return false;
   }
+  if (ftLibCnt == 0)
+  {
+    std::cerr << "Freetype is not initalized." << std::endl;
+    return false;
+  }
+
+  /* clear before start */
+  ClearGlyph();
+  ReleaseFont();
 
   /* Create freetype font */
   int r = FT_New_Face(ftLib, ttfpath, 0, (FT_Face*)&ftface_);
@@ -516,9 +530,6 @@ void Font::ReleaseFont()
     FT_Done_Face(ft);
     ftface_ = 0;
   }
-
-  if (--ftLibCnt == 0)
-    FT_Done_FreeType(ftLib);
 }
 
 
