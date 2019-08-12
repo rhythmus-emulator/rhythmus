@@ -41,6 +41,27 @@ FontBitmap::FontBitmap(int w, int h)
   }
 }
 
+/* Using this constructor, texture is uploaded directly to GPU. */
+FontBitmap::FontBitmap(const uint32_t* bitmap, int w, int h)
+  : bitmap_(0), texid_(0), committed_(false),
+    width_(w), height_(h), cur_x_(0), cur_y_(0), cur_line_height_(0)
+{
+  // create texture & upload directly
+  glGenTextures(1, &texid_);
+  if (texid_ == 0)
+  {
+    GLenum err = glGetError();
+    std::cerr << "Font - Allocating textureID failed: " << (int)err << std::endl;
+    return;
+  }
+
+  glBindTexture(GL_TEXTURE_2D, texid_);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
+    GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap_);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+}
+
 FontBitmap::~FontBitmap()
 {
   if (texid_)
@@ -68,8 +89,6 @@ void FontBitmap::Write(uint32_t* bitmap, int w, int h, FontGlyph &glyph_out)
     cur_x_ = 0;
     cur_line_height_ = 0;
   }
-
-  // TODO: cut too big height
 
   // update new max height
   if (cur_line_height_ < h) cur_line_height_ = h;
@@ -121,6 +140,9 @@ bool FontBitmap::IsWritable(int w, int h) const
   else return true;
 }
 
+int FontBitmap::width() const { return width_; }
+int FontBitmap::height() const { return height_; }
+
 GLuint FontBitmap::get_texid() const
 {
   return texid_;
@@ -143,8 +165,10 @@ void FontBitmap::SetToReadOnly()
 // --------------------------------- class Font
 
 Font::Font()
-  : ftface_(0)
+  : ftface_(0), ftstroker_(0)
 {
+  memset(&fontattr_, 0, sizeof(fontattr_));
+
   if (ftLibCnt++ == 0)
   {
     if (FT_Init_FreeType(&ftLib))
@@ -212,11 +236,6 @@ bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
   PrepareGlyph(glyph_init, 128);
 
   return true;
-}
-
-bool Font::LoadLR2Font(const char* lr2fontpath)
-{
-  return false;
 }
 
 #define BLEND_RGBA
@@ -309,6 +328,10 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
 
         FT_Done_Glyph(glyph);
       }
+
+      /* cut glyph if it's too big height */
+      if (g.height > fontattr_.height)
+        g.height = fontattr_.height;
 
       /* upload bitmap to cache */
       auto* cache = GetWritableBitmapCache(g.width, g.height);

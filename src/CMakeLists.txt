@@ -17,6 +17,9 @@ set (RHYTHMUS_SOURCES
 	Logger.cpp
 	Timer.cpp
     main.cpp
+	
+	LR2/exdxa.cpp
+	LR2/LR2Font.cpp
 
     SceneManager.cpp
     scene/Scene.cpp
@@ -34,6 +37,9 @@ set (RHYTHMUS_HEADERS
 	Timer.h
     Graphic.h
 	Error.h
+
+	LR2/exdxa.h
+	LR2/LR2Font.h
 
     SceneManager.h
     scene/Scene.h

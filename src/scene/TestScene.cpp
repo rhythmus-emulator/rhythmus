@@ -82,6 +82,8 @@ void TestScene::LoadScene()
   spr_bg_.SetImage(img_movie_);
   spr_bg_.SetPos(0, 0);
   spr_bg_.SetSize(800, 480);
+
+  lr2font_.ReadLR2Font("../test/artistfnt.dxa");
 }
 
 void TestScene::CloseScene()

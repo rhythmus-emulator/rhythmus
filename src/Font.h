@@ -87,10 +87,13 @@ class FontBitmap
 {
 public:
   FontBitmap(int w, int h);
+  FontBitmap(const uint32_t* bitmap, int w, int h);
   ~FontBitmap();
   void Write(uint32_t* bitmap, int w, int h, FontGlyph &glyph_out);
   void Update();
   bool IsWritable(int w, int h) const;
+  int width() const;
+  int height() const;
   GLuint get_texid() const;
 
   /**
@@ -117,10 +120,9 @@ class Font
 {
 public:
   Font();
-  ~Font();
+  virtual ~Font();
 
   bool LoadFont(const char* ttfpath, const FontAttributes& attrs);
-  bool LoadLR2Font(const char* lr2fontpath);
   void PrepareGlyph(uint32_t *chrs, int count);
   void Commit();
 
@@ -135,7 +137,7 @@ public:
   void ClearGlyph();
   void ReleaseFont();
 
-private:
+protected:
   // FT_Face, FT_Stroker type
   void *ftface_, *ftstroker_;
 

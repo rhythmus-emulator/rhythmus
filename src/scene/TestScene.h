@@ -2,6 +2,7 @@
 #include "Scene.h"
 #include "Sprite.h"
 #include "Font.h"
+#include "LR2/LR2Font.h"
 
 namespace rhythmus
 {
@@ -23,6 +24,7 @@ private:
   Font font_;
   Text text_;
   ImageAuto img_movie_;
+  LR2Font lr2font_;
 };
 
 }
