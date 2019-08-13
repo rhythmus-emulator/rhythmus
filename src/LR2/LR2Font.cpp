@@ -46,8 +46,9 @@ void LR2Font::ReadLR2Font(const char* path)
 
   // -- parse LR2FONT file --
 
-  const char *p, *p_old = dxa_file_lr2font->p;
-  const char *p_end = p + dxa_file_lr2font->len;
+  const char *p, *p_old, *p_end;
+  p = p_old = dxa_file_lr2font->p;
+  p_end = p + dxa_file_lr2font->len;
   std::vector<std::string> col;
   while (p < p_end)
   {

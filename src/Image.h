@@ -22,6 +22,7 @@ public:
   uint16_t get_width() const;
   uint16_t get_height() const;
   void SetLoopMovie(bool loop = true);
+  void RestartMovie();
 
 private:
   void* bitmap_ctx_;

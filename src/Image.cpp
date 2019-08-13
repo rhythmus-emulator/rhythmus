@@ -9,9 +9,7 @@ extern "C"
 {
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
-#include <libswresample/swresample.h>
 #include <libswscale/swscale.h>
-#include <libavutil/opt.h>
 }
 
 /* rutil for some string functions */
@@ -30,6 +28,9 @@ struct FFmpegContext
 
   // microsecond duration
   uint32_t duration;
+
+  // current time
+  uint32_t current_time;
 
   // video width / height
   int width, height;
@@ -153,6 +154,7 @@ void Image::LoadMovieFromPath(const std::string& path)
   // fetch width / height / duration of video
   AVCodecContext* codecctx = ffmpeg_ctx->formatctx->streams[video_stream_idx]->codec;
   ffmpeg_ctx->duration = ffmpeg_ctx->formatctx->duration / 1000;
+  ffmpeg_ctx->current_time = 0;
   width_ = ffmpeg_ctx->width = codecctx->width;
   height_ = ffmpeg_ctx->height = codecctx->height;
 
@@ -305,11 +307,7 @@ void Image::Update()
 
     // rewind if necessary
     if (read_ret == (int)AVERROR_EOF && loop_movie_)
-    {
-      int flags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
-      av_seek_frame(fctx->formatctx, fctx->video_stream_idx, 0, flags);
-      avcodec_flush_buffers(fctx->context);
-    }
+      RestartMovie();
   }
 }
 
@@ -356,6 +354,18 @@ void Image::UnloadTexture()
   {
     glDeleteTextures(1, &textureID_);
     textureID_ = 0;
+  }
+}
+
+void Image::RestartMovie()
+{
+  if (ffmpeg_ctx_)
+  {
+    FFmpegContext* fctx = (FFmpegContext*)ffmpeg_ctx_;
+    constexpr int flags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
+    av_seek_frame(fctx->formatctx, fctx->video_stream_idx, 0, flags);
+    avcodec_flush_buffers(fctx->context);
+    fctx->current_time = 0;
   }
 }
 
