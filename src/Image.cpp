@@ -55,6 +55,8 @@ private:
   // if -1, packet is not ready.
   int packet_offset;
 
+  int frame_no_;
+
   // EOF of packet
   bool is_eof_packet_;
 
@@ -70,7 +72,8 @@ private:
 
 FFmpegContext::FFmpegContext()
   : codec(0), context(0), formatctx(0), packet(0), video_stream_idx(0),
-    duration_(0), time_(0), packet_offset(-1), is_eof_(false), is_eof_packet_(false),
+    duration_(0), time_(0), packet_offset(-1), frame_no_(0),
+    is_eof_(false), is_eof_packet_(false),
     last_frame_duration(0), width_(0), height_(0)
 {
   /* ffmpeg initialization */
@@ -164,6 +167,7 @@ void FFmpegContext::Open(const std::string& path)
   time_ = 0;
   frame = av_frame_alloc();
   packet = av_packet_alloc();
+  frame_no_ = 0;
 
   width_ = codecctx->width;
   height_ = codecctx->height;
@@ -172,17 +176,24 @@ void FFmpegContext::Open(const std::string& path)
 /* may multiple frame reside in same packet. */
 int FFmpegContext::DecodePacket(int target_time)
 {
-  /* no packet. EOF or read first */
-  if (is_eof_packet_ || packet_offset == -1)
+  /* No packet. Read first. */
+  if (!is_eof_ && packet_offset == -1)
     return 0;
 
-  /* zero packet size might exist, skip it. */
-  if (packet->size == 0)
+  /* zero packet size might exist at first, skip it. */
+  if (frame_no_ == 0 && packet->size == 0)
     return 0;
 
   /* too early time - don't need to decode */
   if (time_ > target_time)
     return 0;
+
+  /* if movie finished and nothing to unpacket, check EOF and exit */
+  if (is_eof_ && packet_offset == -1)
+  {
+    is_eof_packet_ = true;
+    return 2; /* nothing to read but exit */
+  }
 
   bool skip_this_frame = true;
   while (!is_eof_packet_ && packet_offset < packet->size)
@@ -211,22 +222,25 @@ int FFmpegContext::DecodePacket(int target_time)
     }
 
     // calculate time
-    if (frame->pkt_dts != AV_NOPTS_VALUE)
-      time_ = (float)(frame->pkt_dts * av_q2d(context->time_base));
+    if (frame->pts != AV_NOPTS_VALUE)
+      time_ = (float)(frame->pts * av_q2d(context->time_base)) / 100;
     else
       time_ += last_frame_duration;
     last_frame_duration = (float)av_q2d(context->time_base);
     last_frame_duration += frame->repeat_pict * (last_frame_duration * 0.5f);
 
+    frame_no_++;
+
     // packet decoding is done.
     // shall we break at this packet, or peek next?
     if (skip_this_frame)
       continue;
-    else break;
+    else
+      return 1; /* decoding done */
   }
 
-  /* decoding done. */
-  return 1;
+  /* no frame found we want - need to read next */
+  return 0;
 }
 
 int FFmpegContext::ReadPacket()
@@ -260,7 +274,7 @@ int FFmpegContext::ReadPacket()
   {
     is_eof_ = true;
     packet->size = 0;
-    return 0;
+    return 1; /* anyway, we read packet. */
   }
 
   /* Packet reading done. */
@@ -269,7 +283,8 @@ int FFmpegContext::ReadPacket()
 
 void FFmpegContext::Rewind()
 {
-  av_seek_frame(formatctx, -1, 0, 0);
+  //av_seek_frame(formatctx, -1, 0, 0);
+  av_seek_frame(formatctx, -1, 0, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);
   avcodec_flush_buffers(context);
 
   packet_offset = -1;
@@ -277,6 +292,7 @@ void FFmpegContext::Rewind()
   is_eof_packet_ = false;
   last_frame_duration = 0;
   time_ = 0;
+  frame_no_ = 0;
 }
 
 /* check whether open file as movie or image */
@@ -430,7 +446,7 @@ void Image::Update()
     return;
 
   FFmpegContext *fctx = (FFmpegContext*)ffmpeg_ctx_;
-  int target_time = (int)(Timer::GetGameTime() * 1000) /* TODO */ % (int)fctx->get_duration();
+  int target_time = (int)(Timer::GetGameTime() * 1000);// /* TODO */ % (int)(fctx->get_duration() + 1000);
 
   // If EOF, restart (if necessary)
   if (loop_movie_ && fctx->is_eof())
@@ -453,7 +469,7 @@ void Image::Update()
   }
 
   // Convert decoded image into image (if necessary)
-  if (ret)
+  if (ret == 1)
   {
     AVFrame *frame = fctx->get_frame();
     AVFrame *frame_conv = av_frame_alloc();
