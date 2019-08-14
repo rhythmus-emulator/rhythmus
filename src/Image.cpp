@@ -19,22 +19,265 @@ namespace rhythmus
 {
 
 /* ffmpeg context declaration */
-struct FFmpegContext
+class FFmpegContext
 {
+public:
+  FFmpegContext();
+  ~FFmpegContext();
+
+  void Open(const std::string& path);
+  int DecodePacket(int target_time);
+  int ReadPacket();
+  void Unload();
+  void Rewind();
+
+  int get_width() { return width_; }
+  int get_height() { return height_; }
+  bool is_eof() { return is_eof_ && is_eof_packet_; }
+  float get_duration() { return duration_; }
+  AVFrame* get_frame() { return frame; }
+
+private:
   AVCodec* codec;
   AVCodecContext* context;
   AVFormatContext* formatctx;
+  AVPacket *packet;
+  AVFrame *frame;
   int video_stream_idx;
 
   // microsecond duration
-  uint32_t duration;
+  float duration_;
 
   // current time
-  uint32_t current_time;
+  float time_;
+
+  // current packet offset
+  // if -1, packet is not ready.
+  int packet_offset;
+
+  // EOF of packet
+  bool is_eof_packet_;
+
+  // EOF of video stream
+  bool is_eof_;
+
+  // last frame duration
+  float last_frame_duration;
 
   // video width / height
-  int width, height;
+  int width_, height_;
 };
+
+FFmpegContext::FFmpegContext()
+  : codec(0), context(0), formatctx(0), packet(0), video_stream_idx(0),
+    duration_(0), time_(0), packet_offset(-1), is_eof_(false), is_eof_packet_(false),
+    last_frame_duration(0), width_(0), height_(0)
+{
+  /* ffmpeg initialization */
+  static bool is_ffmpeg_initialized_ = false;
+  if (!is_ffmpeg_initialized_)
+  {
+    avcodec_register_all();
+    av_register_all();
+    is_ffmpeg_initialized_ = true;
+  }
+}
+
+FFmpegContext::~FFmpegContext()
+{
+  Unload();
+}
+
+void FFmpegContext::Unload()
+{
+  if (frame)
+  {
+    av_frame_free(&frame);
+    frame = 0;
+  }
+
+  if (packet)
+  {
+    av_packet_unref(packet);
+    av_packet_free(&packet);
+    packet = 0;
+  }
+
+  if (context)
+  {
+    avcodec_close(context);
+    context = 0;
+  }
+
+  if (formatctx)
+  {
+    avformat_close_input(&formatctx);
+    formatctx = 0;
+  }
+}
+
+void FFmpegContext::Open(const std::string& path)
+{
+  // should not open it again ...
+  ASSERT(formatctx == 0);
+
+  if (avformat_open_input(&formatctx, path.c_str(), 0, 0) != 0)
+  {
+    std::cerr << "Movie file open failed: " << path << std::endl;
+    return;
+  }
+
+  int sinfo_ret = avformat_find_stream_info(formatctx, NULL);
+  if (sinfo_ret < 0)
+  {
+    std::cerr << "Movie stream search failed (code " << sinfo_ret << "): " << path << std::endl;
+    Unload();
+    return;
+  }
+
+  video_stream_idx = av_find_best_stream(formatctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
+
+  codec = avcodec_find_decoder(
+    formatctx->streams[video_stream_idx]->codecpar->codec_id);
+  if (!codec)
+  {
+    std::cerr << "Movie stream codec failed: " << path << std::endl;
+    Unload();
+    return;
+  }
+
+  context = avcodec_alloc_context3(codec);
+  int codec_open_code = avcodec_open2(context, codec, NULL);
+  if (codec_open_code < 0)
+  {
+    std::cerr << "Movie codec open failed - code: " << codec_open_code << ". " << path << std::endl;
+    Unload();
+    return;
+  }
+
+  // fetch width / height / duration of video
+  AVCodecContext* codecctx = formatctx->streams[video_stream_idx]->codec;
+  duration_ = formatctx->duration / 1000;
+  packet_offset = -1;
+  is_eof_ = false;
+  last_frame_duration = 0;
+  time_ = 0;
+  frame = av_frame_alloc();
+  packet = av_packet_alloc();
+
+  width_ = codecctx->width;
+  height_ = codecctx->height;
+}
+
+/* may multiple frame reside in same packet. */
+int FFmpegContext::DecodePacket(int target_time)
+{
+  /* no packet. EOF or read first */
+  if (is_eof_packet_ || packet_offset == -1)
+    return 0;
+
+  /* zero packet size might exist, skip it. */
+  if (packet->size == 0)
+    return 0;
+
+  /* too early time - don't need to decode */
+  if (time_ > target_time)
+    return 0;
+
+  bool skip_this_frame = true;
+  while (!is_eof_packet_ && packet_offset < packet->size)
+  {
+    if (time_ <= target_time)
+      skip_this_frame = false;
+
+    int got_frame;
+    /* Hack: we need to send size = 0 to flush frames at the end, but we have
+		 * to give it a buffer to read from since it tries to read anyway. */
+    packet->data = packet->size ? packet->data : nullptr;
+    int len = avcodec_decode_video2(context, frame, &got_frame, packet);
+    if (len < 0)
+    {
+      /* XXX: unknown. decoding failed. */
+      return 0;
+    }
+    packet_offset += len;
+
+    // if no frame, packet is end, maybe.
+    // XXX: should retry ?
+    if (!got_frame)
+    {
+      is_eof_packet_ = true;
+      return 0;
+    }
+
+    // calculate time
+    if (frame->pkt_dts != AV_NOPTS_VALUE)
+      time_ = (float)(frame->pkt_dts * av_q2d(context->time_base));
+    else
+      time_ += last_frame_duration;
+    last_frame_duration = (float)av_q2d(context->time_base);
+    last_frame_duration += frame->repeat_pict * (last_frame_duration * 0.5f);
+
+    // packet decoding is done.
+    // shall we break at this packet, or peek next?
+    if (skip_this_frame)
+      continue;
+    else break;
+  }
+
+  /* decoding done. */
+  return 1;
+}
+
+int FFmpegContext::ReadPacket()
+{
+  // EOF
+  if (is_eof_)
+    return 0;
+
+  // clear previous packet if necessary.
+  av_packet_unref(packet);
+  packet_offset = -1;
+
+  int ret;
+  while ((ret = av_read_frame(formatctx, packet)) >= 0)
+  {
+    if (packet->stream_index == video_stream_idx)
+    {
+      // found good stream. exit searching.
+      is_eof_packet_ = false;
+      packet_offset = 0;
+      break;
+    }
+
+    // other stream is not for our video stream
+    // clear it.
+    av_packet_unref(packet);
+  }
+
+  // EOF
+  if (ret < 0)
+  {
+    is_eof_ = true;
+    packet->size = 0;
+    return 0;
+  }
+
+  /* Packet reading done. */
+  return 1;
+}
+
+void FFmpegContext::Rewind()
+{
+  av_seek_frame(formatctx, -1, 0, 0);
+  avcodec_flush_buffers(context);
+
+  packet_offset = -1;
+  is_eof_ = false;
+  is_eof_packet_ = false;
+  last_frame_duration = 0;
+  time_ = 0;
+}
 
 /* check whether open file as movie or image */
 bool IsMovieFile(const std::string& path)
@@ -51,13 +294,6 @@ Image::Image()
   : bitmap_ctx_(0), data_ptr_(nullptr), width_(0), height_(0),
     textureID_(0), ffmpeg_ctx_(0)
 {
-  /* ffmpeg initialization */
-  static bool is_ffmpeg_initialized_ = false;
-  if (!is_ffmpeg_initialized_)
-  {
-    av_register_all();
-    is_ffmpeg_initialized_ = true;
-  }
 }
 
 Image::~Image()
@@ -109,54 +345,18 @@ bool Image::LoadImageFromMemory(uint8_t* p, size_t len)
 
 void Image::LoadMovieFromPath(const std::string& path)
 {
-  FFmpegContext *ffmpeg_ctx = (FFmpegContext*)malloc(sizeof(FFmpegContext));
-  memset(ffmpeg_ctx, 0, sizeof(FFmpegContext));
-  
-  if (avformat_open_input(&ffmpeg_ctx->formatctx, path.c_str(), 0, 0) != 0)
+  if (ffmpeg_ctx_)
   {
-    std::cerr << "Movie file open failed: " << path << std::endl;
-    free(ffmpeg_ctx);
-    return;
+    FFmpegContext *f = (FFmpegContext*)ffmpeg_ctx_;
+    delete f;
   }
 
+  FFmpegContext *ffmpeg_ctx = new FFmpegContext();
+  ffmpeg_ctx->Open(path);
   ffmpeg_ctx_ = ffmpeg_ctx;
 
-  int sinfo_ret = avformat_find_stream_info(ffmpeg_ctx->formatctx, NULL);
-  if (sinfo_ret < 0)
-  {
-    std::cerr << "Movie stream search failed (code " << sinfo_ret << "): " << path << std::endl;
-    UnloadMovie();
-    return;
-  }
-
-  int video_stream_idx = av_find_best_stream(
-    ffmpeg_ctx->formatctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
-  ffmpeg_ctx->video_stream_idx = video_stream_idx;
-
-  ffmpeg_ctx->codec = avcodec_find_decoder(
-    ffmpeg_ctx->formatctx->streams[video_stream_idx]->codecpar->codec_id);
-  if (!ffmpeg_ctx->codec)
-  {
-    std::cerr << "Movie stream codec failed: " << path << std::endl;
-    UnloadMovie();
-    return;
-  }
-
-  ffmpeg_ctx->context = avcodec_alloc_context3(ffmpeg_ctx->codec);
-  int codec_open_code = avcodec_open2(ffmpeg_ctx->context, ffmpeg_ctx->codec, NULL);
-  if (codec_open_code < 0)
-  {
-    std::cerr << "Movie codec open failed - code: " << codec_open_code << ". " << path << std::endl;
-    UnloadMovie();
-    return;
-  }
-
-  // fetch width / height / duration of video
-  AVCodecContext* codecctx = ffmpeg_ctx->formatctx->streams[video_stream_idx]->codec;
-  ffmpeg_ctx->duration = ffmpeg_ctx->formatctx->duration / 1000;
-  ffmpeg_ctx->current_time = 0;
-  width_ = ffmpeg_ctx->width = codecctx->width;
-  height_ = ffmpeg_ctx->height = codecctx->height;
+  width_ = ffmpeg_ctx->get_width();
+  height_ = ffmpeg_ctx->get_height();
 
   // create empty bitmap
   data_ptr_ = (uint8_t*)malloc(width_ * height_ * 4);
@@ -226,88 +426,65 @@ void Image::CommitImage(bool delete_data)
 
 void Image::Update()
 {
-  if (ffmpeg_ctx_)
+  if (!ffmpeg_ctx_)
+    return;
+
+  FFmpegContext *fctx = (FFmpegContext*)ffmpeg_ctx_;
+  int target_time = (int)(Timer::GetGameTime() * 1000) /* TODO */ % (int)fctx->get_duration();
+
+  // If EOF, restart (if necessary)
+  if (loop_movie_ && fctx->is_eof())
+    fctx->Rewind();
+
+  // Decode first, Read later.
+  // If both failed, video stream is completely end. exit loop.
+  int ret = 0; /* ret of decoding */
+  while (!fctx->is_eof())
   {
-    FFmpegContext *fctx = (FFmpegContext*)ffmpeg_ctx_;
-    double sec_per_frame = av_q2d(fctx->context->time_base);
-    int cur_time = (int)(Timer::GetGameTime() * 1000) /* TODO */;
-    int cur_frame;
-    if (sec_per_frame > 0)
-      cur_frame = cur_time / sec_per_frame / 1000;
-    else cur_frame = 0;
+    // DecodePacket == 0 --> EOF or decoding failure.
+    // We read next packet in this case.
+    // If successfully decode packet, exit loop.
+    if (ret = fctx->DecodePacket(target_time))
+      break;
 
-    // check whether is it necessary to decode frame by counting frame
-    if (fctx->context->frame_number > cur_frame)
-      return;
+    // ReadPacket() might fail, But we can retry.
+    // If success, retry decoding. otherwise exit loop.
+    if (fctx->ReadPacket() == 0) break;
+  }
 
-
-    // --- decoding start ---
-
-    AVPacket *packet = av_packet_alloc();
-    AVFrame *frame = av_frame_alloc();
+  // Convert decoded image into image (if necessary)
+  if (ret)
+  {
+    AVFrame *frame = fctx->get_frame();
     AVFrame *frame_conv = av_frame_alloc();
     uint8_t* frame_conv_buf = (uint8_t *)av_malloc(width_ * height_ * sizeof(uint8_t) * 3);
-    int read_ret, decode_ret;
-    bool frame_updated = false;
     avpicture_fill((AVPicture*)frame_conv, frame_conv_buf, AV_PIX_FMT_RGB24, width_, height_);
 
-    while ((read_ret = av_read_frame(fctx->formatctx, packet)) == 0)
+    // convert frame to RGB24
+    SwsContext* mod_ctx;
+    mod_ctx = sws_getContext(frame->width, frame->height, (AVPixelFormat)frame->format,
+      width_, height_, AV_PIX_FMT_RGB24, SWS_BICUBIC, 0, 0, 0);
+    sws_scale(mod_ctx, frame->data, frame->linesize, 0, frame->height,
+      frame_conv->data, frame_conv->linesize);
+    sws_freeContext(mod_ctx);
+
+    // copy converted frame buffer to image buffer
+    for (int i = 0; i < frame->width * frame->height; ++i)
     {
-      // only decode video packet here ... not audio.
-      if (packet->stream_index != fctx->video_stream_idx)
-        continue;
-
-      if (avcodec_send_packet(fctx->context, packet) < 0)
-      {
-        // packet sending failure
-        break;
-      }
-
-      while ((decode_ret = avcodec_receive_frame(fctx->context, frame)) >= 0)
-      {
-        // convert frame to RGB24
-        SwsContext* mod_ctx;
-        mod_ctx = sws_getContext(frame->width, frame->height, (AVPixelFormat) frame->format,
-          width_, height_, AV_PIX_FMT_RGB24, SWS_BICUBIC, 0, 0, 0);
-        sws_scale(mod_ctx, frame->data, frame->linesize, 0, frame->height,
-          frame_conv->data, frame_conv->linesize);
-        sws_freeContext(mod_ctx);
-
-        // copy converted frame buffer to image buffer
-        for (int i = 0; i < frame->width * frame->height; ++i)
-        {
-          data_ptr_[i * 4] = frame_conv_buf[i * 3];
-          data_ptr_[i * 4 + 1] = frame_conv_buf[i * 3 + 1];
-          data_ptr_[i * 4 + 2] = frame_conv_buf[i * 3 + 2];
-          data_ptr_[i * 4 + 3] = 0xff;
-        }
-
-        // texture update done; exit loop
-        frame_updated = true;
-        break;
-      }
-
-      // once video packet is processed, exit loop
-      if (frame_updated) break;
+      data_ptr_[i * 4] = frame_conv_buf[i * 3];
+      data_ptr_[i * 4 + 1] = frame_conv_buf[i * 3 + 1];
+      data_ptr_[i * 4 + 2] = frame_conv_buf[i * 3 + 2];
+      data_ptr_[i * 4 + 3] = 0xff;
     }
 
-    // Update texture
-    if (frame_updated)
-    {
-      glBindTexture(GL_TEXTURE_2D, textureID_);
-      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
-        GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data_ptr_);
-    }
+    // Upload texture
+    glBindTexture(GL_TEXTURE_2D, textureID_);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
+      GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data_ptr_);
 
+    // Free mem
     av_free(frame_conv_buf);
-    av_frame_free(&frame);
     av_frame_free(&frame_conv);
-    av_packet_unref(packet);
-    av_packet_free(&packet);
-
-    // rewind if necessary
-    if (read_ret == (int)AVERROR_EOF && loop_movie_)
-      RestartMovie();
   }
 }
 
@@ -339,11 +516,8 @@ void Image::UnloadMovie()
 {
   if (ffmpeg_ctx_)
   {
-    FFmpegContext *fctx = (FFmpegContext*)ffmpeg_ctx_;
-    if (fctx->formatctx)
-      avformat_close_input(&fctx->formatctx);
-
-    free(ffmpeg_ctx_);
+    FFmpegContext *f = (FFmpegContext*)ffmpeg_ctx_;
+    delete f;
     ffmpeg_ctx_ = 0;
   }
 }
@@ -360,13 +534,7 @@ void Image::UnloadTexture()
 void Image::RestartMovie()
 {
   if (ffmpeg_ctx_)
-  {
-    FFmpegContext* fctx = (FFmpegContext*)ffmpeg_ctx_;
-    constexpr int flags = AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD;
-    av_seek_frame(fctx->formatctx, fctx->video_stream_idx, 0, flags);
-    avcodec_flush_buffers(fctx->context);
-    fctx->current_time = 0;
-  }
+    static_cast<FFmpegContext*>(ffmpeg_ctx_)->Rewind();
 }
 
 GLuint Image::get_texture_ID() const
