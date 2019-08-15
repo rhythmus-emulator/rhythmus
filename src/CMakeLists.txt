@@ -24,6 +24,7 @@ set (RHYTHMUS_SOURCES
 
 	LR2/exdxa.cpp
 	LR2/LR2Font.cpp
+	LR2/LR2Scene.cpp
     )
 
 set (RHYTHMUS_HEADERS
@@ -44,6 +45,7 @@ set (RHYTHMUS_HEADERS
 
 	LR2/exdxa.h
 	LR2/LR2Font.h
+	LR2/LR2Scene.h
     )
 
 include_directories(

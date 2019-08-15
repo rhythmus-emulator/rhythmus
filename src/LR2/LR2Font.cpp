@@ -9,7 +9,10 @@
 namespace rhythmus
 {
 
-LR2Font::LR2Font() {}
+LR2Font::LR2Font()
+{
+  is_ttf_font_ = false; /* overwrite */
+}
 
 LR2Font::~LR2Font() {}
 
@@ -113,6 +116,8 @@ void LR2Font::ReadLR2Font(const char* path)
       glyph_.push_back(g);
     }
   }
+
+  path_ = path;
 }
 
 void LR2Font::UploadTextureFile(const char* p, size_t len)

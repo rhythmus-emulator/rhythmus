@@ -42,6 +42,16 @@ struct FontAttributes
 
   /* Texture of font border. color option is ignored when tex is set. */
   FontFillTexture outline_tex;
+
+  /* @warn this method is in development.
+   * may cannot distinguish different font. */
+  bool operator==(const FontAttributes& attr) const
+  {
+    return attr.size == size &&
+      attr.color == color &&
+      attr.outline_width == outline_width
+      ;
+  }
 };
 
 struct FontGlyph
@@ -137,7 +147,17 @@ public:
   void ClearGlyph();
   void ReleaseFont();
 
+  const std::string& get_path() const;
+  bool is_ttf_font() const;
+  const FontAttributes& get_attribute() const;
+
 protected:
+  // Font data path. used for identification.
+  std::string path_;
+
+  // is bitmap font or ttf font?
+  bool is_ttf_font_;
+
   // FT_Face, FT_Stroker type
   void *ftface_, *ftstroker_;
 
@@ -204,5 +224,7 @@ private:
   // is line-breaking enabled?
   bool do_line_breaking_;
 };
+
+using FontAuto = std::shared_ptr<Font>;
 
 }

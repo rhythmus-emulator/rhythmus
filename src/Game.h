@@ -7,6 +7,13 @@
 namespace rhythmus
 {
 
+/* @brief Current game boot mode. */
+enum GameBootMode
+{
+  NORMAL,
+  TEST, /* hidden boot mode - only for test purpose */
+};
+
 /**
  * @brief
  * Event types
@@ -37,6 +44,29 @@ struct GameEvent
   int params[4];
 };
 
+/* @brief game theme related options */
+struct GameThemeOption
+{
+  // general scene master path, which includes parameter for total scene
+  // other parameter filled automatically if null.
+  std::string scene_path;
+
+  // select scene path
+  std::string select_scene_path;
+
+  // decide scene path
+  std::string decide_scene_path;
+
+  // play scene path
+  std::string play_scene_path;
+
+  // result scene path
+  std::string result_path;
+
+  // course result scene path
+  std::string courseresult_scene_path;
+};
+
 bool IsEventKeyPress(const GameEvent& e);
 bool IsEventKeyUp(const GameEvent& e);
 int GetKeycode(const GameEvent& e);
@@ -61,6 +91,7 @@ public:
   std::string get_log_path() const;
   bool get_do_logging() const;
   float GetAspect() const;
+  GameBootMode get_boot_mode() const;
 
   void set_do_logging(bool v);
 
@@ -88,8 +119,16 @@ private:
 
   // lock used when using cached_events_
   std::mutex mtx_swap_lock;
-  // cached events
+
+  // cached events.
+  // stored from input thread, flushed in rendering thread.
   std::vector<GameEvent> cached_events_;
+
+  // current game boot mode.
+  GameBootMode game_boot_mode_;
+
+  // game theme related variables.
+  GameThemeOption theme_option_;
 };
 
 }

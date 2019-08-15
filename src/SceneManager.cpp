@@ -1,5 +1,6 @@
 #include "SceneManager.h"
 #include "scene/TestScene.h"
+#include "LR2/LR2Scene.h"
 
 namespace rhythmus
 {
@@ -18,7 +19,10 @@ SceneManager::~SceneManager()
 
 void SceneManager::Initialize()
 {
-  current_scene_ = new TestScene();
+  if (Game::getInstance().get_boot_mode() == GameBootMode::TEST)
+    current_scene_ = new TestScene();
+  else if (Game::getInstance().get_boot_mode() == GameBootMode::NORMAL)
+    current_scene_ = new LR2Scene();
   current_scene_->LoadScene();
 }
 

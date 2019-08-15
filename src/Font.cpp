@@ -166,7 +166,7 @@ void FontBitmap::SetToReadOnly()
 // --------------------------------- class Font
 
 Font::Font()
-  : ftface_(0), ftstroker_(0)
+  : ftface_(0), ftstroker_(0), is_ttf_font_(true)
 {
   memset(&fontattr_, 0, sizeof(fontattr_));
 
@@ -250,6 +250,7 @@ bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
     glyph_init[i] = i;
   PrepareGlyph(glyph_init, 128);
 
+  path_ = ttfpath;
   return true;
 }
 
@@ -533,6 +534,20 @@ void Font::ReleaseFont()
   }
 }
 
+const std::string& Font::get_path() const
+{
+  return path_;
+}
+
+bool Font::is_ttf_font() const
+{
+  return is_ttf_font_;
+}
+
+const FontAttributes& Font::get_attribute() const
+{
+  return fontattr_;
+}
 
 
 // --------------------------------- class Text

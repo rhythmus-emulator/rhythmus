@@ -20,7 +20,8 @@ Game& Game::getInstance()
 }
 
 Game::Game()
-  : fps_(0), setting_path_(kSettingPath)
+  : fps_(0), setting_path_(kSettingPath),
+    game_boot_mode_(GameBootMode::TEST)
 {
 }
 
@@ -34,6 +35,12 @@ Game::~Game()
   XMLATTR(width_, "width", uint16_t) \
   XMLATTR(height_, "height", uint16_t) \
   XMLATTR(do_logging_, "logging", bool) \
+  XMLATTRS(theme_option_.scene_path, "scene_path", std::string) \
+  XMLATTRS(theme_option_.select_scene_path, "select_scene_path", std::string) \
+  XMLATTRS(theme_option_.decide_scene_path, "decide_scene_path", std::string) \
+  XMLATTRS(theme_option_.play_scene_path, "play_scene_path", std::string) \
+  XMLATTRS(theme_option_.result_path, "result_path", std::string) \
+  XMLATTRS(theme_option_.courseresult_scene_path, "courseresult_scene_path", std::string) \
 
 template<typename A>
 A GetValueConverted(const char* v);
@@ -47,25 +54,36 @@ uint16_t GetValueConverted(const char* v)
 template<>
 int GetValueConverted(const char* v)
 {
+  if (!v) return 0;
   return atoi(v);
 }
 
 template<>
 float GetValueConverted(const char* v)
 {
+  if (!v) return 0.f;
   return static_cast<float>(atof(v));
 }
 
 template<>
 double GetValueConverted(const char* v)
 {
+  if (!v) return .0;
   return atof(v);
 }
 
 template<>
 bool GetValueConverted(const char* v)
 {
+  if (!v) return false;
   return stricmp(v, "true") == 0;
+}
+
+template<>
+std::string GetValueConverted(const char* v)
+{
+  if (!v) return "";
+  return std::string(v);
 }
 
 bool Game::Load()
@@ -86,7 +104,9 @@ bool Game::Load()
 #define XMLATTR(var, attrname, type) \
 { XMLElement *e = settings->FirstChildElement(attrname); \
   if (e) { var = GetValueConverted<type>(e->GetText()); } }
+#define XMLATTRS(a,b,c) XMLATTR(a,b,c)
   XML_SETTINGS;
+#undef XMLATTRS
 #undef XMLATTR
 
   return true;
@@ -100,7 +120,9 @@ bool Game::Save()
 
 #define XMLATTR(var, attrname, type) \
 { XMLElement* e = doc.NewElement(attrname); e->SetText(var); settings->LinkEndChild(e); }
+#define XMLATTRS(a,b,c) XMLATTR(a.c_str(),b,c)
   XML_SETTINGS;
+#undef XMLATTRS
 #undef XMLATTR
 
   doc.LinkEndChild(settings);
@@ -158,6 +180,11 @@ bool Game::get_do_logging() const
 float Game::GetAspect() const
 {
   return (float)width_ / height_;
+}
+
+GameBootMode Game::get_boot_mode() const
+{
+  return game_boot_mode_;
 }
 
 
