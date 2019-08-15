@@ -17,13 +17,13 @@ set (RHYTHMUS_SOURCES
 	Logger.cpp
 	Timer.cpp
     main.cpp
-	
+    SceneManager.cpp
+    Scene.cpp
+
+    scene/TestScene.cpp
+
 	LR2/exdxa.cpp
 	LR2/LR2Font.cpp
-
-    SceneManager.cpp
-    scene/Scene.cpp
-    scene/TestScene.cpp
     )
 
 set (RHYTHMUS_HEADERS
@@ -37,13 +37,13 @@ set (RHYTHMUS_HEADERS
 	Timer.h
     Graphic.h
 	Error.h
+    SceneManager.h
+    Scene.h
+
+    scene/TestScene.h
 
 	LR2/exdxa.h
 	LR2/LR2Font.h
-
-    SceneManager.h
-    scene/Scene.h
-    scene/TestScene.h
     )
 
 include_directories(

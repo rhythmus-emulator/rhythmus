@@ -1,5 +1,5 @@
 #pragma once
-#include "scene/Scene.h"
+#include "Scene.h"
 #include "Game.h"
 
 namespace rhythmus
