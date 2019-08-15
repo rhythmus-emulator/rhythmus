@@ -75,7 +75,7 @@ private:
 };
 
 FFmpegContext::FFmpegContext()
-  : codec(0), context(0), formatctx(0), stream(0), packet(0), video_stream_idx(0),
+  : codec(0), context(0), formatctx(0), stream(0), packet(0), frame(0), video_stream_idx(0),
     duration_(0), time_(0), time_offset_(0), packet_offset(-1), frame_no_(0),
     is_eof_(false), is_eof_packet_(false),
     last_frame_duration(0), width_(0), height_(0)
