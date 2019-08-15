@@ -56,8 +56,9 @@ FontBitmap::FontBitmap(const uint32_t* bitmap, int w, int h)
   }
 
   glBindTexture(GL_TEXTURE_2D, texid_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
-    GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap_);
+  /* XXX: FreeImage uses BGR bitmap. need to fix it? */
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0,
+    GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
@@ -125,7 +126,7 @@ void FontBitmap::Update()
 
   // commit bitmap from memory
   glBindTexture(GL_TEXTURE_2D, texid_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width_, height_, 0,
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0,
     GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap_);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -686,6 +687,12 @@ void Text::Render()
   vi[3].sx = .0f;
   vi[3].sy = 1.0f;
 
+  vi[0].r = vi[0].g = vi[0].b = vi[0].a = 1.0f;
+  vi[1].r = vi[1].g = vi[1].b = vi[1].a = 1.0f;
+  vi[2].r = vi[2].g = vi[2].b = vi[2].a = 1.0f;
+  vi[3].r = vi[3].g = vi[3].b = vi[3].a = 1.0f;
+
+  Graphic::getInstance().SetModelIdentity();
   Graphic::RenderQuad(vi);
 #endif
 }

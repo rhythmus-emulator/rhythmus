@@ -52,10 +52,11 @@ void LR2Font::ReadLR2Font(const char* path)
   std::vector<std::string> col;
   while (p < p_end)
   {
-    while (p < p_end && *p != '\n')
+    while (p < p_end && *p != '\n' && *p != '\r')
       ++p;
-    std::string cmd(p, p - p_old);
-    p_old = p + 1;
+    std::string cmd(p_old, p - p_old);
+    while (*p == '\n' || *p == '\r') ++p;
+    p_old = p;
 
     if (cmd.size() <= 2) continue;
     if (cmd[0] == '/' && cmd[1] == '/') continue;
@@ -71,7 +72,7 @@ void LR2Font::ReadLR2Font(const char* path)
     }
     else if (col[0] == "#T")
     {
-      const auto* f = dxa_file_mapper[rutil::upper(col[1])];
+      const auto* f = dxa_file_mapper[rutil::upper(col[2])];
       if (!f)
       {
         std::cerr << "LR2Font : Cannot find texture " << col[1] <<
@@ -91,6 +92,8 @@ void LR2Font::ReadLR2Font(const char* path)
       g.width = atoi(col[5].c_str());
       g.height = atoi(col[6].c_str());
       g.adv_x = g.width;
+      g.pos_x = 0;
+      g.pos_y = g.height;
 
       /* need to calculate src pos by texture, so need to get texture. */
       float tex_width = fontbitmap_[g.texidx]->width();
@@ -126,6 +129,8 @@ void LR2Font::UploadTextureFile(const char* p, size_t len)
   // from here, font bitmap texture must uploaded to memory.
   FIBITMAP *bitmap, *temp;
   temp = FreeImage_LoadFromMemory(fmt, memstream);
+  // I don't know why, but image need to be flipped
+  FreeImage_FlipVertical(temp);
   bitmap = FreeImage_ConvertTo32Bits(temp);
   FreeImage_Unload(temp);
 

@@ -146,7 +146,6 @@ protected:
 
   // store bitmap / texture
   std::vector<FontBitmap*> fontbitmap_;
-  int bitmap_cache_width, bitmap_cache_height;
 
   // current font attributes
   FontAttributes fontattr_;

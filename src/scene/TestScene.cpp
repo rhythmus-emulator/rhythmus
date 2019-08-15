@@ -22,18 +22,20 @@ void TestScene::Render()
   spr_.Update();
   spr2_.Update();
   text_.Update();
+  lr2text_.Update();
 
   spr_bg_.Render();
   spr_.Render();
   spr2_.Render();
   text_.Render();
+  lr2text_.Render();
 }
 
 void TestScene::LoadScene()
 {
   ImageAuto img_ = ResourceManager::getInstance().LoadImage("../test/test.png");
   ImageAuto img2_ = ResourceManager::getInstance().LoadImage("../test/test2.png");
-  img_movie_ = ResourceManager::getInstance().LoadImage("../test/_crow_bga.mpg");
+  img_movie_ = ResourceManager::getInstance().LoadImage("../test/msel.mpg");
   img_->CommitImage();
   img2_->CommitImage();
   img_movie_->CommitImage(); /* tex id create & an black image would committed */
@@ -84,6 +86,11 @@ void TestScene::LoadScene()
   spr_bg_.SetSize(800, 480);
 
   lr2font_.ReadLR2Font("../test/artistfnt.dxa");
+
+  lr2text_.SetFont(&lr2font_);
+  lr2text_.SetText("1234abcd");
+  lr2text_.SetPos(30, 200);
+  lr2text_.SetScale(1.5, 1.5);
 }
 
 void TestScene::CloseScene()

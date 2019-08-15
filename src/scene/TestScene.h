@@ -25,6 +25,7 @@ private:
   Text text_;
   ImageAuto img_movie_;
   LR2Font lr2font_;
+  Text lr2text_;
 };
 
 }

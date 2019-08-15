@@ -312,6 +312,7 @@ void process_dir_vec
         dxafile.p = (char*)malloc(out_len);
         memcpy(dxafile.p, out_buff, out_len);
         dxafile.filename = out_filename;
+        dxafile.len = out_len;
         files.push_back(dxafile);
 
         delete[] out_buff;
@@ -325,6 +326,7 @@ void process_dir_vec
         dxafile.p = (char*)malloc(len);
         memcpy(dxafile.p, buff, len);
         dxafile.filename = out_filename;
+        dxafile.len = len;
         files.push_back(dxafile);
 
         delete[] buff;
@@ -366,7 +368,7 @@ bool DXAExtractor::Open(const char* path)
 
   if (memcmp(hdr.signature, "DX", 2)) {
     fprintf(stderr, "EXDXA %s: unrecognized archive (incorrect key?)\n", path);
-    return -1;
+    return false;
   }
 
   unsigned long  toc_len = hdr.toc_length;
@@ -377,7 +379,7 @@ bool DXAExtractor::Open(const char* path)
 
   delete[] toc_buff;
 
-  return 0;
+  return true;
 }
 
 void DXAExtractor::Close()
