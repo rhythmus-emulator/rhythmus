@@ -33,7 +33,7 @@ void TestScene::LoadScene()
 {
   ImageAuto img_ = ResourceManager::getInstance().LoadImage("../test/test.png");
   ImageAuto img2_ = ResourceManager::getInstance().LoadImage("../test/test2.png");
-  img_movie_ = ResourceManager::getInstance().LoadImage("../test/msel.mpg");
+  img_movie_ = ResourceManager::getInstance().LoadImage("../test/_crow_bga.mpg");
   img_->CommitImage();
   img2_->CommitImage();
   img_movie_->CommitImage(); /* tex id create & an black image would committed */

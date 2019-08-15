@@ -30,6 +30,9 @@ private:
   uint16_t width_, height_;
   GLuint textureID_;
 
+  /* movie timer related */
+  int movie_start_time;
+
   /*
    * Context used for ffmpeg playing.
    * Must call Update() method to update movie.
