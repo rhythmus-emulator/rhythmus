@@ -202,8 +202,6 @@ int FFmpegContext::DecodePacket(int target_time)
   while (packet_offset < packet->size)
   {
     skip_this_frame = true;
-    if (target_time <= time_)
-      skip_this_frame = false;
 
     /* Give nullptr data to finish loop (to set is_eof_packet)
      * in case of last frame */
@@ -233,13 +231,20 @@ int FFmpegContext::DecodePacket(int target_time)
     last_frame_duration = (float)av_q2d(stream->time_base);
     last_frame_duration += frame->repeat_pict * (last_frame_duration * 0.5f);
 
+    /* I don't know this code is necessary... */
+#if 0
     // some video's first timestamp is not zero. if so, shift timestamp offset.
     if (frame_no_ == 0)
     {
       time_offset_ = time_;
     }
+#endif
 
     frame_no_++;
+
+    // now, should we need to skip this frame?
+    if (target_time <= time_)
+      skip_this_frame = false;
 
     // packet decoding is done.
     // shall we break at this packet, or peek next?
@@ -332,6 +337,8 @@ void Image::LoadImageFromPath(const std::string& path)
 
   FIBITMAP *bitmap, *temp;
   temp = FreeImage_Load(fmt, path.c_str());
+  // I don't know why, but image need to be flipped
+  FreeImage_FlipVertical(temp);
   bitmap = FreeImage_ConvertTo32Bits(temp);
   FreeImage_Unload(temp);
 
@@ -354,6 +361,8 @@ bool Image::LoadImageFromMemory(uint8_t* p, size_t len)
 
   FIBITMAP *bitmap, *temp;
   temp = FreeImage_LoadFromMemory(fmt, memstream);
+  // I don't know why, but image need to be flipped
+  FreeImage_FlipVertical(temp);
   bitmap = FreeImage_ConvertTo32Bits(temp);
   FreeImage_Unload(temp);
 
