@@ -125,6 +125,9 @@ void Graphic::LoopRendering()
     /* Update main timer in graphic(main) thread. */
     Timer::Update();
 
+    /* Update whole game context */
+    Game::getInstance().Update();
+
     /* Process cached events in main thread. */
     Game::getInstance().ProcessEvent();
 

@@ -39,6 +39,7 @@ struct AnimatedTexture
   int divx, divy, cnt;
   int interval;
   int idx, eclipsed_time;
+  float sx, sy, sw, sh;     // texture src crop
 };
 
 class SpriteAnimation
@@ -54,6 +55,10 @@ public:
   const TweenInfo& GetCurrentTweenInfo() const;
   void GetVertexInfo(VertexInfo* vi);
   void GetDrawInfo(DrawInfo& di);
+
+  void SetSource(float sx, float sy, float sw, float sh);
+  void SetAnimatedSource(
+    float sx, float sy, float sw, float sh, int divx, int divy, int timer);
 
   void SetPosition(float x, float y);
   void SetSize(float w, float h);

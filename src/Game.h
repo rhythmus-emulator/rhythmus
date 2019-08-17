@@ -10,8 +10,26 @@ namespace rhythmus
 /* @brief Current game boot mode. */
 enum GameBootMode
 {
-  NORMAL,
-  TEST, /* hidden boot mode - only for test purpose */
+  kBootNormal,
+  kBootTest, /* hidden boot mode - only for test purpose */
+};
+
+/* @brief current game mode. */
+enum GameMode
+{
+  kGameModeNone,
+  kGameModeMain,
+  kGameModeLogin,
+  kGameModeSelectMode,
+  kGameModeSelect,
+  kGameModeDecide,
+  kGameModePlay,
+  kGameModeResult,
+  kGameModeCourseResult,
+  kGameModeSetting,
+  kGameClose /* End of a game, Unexitable game state. */,
+  kGameModeKeySetting /* Special mode, only for LR2 */,
+  kGameModeTest /* Special mode, only for testing */,
 };
 
 /**
@@ -84,6 +102,15 @@ public:
   void Default();
   void LoadOrDefault();
 
+  /* Update game status. */
+  void Update();
+
+  /* Set next game mode */
+  void SetNextGameMode(GameMode next_game_mode);
+
+  /* Trigger scene changing. */
+  void ChangeGameMode();
+
   void set_setting_path(const std::string& path);
   uint16_t get_window_width() const;
   uint16_t get_window_height() const;
@@ -92,6 +119,7 @@ public:
   bool get_do_logging() const;
   float GetAspect() const;
   GameBootMode get_boot_mode() const;
+  GameMode get_game_mode() const;
 
   void set_do_logging(bool v);
 
@@ -117,6 +145,9 @@ private:
   std::string log_path_;
   bool do_logging_;
 
+  // game theme related variables.
+  GameThemeOption theme_option_;
+
   // lock used when using cached_events_
   std::mutex mtx_swap_lock;
 
@@ -127,8 +158,14 @@ private:
   // current game boot mode.
   GameBootMode game_boot_mode_;
 
-  // game theme related variables.
-  GameThemeOption theme_option_;
+  // current game mode.
+  GameMode game_mode_;
+
+  // reserved next game mode.
+  GameMode next_game_mode_;
+
+  // check is game mode (scene) need to be changed.
+  bool do_game_mode_change_;
 };
 
 }

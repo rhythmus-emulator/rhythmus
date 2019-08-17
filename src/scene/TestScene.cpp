@@ -31,7 +31,7 @@ void TestScene::Render()
   lr2text_.Render();
 }
 
-void TestScene::LoadScene()
+void TestScene::LoadScene(SceneLoader *scene_loader)
 {
   ImageAuto img_ = ResourceManager::getInstance().LoadImage("../test/test.png");
   ImageAuto img2_ = ResourceManager::getInstance().LoadImage("../test/test2.png");
@@ -104,6 +104,11 @@ void TestScene::ProcessEvent(const GameEvent& e)
     if (GetKeycode(e) == GLFW_KEY_ESCAPE)
       Graphic::getInstance().ExitRendering();
   }
+}
+
+const std::string TestScene::GetSceneName() const
+{
+  return "Test";
 }
 
 }

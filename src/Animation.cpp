@@ -17,6 +17,8 @@ SpriteAnimation::SpriteAnimation()
   ani_texture_.interval = 0;
   ani_texture_.idx = 0;
   ani_texture_.eclipsed_time = 0;
+  ani_texture_.sx = ani_texture_.sy = 0.0f;
+  ani_texture_.sw = ani_texture_.sh = 1.0f;
 }
 
 SpriteAnimation::~SpriteAnimation()
@@ -99,10 +101,10 @@ void SpriteAnimation::GetVertexInfo(VertexInfo* vi)
   y1 = 0; // ti.y / wh;
   x2 = x1 + ti.w / ww;
   y2 = y1 + ti.h / wh;
-  sx1 = ti.sx / iw;
-  sy1 = ti.sy / ih;
-  sx2 = sx1 + ti.sw / iw;
-  sy2 = sy1 + ti.sh / ih;
+  sx1 = ti.sx / iw + ti.sw * ani_texture_.sx;
+  sy1 = ti.sy / ih + ti.sh * ani_texture_.sy;
+  sx2 = sx1 + ti.sw / iw - ti.sw * (1.0f - ani_texture_.sw);
+  sy2 = sy1 + ti.sh / ih - ti.sh * (1.0f - ani_texture_.sh);
 
   // for predefined src width / height (-1 means use whole texture)
   if (ti.sw == -1) sx1 = 0.0, sx2 = 1.0;
@@ -267,6 +269,35 @@ void SpriteAnimation::UpdateTween()
     ti.sw = 1.0f / ani_texture_.divx;
     ti.sh = 1.0f / ani_texture_.divy;
   }
+}
+
+void SpriteAnimation::SetSource(float sx, float sy, float sw, float sh)
+{
+  ani_texture_.cnt = 1;
+  ani_texture_.divx = 1;
+  ani_texture_.divy = 1;
+  ani_texture_.eclipsed_time = 0;
+  ani_texture_.idx = 0;
+  ani_texture_.interval = 0;
+  ani_texture_.sx = sx;
+  ani_texture_.sy = sy;
+  ani_texture_.sw = sw;
+  ani_texture_.sh = sh;
+}
+
+void SpriteAnimation::SetAnimatedSource(
+  float sx, float sy, float sw, float sh, int divx, int divy, int timer)
+{
+  ani_texture_.cnt = divx * divy;
+  ani_texture_.divx = divx;
+  ani_texture_.divy = divy;
+  ani_texture_.eclipsed_time = 0;
+  ani_texture_.idx = 0;
+  ani_texture_.interval = timer;  // TODO
+  ani_texture_.sx = sx;
+  ani_texture_.sy = sy;
+  ani_texture_.sw = sw;
+  ani_texture_.sh = sh;
 }
 
 void SpriteAnimation::SetPosition(float x, float y)

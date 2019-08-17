@@ -13,10 +13,12 @@ public:
   TestScene();
   virtual ~TestScene();
 
-  virtual void LoadScene();
+  virtual void LoadScene(SceneLoader *scene_loader);
   virtual void CloseScene();
   virtual void Render();
   virtual void ProcessEvent(const GameEvent& e);
+
+  virtual const std::string GetSceneName() const;
 private:
   Sprite spr_;
   Sprite spr2_;

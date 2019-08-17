@@ -21,7 +21,9 @@ Game& Game::getInstance()
 
 Game::Game()
   : fps_(0), setting_path_(kSettingPath),
-    game_boot_mode_(GameBootMode::TEST)
+    game_boot_mode_(GameBootMode::kBootNormal),
+    game_mode_(GameMode::kGameModeNone),
+    do_game_mode_change_(false)
 {
 }
 
@@ -147,6 +149,82 @@ void Game::LoadOrDefault()
   }
 }
 
+void Game::Update()
+{
+  // Tick all game timers
+  // TODO
+
+  // Check scene should need to be changed
+  if (do_game_mode_change_)
+  {
+    if (next_game_mode_ != GameMode::kGameModeNone)
+      /* if preserved next game mode exists, use it. */
+      game_mode_ = next_game_mode_;
+    else
+    {
+      switch (game_boot_mode_)
+      {
+      case GameBootMode::kBootTest:
+        if (game_mode_ == GameMode::kGameModeNone)
+          game_mode_ = GameMode::kGameModeTest;
+        else
+          game_mode_ = GameMode::kGameClose;
+        break;
+      case GameBootMode::kBootNormal:
+        switch (game_mode_)
+        {
+        case GameMode::kGameModeNone:
+          // We now need to decide whether start game in select scene -
+          // or in main scene. It is decided by option... If main scene
+          // is null, we start game in select scene.
+          if (!theme_option_.scene_path.empty())
+            game_mode_ = GameMode::kGameModeMain;
+          else
+            game_mode_ = GameMode::kGameModeSelect;
+          break;
+        case GameMode::kGameModeMain:
+          game_mode_ = GameMode::kGameModeSelectMode;
+          break;
+        case GameMode::kGameModeSelectMode:
+          game_mode_ = GameMode::kGameModeSelect;
+          break;
+        case GameMode::kGameModeSelect:
+          game_mode_ = GameMode::kGameModeDecide;
+          break;
+        case GameMode::kGameModeDecide:
+          game_mode_ = GameMode::kGameModePlay;
+          break;
+        case GameMode::kGameModePlay:
+          game_mode_ = GameMode::kGameModeResult;
+          break;
+        case GameMode::kGameModeResult:
+          // TODO: need to go to course result if necessary.
+          // TODO: need to go to Play scene again if course mode.
+          // TODO: need to go to Main scene if it's arcade mode.
+        case GameMode::kGameModeCourseResult:
+          game_mode_ = GameMode::kGameModeSelect;
+          break;
+        }
+        break;
+      }
+    }
+
+    next_game_mode_ = GameMode::kGameModeNone;
+    do_game_mode_change_ = false;
+    SceneManager::getInstance().ChangeScene();
+  }
+}
+
+void Game::SetNextGameMode(GameMode next_game_mode)
+{
+  next_game_mode_ = next_game_mode;
+}
+
+void Game::ChangeGameMode()
+{
+  do_game_mode_change_ = true;
+}
+
 void Game::set_setting_path(const std::string& path)
 {
   setting_path_ = path;
@@ -164,7 +242,7 @@ uint16_t Game::get_window_height() const
 
 std::string Game::get_window_title() const
 {
-  return "Rhythmus 190700";
+  return "Rhythmus 190800";
 }
 
 std::string Game::get_log_path() const
@@ -185,6 +263,11 @@ float Game::GetAspect() const
 GameBootMode Game::get_boot_mode() const
 {
   return game_boot_mode_;
+}
+
+GameMode Game::get_game_mode() const
+{
+  return game_mode_;
 }
 
 

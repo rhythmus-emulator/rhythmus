@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Image.h"
 #include "Font.h"
 #include <string>

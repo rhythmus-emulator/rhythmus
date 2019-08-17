@@ -9,47 +9,53 @@ endif (MSVC)
 set (RHYTHMUS_SOURCES
     ResourceManager.cpp
     Image.cpp
-	Sprite.cpp
-	Animation.cpp
-	Font.cpp
+    Sprite.cpp
+    Animation.cpp
+    Font.cpp
     Game.cpp
     Graphic.cpp
-	Logger.cpp
-	Timer.cpp
+    Logger.cpp
+    Timer.cpp
     main.cpp
     SceneManager.cpp
     Scene.cpp
 
     scene/TestScene.cpp
+    scene/SelectScene.cpp
 
-	LR2/exdxa.cpp
-	LR2/LR2Font.cpp
-	LR2/LR2Scene.cpp
+    LR2/exdxa.cpp
+    LR2/LR2Font.cpp
+    LR2/LR2SceneLoader.cpp
+    LR2/LR2Flag.cpp
+    LR2/LR2Sprite.cpp
     )
 
 set (RHYTHMUS_HEADERS
     ResourceManager.h
     Image.h
-	Sprite.h
-	Animation.h
-	Font.h
+    Sprite.h
+    Animation.h
+    Font.h
     Game.h
-	Logger.h
-	Timer.h
+    Logger.h
+    Timer.h
     Graphic.h
-	Error.h
+    Error.h
     SceneManager.h
     Scene.h
 
     scene/TestScene.h
+    scene/SelectScene.h
 
-	LR2/exdxa.h
-	LR2/LR2Font.h
-	LR2/LR2Scene.h
+    LR2/exdxa.h
+    LR2/LR2Font.h
+    LR2/LR2SceneLoader.h
+    LR2/LR2Flag.h
+    LR2/LR2Sprite.h
     )
 
 include_directories(
-	${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}
     )
 
 include_directories(SYSTEM
@@ -70,11 +76,11 @@ endif ()
 
 target_link_libraries(rhythmus_bin
     ${OPENGL_LIBRARIES}
-	${GLFW_LIBRARY}
-	${GLEW_LIBRARY}
+    ${GLFW_LIBRARY}
+    ${GLEW_LIBRARY}
     ${FREEIMAGE_LIBRARY}
-	${FREETYPE_LIBRARY}
-	${FFMPEG_LIBRARY}
+    ${FREETYPE_LIBRARY}
+    ${FFMPEG_LIBRARY}
     tinyxml2
     rparser
-	)
+    )

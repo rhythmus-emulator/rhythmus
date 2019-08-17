@@ -38,4 +38,6 @@ private:
   DrawInfo di_;
 };
 
+using SpriteAuto = std::shared_ptr<Sprite>;
+
 }
