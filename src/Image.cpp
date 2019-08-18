@@ -132,14 +132,14 @@ bool FFmpegContext::Open(const std::string& path)
 
   if (avformat_open_input(&formatctx, path.c_str(), 0, 0) != 0)
   {
-    std::cerr << "Movie file open failed: " << path;
+    std::cerr << "Movie file open failed: " << path << std::endl;
     return false;
   }
 
   int sinfo_ret = avformat_find_stream_info(formatctx, NULL);
   if (sinfo_ret < 0)
   {
-    std::cerr << "Movie stream search failed (code " << sinfo_ret << "): " << path;
+    std::cerr << "Movie stream search failed (code " << sinfo_ret << "): " << path << std::endl;
     Unload();
     return false;
   }
@@ -151,7 +151,7 @@ bool FFmpegContext::Open(const std::string& path)
     formatctx->streams[video_stream_idx]->codecpar->codec_id);
   if (!codec)
   {
-    std::cerr << "Movie stream codec failed: " << path;
+    std::cerr << "Movie stream codec failed: " << path << std::endl;
     Unload();
     return false;
   }
@@ -160,7 +160,7 @@ bool FFmpegContext::Open(const std::string& path)
   int codec_open_code = avcodec_open2(context, codec, NULL);
   if (codec_open_code < 0)
   {
-    std::cerr << "Movie codec open failed - code: " << codec_open_code << ". " << path;
+    std::cerr << "Movie codec open failed - code: " << codec_open_code << ". " << path << std::endl;
     Unload();
     return false;
   }
@@ -386,7 +386,7 @@ void Image::LoadMovieFromPath(const std::string& path)
   FFmpegContext *ffmpeg_ctx = new FFmpegContext();
   if (!ffmpeg_ctx->Open(path))
   {
-    std::cerr << "Movie open failure: " << path;
+    std::cerr << "Movie open failure: " << path << std::endl;
     delete ffmpeg_ctx;
     ffmpeg_ctx = 0;
     return;

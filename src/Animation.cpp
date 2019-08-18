@@ -43,7 +43,7 @@ void SpriteAnimation::Tick(int delta_ms)
     ani_texture_.idx =
       ani_texture_.eclipsed_time * ani_texture_.divx * ani_texture_.divy
       / ani_texture_.interval % ani_texture_.cnt;
-    //ani_texture_.eclipsed_time %= ani_texture_.interval;
+    ani_texture_.eclipsed_time %= ani_texture_.interval;
   }
 
   // Update tween time (dst)
@@ -60,6 +60,12 @@ void SpriteAnimation::Tick(int delta_ms)
         t.time_eclipsed = 0;
         tweens_.push_back(t);
       }
+
+      // kind of trick: if current tween is last one,
+      // Do UpdateTween here. We expect last tween state
+      // should be same as current tween in that case.
+      if (tweens_.size() == 1)
+        current_tween_ = t.ti;
 
       tweens_.pop_front();
     }
