@@ -50,6 +50,8 @@ public:
   bool IsActive() const;
   void Tick(int delta_ms);
   void AddTween(const Tween& tween);
+  void AddTween(float x, float y, float w, float h,
+    float r, float g, float b, float a, uint32_t time_delta, bool loop);
   Tween& GetLastTween();
   const Tween& GetLastTween() const;
   const TweenInfo& GetCurrentTweenInfo() const;
@@ -60,6 +62,7 @@ public:
   void SetAnimatedSource(
     float sx, float sy, float sw, float sh,
     int divx, int divy, int timer, int loop_time);
+  void UseAnimatedTexture(bool use_ani_tex);
 
   void SetPosition(float x, float y);
   void SetSize(float w, float h);
@@ -72,6 +75,7 @@ private:
   std::list<Tween> tweens_;
   TweenInfo current_tween_;
   AnimatedTexture ani_texture_;
+  bool use_ani_texture_;
 
   void UpdateTween();
 };

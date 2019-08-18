@@ -20,6 +20,7 @@ SpriteAnimation::SpriteAnimation()
   ani_texture_.eclipsed_time = 0;
   ani_texture_.sx = ani_texture_.sy = 0.0f;
   ani_texture_.sw = ani_texture_.sh = 1.0f;
+  use_ani_texture_ = false;
 }
 
 SpriteAnimation::~SpriteAnimation()
@@ -33,12 +34,16 @@ bool SpriteAnimation::IsActive() const
 
 void SpriteAnimation::Tick(int delta_ms)
 {
+  if (delta_ms == 0) return;
+
   // Update AnimatedTexture (src)
   if (ani_texture_.interval > 0)
   {
     ani_texture_.eclipsed_time += delta_ms;
-    ani_texture_.idx = (ani_texture_.idx + ani_texture_.eclipsed_time / ani_texture_.interval) % ani_texture_.cnt;
-    ani_texture_.eclipsed_time %= ani_texture_.interval;
+    ani_texture_.idx =
+      ani_texture_.eclipsed_time * ani_texture_.divx * ani_texture_.divy
+      / ani_texture_.interval % ani_texture_.cnt;
+    //ani_texture_.eclipsed_time %= ani_texture_.interval;
   }
 
   // Update tween time (dst)
@@ -73,6 +78,17 @@ void SpriteAnimation::AddTween(const Tween& tween)
   tweens_.push_back(tween);
 }
 
+void SpriteAnimation::AddTween(float x, float y, float w, float h,
+  float r, float g, float b, float a, uint32_t time_delta, bool loop)
+{
+  tweens_.emplace_back(Tween{
+    /* TweenInfo */ {0, 0, w, h, r, g, b,
+    a, a, a, a, .0f, .0f, 1.0f, 1.0f,
+    /* ProjectionInfo */ {.0f, .0f, .0f, .0f, .0f, x, y, 1.0f, 1.0f }
+    },
+    time_delta, 0, loop, TweenTypes::kTweenTypeEaseOut});
+}
+
 Tween& SpriteAnimation::GetLastTween()
 {
   return tweens_.back();
@@ -94,26 +110,14 @@ void SpriteAnimation::GetVertexInfo(VertexInfo* vi)
 
   float x1, y1, x2, y2, sx1, sx2, sy1, sy2;
 
-  float divw = ani_texture_.sw / ani_texture_.divx;
-  float divh = ani_texture_.sh / ani_texture_.divy;
-  // TODO : use proper timer
-  int dividx = 0;
-  if (ani_texture_.interval)
-  {
-    dividx = Timer::GetGameTimeInMillisecond() %
-      (ani_texture_.interval / ani_texture_.divx / ani_texture_.divy);
-  }
-  int divxi = dividx % ani_texture_.divx;
-  int divyi = dividx / ani_texture_.divx % ani_texture_.divy;
-
-  x1 = 0; // ti.x / ww;
-  y1 = 0; // ti.y / wh;
+  x1 = ti.x;
+  y1 = ti.y;
   x2 = x1 + ti.w;
   y2 = y1 + ti.h;
-  sx1 = ti.sx + ti.sw * ani_texture_.sx + divxi * divw;
-  sy1 = ti.sy + ti.sh * ani_texture_.sy + divyi * divh;
-  sx2 = sx1 + ti.sw * divw;
-  sy2 = sy1 + ti.sh * divh;
+  sx1 = ti.sx;
+  sy1 = ti.sy;
+  sx2 = sx1 + ti.sw;
+  sy2 = sy1 + ti.sh;
 
   // for predefined src width / height (-1 means use whole texture)
   if (ti.sw == -1) sx1 = 0.0, sx2 = 1.0;
@@ -178,6 +182,10 @@ void SpriteAnimation::GetDrawInfo(DrawInfo& di)
   TWEEN(aTR) \
   TWEEN(aBR) \
   TWEEN(aBL) \
+  TWEEN(sx) \
+  TWEEN(sy) \
+  TWEEN(sw) \
+  TWEEN(sh) \
   TWEEN(pi.rotx) \
   TWEEN(pi.roty) \
   TWEEN(pi.rotz) \
@@ -186,97 +194,112 @@ void SpriteAnimation::GetDrawInfo(DrawInfo& di)
   TWEEN(pi.x) \
   TWEEN(pi.y) \
   TWEEN(pi.sx) \
-  TWEEN(pi.sy)
+  TWEEN(pi.sy) \
 
 void SpriteAnimation::UpdateTween()
 {
-  if (!IsActive()) return;
-
   TweenInfo& ti = current_tween_;
-  if (tweens_.size() == 1)
+
+  // DST calculation start.
+  if (IsActive())
   {
-    ti = tweens_.front().ti;
-  }
-  else
-  {
-    const Tween &t1 = tweens_.front();
-    const Tween &t2 = *std::next(tweens_.begin());
-    float r = (float)t1.time_eclipsed / t1.time_original;
+    if (tweens_.size() == 1)
+    {
+      ti = tweens_.front().ti;
+    }
+    else
+    {
+      const Tween &t1 = tweens_.front();
+      const Tween &t2 = *std::next(tweens_.begin());
+      float r = (float)t1.time_eclipsed / t1.time_original;
 
-    // TODO: use SSE to optimize.
-    switch (t1.ease_type)
-    {
-    case TweenTypes::kTweenTypeLinear:
-    {
+      // TODO: use SSE to optimize.
+      switch (t1.ease_type)
+      {
+      case TweenTypes::kTweenTypeLinear:
+      {
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
 
-      TWEEN_ATTRS;
+        TWEEN_ATTRS;
 
 #undef TWEEN
-      break;
-    }
-    case TweenTypes::kTweenTypeEaseIn:
-    {
-      // use cubic function
-      r = r * r * r;
+        break;
+      }
+      case TweenTypes::kTweenTypeEaseIn:
+      {
+        // use cubic function
+        r = r * r * r;
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
 
-      TWEEN_ATTRS;
+        TWEEN_ATTRS;
 
 #undef TWEEN
-      break;
-    }
-    case TweenTypes::kTweenTypeEaseOut:
-    {
-      // use cubic function
-      r = 1 - r;
-      r = r * r * r;
-      r = 1 - r;
+        break;
+      }
+      case TweenTypes::kTweenTypeEaseOut:
+      {
+        // use cubic function
+        r = 1 - r;
+        r = r * r * r;
+        r = 1 - r;
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
 
-      TWEEN_ATTRS;
+        TWEEN_ATTRS;
 
 #undef TWEEN
-      break;
-    }
-    case TweenTypes::kTweenTypeEaseInOut:
-    {
-      // use cubic function
-      r = 2 * r - 1;
-      r = r * r * r;
-      r = 0.5f + r / 2;
+        break;
+      }
+      case TweenTypes::kTweenTypeEaseInOut:
+      {
+        // use cubic function
+        r = 2 * r - 1;
+        r = r * r * r;
+        r = 0.5f + r / 2;
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
 
-      TWEEN_ATTRS;
+        TWEEN_ATTRS;
 
 #undef TWEEN
-      break;
-    }
-    case TweenTypes::kTweenTypeNone:
-    default:
-    {
+        break;
+      }
+      case TweenTypes::kTweenTypeNone:
+      default:
+      {
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr;
 
-      TWEEN_ATTRS;
+        TWEEN_ATTRS;
 
 #undef TWEEN
-      break;
-    }
+        break;
+      }
+      }
     }
   }
 
-  // If animated src is alive, then previous sx / sy is ignored.
-  if (ani_texture_.interval > 0)
+  // SRC calculation start
+  // If use_ani_texture_ set,
+  // it uses animated SRC info instead of Vertex SRC info.
+  if (use_ani_texture_)
   {
-    ti.sx = 1.0f / ani_texture_.divx * (ani_texture_.idx % ani_texture_.divx);
-    ti.sy = 1.0f / ani_texture_.divy * (ani_texture_.idx / ani_texture_.divx % ani_texture_.divy);
-    ti.sw = 1.0f / ani_texture_.divx;
-    ti.sh = 1.0f / ani_texture_.divy;
+    if (ani_texture_.interval > 0)
+    {
+      ti.sw = ani_texture_.sw / ani_texture_.divx;
+      ti.sh = ani_texture_.sh / ani_texture_.divy;
+      ti.sx = ani_texture_.sx + ti.sw * (ani_texture_.idx % ani_texture_.divx);
+      ti.sy = ani_texture_.sy + ti.sh * (ani_texture_.idx / ani_texture_.divx % ani_texture_.divy);
+    }
+    else
+    {
+      ti.sx = ani_texture_.sx;
+      ti.sy = ani_texture_.sy;
+      ti.sw = ani_texture_.sw;
+      ti.sh = ani_texture_.sh;
+    }
   }
 }
 
@@ -295,7 +318,8 @@ void SpriteAnimation::SetSource(float sx, float sy, float sw, float sh)
 }
 
 void SpriteAnimation::SetAnimatedSource(
-  float sx, float sy, float sw, float sh, int divx, int divy, int timer, int loop_time)
+  float sx, float sy, float sw, float sh,
+  int divx, int divy, int timer, int loop_time)
 {
   ani_texture_.cnt = divx * divy;
   ani_texture_.divx = divx;
@@ -307,6 +331,11 @@ void SpriteAnimation::SetAnimatedSource(
   ani_texture_.sy = sy;
   ani_texture_.sw = sw;
   ani_texture_.sh = sh;
+}
+
+void SpriteAnimation::UseAnimatedTexture(bool use_ani_tex)
+{
+  use_ani_texture_ = use_ani_tex;
 }
 
 void SpriteAnimation::SetPosition(float x, float y)

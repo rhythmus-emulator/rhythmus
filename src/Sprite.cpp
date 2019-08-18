@@ -84,8 +84,7 @@ void Sprite::Update()
 {
   // check animation is now in active
   // if active, call Tick() and invalidate new frame
-  if (ani_.IsActive())
-    ani_.Tick(Timer::GetGameTimeDeltaInMillisecond());
+  ani_.Tick(Timer::GetGameTimeDeltaInMillisecond());
   ani_.GetDrawInfo(di_);
 }
 

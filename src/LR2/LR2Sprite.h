@@ -31,6 +31,9 @@ public:
   /* @brief Set sprite information in sprite form */
   void SetSpriteFromLR2Data();
 
+  /* Update before rendering */
+  virtual void Update();
+
 private:
   LR2SpriteSRC src_;
   std::vector<LR2SpriteDST> dst_;

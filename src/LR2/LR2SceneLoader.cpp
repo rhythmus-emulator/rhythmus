@@ -263,6 +263,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       int op3 = atoi(params[20].c_str());
 
       LR2Sprite* lr2_sprite = (LR2Sprite*)sprites_.back().get();
+      lr2_sprite->new_dst();
       lr2_sprite->get_cur_dst() = {
         time, x, y, w, h, acc_type, a, r, g, b,
         blend, filter, angle, center, loop, timer,

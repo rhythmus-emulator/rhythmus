@@ -1,4 +1,5 @@
 #include "LR2Sprite.h"
+#include "Timer.h"
 
 namespace rhythmus
 {
@@ -34,14 +35,33 @@ void LR2Sprite::SetSpriteFromLR2Data()
   if (divx < 1) divx = 1;
   if (divy < 1) divy = 1;
 
+  ani_.UseAnimatedTexture(true);
   ani_.SetAnimatedSource(sx, sy, sw, sh, divx, divy, 0, src_.cycle);
 
   // Set DST
-  // TODO
-  //ani.SetAnimatedSource(sx, sy, sw, sh, divx, divy, timer, op1, op2, op3);
-
+  int cur_time = 0;
+  for (const auto& dst : dst_)
+  {
+    ani_.AddTween(dst.x, dst.y, dst.w, dst.h,
+      dst.r / 255.0f, dst.g / 255.0f, dst.b / 255.0f, dst.a / 255.0f,
+      dst.time - cur_time, false);
+    // TODO: set center
+    // TODO: add AnimationFixed for loop process
+    cur_time = dst.time;
+  }
+  
+  /* Only if you want to see last animation motion */
+#if 0
   ani_.SetPosition(get_cur_dst().x, get_cur_dst().y);
   ani_.SetSize(get_cur_dst().w, get_cur_dst().h);
+#endif
+}
+
+void LR2Sprite::Update()
+{
+  // TODO: update animation if specified timer is activated.
+
+  Sprite::Update();
 }
 
 }
