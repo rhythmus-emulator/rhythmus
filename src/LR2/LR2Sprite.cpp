@@ -34,7 +34,7 @@ void LR2Sprite::SetSpriteFromLR2Data()
   if (divx < 1) divx = 1;
   if (divy < 1) divy = 1;
 
-  ani_.SetAnimatedSource(sx, sy, sw, sh, divx, divy, 0);
+  ani_.SetAnimatedSource(sx, sy, sw, sh, divx, divy, 0, src_.cycle);
 
   // Set DST
   // TODO

@@ -17,6 +17,9 @@ public:
   ~Timer();
   double GetTime();
   uint32_t GetTimeInMillisecond();
+  void Start();
+  void Stop();
+  bool IsTimerStarted();
   void Tick();
   double GetTickRate();
   void SetEventInterval(double interval_second, bool loop);
@@ -39,6 +42,7 @@ private:
   double event_interval_;
   double event_next_tick_;
   bool event_loop_;
+  bool timer_started_;
 };
 
 }

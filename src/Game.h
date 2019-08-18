@@ -1,4 +1,6 @@
 #pragma once
+
+#include "Timer.h"
 #include <stdint.h>
 #include <string>
 #include <vector>

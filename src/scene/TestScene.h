@@ -14,6 +14,7 @@ public:
   virtual ~TestScene();
 
   virtual void LoadScene(SceneLoader *scene_loader);
+  virtual void StartScene();
   virtual void CloseScene();
   virtual void Render();
   virtual void ProcessEvent(const GameEvent& e);

@@ -31,6 +31,10 @@ void TestScene::Render()
   lr2text_.Render();
 }
 
+void TestScene::StartScene()
+{
+}
+
 void TestScene::LoadScene(SceneLoader *scene_loader)
 {
   ImageAuto img_ = ResourceManager::getInstance().LoadImage("../test/test.png");

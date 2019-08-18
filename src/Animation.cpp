@@ -1,4 +1,5 @@
 #include "Animation.h"
+#include "Timer.h"
 
 namespace rhythmus
 {
@@ -92,19 +93,24 @@ void SpriteAnimation::GetVertexInfo(VertexInfo* vi)
   const TweenInfo &ti = GetCurrentTweenInfo();
 
   float x1, y1, x2, y2, sx1, sx2, sy1, sy2;
-  // window width / height (for ratio)
-  float ww = 1.0f, wh = 1.0f;
-  // image width / height (for ratio)
-  float iw = 1.0f, ih = 1.0f;
+
+  float divw = ani_texture_.sw / ani_texture_.divx;
+  float divh = ani_texture_.sh / ani_texture_.divy;
+  // TODO : use proper timer
+  int dividx = 0;
+  if (ani_texture_.interval)
+    dividx = Timer::GetGameTimeInMillisecond() % ani_texture_.interval;
+  int divxi = dividx % ani_texture_.divx;
+  int divyi = dividx / ani_texture_.divx % ani_texture_.divy;
 
   x1 = 0; // ti.x / ww;
   y1 = 0; // ti.y / wh;
-  x2 = x1 + ti.w / ww;
-  y2 = y1 + ti.h / wh;
-  sx1 = ti.sx / iw + ti.sw * ani_texture_.sx;
-  sy1 = ti.sy / ih + ti.sh * ani_texture_.sy;
-  sx2 = sx1 + ti.sw / iw - ti.sw * (1.0f - ani_texture_.sw);
-  sy2 = sy1 + ti.sh / ih - ti.sh * (1.0f - ani_texture_.sh);
+  x2 = x1 + ti.w;
+  y2 = y1 + ti.h;
+  sx1 = ti.sx + ti.sw * ani_texture_.sx + divxi * divw;
+  sy1 = ti.sy + ti.sh * ani_texture_.sy + divyi * divh;
+  sx2 = sx1 + ti.sw * divw;
+  sy2 = sy1 + ti.sh * divh;
 
   // for predefined src width / height (-1 means use whole texture)
   if (ti.sw == -1) sx1 = 0.0, sx2 = 1.0;
@@ -286,14 +292,14 @@ void SpriteAnimation::SetSource(float sx, float sy, float sw, float sh)
 }
 
 void SpriteAnimation::SetAnimatedSource(
-  float sx, float sy, float sw, float sh, int divx, int divy, int timer)
+  float sx, float sy, float sw, float sh, int divx, int divy, int timer, int loop_time)
 {
   ani_texture_.cnt = divx * divy;
   ani_texture_.divx = divx;
   ani_texture_.divy = divy;
   ani_texture_.eclipsed_time = 0;
   ani_texture_.idx = 0;
-  ani_texture_.interval = timer;  // TODO
+  ani_texture_.interval = loop_time;
   ani_texture_.sx = sx;
   ani_texture_.sy = sy;
   ani_texture_.sw = sw;

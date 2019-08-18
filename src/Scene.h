@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Game.h"
+#include "Timer.h"
 #include "ResourceManager.h"
 #include <string>
 #include <vector>
@@ -87,9 +88,19 @@ class Scene
 public:
   virtual ~Scene() { };
 
+  /* @brief load scene resource and prepare to start */
   virtual void LoadScene(SceneLoader *scene_loader);
+
+  /* @brief start scene e.g. start scene timer */
+  virtual void StartScene() = 0;
+
+  /* @brief prepare to finish scene e.g. prepare next scene */
   virtual void CloseScene() = 0;
+
+  /* @brief Render scene */
   virtual void Render() = 0;
+
+  /* @brief Process event in this scene */
   virtual void ProcessEvent(const GameEvent& e) = 0;
 
   void LoadOptions();

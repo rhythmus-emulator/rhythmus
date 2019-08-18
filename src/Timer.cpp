@@ -15,8 +15,9 @@ struct {
  * @brief Constructor for general timer
  */
 Timer::Timer()
-  : start_time_(Timer::GetGameTime()), last_time_(start_time_),
-    tick_rate_(0), event_interval_(0), event_next_tick_(0), event_loop_(false)
+  : start_time_(0), last_time_(0),
+    tick_rate_(0), event_interval_(0), event_next_tick_(0),
+    event_loop_(false), timer_started_(false)
 {
 }
 
@@ -24,11 +25,31 @@ Timer::~Timer()
 {
 }
 
+
+void Timer::Start()
+{
+  start_time_ = Timer::GetGameTime();
+  timer_started_ = true;
+}
+
+void Timer::Stop()
+{
+  timer_started_ = false;
+}
+
+bool Timer::IsTimerStarted()
+{
+  return timer_started_;
+}
+
 /**
  * @brief Update last time(rate) of timer & call callback functions if necessary.
  */
 void Timer::Tick()
 {
+  if (!timer_started_)
+    return;
+
   // update tick rate
   double new_last_time = Timer::GetGameTime();
   double delta = new_last_time - last_time_;
@@ -50,7 +71,7 @@ void Timer::Tick()
   OnTick(delta);
 }
 
-/* Timer automatically starts when this method is called. */
+/* Timer event interval is cleared if previous one exists. */
 void Timer::SetEventInterval(double interval_second, bool loop)
 {
   event_interval_ = interval_second;

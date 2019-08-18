@@ -21,7 +21,14 @@ private:
   // currently displaying scene
   Scene* current_scene_;
 
+  // Create next scene using current gamestate.
   Scene* CreateNextScene();
+
+  // Scene timer
+  Timer timer_scene_;
+
+  // Scene fadeout timer
+  Timer timer_fadeout_;
 };
 
 /* singleton object. */

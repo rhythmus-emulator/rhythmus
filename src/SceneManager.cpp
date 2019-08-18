@@ -61,6 +61,12 @@ void SceneManager::ChangeScene(bool force)
 
   delete current_scene_;
   current_scene_ = new_scene;
+
+  // reset related timer
+  timer_fadeout_.Stop();
+  timer_scene_.Start();
+
+  current_scene_->StartScene();
 }
 
 SceneManager& SceneManager::getInstance()

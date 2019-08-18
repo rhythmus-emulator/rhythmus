@@ -10,4 +10,11 @@ int GetLR2Flag(int flag_no)
   return 0;
 }
 
+Timer& GetLR2Timer(int timer_no)
+{
+  // TODO
+  static Timer test;
+  return test;
+}
+
 }

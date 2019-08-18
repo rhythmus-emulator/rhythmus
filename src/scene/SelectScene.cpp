@@ -3,6 +3,10 @@
 namespace rhythmus
 {
 
+void SelectScene::StartScene()
+{
+}
+
 void SelectScene::CloseScene()
 {
   // TODO
