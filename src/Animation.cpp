@@ -99,7 +99,10 @@ void SpriteAnimation::GetVertexInfo(VertexInfo* vi)
   // TODO : use proper timer
   int dividx = 0;
   if (ani_texture_.interval)
-    dividx = Timer::GetGameTimeInMillisecond() % ani_texture_.interval;
+  {
+    dividx = Timer::GetGameTimeInMillisecond() %
+      (ani_texture_.interval / ani_texture_.divx / ani_texture_.divy);
+  }
   int divxi = dividx % ani_texture_.divx;
   int divyi = dividx / ani_texture_.divx % ani_texture_.divy;
 

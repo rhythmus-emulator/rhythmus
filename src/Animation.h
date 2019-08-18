@@ -58,7 +58,8 @@ public:
 
   void SetSource(float sx, float sy, float sw, float sh);
   void SetAnimatedSource(
-    float sx, float sy, float sw, float sh, int divx, int divy, int timer, int loop_time);
+    float sx, float sy, float sw, float sh,
+    int divx, int divy, int timer, int loop_time);
 
   void SetPosition(float x, float y);
   void SetSize(float w, float h);
