@@ -27,6 +27,7 @@ private:
   void LoadCSV(const std::string& filepath);
   void ParseCSV(const char* p, size_t len);
   void GetImagePath(const std::string& value);
+  std::string ConvertLR2Path(const std::string& lr2path);
 };
 
 }

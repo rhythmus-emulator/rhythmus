@@ -29,7 +29,7 @@ public:
   LR2SpriteDST& get_cur_dst();
 
   /* @brief Set sprite information in sprite form */
-  void SetSprite();
+  void SetSpriteFromLR2Data();
 
 private:
   LR2SpriteSRC src_;

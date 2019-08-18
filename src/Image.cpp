@@ -568,6 +568,11 @@ void Image::UnloadTexture()
   }
 }
 
+bool Image::is_loaded() const
+{
+  return width_ > 0 && height_ > 0;
+}
+
 void Image::RestartMovie()
 {
   if (ffmpeg_ctx_)

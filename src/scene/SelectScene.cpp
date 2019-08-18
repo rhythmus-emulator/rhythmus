@@ -10,7 +10,11 @@ void SelectScene::CloseScene()
 
 void SelectScene::Render()
 {
-  // TODO
+  for (auto spr : sprites_)
+  {
+    spr->Update();
+    spr->Render();
+  }
 }
 
 void SelectScene::ProcessEvent(const GameEvent& e)

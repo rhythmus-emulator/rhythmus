@@ -18,13 +18,24 @@ LR2SceneLoader::~LR2SceneLoader()
 void LR2SceneLoader::Load(const std::string& path)
 {
   scene_filepath_ = path;
+  folder_ = rutil::GetDirectory(path);
+
   LoadCSV(path);
 
   // set all LR2Sprites valid
   for (auto s : sprites_)
   {
     LR2Sprite* sp = (LR2Sprite*)s.get();
-    sp->SetSprite();  // TODO: need to send image mapping information
+    if (images_.size() < sp->get_src().imgidx)
+    {
+      // TODO: Some imgidx is special(e.g. CoverImage, BG ...)
+      // need to deal with it.
+      std::cerr << "LR2SceneLoader: Sprite invalid imgidx(" <<
+        sp->get_src().imgidx << "), ignored." << std::endl;
+      continue;
+    }
+    sp->SetImage(images_[sp->get_src().imgidx]);
+    sp->SetSpriteFromLR2Data();
   }
 }
 
@@ -55,9 +66,11 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
   while (p < p_end)
   {
     while (*p != '\n' && *p != '\r' && p < p_end) ++p;
-    std::string s(p_ls, p_end - p);
+    std::string s(p_ls, p - p_ls);
     while (*p == '\n' || *p == '\r' || *p == ' ') ++p;
     p_ls = p;
+
+    s = rutil::ConvertEncoding(s, rutil::E_UTF8, rutil::E_SHIFT_JIS);
 
     if (s.size() < 2) continue;
     if (s[0] != '#') continue;
@@ -112,7 +125,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     {
       if (if_stack_.empty())
       {
-        std::cerr << "LR2Skin: #ENDIF without #IF statement, ignored.";
+        std::cerr << "LR2Skin: #ENDIF without #IF statement, ignored." << std::endl;
         break;
       }
       if_stack_.pop_back();
@@ -126,7 +139,9 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     if (params[0] == "#INCLUDE")
     {
       MakeParamCountSafe(params, 2);
-      LoadCSV(params[1]);
+      // before continue, need to change path of LR2
+      std::string path = ConvertLR2Path(params[1]);
+      LoadCSV(path);
     }
     else if (params[0] == "#INFORMATION")
     {
@@ -186,8 +201,9 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     else if (params[0] == "#IMAGE")
     {
       MakeParamCountSafe(params, 2);
-      std::string imgpath = params[1];
+      std::string imgpath = ConvertLR2Path(params[1]);
       ImageAuto img = ResourceManager::getInstance().LoadImage(imgpath);
+      img->CommitImage();
       images_.push_back(img);
     }
     /*
@@ -221,7 +237,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     {
       if (sprites_.size() == 0)
       {
-        std::cout << "LR2Skin Load warning : DST command found without SRC, ignored.";
+        std::cout << "LR2Skin Load warning : DST command found without SRC, ignored." << std::endl;
         continue;
       }
 
@@ -259,6 +275,33 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
 void LR2SceneLoader::GetImagePath(const std::string& value)
 {
 
+}
+
+// we need to change path of LR2 into general relative path.
+std::string LR2SceneLoader::ConvertLR2Path(const std::string& lr2path)
+{
+  std::string path = lr2path;
+  for (int i = 0; i < path.size(); ++i)
+    if (path[i] == '\\') path[i] = '/';
+  if (strncmp(path.c_str(), "./", 2) == 0)
+    path = path.substr(2);
+  if (strnicmp(path.c_str(), "LR2files/Theme", 14) == 0)
+  {
+    std::vector<std::string> path_seps;
+    rutil::split(path, '/', path_seps);
+    path = folder_;
+
+    /* Need to check that folder depth is 3 or 4 */
+    int fld_depth = 1;
+    for (int i = 0; i < folder_.size(); ++i)
+      if (folder_[i] == '/' || folder_[i] == '\\') fld_depth++;
+
+    for (int i = fld_depth; i < path_seps.size(); ++i)
+    {
+      path += "/" + path_seps[i];
+    }
+  }
+  return path;
 }
 
 }

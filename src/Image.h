@@ -18,6 +18,7 @@ public:
   void UnloadTexture();
   void UnloadBitmap();
   void UnloadMovie();
+  bool is_loaded() const;
   GLuint get_texture_ID() const;
   uint16_t get_width() const;
   uint16_t get_height() const;

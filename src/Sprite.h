@@ -32,7 +32,6 @@ protected:
   const DrawInfo& get_drawinfo() const;
   DrawInfo& get_drawinfo();
 
-private:
   ImageAuto img_;
   SpriteAnimation ani_;
   DrawInfo di_;
