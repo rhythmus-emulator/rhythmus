@@ -2,6 +2,7 @@
 #include "scene/TestScene.h"
 #include "scene/SelectScene.h"
 #include "LR2/LR2SceneLoader.h"
+#include "LR2/LR2Flag.h"
 
 namespace rhythmus
 {
@@ -29,7 +30,11 @@ void SceneManager::Initialize()
 
 void SceneManager::Render()
 {
+  // Tick all scenemanager related timer
   timer_scene_.Tick();
+
+  // Update LR2Flag (LR2 compatible layer)
+  LR2Flag::Update();
 
   if (current_scene_)
     current_scene_->Render();

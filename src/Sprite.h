@@ -38,6 +38,9 @@ protected:
   ImageAuto img_;
   SpriteAnimation ani_;
   DrawInfo di_;
+
+  /* invalidate drawinfo with force (internal use) */
+  bool invalidate_drawinfo_;
 };
 
 using SpriteAuto = std::shared_ptr<Sprite>;

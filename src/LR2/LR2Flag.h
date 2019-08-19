@@ -5,7 +5,12 @@
 namespace rhythmus
 {
 
-int GetLR2Flag(int flag_no);
-Timer& GetLR2Timer(int timer_no);
+  namespace LR2Flag
+  {
+    int GetFlag(int flag_no);
+    void Update();
+    bool ShouldActiveTimer(int timer_no);
+    bool IsTimerActive(int timer_no);
+  }
 
 }

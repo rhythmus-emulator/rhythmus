@@ -84,7 +84,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     {
       MakeParamCountSafe(params, 2);
       int cond = atoi(params[1].c_str());
-      if (GetLR2Flag(cond))
+      if (LR2Flag::GetFlag(cond))
         if_stack_.emplace_back(IfStmt{ 0, false });
       else
         if_stack_.emplace_back(IfStmt{ 1, true });
@@ -102,7 +102,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
 
       MakeParamCountSafe(params, 2);
       int cond = atoi(params[1].c_str());
-      if (GetLR2Flag(cond))
+      if (LR2Flag::GetFlag(cond))
       {
         if_stack_.back().cond_is_true = true;
         if_stack_.back().cond_match_count++;
