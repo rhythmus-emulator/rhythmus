@@ -369,6 +369,8 @@ void Game::ProcessEvent()
   }
 
   // Update FPS for internal use.
+  if (!FpsTimer.IsTimerStarted())
+    FpsTimer.Start();
   FpsTimer.Tick();
 }
 

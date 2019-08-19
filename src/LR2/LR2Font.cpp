@@ -98,6 +98,10 @@ void LR2Font::ReadLR2Font(const char* path)
       g.pos_x = 0;
       g.pos_y = g.height;
 
+      /* in case of unexpected texture */
+      if (g.texidx >= fontbitmap_.size())
+        continue;
+
       /* need to calculate src pos by texture, so need to get texture. */
       float tex_width = fontbitmap_[g.texidx]->width();
       float tex_height = fontbitmap_[g.texidx]->height();

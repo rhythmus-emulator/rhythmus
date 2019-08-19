@@ -111,6 +111,9 @@ void Graphic::Initialize()
   }
 #endif
 
+  // Vsync enabled
+  glfwSwapInterval(1);
+
   // set rendering context
   current_proj_mode_ = -1;  // no projection mode initially.
 }
