@@ -44,9 +44,11 @@ int main(int argc, char **argv)
   Logger::getInstance().StartLogging();
   Logger::getInstance().HookStdOut();
   graphic.Initialize();
-  game.ChangeGameMode();
   SceneManager::getInstance().Initialize();
   Timer::Initialize();
+
+  // after all settings are done, start scene translation
+  game.ChangeGameMode();
 
   /**
    * Main game loop

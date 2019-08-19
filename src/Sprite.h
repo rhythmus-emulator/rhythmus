@@ -22,6 +22,9 @@ public:
   void SetRotation(float x, float y, float z);
   void SetCenter(float x, float y);
 
+  void Hide();
+  void Show();
+
   /* Update before rendering */
   virtual void Update();
 

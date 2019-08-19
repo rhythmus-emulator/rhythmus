@@ -17,7 +17,7 @@ struct {
 Timer::Timer()
   : start_time_(0), last_time_(0),
     tick_rate_(0), event_interval_(0), event_next_tick_(0),
-    event_loop_(false), timer_started_(false)
+    delta_(0), event_loop_(false), timer_started_(false)
 {
 }
 
@@ -52,14 +52,14 @@ void Timer::Tick()
 
   // update tick rate
   double new_last_time = Timer::GetGameTime();
-  double delta = new_last_time - last_time_;
+  delta_ = new_last_time - last_time_;
   last_time_ = new_last_time;
-  tick_rate_ = tick_rate_ * (1 - TickRateUpdateRate) + (1 / delta) * TickRateUpdateRate;
+  tick_rate_ = tick_rate_ * (1 - TickRateUpdateRate) + (1 / delta_) * TickRateUpdateRate;
 
   // call callback function
   if (event_interval_ > 0)
   {
-    event_next_tick_ -= delta;
+    event_next_tick_ -= delta_;
     if (event_next_tick_ <= 0)
     {
       OnEvent();
@@ -68,7 +68,7 @@ void Timer::Tick()
     }
   }
 
-  OnTick(delta);
+  OnTick(delta_);
 }
 
 /* Timer event interval is cleared if previous one exists. */
@@ -99,19 +99,29 @@ void Timer::ClearEvent()
   event_interval_ = 0;
 }
 
-double Timer::GetTickRate()
+double Timer::GetTickRate() const
 {
   return tick_rate_;
 }
 
-double Timer::GetTime()
+double Timer::GetTime() const
 {
   return GlobalTimerContext.game_current_time_.load() - start_time_;
 }
 
-uint32_t Timer::GetTimeInMillisecond()
+uint32_t Timer::GetTimeInMillisecond() const
 {
   return static_cast<uint32_t>(GetTime() * 1000);
+}
+
+double Timer::GetDeltaTime() const
+{
+  return delta_;
+}
+
+uint32_t Timer::GetDeltaTimeInMillisecond() const
+{
+  return static_cast<uint32_t>(GetDeltaTime() * 1000);
 }
 
 double Timer::GetUncachedGameTime()

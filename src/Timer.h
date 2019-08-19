@@ -15,13 +15,15 @@ class Timer
 public:
   Timer();
   ~Timer();
-  double GetTime();
-  uint32_t GetTimeInMillisecond();
+  double GetTime() const;
+  uint32_t GetTimeInMillisecond() const;
+  double GetDeltaTime() const;
+  uint32_t GetDeltaTimeInMillisecond() const;
   void Start();
   void Stop();
   bool IsTimerStarted();
   void Tick();
-  double GetTickRate();
+  double GetTickRate() const;
   void SetEventInterval(double interval_second, bool loop);
   void RestartEvent();
   void ClearEvent();
@@ -41,6 +43,7 @@ private:
   double tick_rate_;
   double event_interval_;
   double event_next_tick_;
+  double delta_;
   bool event_loop_;
   bool timer_started_;
 };

@@ -1,6 +1,6 @@
 #include "Sprite.h"
 #include "Game.h"
-#include "Timer.h"
+#include "SceneManager.h" // to use scene timer
 #include <iostream>
 
 namespace rhythmus
@@ -72,8 +72,22 @@ void Sprite::SetCenter(float x, float y)
   ani_.SetCenter(x, y);
 }
 
+void Sprite::Hide()
+{
+  ani_.Hide();
+}
+
+void Sprite::Show()
+{
+  ani_.Show();
+}
+
 void Sprite::Render()
 {
+  // If hide, then not draw
+  if (!ani_.IsDisplay())
+    return;
+
   // Render with given frame
   if (img_)
     glBindTexture(GL_TEXTURE_2D, img_->get_texture_ID());
@@ -82,10 +96,15 @@ void Sprite::Render()
 
 void Sprite::Update()
 {
-  // check animation is now in active
-  // if active, call Tick() and invalidate new frame
-  ani_.Tick(Timer::GetGameTimeDeltaInMillisecond());
-  ani_.GetDrawInfo(di_);
+  // Before Tick(), check is there any motion
+  // If not, we don't need to update DrawInfo.
+  bool update_drawinfo = ani_.IsActive();
+
+  // always Tick() to update tween
+  ani_.Tick(SceneManager::getInstance().GetSceneTimer().GetDeltaTimeInMillisecond());
+
+  if (update_drawinfo)
+    ani_.GetDrawInfo(di_);
 }
 
 }

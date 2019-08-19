@@ -8,6 +8,7 @@ SpriteAnimation::SpriteAnimation()
 {
   memset(&current_tween_, 0, sizeof(current_tween_));
   current_tween_.sw = current_tween_.sh = 1.0f;
+  current_tween_.display = true;
   SetRGB(1.0f, 1.0f, 1.0f);
   SetAlpha(1.0f);
   SetScale(1.0f, 1.0f);
@@ -50,14 +51,19 @@ void SpriteAnimation::Tick(int delta_ms)
   while (IsActive() && delta_ms > 0)
   {
     Tween &t = tweens_.front();
-    if (delta_ms + t.time_eclipsed >= t.time_original)  // in case of last tween
+    if (delta_ms + t.time_eclipsed >= t.time_duration)  // in case of last tween
     {
-      delta_ms -= t.time_original - t.time_eclipsed;
+      delta_ms -= t.time_duration - t.time_eclipsed;
+
+      // kind of trick: if single tween with loop,
+      // It's actually useless. turn off loop attr.
+      if (tweens_.size() == 1)
+        t.loop = false;
 
       // loop tween by push it back.
       if (t.loop)
       {
-        t.time_eclipsed = 0;
+        t.time_eclipsed = t.time_loopstart;
         tweens_.push_back(t);
       }
 
@@ -90,9 +96,19 @@ void SpriteAnimation::AddTween(float x, float y, float w, float h,
   tweens_.emplace_back(Tween{
     /* TweenInfo */ {0, 0, w, h, r, g, b,
     a, a, a, a, .0f, .0f, 1.0f, 1.0f,
-    /* ProjectionInfo */ {.0f, .0f, .0f, .0f, .0f, x, y, 1.0f, 1.0f }
-    },
-    time_delta, 0, loop, TweenTypes::kTweenTypeEaseOut});
+    /* ProjectionInfo */ {.0f, .0f, .0f, .0f, .0f, x, y, 1.0f, 1.0f },
+    true},
+    time_delta, 0, 0, loop, TweenTypes::kTweenTypeEaseOut});
+}
+
+void SpriteAnimation::AddTweenHideDuration(uint32_t time_delta)
+{
+  tweens_.emplace_back(Tween{
+    /* TweenInfo */ {0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, .0f, .0f, 1.0f, 1.0f,
+    /* ProjectionInfo */ {.0f, .0f, .0f, .0f, .0f, 0, 0, 1.0f, 1.0f },
+    false},
+    time_delta, 0, 0, false, TweenTypes::kTweenTypeNone });
 }
 
 Tween& SpriteAnimation::GetLastTween()
@@ -103,6 +119,25 @@ Tween& SpriteAnimation::GetLastTween()
 const Tween& SpriteAnimation::GetLastTween() const
 {
   return tweens_.back();
+}
+
+/* This method should be called just after all fixed tween is appended. */
+void SpriteAnimation::SetTweenLoopTime(uint32_t time_msec)
+{
+  for (auto& t : tweens_)
+  {
+    if (time_msec < t.time_duration)
+    {
+      t.time_loopstart = time_msec;
+      t.loop = true;
+      time_msec = 0;
+    }
+    else {
+      t.time_loopstart = 0;
+      t.loop = false;
+      time_msec -= t.time_duration;
+    }
+  }
 }
 
 const TweenInfo& SpriteAnimation::GetCurrentTweenInfo() const
@@ -217,72 +252,78 @@ void SpriteAnimation::UpdateTween()
     {
       const Tween &t1 = tweens_.front();
       const Tween &t2 = *std::next(tweens_.begin());
-      float r = (float)t1.time_eclipsed / t1.time_original;
+      ti.display = t1.ti.display;
 
-      // TODO: use SSE to optimize.
-      switch (t1.ease_type)
+      // If not display, we don't need to calculate further away.
+      if (ti.display)
       {
-      case TweenTypes::kTweenTypeLinear:
-      {
+        float r = (float)t1.time_eclipsed / t1.time_duration;
+
+        // TODO: use SSE to optimize.
+        switch (t1.ease_type)
+        {
+        case TweenTypes::kTweenTypeLinear:
+        {
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
 
-        TWEEN_ATTRS;
+          TWEEN_ATTRS;
 
 #undef TWEEN
-        break;
-      }
-      case TweenTypes::kTweenTypeEaseIn:
-      {
-        // use cubic function
-        r = r * r * r;
+          break;
+        }
+        case TweenTypes::kTweenTypeEaseIn:
+        {
+          // use cubic function
+          r = r * r * r;
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
 
-        TWEEN_ATTRS;
+          TWEEN_ATTRS;
 
 #undef TWEEN
-        break;
-      }
-      case TweenTypes::kTweenTypeEaseOut:
-      {
-        // use cubic function
-        r = 1 - r;
-        r = r * r * r;
-        r = 1 - r;
+          break;
+        }
+        case TweenTypes::kTweenTypeEaseOut:
+        {
+          // use cubic function
+          r = 1 - r;
+          r = r * r * r;
+          r = 1 - r;
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
 
-        TWEEN_ATTRS;
+          TWEEN_ATTRS;
 
 #undef TWEEN
-        break;
-      }
-      case TweenTypes::kTweenTypeEaseInOut:
-      {
-        // use cubic function
-        r = 2 * r - 1;
-        r = r * r * r;
-        r = 0.5f + r / 2;
+          break;
+        }
+        case TweenTypes::kTweenTypeEaseInOut:
+        {
+          // use cubic function
+          r = 2 * r - 1;
+          r = r * r * r;
+          r = 0.5f + r / 2;
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
 
-        TWEEN_ATTRS;
+          TWEEN_ATTRS;
 
 #undef TWEEN
-        break;
-      }
-      case TweenTypes::kTweenTypeNone:
-      default:
-      {
+          break;
+        }
+        case TweenTypes::kTweenTypeNone:
+        default:
+        {
 #define TWEEN(attr) \
   ti.attr = t1.ti.attr;
 
-        TWEEN_ATTRS;
+          TWEEN_ATTRS;
 
 #undef TWEEN
-        break;
-      }
+          break;
+        }
+        }
       }
     }
   }
@@ -388,6 +429,25 @@ void SpriteAnimation::SetCenter(float x, float y)
 {
   current_tween_.pi.tx = x;
   current_tween_.pi.ty = y;
+}
+
+void SpriteAnimation::Show()
+{
+  current_tween_.display = true;
+}
+
+void SpriteAnimation::Hide()
+{
+  current_tween_.display = false;
+}
+
+bool SpriteAnimation::IsDisplay() const
+{
+  return current_tween_.display &&
+    current_tween_.aBL > 0 &&
+    current_tween_.aBR > 0 &&
+    current_tween_.aTL > 0 &&
+    current_tween_.aTR > 0;
 }
 
 }

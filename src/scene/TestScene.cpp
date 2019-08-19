@@ -52,15 +52,15 @@ void TestScene::LoadScene(SceneLoader *scene_loader)
       0, 0, 100, 100,
       1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, 0.0f, 0.0f, 50, 50, 100, 100, 1.0f, 1.0f
-    }, 1000, 0, true, TweenTypes::kTweenTypeEaseOut
+      0.0f, 0.0f, 0.0f, 50, 50, 100, 100, 1.0f, 1.0f, true
+    }, 1000, 0, 0, true, TweenTypes::kTweenTypeEaseOut
     });
   spr_.get_animation().AddTween({ {
       0, 0, 110, 110,
       1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
-      0.0f, 0.0f, glm::radians(90.0f), 55, 55, 100, 200, 1.0f, 1.5f
-    }, 1500, 0, true, TweenTypes::kTweenTypeEaseOut
+      0.0f, 0.0f, glm::radians(90.0f), 55, 55, 100, 200, 1.0f, 1.5f, true
+    }, 1500, 0, 0, true, TweenTypes::kTweenTypeEaseOut
     });
 
   spr2_.SetImage(img2_);

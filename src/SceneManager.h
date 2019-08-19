@@ -13,6 +13,8 @@ public:
   void SendEvent(const GameEvent& e);
   void ChangeScene(bool force=false);
 
+  Timer& GetSceneTimer();
+
   static SceneManager& getInstance();
 private:
   SceneManager();

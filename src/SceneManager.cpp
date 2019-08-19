@@ -29,6 +29,8 @@ void SceneManager::Initialize()
 
 void SceneManager::Render()
 {
+  timer_scene_.Tick();
+
   if (current_scene_)
     current_scene_->Render();
 }
@@ -100,6 +102,12 @@ Scene* SceneManager::CreateNextScene()
 
   // NOT REACHABLE.
   return nullptr;
+}
+
+
+Timer& SceneManager::GetSceneTimer()
+{
+  return timer_scene_;
 }
 
 }

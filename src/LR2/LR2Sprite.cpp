@@ -38,17 +38,33 @@ void LR2Sprite::SetSpriteFromLR2Data()
   ani_.UseAnimatedTexture(true);
   ani_.SetAnimatedSource(sx, sy, sw, sh, divx, divy, 0, src_.cycle);
 
+  // Before set DST, pre-calculate delta time
+  int deltatime_calc[1024];
+  ASSERT(dst_.size() < 1024);
+  if (dst_[0].time > 0)
+    ani_.AddTweenHideDuration(dst_[0].time);
+  int i = 0;
+  for (; i < dst_.size()-1; ++i)
+  {
+    deltatime_calc[i] = dst_[i + 1].time - dst_[i].time;
+  }
+  deltatime_calc[i] = 0;
+
   // Set DST
-  int cur_time = 0;
+  i = 0;
   for (const auto& dst : dst_)
   {
     ani_.AddTween(dst.x, dst.y, dst.w, dst.h,
       dst.r / 255.0f, dst.g / 255.0f, dst.b / 255.0f, dst.a / 255.0f,
-      dst.time - cur_time, false);
+      deltatime_calc[i], false);
     // TODO: set center
     // TODO: add AnimationFixed for loop process
-    cur_time = dst.time;
+    i++;
   }
+
+  // Set Loop time
+  if (dst_.size() > 0)
+    ani_.SetTweenLoopTime(dst_.front().loop);
   
   /* Only if you want to see last animation motion */
 #if 0
