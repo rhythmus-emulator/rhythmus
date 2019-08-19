@@ -3,6 +3,41 @@
 namespace rhythmus
 {
 
+// -------------------------- ThemeOption
+
+void ThemeOption::GetSelectionList(std::vector<std::string> &list)
+{
+  // TODO
+}
+
+std::string ThemeOption::GetSelectedValue()
+{
+  switch (type)
+  {
+  case 2:
+  {
+    std::string path;
+    const char* opt = options.c_str();
+    while (*opt)
+    {
+      if (*opt == '*')
+        path += selected;
+      else
+        path.push_back(*opt);
+      opt++;
+    }
+    // TODO: if file is not exist, then try to GetSelectionList and set as first one
+    return path;
+  }
+  case 1:
+  default:
+    return selected;
+  }
+
+  // NOT REACHABLE
+  return "";
+}
+
 // -------------------------- SceneLoader
 
 SceneLoader::SceneLoader(Scene *s)

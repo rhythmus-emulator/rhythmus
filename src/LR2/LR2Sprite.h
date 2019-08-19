@@ -35,6 +35,8 @@ public:
 
   /* @brief Set sprite information in sprite form */
   void SetSpriteFromLR2Data();
+  void SetSpriteSRC();
+  void SetSpriteDST();
 
   /* @brief Update before rendering */
   virtual void Update();

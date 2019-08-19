@@ -28,6 +28,8 @@ namespace rhythmus
       // TODO: update LR2Flag.
       memset(LR2Flag, 0, sizeof(LR2Flag));
       LR2Flag[0] = 1;
+      LR2Flag[50] = 1;  // OFFLINE
+      LR2Flag[52] = 1;  // EXTRA MODE OFF
 
       memcpy(LR2Timer_prev_activated, LR2Timer_curr_activated, sizeof(LR2Timer_prev_activated));
 

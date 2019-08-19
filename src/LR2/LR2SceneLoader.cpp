@@ -9,6 +9,7 @@ namespace rhythmus
 
 LR2SceneLoader::LR2SceneLoader(Scene *s) : SceneLoader(s)
 {
+  ASSERT(scene_);
 }
 
 LR2SceneLoader::~LR2SceneLoader()
@@ -22,8 +23,30 @@ void LR2SceneLoader::Load(const std::string& path)
 
   LoadCSV(path);
 
+  // Attempt to load images from imgname
+  for (auto& imgname : imgnames_)
+  {
+    ImageAuto img = std::make_shared<Image>();
+    std::string imgpath;
+    ThemeOption* option = GetThemeOption(imgname);
+    if (option)
+    {
+      // create img path from option
+      imgpath = option->GetSelectedValue();
+    }
+    else
+    {
+      imgpath = imgname;
+    }
+    imgpath = ConvertLR2Path(imgpath);
+    img->LoadFromPath(imgpath);
+    // TODO: set colorkey
+    img->CommitImage();
+    images_.push_back(img);
+  }
+
   // set all LR2Sprites valid
-  for (auto s : sprites_)
+  for (const auto& s : sprites_)
   {
     LR2Sprite* sp = (LR2Sprite*)s.get();
     if (images_.size() < sp->get_src().imgidx)
@@ -34,7 +57,10 @@ void LR2SceneLoader::Load(const std::string& path)
         sp->get_src().imgidx << "), ignored." << std::endl;
       continue;
     }
-    sp->SetImage(images_[sp->get_src().imgidx]);
+
+    // TODO: get real image path from imgname
+    const auto& img = images_[sp->get_src().imgidx];
+    sp->SetImage(img);
     sp->SetSpriteFromLR2Data();
   }
 }
@@ -42,7 +68,7 @@ void LR2SceneLoader::Load(const std::string& path)
 void MakeParamCountSafe(std::vector<std::string> &v, size_t expected_count)
 {
   while (v.size() < expected_count)
-    v.push_back("");
+    v.emplace_back(std::string());
 }
 
 void LR2SceneLoader::LoadCSV(const std::string& filepath)
@@ -201,10 +227,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     else if (params[0] == "#IMAGE")
     {
       MakeParamCountSafe(params, 2);
-      std::string imgpath = ConvertLR2Path(params[1]);
-      ImageAuto img = ResourceManager::getInstance().LoadImage(imgpath);
-      img->CommitImage();
-      images_.push_back(img);
+      imgnames_.push_back(params[1]);
     }
     /*
     else if (params[0] == "#HELPFILE")
@@ -303,6 +326,14 @@ std::string LR2SceneLoader::ConvertLR2Path(const std::string& lr2path)
     }
   }
   return path;
+}
+
+ThemeOption* LR2SceneLoader::GetThemeOption(const std::string& option_name)
+{
+  for (auto& toption : theme_options_)
+    if (toption.name == option_name)
+      return &toption;
+  return nullptr;
 }
 
 }

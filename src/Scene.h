@@ -55,6 +55,12 @@ struct ThemeOption
 
   // selected value.
   std::string selected;
+
+  /* @brief Get selection list from current ThemeOption */
+  void GetSelectionList(std::vector<std::string> &list);
+
+  /* @brief Get current selected value */
+  std::string GetSelectedValue();
 };
 
 class Scene;

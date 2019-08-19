@@ -24,10 +24,15 @@ private:
 
   std::vector<IfStmt> if_stack_;
 
+  std::vector<std::string> imgnames_;
+
   void LoadCSV(const std::string& filepath);
   void ParseCSV(const char* p, size_t len);
   void GetImagePath(const std::string& value);
   std::string ConvertLR2Path(const std::string& lr2path);
+
+  /* @brief Get theme option by name. nullptr if no name found. */
+  ThemeOption* GetThemeOption(const std::string& option_name);
 };
 
 }

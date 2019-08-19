@@ -69,7 +69,10 @@ void SceneManager::ChangeScene(bool force)
   delete current_scene_;
   current_scene_ = new_scene;
 
-  // reset related timer
+  // Reset SceneManager timer
+  // Need to refresh whole timing to set exact scene start timing
+  // As much time passed due to scene loading.
+  Timer::Update();
   timer_fadeout_.Stop();
   timer_scene_.Start();
 

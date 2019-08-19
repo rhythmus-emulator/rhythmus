@@ -37,8 +37,12 @@ void LR2Sprite::set_timer(int timer_id)
 void LR2Sprite::SetSpriteFromLR2Data()
 {
   if (!img_ || !img_->is_loaded()) return;
+  SetSpriteSRC();
+  SetSpriteDST();
+}
 
-  // Set SRC
+void LR2Sprite::SetSpriteSRC()
+{
   float sx, sy, sw, sh;
   sx = (float)src_.sx / img_->get_width();
   sy = (float)src_.sy / img_->get_height();
@@ -57,7 +61,10 @@ void LR2Sprite::SetSpriteFromLR2Data()
 
   ani_.UseAnimatedTexture(true);
   ani_.SetAnimatedSource(sx, sy, sw, sh, divx, divy, 0, src_.cycle);
+}
 
+void LR2Sprite::SetSpriteDST()
+{
   if (!dst_.empty())
   {
     // Before set DST, pre-calculate delta time
@@ -91,7 +98,7 @@ void LR2Sprite::SetSpriteFromLR2Data()
     set_op(dst_.front().op1, dst_.front().op2, dst_.front().op3);
     set_timer(dst_.front().timer);
   }
-  
+
   /* Only if you want to see last animation motion */
 #if 0
   ani_.SetPosition(get_cur_dst().x, get_cur_dst().y);

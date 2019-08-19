@@ -25,10 +25,10 @@ Timer::~Timer()
 {
 }
 
-
 void Timer::Start()
 {
-  start_time_ = Timer::GetGameTime();
+  last_time_ = start_time_ = Timer::GetGameTime();
+  delta_ = 0;
   timer_started_ = true;
 }
 
@@ -54,7 +54,10 @@ void Timer::Tick()
   double new_last_time = Timer::GetGameTime();
   delta_ = new_last_time - last_time_;
   last_time_ = new_last_time;
-  tick_rate_ = tick_rate_ * (1 - TickRateUpdateRate) + (1 / delta_) * TickRateUpdateRate;
+  if (delta_ > 0)
+    tick_rate_ = tick_rate_ * (1 - TickRateUpdateRate) + (1 / delta_) * TickRateUpdateRate;
+  else
+    tick_rate_ = .0;  // inf_
 
   // call callback function
   if (event_interval_ > 0)
