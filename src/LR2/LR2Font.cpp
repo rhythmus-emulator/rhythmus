@@ -4,7 +4,8 @@
 #include <string>
 #include <map>
 #include <FreeImage.h>
-#include "rutil.h"  // string modification function
+#include "LR2JIS.h" // customized SHIFTJIS table for ease of use.
+#include "rutil.h"    // string modification function
 
 namespace rhythmus
 {
@@ -88,7 +89,8 @@ void LR2Font::ReadLR2Font(const char* path)
     {
       /* glyphnum, texid, x, y, width, height */
       FontGlyph g;
-      g.codepoint = atoi(col[1].c_str()); // TODO: convert Shift-JIS codepoint to UTF8. ftp://ftp.unicode.org/Public/MAPPINGS/OBSOLETE/EASTASIA/JIS/SHIFTJIS.TXT
+      g.codepoint = atoi(col[1].c_str());
+      g.codepoint = ConvertLR2JIStoUTF16(g.codepoint);
       g.texidx = atoi(col[2].c_str());
       g.srcx = atoi(col[3].c_str());
       g.srcy = atoi(col[4].c_str());
