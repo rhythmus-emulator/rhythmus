@@ -1,4 +1,4 @@
-#include "TestScene.h"
+﻿#include "TestScene.h"
 #include "../ResourceManager.h"
 #include <iostream>
 
@@ -73,12 +73,15 @@ void TestScene::LoadScene(SceneLoader *scene_loader)
   attr.outline_width = 2;
   attr.color = 0xfffffff;
   attr.outline_color = 0xff666666;
+
+  const std::string text_to_print = u8"Hello World!\nWith Line breaking\nあえいおう가나다ㅏ";
+
   font_.LoadFont("../test/gyeonggi.ttf", attr);
-  //font_.PrepareGlyph ...
+  font_.PrepareText(text_to_print);
   font_.Commit();
 
   text_.SetFont(&font_);
-  text_.SetText("Hello World!\nWith Line breaking");
+  text_.SetText(text_to_print);
   text_.SetPos(30, 10);
   //text_.SetScale(0.8f, 1.0f);
   //text_.SetRotation(0, 0, 0.3);
@@ -90,9 +93,10 @@ void TestScene::LoadScene(SceneLoader *scene_loader)
   spr_bg_.SetSize(800, 480);
 
   lr2font_.ReadLR2Font("../test/artistfnt.dxa");
+  lr2font_.SetNullGlyphAsCodePoint('?');
 
   lr2text_.SetFont(&lr2font_);
-  lr2text_.SetText("1234abcd");
+  lr2text_.SetText(u8"1234abcdあえいおう楽しい");
   lr2text_.SetPos(30, 200);
   lr2text_.SetScale(1.5, 1.5);
 }
@@ -112,7 +116,7 @@ void TestScene::ProcessEvent(const GameEvent& e)
 
 const std::string TestScene::GetSceneName() const
 {
-  return "Test";
+  return "TestScene";
 }
 
 }

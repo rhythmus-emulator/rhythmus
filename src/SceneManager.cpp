@@ -61,8 +61,12 @@ void SceneManager::ChangeScene(bool force)
   // load scene
   // TODO: use general SceneLoader class
   // TODO: TestScene won't need SceneLoader. need to take care of it.
-  SceneLoader *scene_loader = new LR2SceneLoader(new_scene);
-  scene_loader->Load("../themes/WMIX_HD/select/select.lr2skin");
+  SceneLoader *scene_loader = nullptr;
+  if (new_scene->GetSceneName() != "TestScene")
+  {
+    scene_loader = new LR2SceneLoader(new_scene);
+    scene_loader->Load("../themes/WMIX_HD/select/select.lr2skin");
+  }
   new_scene->LoadScene(scene_loader);
   delete scene_loader;
 

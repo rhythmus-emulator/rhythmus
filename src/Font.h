@@ -133,6 +133,7 @@ public:
   virtual ~Font();
 
   bool LoadFont(const char* ttfpath, const FontAttributes& attrs);
+  void PrepareText(const std::string& text_utf8);
   void PrepareGlyph(uint32_t *chrs, int count);
   void Commit();
 

@@ -1,4 +1,5 @@
 #include "Font.h"
+#include "rutil.h"  /* Text encoding to UTF32 */
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_STROKER_H
@@ -277,6 +278,14 @@ inline void __blend(unsigned char result[4], unsigned char fg[4], unsigned char 
 }
 #endif
 
+void Font::PrepareText(const std::string& s)
+{
+  uint32_t s32[1024];
+  int s32len = 0;
+  ConvertStringToCodepoint(s, s32, s32len, 1024);
+  PrepareGlyph(s32, s32len);
+}
+
 void Font::PrepareGlyph(uint32_t *chrs, int count)
 {
   FT_Face ftface = (FT_Face)ftface_;
@@ -488,8 +497,16 @@ void Font::ConvertStringToCodepoint(const std::string& s,
   if (maxlen < 0)
     maxlen = 0x7fffffff;
 
-  // TODO: convert string to uint32 completely
-  for (int i = 0; i < s.size() && i < maxlen; ++i) s32[i] = s[i], lenout++;
+  // convert utf8 string to uint32 (utf32-le)
+  std::string enc_str = rutil::ConvertEncoding(s, rutil::E_UTF32, rutil::E_UTF8);
+  maxlen = std::min(maxlen - 1 /* last null character */, static_cast<int>(enc_str.size() / 4));
+  const uint32_t *cp = reinterpret_cast<const uint32_t*>(enc_str.c_str());
+  
+  int i = 0;
+  for (; i < maxlen; ++i)
+    s32[i] = cp[i];
+  s32[i] = 0;
+  lenout = maxlen;
 }
 
 FontBitmap* Font::GetWritableBitmapCache(int w, int h)

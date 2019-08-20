@@ -21,7 +21,7 @@ Game& Game::getInstance()
 
 Game::Game()
   : fps_(0), setting_path_(kSettingPath),
-    game_boot_mode_(GameBootMode::kBootNormal),
+    game_boot_mode_(GameBootMode::kBootTest),
     game_mode_(GameMode::kGameModeNone),
     do_game_mode_change_(false)
 {
