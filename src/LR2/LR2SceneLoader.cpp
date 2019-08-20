@@ -2,6 +2,7 @@
 #include "rutil.h" /* utf-8 file load */
 #include "LR2Flag.h"
 #include "LR2Sprite.h"
+#include "LR2Font.h"
 #include <iostream>
 
 namespace rhythmus
@@ -57,23 +58,34 @@ void LR2SceneLoader::Load(const std::string& path)
     fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fntpath));
   }
 
-  // set all LR2Sprites image
+  // set all LR2Sprite (set image)
   for (const auto& s : sprites_)
   {
+    if (s->get_name() != "LR2Sprite")
+      continue;
+
     LR2Sprite* sp = (LR2Sprite*)s.get();
-    if (images_.size() < sp->get_src().imgidx)
+    if (images_.size() < sp->get_sprinfo().get_src().imgidx)
     {
       // TODO: Some imgidx is special(e.g. CoverImage, BG ...)
       // need to deal with it.
       std::cerr << "LR2SceneLoader: Sprite invalid imgidx(" <<
-        sp->get_src().imgidx << "), ignored." << std::endl;
+        sp->get_sprinfo().get_src().imgidx << "), ignored." << std::endl;
       continue;
     }
 
     // TODO: get real image path from imgname
-    const auto& img = images_[sp->get_src().imgidx];
+    const auto& img = images_[sp->get_sprinfo().get_src().imgidx];
     sp->SetImage(img);
     sp->SetSpriteFromLR2Data();
+  }
+
+  // set all LR2Text (set font)
+  for (const auto& s : sprites_)
+  {
+    if (s->get_name() != "LR2Text")
+      continue;
+    // TODO
   }
 }
 
@@ -116,6 +128,8 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     std::vector<std::string> params;
     rutil::split(s, ',', params);
     params[0] = rutil::upper(params[0]);
+
+    /* TODO: make these clauses into command-mapping functors */
 
     /* conditional statement first */
     if (params[0] == "#IF")
@@ -175,8 +189,10 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
 
     /* General commands
      * Compare SRC, DST first as they used a lot. */
-    if (params[0] == "#SRC_IMAGE")
+    if (strncmp(params[0].c_str(), "#SRC_", 5) == 0)
     {
+      std::string objtype = params[0].substr(5);
+
       MakeParamCountSafe(params, 14);
       int imgidx = atoi(params[2].c_str());
       int sx = atoi(params[3].c_str());
@@ -191,20 +207,37 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       int op2 = atoi(params[12].c_str());
       int op3 = atoi(params[13].c_str());
 
-      sprites_.emplace_back(std::make_unique<LR2Sprite>());
-      LR2Sprite* lr2_sprite = (LR2Sprite*)sprites_.back().get();
-      lr2_sprite->get_src() = {
-        imgidx, sx, sy, sw, sh, divx, divy,
-        cycle, timer, op1, op2, op3
-      };
+      LR2SprInfo* lr2_sprinfo = nullptr;
+      if (objtype == "IMAGE")
+      {
+        sprites_.emplace_back(std::make_unique<LR2Sprite>());
+        lr2_sprinfo = &((LR2Sprite*)sprites_.back().get())->get_sprinfo();
+      }
+      else if (objtype == "TEXT")
+      {
+        sprites_.emplace_back(std::make_unique<LR2Text>());
+        lr2_sprinfo = &((LR2Text*)sprites_.back().get())->get_sprinfo();
+      }
+      else
+        std::cerr << "LR2SceneLoader: Unknown SRC objtype - " << objtype << std::endl;
+
+      if (lr2_sprinfo)
+      {
+        lr2_sprinfo->get_src() = {
+          imgidx, sx, sy, sw, sh, divx, divy,
+          cycle, timer, op1, op2, op3
+        };
+      }
     }
-    else if (params[0] == "#DST_IMAGE")
+    else if (strncmp(params[0].c_str(), "#DST_", 5) == 0)
     {
       if (sprites_.size() == 0)
       {
         std::cout << "LR2Skin Load warning : DST command found without SRC, ignored." << std::endl;
         continue;
       }
+
+      std::string objtype = params[0].substr(5);
 
       MakeParamCountSafe(params, 21);
       int time = atoi(params[2].c_str());
@@ -227,13 +260,23 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       int op2 = atoi(params[19].c_str());
       int op3 = atoi(params[20].c_str());
 
-      LR2Sprite* lr2_sprite = (LR2Sprite*)sprites_.back().get();
-      lr2_sprite->new_dst();
-      lr2_sprite->get_cur_dst() = {
-        time, x, y, w, h, acc_type, a, r, g, b,
-        blend, filter, angle, center, loop, timer,
-        op1, op2, op3
-      };
+      LR2SprInfo* lr2_sprinfo = nullptr;
+      if (objtype == "IMAGE")
+        lr2_sprinfo = &((LR2Sprite*)sprites_.back().get())->get_sprinfo();
+      else if (objtype == "TEXT")
+        lr2_sprinfo = &((LR2Text*)sprites_.back().get())->get_sprinfo();
+      else
+        std::cerr << "LR2SceneLoader: Unknown DST objtype - " << objtype << std::endl;
+
+      if (lr2_sprinfo)
+      {
+        lr2_sprinfo->new_dst();
+        lr2_sprinfo->get_cur_dst() = {
+          time, x, y, w, h, acc_type, a, r, g, b,
+          blend, filter, angle, center, loop, timer,
+          op1, op2, op3
+        };
+      }
     }
     else if (params[0] == "#INCLUDE")
     {

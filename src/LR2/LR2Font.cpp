@@ -154,4 +154,26 @@ void LR2Font::UploadTextureFile(const char* p, size_t len)
   FreeImage_Unload(bitmap);
 }
 
+// ------------------------------ class LR2Text
+
+LR2Text::LR2Text()
+{
+  sprite_name_ = "LR2Text";
+}
+
+LR2Text::~LR2Text()
+{
+
+}
+
+LR2SprInfo& LR2Text::get_sprinfo()
+{
+  return spr_info_;
+}
+
+void LR2Text::Update()
+{
+  Text::Update();
+}
+
 }

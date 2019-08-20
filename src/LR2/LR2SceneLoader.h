@@ -25,7 +25,7 @@ private:
 
   std::vector<IfStmt> if_stack_;
 
-  std::vector<std::string> imgnames_; // #IMAGE param
+  std::vector<std::string> imgnames_;     // #IMAGE param
   std::vector<std::string> fontnames_;    // #FONT param (not used)
   std::vector<std::string> lr2fontnames_; // #LR2FONT param
 

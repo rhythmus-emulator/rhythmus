@@ -25,11 +25,14 @@ public:
   void Hide();
   void Show();
 
-  /* Update before rendering */
+  /* @brief Update before rendering */
   virtual void Update();
 
-  /* Render based on updated information */
+  /* @brief Render based on updated information */
   virtual void Render();
+
+  /* @brief Get Sprite name */
+  const std::string& get_name() const;
 
 protected:
   const DrawInfo& get_drawinfo() const;
@@ -41,6 +44,9 @@ protected:
 
   /* invalidate drawinfo with force (internal use) */
   bool invalidate_drawinfo_;
+
+  /* sprite name */
+  std::string sprite_name_;
 };
 
 /* Sprite may not need to be shared. */

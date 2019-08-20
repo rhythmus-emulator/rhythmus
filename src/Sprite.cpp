@@ -91,6 +91,11 @@ void Sprite::Show()
   invalidate_drawinfo_ = true;
 }
 
+const std::string& Sprite::get_name() const
+{
+  return sprite_name_;
+}
+
 void Sprite::Render()
 {
   // If hide, then not draw

@@ -21,10 +21,11 @@ struct LR2SpriteDST
     op1, op2, op3;
 };
 
-class LR2Sprite : public Sprite
+/* @brief LR2 sprite info */
+class LR2SprInfo
 {
 public:
-  LR2Sprite();
+  LR2SprInfo();
 
   LR2SpriteSRC& get_src();
   void new_dst();
@@ -32,20 +33,35 @@ public:
 
   void set_op(int op1 = 0, int op2 = 0, int op3 = 0);
   void set_timer(int timer_id = 0);
+  void set_src_size(int width, int height);
 
   /* @brief Set sprite information in sprite form */
-  void SetSpriteFromLR2Data();
-  void SetSpriteSRC();
-  void SetSpriteDST();
+  void SetSpriteFromLR2Data(SpriteAnimation& ani_);
+  void SetSpriteSRC(SpriteAnimation& ani_);
+  void SetSpriteDST(SpriteAnimation& ani_);
 
-  /* @brief Update before rendering */
-  virtual void Update();
-
+  bool IsSpriteShow();
 private:
   LR2SpriteSRC src_;
   std::vector<LR2SpriteDST> dst_;
   int op_[3];
   int timer_id_;
+  int width_, height_;
+};
+
+class LR2Sprite : public Sprite
+{
+public:
+  LR2Sprite();
+
+  LR2SprInfo& get_sprinfo();
+  void SetSpriteFromLR2Data();
+
+  /* @brief Update before rendering */
+  virtual void Update();
+
+private:
+  LR2SprInfo spr_info_;
 };
 
 }
