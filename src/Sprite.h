@@ -43,6 +43,7 @@ protected:
   bool invalidate_drawinfo_;
 };
 
-using SpriteAuto = std::shared_ptr<Sprite>;
+/* Sprite may not need to be shared. */
+using SpriteAuto = std::unique_ptr<Sprite>;
 
 }

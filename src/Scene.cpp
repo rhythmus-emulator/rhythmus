@@ -65,6 +65,11 @@ void SceneLoader::GetImages(std::vector<ImageAuto>& images)
   images.swap(images_);
 }
 
+void SceneLoader::GetFonts(std::vector<FontAuto>& fonts)
+{
+  fonts.swap(fonts_);
+}
+
 const ThemeParameter& SceneLoader::GetThemeParameter()
 {
   return theme_param_;

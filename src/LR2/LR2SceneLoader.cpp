@@ -24,9 +24,9 @@ void LR2SceneLoader::Load(const std::string& path)
   LoadCSV(path);
 
   // Attempt to load images from imgname
-  for (auto& imgname : imgnames_)
+  for (const auto& imgname : imgnames_)
   {
-    ImageAuto img = std::make_shared<Image>();
+    ImageAuto img;
     std::string imgpath;
     ThemeOption* option = GetThemeOption(imgname);
     if (option)
@@ -39,13 +39,20 @@ void LR2SceneLoader::Load(const std::string& path)
       imgpath = imgname;
     }
     imgpath = ConvertLR2Path(imgpath);
-    img->LoadFromPath(imgpath);
+    img = ResourceManager::getInstance().LoadImage(imgpath);
     // TODO: set colorkey
     img->CommitImage();
     images_.push_back(img);
   }
 
-  // set all LR2Sprites valid
+  // Load all fonts
+  for (const auto& fntname: lr2fontnames_)
+  {
+    std::string fntpath = ConvertLR2Path(fntname);
+    fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fntpath));
+  }
+
+  // set all LR2Sprites image
   for (const auto& s : sprites_)
   {
     LR2Sprite* sp = (LR2Sprite*)s.get();
@@ -161,8 +168,69 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     if (!if_stack_.empty() && !if_stack_.back().cond_is_true)
       continue;
 
-    /* general commands */
-    if (params[0] == "#INCLUDE")
+    /* General commands
+     * Compare SRC, DST first as they used a lot. */
+    if (params[0] == "#SRC_IMAGE")
+    {
+      MakeParamCountSafe(params, 14);
+      int imgidx = atoi(params[2].c_str());
+      int sx = atoi(params[3].c_str());
+      int sy = atoi(params[4].c_str());
+      int sw = atoi(params[5].c_str());
+      int sh = atoi(params[6].c_str());
+      int divx = atoi(params[7].c_str());
+      int divy = atoi(params[8].c_str());
+      int cycle = atoi(params[9].c_str()); /* total loop time */
+      int timer = atoi(params[10].c_str()); /* timer id in LR2 form */
+      int op1 = atoi(params[11].c_str());
+      int op2 = atoi(params[12].c_str());
+      int op3 = atoi(params[13].c_str());
+
+      sprites_.emplace_back(std::make_unique<LR2Sprite>());
+      LR2Sprite* lr2_sprite = (LR2Sprite*)sprites_.back().get();
+      lr2_sprite->get_src() = {
+        imgidx, sx, sy, sw, sh, divx, divy,
+        cycle, timer, op1, op2, op3
+      };
+    }
+    else if (params[0] == "#DST_IMAGE")
+    {
+      if (sprites_.size() == 0)
+      {
+        std::cout << "LR2Skin Load warning : DST command found without SRC, ignored." << std::endl;
+        continue;
+      }
+
+      MakeParamCountSafe(params, 21);
+      int time = atoi(params[2].c_str());
+      int x = atoi(params[3].c_str());
+      int y = atoi(params[4].c_str());
+      int w = atoi(params[5].c_str());
+      int h = atoi(params[6].c_str());
+      int acc_type = atoi(params[7].c_str());
+      int a = atoi(params[8].c_str());
+      int r = atoi(params[9].c_str());
+      int g = atoi(params[10].c_str());
+      int b = atoi(params[11].c_str());
+      int blend = atoi(params[12].c_str());
+      int filter = atoi(params[13].c_str());
+      int angle = atoi(params[14].c_str());
+      int center = atoi(params[15].c_str());
+      int loop = atoi(params[16].c_str());
+      int timer = atoi(params[17].c_str());
+      int op1 = atoi(params[18].c_str());
+      int op2 = atoi(params[19].c_str());
+      int op3 = atoi(params[20].c_str());
+
+      LR2Sprite* lr2_sprite = (LR2Sprite*)sprites_.back().get();
+      lr2_sprite->new_dst();
+      lr2_sprite->get_cur_dst() = {
+        time, x, y, w, h, acc_type, a, r, g, b,
+        blend, filter, angle, center, loop, timer,
+        op1, op2, op3
+      };
+    }
+    else if (params[0] == "#INCLUDE")
     {
       MakeParamCountSafe(params, 2);
       // before continue, need to change path of LR2
@@ -229,70 +297,20 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       MakeParamCountSafe(params, 2);
       imgnames_.push_back(params[1]);
     }
+    else if (params[0] == "#FONT")
+    {
+      MakeParamCountSafe(params, 2);
+      fontnames_.push_back(params[1]);
+    }
+    else if (params[0] == "#LR2FONT")
+    {
+      MakeParamCountSafe(params, 2);
+      lr2fontnames_.push_back(params[1]);
+    }
     /*
     else if (params[0] == "#HELPFILE")
     {
     }*/
-    else if (params[0] == "#SRC_IMAGE")
-    {
-      MakeParamCountSafe(params, 14);
-      int imgidx = atoi(params[2].c_str());
-      int sx = atoi(params[3].c_str());
-      int sy = atoi(params[4].c_str());
-      int sw = atoi(params[5].c_str());
-      int sh = atoi(params[6].c_str());
-      int divx = atoi(params[7].c_str());
-      int divy = atoi(params[8].c_str());
-      int cycle = atoi(params[9].c_str()); /* total loop time */
-      int timer = atoi(params[10].c_str()); /* timer id in LR2 form */
-      int op1 = atoi(params[11].c_str());
-      int op2 = atoi(params[12].c_str());
-      int op3 = atoi(params[13].c_str());
-
-      sprites_.emplace_back(std::make_unique<LR2Sprite>());
-      LR2Sprite* lr2_sprite = (LR2Sprite*)sprites_.back().get();
-      lr2_sprite->get_src() = {
-        imgidx, sx, sy, sw, sh, divx, divy,
-        cycle, timer, op1, op2, op3
-      };
-    }
-    else if (params[0] == "#DST_IMAGE")
-    {
-      if (sprites_.size() == 0)
-      {
-        std::cout << "LR2Skin Load warning : DST command found without SRC, ignored." << std::endl;
-        continue;
-      }
-
-      MakeParamCountSafe(params, 21);
-      int time = atoi(params[2].c_str());
-      int x = atoi(params[3].c_str());
-      int y = atoi(params[4].c_str());
-      int w = atoi(params[5].c_str());
-      int h = atoi(params[6].c_str());
-      int acc_type = atoi(params[7].c_str());
-      int a = atoi(params[8].c_str());
-      int r = atoi(params[9].c_str());
-      int g = atoi(params[10].c_str());
-      int b = atoi(params[11].c_str());
-      int blend = atoi(params[12].c_str());
-      int filter = atoi(params[13].c_str());
-      int angle = atoi(params[14].c_str());
-      int center = atoi(params[15].c_str());
-      int loop = atoi(params[16].c_str());
-      int timer = atoi(params[17].c_str());
-      int op1 = atoi(params[18].c_str());
-      int op2 = atoi(params[19].c_str());
-      int op3 = atoi(params[20].c_str());
-
-      LR2Sprite* lr2_sprite = (LR2Sprite*)sprites_.back().get();
-      lr2_sprite->new_dst();
-      lr2_sprite->get_cur_dst() = {
-        time, x, y, w, h, acc_type, a, r, g, b,
-        blend, filter, angle, center, loop, timer,
-        op1, op2, op3
-      };
-    }
   }
 }
 

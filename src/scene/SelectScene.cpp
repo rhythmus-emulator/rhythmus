@@ -14,7 +14,7 @@ void SelectScene::CloseScene()
 
 void SelectScene::Render()
 {
-  for (auto spr : sprites_)
+  for (const auto& spr : sprites_)
   {
     spr->Update();
     spr->Render();

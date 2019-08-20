@@ -77,6 +77,7 @@ public:
   void GetThemeOptions(std::vector<ThemeOption>& theme_options);
   void GetSpriteObjects(std::vector<SpriteAuto>& sprites);
   void GetImages(std::vector<ImageAuto>& images);
+  void GetFonts(std::vector<FontAuto>& fonts);
   const ThemeParameter& GetThemeParameter();
 
 protected:
@@ -84,6 +85,7 @@ protected:
 
   ThemeParameter theme_param_;
   std::vector<ImageAuto> images_;
+  std::vector<FontAuto> fonts_;
   std::vector<ThemeOption> theme_options_;
   std::vector<SpriteAuto> sprites_;
 };

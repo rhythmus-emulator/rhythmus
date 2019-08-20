@@ -9,9 +9,9 @@ namespace rhythmus
 ImageAuto ResourceManager::LoadImage(const std::string& path)
 {
   /* Most image won't be shared from scene to scene, so just load it now */
-  Image* img = new Image();
+  ImageAuto img = std::make_shared<Image>();
   img->LoadFromPath(path);
-  return ImageAuto(img);
+  return img;
 }
 
 FontAuto ResourceManager::LoadFont(const std::string& path, FontAttributes& attrs)
@@ -22,7 +22,7 @@ FontAuto ResourceManager::LoadFont(const std::string& path, FontAttributes& attr
       return f;
   }
 
-  FontAuto f(new Font());
+  FontAuto f = std::make_shared<Font>();
   f->LoadFont(path.c_str(), attrs);
   fonts_.push_back(f);
   return f;
@@ -36,10 +36,8 @@ FontAuto ResourceManager::LoadLR2Font(const std::string& path)
       return f;
   }
 
-  LR2Font* f = new LR2Font();
-  f->ReadLR2Font(path.c_str());
-  FontAuto fa;
-  fa.reset(f);
+  FontAuto fa = std::make_shared<LR2Font>();
+  ((LR2Font*)fa.get())->ReadLR2Font(path.c_str());
   return fa;
 }
 
