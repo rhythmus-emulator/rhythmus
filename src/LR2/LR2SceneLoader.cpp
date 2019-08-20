@@ -10,6 +10,7 @@ namespace rhythmus
 LR2SceneLoader::LR2SceneLoader(Scene *s) : SceneLoader(s)
 {
   ASSERT(scene_);
+  base_theme_folder_ = "../themes";
 }
 
 LR2SceneLoader::~LR2SceneLoader()
@@ -49,6 +50,10 @@ void LR2SceneLoader::Load(const std::string& path)
   for (const auto& fntname: lr2fontnames_)
   {
     std::string fntpath = ConvertLR2Path(fntname);
+    // convert filename path to .dxa
+    auto ri = fntpath.rfind('/');
+    if (ri != std::string::npos && stricmp(fntpath.substr(ri).c_str(), "/font.lr2font") == 0)
+      fntpath = fntpath.substr(0, ri) + ".dxa";
     fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fntpath));
   }
 
@@ -331,14 +336,9 @@ std::string LR2SceneLoader::ConvertLR2Path(const std::string& lr2path)
   {
     std::vector<std::string> path_seps;
     rutil::split(path, '/', path_seps);
-    path = folder_;
+    path = base_theme_folder_;
 
-    /* Need to check that folder depth is 3 or 4 */
-    int fld_depth = 1;
-    for (int i = 0; i < folder_.size(); ++i)
-      if (folder_[i] == '/' || folder_[i] == '\\') fld_depth++;
-
-    for (int i = fld_depth; i < path_seps.size(); ++i)
+    for (int i = 2; i < path_seps.size(); ++i)
     {
       path += "/" + path_seps[i];
     }

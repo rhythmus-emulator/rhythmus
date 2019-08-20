@@ -15,6 +15,7 @@ public:
 private:
   std::string scene_filepath_;
   std::string folder_;
+  std::string base_theme_folder_;
 
   struct IfStmt
   {
