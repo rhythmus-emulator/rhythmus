@@ -8,15 +8,30 @@ if (len(sys.argv) > 2):
     params[0] = sys.argv[0]
     params[1] = sys.argv[1]
 
-# load original file SHIFT-JIS.txt
-with codecs.open(params[0], 'r', 'utf-8') as f:
-    for line in f:
-        for char in line:
-            if (char not in chars):
-                if (char != '\r'):  # left \t, \n and space
-                    chars.append(char)
+def getJISord(c):
+    '''
+    i = 0
+    try:
+        for x in c.encode('shift-jis'):
+            i *= 256
+            i += x
+        return i
+    except:
+        return ord(c)
+    '''
+    return ord(c)
 
-chars.sort()
+
+# load original file SHIFT-JIS.txt
+# and we add tab / break char for special.
+with codecs.open(params[0], 'r', 'utf-8') as f:
+    txt = f.read()
+    for char in txt:
+        if (char not in chars):
+            if (char != '\r'):
+                chars.append(char)
+
+#chars.sort()
 
 # load compiled file font.lr2font
 with codecs.open(params[1], 'r', 'shift-jis') as f:
@@ -29,7 +44,7 @@ with codecs.open(params[1], 'r', 'shift-jis') as f:
 
 maxglyphid = lr2glyphs[-1][3]
 
-lr2glyphs.sort()
+#lr2glyphs.sort()
 
 # check length
 if (len(chars) != len(lr2glyphs)):
@@ -41,7 +56,7 @@ glyphmap = [0 for x in range(maxglyphid + 1)]
 for (char, g) in zip(chars, lr2glyphs):
     glyphmap[g[3]] = ord(char)
 
-# write results
+# debug result (1)
 i = 0
 with codecs.open(params[0]+'.out', 'w', 'utf-8') as f:
     for char in chars:
@@ -50,11 +65,18 @@ with codecs.open(params[0]+'.out', 'w', 'utf-8') as f:
         if (i % 64 == 0):
             f.write('\n')
 
+# debug result (2)
+i = 0
+with codecs.open(params[0]+'.mapout', 'w', 'utf-8') as f:
+    for gidx in glyphmap:
+        f.write('LR2glyph %d (%s) = %d\n' % (i, chr(glyphmap[i]), gidx))
+        i+=1
 
+# write result
 with open('LR2JIS.h', 'w') as f:
     f.write('uint16_t _LR2GlyphID[%d] = {' % (maxglyphid + 1))
-    for g in glyphmap:
-        f.write('%d,\n' % g)
+    for unichrpt in glyphmap:
+        f.write('%d,\n' % unichrpt)
     f.write('};\n\n')
     f.write('''uint16_t ConvertLR2JIStoUTF16(uint16_t lr2_code)
 {

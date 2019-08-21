@@ -96,7 +96,7 @@ void TestScene::LoadScene(SceneLoader *scene_loader)
   lr2font_.SetNullGlyphAsCodePoint('?');
 
   lr2text_.SetFont(&lr2font_);
-  lr2text_.SetText(u8"1234abcdあえいおう楽しい");
+  lr2text_.SetText(u8"1234abcdΘΙΚΛあえいおう楽しい熙ⅷ黑");
   lr2text_.SetPos(30, 200);
   lr2text_.SetScale(1.5, 1.5);
 }
