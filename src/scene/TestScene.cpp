@@ -92,10 +92,10 @@ void TestScene::LoadScene(SceneLoader *scene_loader)
   spr_bg_.SetPos(0, 0);
   spr_bg_.SetSize(800, 480);
 
-  lr2font_.ReadLR2Font("../test/artistfnt.dxa");
-  lr2font_.SetNullGlyphAsCodePoint('?');
+  lr2font_ = ResourceManager::getInstance().LoadLR2Font("../test/artistfnt.dxa");
+  lr2font_->SetNullGlyphAsCodePoint('?');
 
-  lr2text_.SetFont(&lr2font_);
+  lr2text_.SetFont(lr2font_.get());
   lr2text_.SetText(u8"1234abcdΘΙΚΛあえいおう楽しい熙ⅷ黑");
   lr2text_.SetPos(30, 200);
   lr2text_.SetScale(1.5, 1.5);

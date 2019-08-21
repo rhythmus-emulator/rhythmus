@@ -173,9 +173,36 @@ LR2SprInfo& LR2Text::get_sprinfo()
   return spr_info_;
 }
 
+LR2FontSRC& LR2Text::get_fontsrc()
+{
+  return (LR2FontSRC&)spr_info_.get_src();
+}
+
+void LR2Text::SetSpriteFromLR2Data()
+{
+  // XXX: (0, 0) SRC size prevent tween not be updated
+  // (considered as invalid sprite)
+  // So just use dummy value.
+  spr_info_.set_src_size(1, 1);
+  spr_info_.SetSpriteFromLR2Data(ani_);
+}
+
 void LR2Text::Update()
 {
   Text::Update();
+
+  // TEMP CODE
+  //SetPos(200, 200);
+
+  // hide sprite if currently showing & op(cond) is false
+  if (ani_.IsDisplay() && !spr_info_.IsSpriteShow())
+    ani_.Hide();
+}
+
+
+void LR2Text::Render()
+{
+  Text::Render();
 }
 
 }

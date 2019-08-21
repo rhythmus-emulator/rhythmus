@@ -85,7 +85,20 @@ void LR2SceneLoader::Load(const std::string& path)
   {
     if (s->get_name() != "LR2Text")
       continue;
-    // TODO
+
+    LR2Text* text = (LR2Text*)s.get();
+
+    if (fonts_.size() < text->get_fontsrc().fontidx)
+    {
+      std::cerr << "LR2SceneLoader: Font invalid idx(" <<
+        text->get_fontsrc().fontidx << "), ignored." << std::endl;
+      continue;
+    }
+
+    auto& fnt = fonts_[text->get_fontsrc().fontidx];
+    text->SetFont(fnt.get());
+    text->SetText("DEMOTEXT");
+    text->SetSpriteFromLR2Data();
   }
 }
 

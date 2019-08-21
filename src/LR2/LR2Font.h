@@ -8,6 +8,11 @@
 namespace rhythmus
 {
 
+struct LR2FontSRC
+{
+  int fontidx, st, align, edit;
+};
+
 class LR2Font : public Font
 {
 public:
@@ -27,8 +32,14 @@ public:
   virtual ~LR2Text();
 
   LR2SprInfo& get_sprinfo();
+  LR2FontSRC& get_fontsrc();
+
+  /* @brief upload LR2 SRC/DST data into tweens */
+  void SetSpriteFromLR2Data();
 
   virtual void Update();
+
+  virtual void Render();
 
 private:
   /* Internally stored lr2 string ptr.

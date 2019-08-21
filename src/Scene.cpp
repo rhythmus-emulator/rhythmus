@@ -81,6 +81,7 @@ const ThemeParameter& SceneLoader::GetThemeParameter()
 void Scene::LoadScene(SceneLoader *scene_loader)
 {
   scene_loader->GetImages(images_);
+  scene_loader->GetFonts(fonts_);
   scene_loader->GetSpriteObjects(sprites_);
   scene_loader->GetThemeOptions(theme_options_);
   theme_param_ = scene_loader->GetThemeParameter();
