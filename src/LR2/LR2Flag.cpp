@@ -73,6 +73,8 @@ namespace rhythmus
         switch (e.GetEventID())
         {
         case Events::kEventSongSelectChanged:
+          // XXX: Better to check current scene is really SelectScene
+          // before do casting.
           LR2Text[10] = static_cast<SelectScene*>(SceneManager::getInstance().get_current_scene())
             ->get_selected_title();
           break;
