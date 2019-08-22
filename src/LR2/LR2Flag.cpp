@@ -1,5 +1,9 @@
 #include "LR2Flag.h"
+#include "Event.h"
 #include "Game.h"
+#include "SceneManager.h"
+#include "scene/SelectScene.h"
+#include "Error.h"
 
 namespace rhythmus
 {
@@ -15,12 +19,27 @@ namespace rhythmus
     // current timer status.
     bool LR2Timer_curr_activated[1000];
 
+    // strings for TEXT
+    const char* LR2Text[1000];
+
     int GetFlag(int flag_no)
     {
+      ASSERT(flag_no < 1000);
       if (flag_no >= 0)
         return LR2Flag[flag_no];
       else
         return LR2Flag[-flag_no] > 0 ? 1 : 0;
+    }
+
+    const char* GetText(int text_no)
+    {
+      ASSERT(text_no < 1000);
+      return LR2Text[text_no];
+    }
+
+    bool IsTimerActive(int timer_no)
+    {
+      return LR2Timer_curr_activated[timer_no];
     }
 
     void Update()
@@ -33,7 +52,7 @@ namespace rhythmus
 
       memcpy(LR2Timer_prev_activated, LR2Timer_curr_activated, sizeof(LR2Timer_prev_activated));
 
-      // TODO: update LR2Timer.
+      // TODO: update LR2Timer (using EventReceiver?)
       memset(LR2Timer_curr_activated, 0, sizeof(LR2Timer_curr_activated));
       LR2Timer_curr_activated[0] = true;
     }
@@ -45,11 +64,27 @@ namespace rhythmus
       return LR2Timer_curr_activated[timer_no];
     }
 
-    bool IsTimerActive(int timer_no)
-    {
-      return LR2Timer_curr_activated[timer_no];
-    }
 
+
+    class LR2EventReceiver : public EventReceiver
+    {
+      virtual void OnEvent(const EventMessage &e)
+      {
+        switch (e.GetEventID())
+        {
+        case Events::kEventSongSelectChanged:
+          LR2Text[10] = static_cast<SelectScene*>(SceneManager::getInstance().get_current_scene())
+            ->get_selected_title();
+          break;
+        }
+      }
+    };
+
+    void Subscribe()
+    {
+      static LR2EventReceiver r;
+      r.SubscribeTo(Events::kEventSongSelectChanged);
+    }
   }
 
 }

@@ -7,6 +7,8 @@
 #include "Game.h"
 #include "Timer.h"
 #include "SceneManager.h"
+#include "LR2/LR2Flag.h"  // For updating LR2 flag
+#include "Event.h"
 #include <iostream>
 
 using namespace rhythmus;
@@ -46,6 +48,9 @@ int main(int argc, char **argv)
   graphic.Initialize();
   SceneManager::getInstance().Initialize();
   Timer::Initialize();
+
+  // for LR2 flag support
+  LR2Flag::Subscribe();
 
   // after all settings are done, start scene translation
   game.ChangeGameMode();

@@ -19,6 +19,7 @@ set (RHYTHMUS_SOURCES
     main.cpp
     SceneManager.cpp
     Scene.cpp
+	Event.cpp
 
     scene/TestScene.cpp
     scene/SelectScene.cpp
@@ -43,6 +44,7 @@ set (RHYTHMUS_HEADERS
     Error.h
     SceneManager.h
     Scene.h
+	Event.h
 
     scene/TestScene.h
     scene/SelectScene.h

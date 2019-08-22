@@ -10,7 +10,6 @@ namespace rhythmus
 SceneManager::SceneManager()
   : current_scene_(nullptr)
 {
-
 }
 
 SceneManager::~SceneManager()
@@ -81,6 +80,11 @@ void SceneManager::ChangeScene(bool force)
   timer_scene_.Start();
 
   current_scene_->StartScene();
+}
+
+Scene* SceneManager::get_current_scene()
+{
+  return current_scene_;
 }
 
 SceneManager& SceneManager::getInstance()

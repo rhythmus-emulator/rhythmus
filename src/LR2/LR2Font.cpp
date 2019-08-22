@@ -4,8 +4,9 @@
 #include <string>
 #include <map>
 #include <FreeImage.h>
-#include "LR2JIS.h" // customized SHIFTJIS table for ease of use.
+#include "LR2JIS.h"   // customized SHIFTJIS table for ease of use.
 #include "rutil.h"    // string modification function
+#include "LR2Flag.h"
 
 namespace rhythmus
 {
@@ -161,6 +162,7 @@ void LR2Font::UploadTextureFile(const char* p, size_t len)
 LR2Text::LR2Text()
 {
   sprite_name_ = "LR2Text";
+  e_.t_ = this;
 }
 
 LR2Text::~LR2Text()
@@ -185,6 +187,15 @@ void LR2Text::SetSpriteFromLR2Data()
   // So just use dummy value.
   spr_info_.set_src_size(1, 1);
   spr_info_.SetSpriteFromLR2Data(ani_);
+
+  // Decide what event this receiver should receive.
+  e_.lr2_st_id_ = get_fontsrc().st;
+  switch (get_fontsrc().st)
+  {
+  case 10:
+    e_.SubscribeTo(Events::kEventSongSelectChanged);
+    break;
+  }
 }
 
 void LR2Text::Update()
@@ -199,10 +210,14 @@ void LR2Text::Update()
     ani_.Hide();
 }
 
-
 void LR2Text::Render()
 {
   Text::Render();
+}
+
+void LR2Text::LR2EventReceiver::OnEvent(const EventMessage &e)
+{
+  t_->SetText(LR2Flag::GetText(lr2_st_id_));
 }
 
 }

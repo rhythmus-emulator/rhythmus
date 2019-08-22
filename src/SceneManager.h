@@ -12,6 +12,7 @@ public:
   void Render();
   void SendEvent(const GameEvent& e);
   void ChangeScene(bool force=false);
+  Scene* get_current_scene();
 
   Timer& GetSceneTimer();
 

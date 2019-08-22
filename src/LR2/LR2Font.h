@@ -2,6 +2,7 @@
 
 #include "Font.h"
 #include "LR2Sprite.h"
+#include "Event.h"
 #include <vector>
 #include <string>
 
@@ -47,6 +48,15 @@ private:
   const char* lr2_str_ptr_;
 
   LR2SprInfo spr_info_;
+
+  /* Event handler for some sprite */
+  class LR2EventReceiver : public EventReceiver
+  {
+  public:
+    virtual void OnEvent(const EventMessage &e);
+    LR2Text* t_;
+    int lr2_st_id_;
+  } e_;
 };
 
 }
