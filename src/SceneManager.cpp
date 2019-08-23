@@ -12,6 +12,7 @@ SceneManager::SceneManager()
 {
   // self subscription start
   SubscribeTo(Events::kOnKeyDown);
+  SubscribeTo(Events::kOnKeyPress);
   SubscribeTo(Events::kOnKeyUp);
 }
 

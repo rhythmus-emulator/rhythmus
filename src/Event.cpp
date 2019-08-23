@@ -21,7 +21,7 @@ std::vector<EventMessage> evt_messages_;
 
 void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
 {
-  int eventid;
+  int eventid = 0;
   if (action == GLFW_PRESS)
     eventid = Events::kOnKeyDown;
   else if (action == GLFW_RELEASE)
@@ -30,46 +30,10 @@ void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
     eventid = Events::kOnKeyPress;
 
   EventMessage msg(eventid, false);
+  msg.SetParam(&key, 2);    // key & scancode
   EventManager::SendEvent(msg);
 }
 
-#if 0
-
-Game::getInstance().SendEvent({
-  static_cast<uint32_t>(Timer::GetUncachedGameTime() * 1000), 0,
-  GameInputEvents::kOnKeyDown,
-  { scancode, 0, }
-  });
-}
-
-void Game::SendKeyUpEvent(int scancode)
-{
-  Game::getInstance().SendEvent({
-    static_cast<uint32_t>(Timer::GetUncachedGameTime() * 1000), 0,
-    GameInputEvents::kOnKeyUp,
-    { scancode, 0, }
-    });
-}
-
-void Game::SendTextEvent(uint32_t codepoint)
-{
-  static_assert(sizeof(uint32_t) == sizeof(int),
-    "Uint32_t and int size should be same. If not in some platform, You should fix to split codepoint into two params.");
-
-  Game::getInstance().SendEvent({
-    static_cast<uint32_t>(Timer::GetUncachedGameTime() * 1000), 0,
-    GameInputEvents::kOnText,
-    { static_cast<int>(codepoint), }
-    });
-
-  void Game::SendCursorMoveEvent(int x, int y)
-  {
-  }
-
-  void Game::SendCursorClickEvent(int button)
-  {
-  }
-#endif
 void on_text(GLFWwindow *w, uint32_t codepoint)
 {
   EventManager::SendEvent(Events::kOnText);
@@ -115,7 +79,14 @@ void EventMessage::SetNewTimeUncached()
   time_ = Timer::GetUncachedGameTime();
 }
 
+void EventMessage::SetParam(int *params, int param_len)
+{
+  while (param_len-- > 0)
+    params_[param_len] = params[param_len];
+}
+
 bool EventMessage::IsKeyDown() const { return id_ == Events::kOnKeyDown; }
+bool EventMessage::IsKeyPress() const { return id_ == Events::kOnKeyPress; /* indicates constant key press */ }
 bool EventMessage::IsKeyUp() const { return id_ == Events::kOnKeyUp; }
 int EventMessage::GetKeycode() const { return params_[0]; }
 

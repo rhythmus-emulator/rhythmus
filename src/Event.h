@@ -42,6 +42,7 @@ public:
   void SetEventID(int id);
   int GetEventID() const;
   void SetNewTime();
+  void SetParam(int *params, int param_len);
 
   /**
    * This methods only called
@@ -51,6 +52,7 @@ public:
   void SetNewTimeUncached();
 
   bool IsKeyDown() const;
+  bool IsKeyPress() const;
   bool IsKeyUp() const;
   int GetKeycode() const;
 
