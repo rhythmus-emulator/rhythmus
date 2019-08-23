@@ -74,15 +74,19 @@ public:
   void SetProjPerspectiveCenter();
   void SetModelIdentity();
   void SetModel(const ProjectionInfo& pi);
+  GLFWwindow* window();
 
   static Graphic& getInstance();
 
   static void RenderQuad(const VertexInfo* vi);
   static void RenderQuad(const DrawInfo& di);
   static void SetProj(const ProjectionInfo& pi);
+
+  static double GetFPS();
 private:
   Graphic();
   ~Graphic();
+
   bool CompileShader();
   bool CompileShaderInfo(ShaderInfo& shader);
   void SetView(float x, float y, float dist);

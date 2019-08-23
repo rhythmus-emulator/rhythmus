@@ -7,9 +7,22 @@
 namespace rhythmus
 {
 
+/**
+ * @brief
+ * General game event types (including input event)
+ */
 enum Events
 {
   kEventNone,
+
+  kOnKeyDown,
+  kOnKeyPress,  /* key event repeating due to pressing */
+  kOnKeyUp,
+  kOnText,
+  kOnCursorMove,
+  kOnCursorClick,
+  kOnJoystick,
+
   kEventSceneChanged,
   kEventSongSelectChanged,
   kEventSongSelected,
@@ -22,16 +35,30 @@ enum Events
 class EventMessage
 {
 public:
-  EventMessage(int id);
+  EventMessage(int id = 0, bool time_synced = true);
 
   void SetDesc(const std::string& desc);
   const std::string& GetDesc() const;
   void SetEventID(int id);
   int GetEventID() const;
+  void SetNewTime();
+
+  /**
+   * This methods only called
+   * when unsynchronized time with rendering is necessary
+   * e.g. Input event
+   */
+  void SetNewTimeUncached();
+
+  bool IsKeyDown() const;
+  bool IsKeyUp() const;
+  int GetKeycode() const;
 
 private:
   int id_;
+  int params_[4];
   std::string desc_;
+  double time_;
 };
 
 class EventReceiver
@@ -42,7 +69,7 @@ public:
   void SubscribeTo(int id);
   void UnsubscribeAll();
 
-  virtual void OnEvent(const EventMessage& msg);
+  virtual bool OnEvent(const EventMessage& msg);
 
 private:
   /* to what events it subscribed. */
@@ -59,6 +86,14 @@ public:
   /* broadcast event to whole subscriber of it. */
   static void SendEvent(int event_id);
   static void SendEvent(const EventMessage &msg);
+  static void SendEvent(EventMessage &&msg);
+
+  /* e.g. Set input event handler */
+  static void Initialize();
+
+  /* Flush all events for each rendering.
+   * Use */
+  static void Flush();
 
   static EventManager& getInstance();
 private:

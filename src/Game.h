@@ -4,7 +4,6 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <mutex>
 
 namespace rhythmus
 {
@@ -34,36 +33,6 @@ enum GameMode
   kGameModeTest /* Special mode, only for testing */,
 };
 
-/**
- * @brief
- * Event types
- */
-enum GameEventTypes
-{
-  kOnKeyDown,
-  kOnKeyUp,
-  kOnText,
-  kOnCursorMove,
-  kOnCursorClick,
-  kOnJoystick,
-};
-
-/**
- * @brief
- * Event object which is cached internally in game object.
- */
-struct GameEvent
-{
-  // absolute game time msec
-  uint32_t time_msec;
-  // delta game time from rendering time
-  uint32_t delta_time_msec;
-  // game event type
-  int event_type;
-  // params
-  int params[4];
-};
-
 /* @brief game theme related options */
 struct GameThemeOption
 {
@@ -86,10 +55,6 @@ struct GameThemeOption
   // course result scene path
   std::string courseresult_scene_path;
 };
-
-bool IsEventKeyPress(const GameEvent& e);
-bool IsEventKeyUp(const GameEvent& e);
-int GetKeycode(const GameEvent& e);
 
 /**
  * @brief
@@ -125,20 +90,9 @@ public:
 
   void set_do_logging(bool v);
 
-  static void SendKeyDownEvent(int key);
-  static void SendKeyUpEvent(int key);
-  static void SendTextEvent(uint32_t codepoint);
-  static void SendCursorMoveEvent(int x, int y);
-  static void SendCursorClickEvent(int button);
-  void SendEvent(const GameEvent& e);
-  void SendEvent(GameEvent&& e);
-  void ProcessEvent();
-
-  double fps_;
 private:
   Game();
   ~Game();
-  bool ProcessSystemEvent(const GameEvent& e);
 
   static Game game_;
 
@@ -149,13 +103,6 @@ private:
 
   // game theme related variables.
   GameThemeOption theme_option_;
-
-  // lock used when using cached_events_
-  std::mutex mtx_swap_lock;
-
-  // cached events.
-  // stored from input thread, flushed in rendering thread.
-  std::vector<GameEvent> cached_events_;
 
   // current game boot mode.
   GameBootMode game_boot_mode_;

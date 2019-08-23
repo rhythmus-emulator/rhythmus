@@ -27,23 +27,24 @@ void SelectScene::Render()
   }
 }
 
-void SelectScene::ProcessEvent(const GameEvent& e)
+bool SelectScene::ProcessEvent(const EventMessage& e)
 {
-  if (e.event_type == GameEventTypes::kOnKeyDown)
+  if (e.IsKeyDown())
   {
-    if (GetKeycode(e) == GLFW_KEY_UP)
+    if (e.GetKeycode() == GLFW_KEY_UP)
     {
       select_index_--;
       if (select_index_ < 0) select_index_ += select_list_.size();
       EventManager::SendEvent(Events::kEventSongSelectChanged);
     }
-    else if (GetKeycode(e) == GLFW_KEY_DOWN)
+    else if (e.GetKeycode() == GLFW_KEY_DOWN)
     {
       select_index_++;
       select_index_ %= select_list_.size();
       EventManager::SendEvent(Events::kEventSongSelectChanged);
     }
   }
+  return true;
 }
 
 const std::string SelectScene::GetSceneName() const

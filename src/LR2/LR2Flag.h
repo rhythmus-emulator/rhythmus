@@ -13,7 +13,7 @@ namespace rhythmus
     void Update();
     bool ShouldActiveTimer(int timer_no);
 
-    void Subscribe();
+    void SubscribeEvent();
   }
 
 }

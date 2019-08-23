@@ -53,7 +53,7 @@ private:
   class LR2EventReceiver : public EventReceiver
   {
   public:
-    virtual void OnEvent(const EventMessage &e);
+    virtual bool OnEvent(const EventMessage &e);
     LR2Text* t_;
     int lr2_st_id_;
   } e_;

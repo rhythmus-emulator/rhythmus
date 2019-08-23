@@ -105,13 +105,17 @@ void TestScene::CloseScene()
 {
 }
 
-void TestScene::ProcessEvent(const GameEvent& e)
+bool TestScene::ProcessEvent(const EventMessage& e)
 {
-  if (IsEventKeyPress(e))
+  if (e.IsKeyDown())
   {
-    if (GetKeycode(e) == GLFW_KEY_ESCAPE)
+    if (e.GetKeycode() == GLFW_KEY_ESCAPE)
+    {
       Graphic::getInstance().ExitRendering();
+      return false;
+    }
   }
+  return true;
 }
 
 const std::string TestScene::GetSceneName() const

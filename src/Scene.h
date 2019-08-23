@@ -3,6 +3,7 @@
 #include "Game.h"
 #include "Timer.h"
 #include "ResourceManager.h"
+#include "Event.h"
 #include <string>
 #include <vector>
 
@@ -109,7 +110,7 @@ public:
   virtual void Render() = 0;
 
   /* @brief Process event in this scene */
-  virtual void ProcessEvent(const GameEvent& e) = 0;
+  virtual bool ProcessEvent(const EventMessage& e) = 0;
 
   void LoadOptions();
   void SaveOptions();

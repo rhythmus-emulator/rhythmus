@@ -1,16 +1,17 @@
 #pragma once
 #include "Scene.h"
 #include "Game.h"
+#include "Event.h"
 
 namespace rhythmus
 {
 
-class SceneManager
+class SceneManager : public EventReceiver
 {
 public:
   void Initialize();
   void Render();
-  void SendEvent(const GameEvent& e);
+  virtual bool OnEvent(const EventMessage& msg);
   void ChangeScene(bool force=false);
   Scene* get_current_scene();
 

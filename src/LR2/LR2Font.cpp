@@ -215,9 +215,10 @@ void LR2Text::Render()
   Text::Render();
 }
 
-void LR2Text::LR2EventReceiver::OnEvent(const EventMessage &e)
+bool LR2Text::LR2EventReceiver::OnEvent(const EventMessage &e)
 {
   t_->SetText(LR2Flag::GetText(lr2_st_id_));
+  return true;
 }
 
 }

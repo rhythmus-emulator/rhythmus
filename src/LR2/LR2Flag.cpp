@@ -28,7 +28,7 @@ namespace rhythmus
       if (flag_no >= 0)
         return LR2Flag[flag_no];
       else
-        return LR2Flag[-flag_no] > 0 ? 1 : 0;
+        return LR2Flag[-flag_no] == 0 ? 1 : 0;
     }
 
     const char* GetText(int text_no)
@@ -68,7 +68,7 @@ namespace rhythmus
 
     class LR2EventReceiver : public EventReceiver
     {
-      virtual void OnEvent(const EventMessage &e)
+      virtual bool OnEvent(const EventMessage &e)
       {
         switch (e.GetEventID())
         {
@@ -79,10 +79,11 @@ namespace rhythmus
             ->get_selected_title();
           break;
         }
+        return true;
       }
     };
 
-    void Subscribe()
+    void SubscribeEvent()
     {
       static LR2EventReceiver r;
       r.SubscribeTo(Events::kEventSongSelectChanged);

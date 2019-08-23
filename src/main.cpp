@@ -49,8 +49,9 @@ int main(int argc, char **argv)
   SceneManager::getInstance().Initialize();
   Timer::Initialize();
 
-  // for LR2 flag support
-  LR2Flag::Subscribe();
+  // Event Initialization
+  EventManager::Initialize();
+  LR2Flag::SubscribeEvent(); // Don't need to do if you won't support LR2 skin
 
   // after all settings are done, start scene translation
   game.ChangeGameMode();

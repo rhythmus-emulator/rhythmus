@@ -17,7 +17,7 @@ public:
   virtual void StartScene();
   virtual void CloseScene();
   virtual void Render();
-  virtual void ProcessEvent(const GameEvent& e);
+  virtual bool ProcessEvent(const EventMessage& e);
 
   virtual const std::string GetSceneName() const;
 

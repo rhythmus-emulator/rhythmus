@@ -3,6 +3,7 @@
 #include "SceneManager.h"
 #include "Timer.h"
 #include "Logger.h"
+#include "Event.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
@@ -26,31 +27,29 @@ void on_resize(GLFWwindow* w, GLint width, GLint height)
   sHeight = height;
 }
 
-void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
-{
-  if (action == GLFW_PRESS)
-    Game::SendKeyDownEvent(key);
-  else if (action == GLFW_RELEASE)
-    Game::SendKeyUpEvent(key);
-}
+// FPS
+double fps_;
 
-void on_text(GLFWwindow *w, uint32_t codepoint)
+// Timer for calculating FPS
+class FPSTimer : public Timer
 {
-  Game::SendTextEvent(codepoint);
-}
+public:
+  FPSTimer()
+  {
+    SetEventInterval(5, true);
+  }
 
-void on_cursormove(GLFWwindow *w, double xpos, double ypos)
-{
-  Game::SendCursorMoveEvent((int)xpos, (int)ypos);
-}
+  virtual void OnEvent()
+  {
+    fps_ = GetTickRate();
+    if (Game::getInstance().get_do_logging())
+      Logger::Info("FPS: %.2lf", fps_);
+  }
+} FpsTimer;
 
-void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
+GLFWwindow* Graphic::window()
 {
-  Game::SendCursorClickEvent(button);
-}
-
-void on_joystick_conn(int jid, int event)
-{
+  return window_;
 }
 
 void Graphic::Initialize()
@@ -83,15 +82,8 @@ void Graphic::Initialize()
     exit(EXIT_FAILURE);
   }
 
-  // Callback function setting
-  // XXX: https://www.glfw.org/docs/latest/input_guide.html
-  // TODO: calling callback func is appropriate for other function ...?
+  // Callback function setting (related to graphic)
   glfwSetWindowSizeCallback(window_, on_resize);
-  glfwSetKeyCallback(window_, on_keyevent);
-  glfwSetCharCallback(window_, on_text);
-  glfwSetCursorPosCallback(window_, on_cursormove);
-  glfwSetMouseButtonCallback(window_, on_cursorbutton);
-  glfwSetJoystickCallback(on_joystick_conn);
 
   // GL flag setting
   glClearColor(0, 0, 0, 1);
@@ -116,6 +108,9 @@ void Graphic::Initialize()
 
   // set rendering context
   current_proj_mode_ = -1;  // no projection mode initially.
+
+  // FPS timer start
+  FpsTimer.Start();
 }
 
 void Graphic::LoopRendering()
@@ -127,12 +122,13 @@ void Graphic::LoopRendering()
 
     /* Update main timer in graphic(main) thread. */
     Timer::Update();
+    FpsTimer.Tick();
 
     /* Update whole game context */
     Game::getInstance().Update();
 
     /* Process cached events in main thread. */
-    Game::getInstance().ProcessEvent();
+    EventManager::Flush();
 
     /* Main Rendering */
     SceneManager::getInstance().Render();
@@ -515,6 +511,11 @@ Graphic::~Graphic()
    * But automatic Cleanup would occur if initialization failed.
    */
   Cleanup();
+}
+
+double Graphic::GetFPS()
+{
+  return fps_;
 }
 
 }

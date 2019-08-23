@@ -1,22 +1,132 @@
 #include "Event.h"
+#include "SceneManager.h"
+#include "Graphic.h" /* Need to get GLFW handle */
+#include <mutex>
+#include <GLFW/glfw3.h>
 
 namespace rhythmus
 {
 
-EventMessage::EventMessage(int id)
-  : id_(id) {}
+/* Size of pre-reserved for event cache (to improve performance) */
+constexpr int kPreCacheEventCount = 64;
+
+// lock used when using cached_events_
+std::mutex mtx_swap_lock;
+
+// cached events.
+// stored from input thread, flushed in rendering thread.
+std::vector<EventMessage> evt_messages_;
+
+// ------------------------- Internal Functions
+
+void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
+{
+  int eventid;
+  if (action == GLFW_PRESS)
+    eventid = Events::kOnKeyDown;
+  else if (action == GLFW_RELEASE)
+    eventid = Events::kOnKeyUp;
+  else if (action == GLFW_REPEAT)
+    eventid = Events::kOnKeyPress;
+
+  EventMessage msg(eventid, false);
+  EventManager::SendEvent(msg);
+}
+
+#if 0
+
+Game::getInstance().SendEvent({
+  static_cast<uint32_t>(Timer::GetUncachedGameTime() * 1000), 0,
+  GameInputEvents::kOnKeyDown,
+  { scancode, 0, }
+  });
+}
+
+void Game::SendKeyUpEvent(int scancode)
+{
+  Game::getInstance().SendEvent({
+    static_cast<uint32_t>(Timer::GetUncachedGameTime() * 1000), 0,
+    GameInputEvents::kOnKeyUp,
+    { scancode, 0, }
+    });
+}
+
+void Game::SendTextEvent(uint32_t codepoint)
+{
+  static_assert(sizeof(uint32_t) == sizeof(int),
+    "Uint32_t and int size should be same. If not in some platform, You should fix to split codepoint into two params.");
+
+  Game::getInstance().SendEvent({
+    static_cast<uint32_t>(Timer::GetUncachedGameTime() * 1000), 0,
+    GameInputEvents::kOnText,
+    { static_cast<int>(codepoint), }
+    });
+
+  void Game::SendCursorMoveEvent(int x, int y)
+  {
+  }
+
+  void Game::SendCursorClickEvent(int button)
+  {
+  }
+#endif
+void on_text(GLFWwindow *w, uint32_t codepoint)
+{
+  EventManager::SendEvent(Events::kOnText);
+}
+
+void on_cursormove(GLFWwindow *w, double xpos, double ypos)
+{
+  EventManager::SendEvent(Events::kOnCursorMove);
+}
+
+void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
+{
+  EventManager::SendEvent(Events::kOnCursorClick);
+}
+
+void on_joystick_conn(int jid, int event)
+{
+}
+
+
+// ------------------------- class EventMessage
+
+EventMessage::EventMessage(int id, bool time_synced)
+  : id_(id)
+{
+  memset(params_, 0, sizeof(params_));
+  if (time_synced) SetNewTime();
+  else SetNewTimeUncached();
+}
 
 void EventMessage::SetDesc(const std::string& desc) { desc_ = desc; }
 const std::string& EventMessage::GetDesc() const { return desc_; }
 void EventMessage::SetEventID(int id) { id_ = id; }
 int EventMessage::GetEventID() const { return id_; }
 
+void EventMessage::SetNewTime()
+{
+  time_ = Timer::GetGameTime();
+}
+
+void EventMessage::SetNewTimeUncached()
+{
+  time_ = Timer::GetUncachedGameTime();
+}
+
+bool EventMessage::IsKeyDown() const { return id_ == Events::kOnKeyDown; }
+bool EventMessage::IsKeyUp() const { return id_ == Events::kOnKeyUp; }
+int EventMessage::GetKeycode() const { return params_[0]; }
 
 
 EventReceiver::~EventReceiver()
 {
   UnsubscribeAll();
 }
+
+
+// ------------------------- class EventReceiver
 
 void EventReceiver::SubscribeTo(int id)
 {
@@ -35,10 +145,14 @@ void EventReceiver::UnsubscribeAll()
   }
 }
 
-void EventReceiver::OnEvent(const EventMessage& msg)
+bool EventReceiver::OnEvent(const EventMessage& msg)
 {
-  // Fill oneself
+  // return false will stop event propagation.
+  return true;
 }
+
+
+// ------------------------- class EventManager
 
 void EventManager::Subscribe(EventReceiver& e, int event_id)
 {
@@ -64,10 +178,52 @@ void EventManager::SendEvent(int event_id)
 
 void EventManager::SendEvent(const EventMessage &msg)
 {
-  auto &evtlist = getInstance().event_subscribers_[msg.GetEventID()];
-  for (auto* recv : evtlist)
+  mtx_swap_lock.lock();
+  evt_messages_.push_back(msg);
+  mtx_swap_lock.unlock();
+}
+
+void EventManager::SendEvent(EventMessage &&msg)
+{
+  mtx_swap_lock.lock();
+  evt_messages_.emplace_back(msg);
+  mtx_swap_lock.unlock();
+}
+
+/* @brief Subscribe to input events */
+void EventManager::Initialize()
+{
+  auto* window_ = Graphic::getInstance().window();
+  ASSERT(window_);
+  glfwSetKeyCallback(window_, on_keyevent);
+  glfwSetCharCallback(window_, on_text);
+  glfwSetCursorPosCallback(window_, on_cursormove);
+  glfwSetMouseButtonCallback(window_, on_cursorbutton);
+  glfwSetJoystickCallback(on_joystick_conn);
+}
+
+void EventManager::Flush()
+{
+  auto& em = getInstance();
+
+  // process cached events.
+  // swap cache to prevent event lagging while ProcessEvent.
+  // Pre-reserve enough space for new event cache to improve performance.
+  std::vector<EventMessage> evnt(kPreCacheEventCount);
+  mtx_swap_lock.lock();
+  evt_messages_.swap(evnt);
+  mtx_swap_lock.unlock();
+
+  for (const auto& e : evnt)
   {
-    recv->OnEvent(msg);
+    auto &evtlist = getInstance().event_subscribers_[e.GetEventID()];
+    for (auto* recv : evtlist)
+    {
+      if (!recv->OnEvent(e))
+        break;
+    }
+    // Depreciated: Send remain event to SceneManager.
+    //SceneManager::getInstance().SendEvent(e);
   }
 }
 

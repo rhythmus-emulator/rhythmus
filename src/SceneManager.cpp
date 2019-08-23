@@ -10,6 +10,9 @@ namespace rhythmus
 SceneManager::SceneManager()
   : current_scene_(nullptr)
 {
+  // self subscription start
+  SubscribeTo(Events::kOnKeyDown);
+  SubscribeTo(Events::kOnKeyUp);
 }
 
 SceneManager::~SceneManager()
@@ -39,10 +42,11 @@ void SceneManager::Render()
     current_scene_->Render();
 }
 
-void SceneManager::SendEvent(const GameEvent& e)
+bool SceneManager::OnEvent(const EventMessage& e)
 {
   if (current_scene_)
-    current_scene_->ProcessEvent(e);
+    return current_scene_->ProcessEvent(e);
+  return true;
 }
 
 void SceneManager::ChangeScene(bool force)
