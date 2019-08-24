@@ -36,7 +36,8 @@ public:
   void set_src_size(int width, int height);
 
   /* @brief Set sprite information in sprite form */
-  void SetSpriteFromLR2Data(SpriteAnimation& ani_);
+  /* XXX: move as common function feature in Sprite class? */
+  virtual void SetSpriteFromLR2Data(SpriteAnimation& ani_);
   void SetSpriteSRC(SpriteAnimation& ani_);
   void SetSpriteDST(SpriteAnimation& ani_);
 

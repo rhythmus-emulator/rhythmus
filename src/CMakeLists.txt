@@ -29,6 +29,7 @@ set (RHYTHMUS_SOURCES
     LR2/LR2SceneLoader.cpp
     LR2/LR2Flag.cpp
     LR2/LR2Sprite.cpp
+    LR2/LR2SpriteDummy.cpp
     )
 
 set (RHYTHMUS_HEADERS
@@ -54,6 +55,7 @@ set (RHYTHMUS_HEADERS
     LR2/LR2SceneLoader.h
     LR2/LR2Flag.h
     LR2/LR2Sprite.h
+    LR2/LR2SpriteDummy.h
     )
 
 include_directories(

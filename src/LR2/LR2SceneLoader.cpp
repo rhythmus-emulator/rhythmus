@@ -1,8 +1,9 @@
 #include "LR2SceneLoader.h"
-#include "rutil.h" /* utf-8 file load */
 #include "LR2Flag.h"
 #include "LR2Sprite.h"
+#include "LR2SpriteDummy.h"
 #include "LR2Font.h"
+#include "rutil.h" /* utf-8 file load */
 #include <iostream>
 
 namespace rhythmus
@@ -116,6 +117,14 @@ void LR2SceneLoader::LoadCSV(const std::string& filepath)
   ParseCSV((char*)data.p, data.len);
 }
 
+inline int atoi_op(const char* op)
+{
+  if (*op == '!')
+    return atoi(op + 1);
+  else
+    return atoi(op);
+}
+
 void LR2SceneLoader::ParseCSV(const char* p, size_t len)
 {
   const char* p_end = p + len;
@@ -148,7 +157,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     if (params[0] == "#IF")
     {
       MakeParamCountSafe(params, 2);
-      int cond = atoi(params[1].c_str());
+      int cond = atoi_op(params[1].c_str());
       if (LR2Flag::GetFlag(cond))
         if_stack_.emplace_back(IfStmt{ 0, false });
       else
@@ -166,7 +175,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       }
 
       MakeParamCountSafe(params, 2);
-      int cond = atoi(params[1].c_str());
+      int cond = atoi_op(params[1].c_str());
       if (LR2Flag::GetFlag(cond))
       {
         if_stack_.back().cond_is_true = true;
@@ -216,11 +225,12 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       int divy = atoi(params[8].c_str());
       int cycle = atoi(params[9].c_str()); /* total loop time */
       int timer = atoi(params[10].c_str()); /* timer id in LR2 form */
-      int op1 = atoi(params[11].c_str());
-      int op2 = atoi(params[12].c_str());
-      int op3 = atoi(params[13].c_str());
+      int op1 = atoi_op(params[11].c_str());
+      int op2 = atoi_op(params[12].c_str());
+      int op3 = atoi_op(params[13].c_str());
 
       LR2SprInfo* lr2_sprinfo = nullptr;
+      /* BAR_FLASH is same as general sprite */
       if (objtype == "IMAGE")
       {
         sprites_.emplace_back(std::make_unique<LR2Sprite>());
@@ -230,6 +240,18 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       {
         sprites_.emplace_back(std::make_unique<LR2Text>());
         lr2_sprinfo = &((LR2Text*)sprites_.back().get())->get_sprinfo();
+      }
+      else if (objtype == "BAR_BODY" ||
+              objtype == "BAR_TITLE" ||
+              objtype == "BAR_LEVEL" ||
+              objtype == "BAR_FLASH" ||
+              objtype == "BAR_LAMP" ||
+              objtype == "BAR_MY_LAMP" ||
+              objtype == "BAR_RIVAL_LAMP" ||
+              objtype == "BAR_RIVAL")
+      {
+        sprites_.emplace_back(std::make_unique<LR2SpriteDummy>());
+        lr2_sprinfo = &((LR2SpriteDummy*)sprites_.back().get())->get_sprinfo();
       }
       else
         std::cerr << "LR2SceneLoader: Unknown SRC objtype - " << objtype << std::endl;
@@ -269,15 +291,34 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       int center = atoi(params[15].c_str());
       int loop = atoi(params[16].c_str());
       int timer = atoi(params[17].c_str());
-      int op1 = atoi(params[18].c_str());
-      int op2 = atoi(params[19].c_str());
-      int op3 = atoi(params[20].c_str());
+      int op1 = atoi_op(params[18].c_str());
+      int op2 = atoi_op(params[19].c_str());
+      int op3 = atoi_op(params[20].c_str());
 
       LR2SprInfo* lr2_sprinfo = nullptr;
       if (objtype == "IMAGE")
         lr2_sprinfo = &((LR2Sprite*)sprites_.back().get())->get_sprinfo();
       else if (objtype == "TEXT")
         lr2_sprinfo = &((LR2Text*)sprites_.back().get())->get_sprinfo();
+      else if (objtype == "BAR_TITLE" ||
+              objtype == "BAR_LEVEL" ||
+              objtype == "BAR_FLASH" ||
+              objtype == "BAR_LAMP" ||
+              objtype == "BAR_MY_LAMP" ||
+              objtype == "BAR_RIVAL_LAMP" ||
+              objtype == "BAR_RIVAL")
+        lr2_sprinfo = &((LR2SpriteDummy*)sprites_.back().get())->get_sprinfo();
+      else if (objtype == "BAR_BODY_OFF" ||
+               objtype == "BAR_BODY_ON")
+      {
+        // such command generates DummySprite for each of them.
+        // (as it's name is different with BAR_BODY ON and OFF)
+        LR2SpriteDummy* sprdummy_;
+        sprites_.emplace_back(std::make_unique<LR2SpriteDummy>());
+        sprdummy_ = static_cast<LR2SpriteDummy*>(sprites_.back().get());
+        sprdummy_->set_name(objtype);
+        lr2_sprinfo = &sprdummy_->get_sprinfo();
+      }
       else
         std::cerr << "LR2SceneLoader: Unknown DST objtype - " << objtype << std::endl;
 
@@ -290,6 +331,10 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
           op1, op2, op3
         };
       }
+    }
+    else if (params[0] == "#BAR_CENTER" || params[0] == "#BAR_AVAILABLE")
+    {
+      // TODO: set attribute to theme_param_
     }
     else if (params[0] == "#INCLUDE")
     {
