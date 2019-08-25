@@ -11,6 +11,15 @@ Sprite::Sprite()
   memset(&di_, 0, sizeof(di_));
 }
 
+Sprite::Sprite(const Sprite& spr)
+{
+  img_ = spr.img_;
+  ani_ = spr.ani_;
+  di_ = spr.di_;
+  invalidate_drawinfo_ = spr.invalidate_drawinfo_;
+  sprite_name_ = spr.sprite_name_;
+}
+
 Sprite::~Sprite()
 {
 }
@@ -116,7 +125,7 @@ void Sprite::Update()
   invalidate_drawinfo_ = false;
 
   // always Tick() to update tween
-  ani_.Tick(SceneManager::getInstance().GetSceneTimer().GetDeltaTimeInMillisecond());
+  ani_.Tick(SceneManager::GetSceneTickTime());
 
   if (update_drawinfo)
     ani_.GetDrawInfo(di_);

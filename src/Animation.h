@@ -59,6 +59,12 @@ public:
   const Tween& GetLastTween() const;
   void SetTweenLoopTime(uint32_t time_msec);
   const TweenInfo& GetCurrentTweenInfo() const;
+  void Load(SpriteAnimation& from_other);
+  void LoadSource(SpriteAnimation& from_other);
+  void LoadTween(SpriteAnimation& from_other);
+  void LoadTweenCurr(SpriteAnimation& from_other);
+  void LoadTweenCurr(TweenInfo& target);
+
   void GetVertexInfo(VertexInfo* vi);
   void GetDrawInfo(DrawInfo& di);
 
@@ -69,6 +75,7 @@ public:
   void UseAnimatedTexture(bool use_ani_tex);
 
   void SetPosition(float x, float y);
+  void MovePosition(float x, float y);
   void SetSize(float w, float h);
   void SetRGB(float r, float g, float b);
   void SetAlpha(float a);
@@ -94,5 +101,8 @@ private:
 
   void UpdateTween();
 };
+
+void MakeTween(TweenInfo& ti, const TweenInfo& t1, const TweenInfo& t2, double r,
+  int ease_type = TweenTypes::kTweenTypeLinear);
 
 }

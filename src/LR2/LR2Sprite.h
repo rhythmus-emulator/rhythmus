@@ -8,7 +8,7 @@ namespace rhythmus
 
 struct LR2SpriteSRC
 {
-  int imgidx,
+  int attr, imgidx,
     sx, sy, sw, sh,
     divx, divy, cycle, timer,
     op1, op2, op3;
@@ -16,7 +16,7 @@ struct LR2SpriteSRC
 
 struct LR2SpriteDST
 {
-  int time, x, y, w, h, acc_type, a, r, g, b,
+  int attr, time, x, y, w, h, acc_type, a, r, g, b,
     blend, filter, angle, center, loop, timer,
     op1, op2, op3;
 };

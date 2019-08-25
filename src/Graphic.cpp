@@ -126,6 +126,7 @@ void Graphic::LoopRendering()
 
     /* Update whole game context */
     Game::getInstance().Update();
+    SceneManager::getInstance().Update();
 
     /* Process cached events in main thread. */
     EventManager::Flush();

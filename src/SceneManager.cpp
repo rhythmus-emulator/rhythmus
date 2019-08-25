@@ -31,7 +31,7 @@ void SceneManager::Initialize()
 
 }
 
-void SceneManager::Render()
+void SceneManager::Update()
 {
   // Tick all scenemanager related timer
   timer_scene_.Tick();
@@ -39,6 +39,12 @@ void SceneManager::Render()
   // Update LR2Flag (LR2 compatible layer)
   LR2Flag::Update();
 
+  if (current_scene_)
+    current_scene_->Update();
+}
+
+void SceneManager::Render()
+{
   if (current_scene_)
     current_scene_->Render();
 }
@@ -129,6 +135,11 @@ Scene* SceneManager::CreateNextScene()
 Timer& SceneManager::GetSceneTimer()
 {
   return timer_scene_;
+}
+
+uint32_t SceneManager::GetSceneTickTime()
+{
+  return getInstance().timer_scene_.GetDeltaTimeInMillisecond();
 }
 
 }

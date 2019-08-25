@@ -13,7 +13,7 @@ TestScene::~TestScene()
 {
 }
 
-void TestScene::Render()
+void TestScene::Update()
 {
   /* TODO: movie image should be updated automatically ..? */
   img_movie_->Update();
@@ -23,7 +23,10 @@ void TestScene::Render()
   spr2_.Update();
   text_.Update();
   lr2text_.Update();
+}
 
+void TestScene::Render()
+{
   spr_bg_.Render();
   spr_.Render();
   spr2_.Render();

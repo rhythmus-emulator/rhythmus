@@ -10,6 +10,7 @@ class Sprite
 {
 public:
   Sprite();
+  Sprite(const Sprite& spr);
   virtual ~Sprite();
 
   SpriteAnimation& get_animation();

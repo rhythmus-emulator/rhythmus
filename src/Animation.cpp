@@ -145,6 +145,33 @@ const TweenInfo& SpriteAnimation::GetCurrentTweenInfo() const
   return current_tween_;
 }
 
+
+void SpriteAnimation::Load(SpriteAnimation& from_other)
+{
+  LoadSource(from_other);
+  LoadTween(from_other);
+}
+
+void SpriteAnimation::LoadSource(SpriteAnimation& from_other)
+{
+
+}
+
+void SpriteAnimation::LoadTween(SpriteAnimation& from_other)
+{
+
+}
+
+void SpriteAnimation::LoadTweenCurr(SpriteAnimation& from_other)
+{
+  LoadTweenCurr(from_other.current_tween_);
+}
+
+void SpriteAnimation::LoadTweenCurr(TweenInfo& target)
+{
+  current_tween_ = target;
+}
+
 void SpriteAnimation::GetVertexInfo(VertexInfo* vi)
 {
   const TweenInfo &ti = GetCurrentTweenInfo();
@@ -237,6 +264,76 @@ void SpriteAnimation::GetDrawInfo(DrawInfo& di)
   TWEEN(pi.sx) \
   TWEEN(pi.sy) \
 
+
+void MakeTween(TweenInfo& ti, const TweenInfo& t1, const TweenInfo& t2,
+  double r, int ease_type)
+{
+  switch (ease_type)
+  {
+  case TweenTypes::kTweenTypeLinear:
+  {
+#define TWEEN(attr) \
+  ti.attr = t1.attr * (1 - r) + t2.attr * r;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  case TweenTypes::kTweenTypeEaseIn:
+  {
+    // use cubic function
+    r = r * r * r;
+#define TWEEN(attr) \
+  ti.attr = t1.attr * (1 - r) + t2.attr * r;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  case TweenTypes::kTweenTypeEaseOut:
+  {
+    // use cubic function
+    r = 1 - r;
+    r = r * r * r;
+    r = 1 - r;
+#define TWEEN(attr) \
+  ti.attr = t1.attr * (1 - r) + t2.attr * r;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  case TweenTypes::kTweenTypeEaseInOut:
+  {
+    // use cubic function
+    r = 2 * r - 1;
+    r = r * r * r;
+    r = 0.5f + r / 2;
+#define TWEEN(attr) \
+  ti.attr = t1.attr * (1 - r) + t2.attr * r;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  case TweenTypes::kTweenTypeNone:
+  default:
+  {
+#define TWEEN(attr) \
+  ti.attr = t1.attr;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  }
+}
+
 void SpriteAnimation::UpdateTween()
 {
   TweenInfo& ti = current_tween_;
@@ -258,72 +355,7 @@ void SpriteAnimation::UpdateTween()
       if (ti.display)
       {
         float r = (float)t1.time_eclipsed / t1.time_duration;
-
-        // TODO: use SSE to optimize.
-        switch (t1.ease_type)
-        {
-        case TweenTypes::kTweenTypeLinear:
-        {
-#define TWEEN(attr) \
-  ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
-
-          TWEEN_ATTRS;
-
-#undef TWEEN
-          break;
-        }
-        case TweenTypes::kTweenTypeEaseIn:
-        {
-          // use cubic function
-          r = r * r * r;
-#define TWEEN(attr) \
-  ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
-
-          TWEEN_ATTRS;
-
-#undef TWEEN
-          break;
-        }
-        case TweenTypes::kTweenTypeEaseOut:
-        {
-          // use cubic function
-          r = 1 - r;
-          r = r * r * r;
-          r = 1 - r;
-#define TWEEN(attr) \
-  ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
-
-          TWEEN_ATTRS;
-
-#undef TWEEN
-          break;
-        }
-        case TweenTypes::kTweenTypeEaseInOut:
-        {
-          // use cubic function
-          r = 2 * r - 1;
-          r = r * r * r;
-          r = 0.5f + r / 2;
-#define TWEEN(attr) \
-  ti.attr = t1.ti.attr * (1 - r) + t2.ti.attr * r;
-
-          TWEEN_ATTRS;
-
-#undef TWEEN
-          break;
-        }
-        case TweenTypes::kTweenTypeNone:
-        default:
-        {
-#define TWEEN(attr) \
-  ti.attr = t1.ti.attr;
-
-          TWEEN_ATTRS;
-
-#undef TWEEN
-          break;
-        }
-        }
+        MakeTween(ti, t1.ti, t2.ti, r, t1.ease_type);
       }
     }
   }
@@ -389,6 +421,12 @@ void SpriteAnimation::SetPosition(float x, float y)
 {
   current_tween_.pi.x = x;
   current_tween_.pi.y = y;
+}
+
+void SpriteAnimation::MovePosition(float x, float y)
+{
+  current_tween_.pi.x += x;
+  current_tween_.pi.y += y;
 }
 
 void SpriteAnimation::SetSize(float w, float h)

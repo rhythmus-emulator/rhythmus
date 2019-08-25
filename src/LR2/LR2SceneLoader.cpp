@@ -2,6 +2,7 @@
 #include "LR2Flag.h"
 #include "LR2Sprite.h"
 #include "LR2SpriteDummy.h"
+#include "LR2SpriteSelectBar.h"
 #include "LR2Font.h"
 #include "rutil.h" /* utf-8 file load */
 #include <iostream>
@@ -59,47 +60,45 @@ void LR2SceneLoader::Load(const std::string& path)
     fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fntpath));
   }
 
-  // set all LR2Sprite (set image)
   for (const auto& s : sprites_)
   {
-    if (s->get_name() != "LR2Sprite")
-      continue;
-
-    LR2Sprite* sp = (LR2Sprite*)s.get();
-    if (images_.size() < sp->get_sprinfo().get_src().imgidx)
+    if (s->get_name() == "LR2Sprite")
     {
-      // TODO: Some imgidx is special(e.g. CoverImage, BG ...)
-      // need to deal with it.
-      std::cerr << "LR2SceneLoader: Sprite invalid imgidx(" <<
-        sp->get_sprinfo().get_src().imgidx << "), ignored." << std::endl;
-      continue;
+      LR2Sprite* sp = (LR2Sprite*)s.get();
+      if (images_.size() < sp->get_sprinfo().get_src().imgidx)
+      {
+        // TODO: Some imgidx is special(e.g. CoverImage, BG ...)
+        // need to deal with it.
+        std::cerr << "LR2SceneLoader: Sprite invalid imgidx(" <<
+          sp->get_sprinfo().get_src().imgidx << "), ignored." << std::endl;
+        continue;
+      }
+
+      // TODO: get real image path from imgname
+      const auto& img = images_[sp->get_sprinfo().get_src().imgidx];
+      sp->SetImage(img);
+      sp->SetSpriteFromLR2Data();
     }
-
-    // TODO: get real image path from imgname
-    const auto& img = images_[sp->get_sprinfo().get_src().imgidx];
-    sp->SetImage(img);
-    sp->SetSpriteFromLR2Data();
-  }
-
-  // set all LR2Text (set font)
-  for (const auto& s : sprites_)
-  {
-    if (s->get_name() != "LR2Text")
-      continue;
-
-    LR2Text* text = (LR2Text*)s.get();
-
-    if (fonts_.size() < text->get_fontsrc().fontidx)
+    else if (s->get_name() == "LR2Text")
     {
-      std::cerr << "LR2SceneLoader: Font invalid idx(" <<
-        text->get_fontsrc().fontidx << "), ignored." << std::endl;
-      continue;
-    }
+      LR2Text* text = (LR2Text*)s.get();
 
-    auto& fnt = fonts_[text->get_fontsrc().fontidx];
-    text->SetFont(fnt.get());
-    text->SetText("DEMOTEXT");
-    text->SetSpriteFromLR2Data();
+      if (fonts_.size() < text->get_fontsrc().fontidx)
+      {
+        std::cerr << "LR2SceneLoader: Font invalid idx(" <<
+          text->get_fontsrc().fontidx << "), ignored." << std::endl;
+        continue;
+      }
+
+      auto& fnt = fonts_[text->get_fontsrc().fontidx];
+      text->SetFont(fnt.get());
+      text->SetText("DEMOTEXT");
+      text->SetSpriteFromLR2Data();
+    }
+    /* Below is for special objects */
+    else if (s->get_name() == "BAR_BODY")
+    {
+    }
   }
 }
 
@@ -216,6 +215,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       std::string objtype = params[0].substr(5);
 
       MakeParamCountSafe(params, 14);
+      int attr = atoi(params[1].c_str());
       int imgidx = atoi(params[2].c_str());
       int sx = atoi(params[3].c_str());
       int sy = atoi(params[4].c_str());
@@ -228,6 +228,10 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       int op1 = atoi_op(params[11].c_str());
       int op2 = atoi_op(params[12].c_str());
       int op3 = atoi_op(params[13].c_str());
+      LR2SpriteSRC src = { attr,
+          imgidx, sx, sy, sw, sh, divx, divy,
+          cycle, timer, op1, op2, op3
+      };
 
       LR2SprInfo* lr2_sprinfo = nullptr;
       /* BAR_FLASH is same as general sprite */
@@ -241,8 +245,15 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
         sprites_.emplace_back(std::make_unique<LR2Text>());
         lr2_sprinfo = &((LR2Text*)sprites_.back().get())->get_sprinfo();
       }
-      else if (objtype == "BAR_BODY" ||
-              objtype == "BAR_TITLE" ||
+      else if (objtype == "BAR_BODY")
+      {
+        /* Do exceptional process */
+        if (sprites_.back()->get_name() != "LR2SpriteSelectBar")
+          sprites_.emplace_back(std::make_unique<LR2SpriteSelectBar>());
+        ((LR2SpriteSelectBar*)sprites_.back().get())->get_bar_src(attr) = src;
+        continue;
+      }
+      else if (objtype == "BAR_TITLE" ||
               objtype == "BAR_LEVEL" ||
               objtype == "BAR_FLASH" ||
               objtype == "BAR_LAMP" ||
@@ -257,12 +268,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
         std::cerr << "LR2SceneLoader: Unknown SRC objtype - " << objtype << std::endl;
 
       if (lr2_sprinfo)
-      {
-        lr2_sprinfo->get_src() = {
-          imgidx, sx, sy, sw, sh, divx, divy,
-          cycle, timer, op1, op2, op3
-        };
-      }
+        lr2_sprinfo->get_src() = src;
     }
     else if (strncmp(params[0].c_str(), "#DST_", 5) == 0)
     {
@@ -275,6 +281,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       std::string objtype = params[0].substr(5);
 
       MakeParamCountSafe(params, 21);
+      int attr = atoi(params[1].c_str());
       int time = atoi(params[2].c_str());
       int x = atoi(params[3].c_str());
       int y = atoi(params[4].c_str());
@@ -294,12 +301,21 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       int op1 = atoi_op(params[18].c_str());
       int op2 = atoi_op(params[19].c_str());
       int op3 = atoi_op(params[20].c_str());
+      LR2SpriteDST dst = { attr,
+          time, x, y, w, h, acc_type, a, r, g, b,
+          blend, filter, angle, center, loop, timer,
+          op1, op2, op3
+      };
 
       LR2SprInfo* lr2_sprinfo = nullptr;
       if (objtype == "IMAGE")
         lr2_sprinfo = &((LR2Sprite*)sprites_.back().get())->get_sprinfo();
       else if (objtype == "TEXT")
         lr2_sprinfo = &((LR2Text*)sprites_.back().get())->get_sprinfo();
+      else if (objtype == "BAR_BODY_OFF")
+        lr2_sprinfo = &((LR2SpriteSelectBar*)sprites_.back().get())->get_bar_sprinfo(attr, 0);
+      else if (objtype == "BAR_BODY_ON")
+        lr2_sprinfo = &((LR2SpriteSelectBar*)sprites_.back().get())->get_bar_sprinfo(attr, 1);
       else if (objtype == "BAR_TITLE" ||
               objtype == "BAR_LEVEL" ||
               objtype == "BAR_FLASH" ||
@@ -308,28 +324,13 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
               objtype == "BAR_RIVAL_LAMP" ||
               objtype == "BAR_RIVAL")
         lr2_sprinfo = &((LR2SpriteDummy*)sprites_.back().get())->get_sprinfo();
-      else if (objtype == "BAR_BODY_OFF" ||
-               objtype == "BAR_BODY_ON")
-      {
-        // such command generates DummySprite for each of them.
-        // (as it's name is different with BAR_BODY ON and OFF)
-        LR2SpriteDummy* sprdummy_;
-        sprites_.emplace_back(std::make_unique<LR2SpriteDummy>());
-        sprdummy_ = static_cast<LR2SpriteDummy*>(sprites_.back().get());
-        sprdummy_->set_name(objtype);
-        lr2_sprinfo = &sprdummy_->get_sprinfo();
-      }
       else
         std::cerr << "LR2SceneLoader: Unknown DST objtype - " << objtype << std::endl;
 
       if (lr2_sprinfo)
       {
         lr2_sprinfo->new_dst();
-        lr2_sprinfo->get_cur_dst() = {
-          time, x, y, w, h, acc_type, a, r, g, b,
-          blend, filter, angle, center, loop, timer,
-          op1, op2, op3
-        };
+        lr2_sprinfo->get_cur_dst() = dst;
       }
     }
     else if (params[0] == "#BAR_CENTER" || params[0] == "#BAR_AVAILABLE")
@@ -418,11 +419,6 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     {
     }*/
   }
-}
-
-void LR2SceneLoader::GetImagePath(const std::string& value)
-{
-
 }
 
 // we need to change path of LR2 into general relative path.

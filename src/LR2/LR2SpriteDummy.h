@@ -16,6 +16,8 @@ namespace rhythmus
 class LR2SpriteDummy : public LR2Sprite
 {
 public:
+  LR2SpriteDummy();
+
   /* Set sprite(attr) name */
   void set_name(const std::string& name);
 
@@ -26,6 +28,9 @@ public:
   /* As this object doesn't have it's own rendering context,
    * It delegates rendering to pre-set sprite. */
   virtual void Render();
+
+private:
+  int render_type_;
 };
 
 }

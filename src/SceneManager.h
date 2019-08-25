@@ -10,12 +10,14 @@ class SceneManager : public EventReceiver
 {
 public:
   void Initialize();
+  void Update();
   void Render();
   virtual bool OnEvent(const EventMessage& msg);
   void ChangeScene(bool force=false);
   Scene* get_current_scene();
 
   Timer& GetSceneTimer();
+  static uint32_t GetSceneTickTime();
 
   static SceneManager& getInstance();
 private:

@@ -106,6 +106,9 @@ public:
   /* @brief prepare to finish scene e.g. prepare next scene */
   virtual void CloseScene() = 0;
 
+  /* @brief Preprocess work for rendering */
+  virtual void Update() = 0;
+
   /* @brief Render scene */
   virtual void Render() = 0;
 
