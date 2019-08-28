@@ -1,15 +1,15 @@
 #pragma once
 
-#include "LR2SpriteDummy.h"
+#include "BaseObject.h"
 
 namespace rhythmus
 {
 
 /**
  * @brief
- * This class is for BAR_BODY
+ * This class is for BAR_BODY, and only used for rendering order...?
  */
-class LR2SpriteSelectBar : public LR2SpriteDummy
+class LR2SpriteSelectBar : public BaseObject
 {
 public:
   LR2SpriteSelectBar();

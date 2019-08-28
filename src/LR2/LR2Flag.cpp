@@ -3,6 +3,7 @@
 #include "Game.h"
 #include "SceneManager.h"
 #include "scene/SelectScene.h"
+#include "rutil.h"  /* string modification */
 #include "Error.h"
 
 namespace rhythmus
@@ -76,7 +77,7 @@ namespace rhythmus
           // XXX: Better to check current scene is really SelectScene
           // before do casting.
           LR2Text[10] = static_cast<SelectScene*>(SceneManager::getInstance().get_current_scene())
-            ->get_selected_title();
+            ->get_wheel().get_selected_title();
           break;
         }
         return true;

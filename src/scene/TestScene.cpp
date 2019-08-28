@@ -13,32 +13,11 @@ TestScene::~TestScene()
 {
 }
 
-void TestScene::Update()
-{
-  /* TODO: movie image should be updated automatically ..? */
-  img_movie_->Update();
-
-  spr_bg_.Update();
-  spr_.Update();
-  spr2_.Update();
-  text_.Update();
-  lr2text_.Update();
-}
-
-void TestScene::Render()
-{
-  spr_bg_.Render();
-  spr_.Render();
-  spr2_.Render();
-  text_.Render();
-  lr2text_.Render();
-}
-
 void TestScene::StartScene()
 {
 }
 
-void TestScene::LoadScene(SceneLoader *scene_loader)
+void TestScene::LoadScene()
 {
   ImageAuto img_ = ResourceManager::getInstance().LoadImage("../test/test.png");
   ImageAuto img2_ = ResourceManager::getInstance().LoadImage("../test/test2.png");
@@ -51,20 +30,17 @@ void TestScene::LoadScene(SceneLoader *scene_loader)
   spr_.SetImage(img_);
 
   // XXX: test animation
-  spr_.get_animation().AddTween({ {
-      0, 0, 100, 100,
+  spr_.AddTweenState({ 0, 0, 100, 100,
       1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
       0.0f, 0.0f, 0.0f, 50, 50, 100, 100, 1.0f, 1.0f, true
-    }, 1000, 0, 0, true, TweenTypes::kTweenTypeEaseOut
-    });
-  spr_.get_animation().AddTween({ {
+    }, 1000, EaseTypes::kEaseOut, true);
+  spr_.AddTweenState({
       0, 0, 110, 110,
       1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
       0.0f, 0.0f, 1.0f, 1.0f,
       0.0f, 0.0f, glm::radians(90.0f), 55, 55, 100, 200, 1.0f, 1.5f, true
-    }, 1500, 0, 0, true, TweenTypes::kTweenTypeEaseOut
-    });
+    }, 1500, EaseTypes::kEaseOut, true);
 
   spr2_.SetImage(img2_);
   spr2_.SetPos(200, 350);
@@ -102,6 +78,16 @@ void TestScene::LoadScene(SceneLoader *scene_loader)
   lr2text_.SetText(u8"1234abcdΘΙΚΛあえいおう楽しい熙ⅷ黑");
   lr2text_.SetPos(30, 200);
   lr2text_.SetScale(1.5, 1.5);
+
+  // AddChild for rendering!
+  AddChild(&spr_);
+  AddChild(&spr2_);
+  AddChild(&spr_bg_);
+  AddChild(&text_);
+  AddChild(&lr2text_);
+
+  // RegisterImage for movie update!
+  RegisterImage(img_movie_);
 }
 
 void TestScene::CloseScene()

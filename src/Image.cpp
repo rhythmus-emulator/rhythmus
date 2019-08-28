@@ -329,6 +329,22 @@ Image::~Image()
   UnloadAll();
 }
 
+/* Set an alias of image in case of searching. */
+void Image::set_name(const std::string& name)
+{
+  name_ = name;
+}
+
+std::string Image::get_name() const
+{
+  return name_;
+}
+
+std::string Image::get_path() const
+{
+  return path_;
+}
+
 void Image::LoadImageFromPath(const std::string& path)
 {
   FREE_IMAGE_FORMAT fmt = FreeImage_GetFileType(path.c_str());

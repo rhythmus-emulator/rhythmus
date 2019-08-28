@@ -225,6 +225,20 @@ void Game::ChangeGameMode()
   do_game_mode_change_ = true;
 }
 
+template<>
+std::string Game::GetAttribute(const std::string& key) const
+{
+  const auto ii = attributes_.find(key);
+  if (ii != attributes_.end())
+    return ii->first;
+  else return std::string();
+}
+
+void Game::SetAttribute(const std::string& key, const std::string& value)
+{
+  attributes_[key] = value;
+}
+
 void Game::set_setting_path(const std::string& path)
 {
   setting_path_ = path;

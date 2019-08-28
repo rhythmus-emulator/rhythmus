@@ -159,65 +159,50 @@ void LR2Font::UploadTextureFile(const char* p, size_t len)
 
 // ------------------------------ class LR2Text
 
-LR2Text::LR2Text()
+LR2Text::LR2Text() : lr2_st_id_(0)
 {
-  sprite_name_ = "LR2Text";
-  e_.t_ = this;
+  set_name("LR2Text");
 }
 
 LR2Text::~LR2Text()
 {
-
 }
 
-LR2SprInfo& LR2Text::get_sprinfo()
+void LR2Text::LoadProperty(const std::string& prop_name, const std::string& value)
 {
-  return spr_info_;
-}
+  Text::LoadProperty(prop_name, value);
 
-LR2FontSRC& LR2Text::get_fontsrc()
-{
-  return (LR2FontSRC&)spr_info_.get_src();
-}
-
-void LR2Text::SetSpriteFromLR2Data()
-{
-  // XXX: (0, 0) SRC size prevent tween not be updated
-  // (considered as invalid sprite)
-  // So just use dummy value.
-  spr_info_.set_src_size(1, 1);
-  spr_info_.SetSpriteFromLR2Data(ani_);
-
-  // Decide what event this receiver should receive.
-  e_.lr2_st_id_ = get_fontsrc().st;
-  switch (get_fontsrc().st)
+  if (prop_name == "#SRC_TEXT")
   {
-  case 10:
-    e_.SubscribeTo(Events::kEventSongSelectChanged);
-    break;
+    std::vector<std::string> params;
+    MakeParamCountSafe(value, params, 5);
+    lr2_st_id_ = atoi(params[2].c_str());
+    switch (lr2_st_id_)
+    {
+    case 10:
+      SubscribeTo(Events::kEventSongSelectChanged);
+      break;
+    }
+  }
+  else if (prop_name == "#DST_TEXT")
+  {
+    op_[0] = GetAttribute<int>("op0");
+    op_[1] = GetAttribute<int>("op1");
+    op_[2] = GetAttribute<int>("op2");
+    timer_id_ = GetAttribute<int>("timer");
   }
 }
 
-void LR2Text::Update()
+bool LR2Text::IsVisible() const
 {
-  Text::Update();
-
-  // TEMP CODE
-  //SetPos(200, 200);
-
-  // hide sprite if currently showing & op(cond) is false
-  if (ani_.IsDisplay() && !spr_info_.IsSpriteShow())
-    ani_.Hide();
+  return BaseObject::IsVisible() &&
+    LR2Flag::GetFlag(op_[0]) && LR2Flag::GetFlag(op_[1]) &&
+    LR2Flag::GetFlag(op_[2]) && LR2Flag::IsTimerActive(timer_id_);
 }
 
-void LR2Text::Render()
+bool LR2Text::OnEvent(const EventMessage &e)
 {
-  Text::Render();
-}
-
-bool LR2Text::LR2EventReceiver::OnEvent(const EventMessage &e)
-{
-  t_->SetText(LR2Flag::GetText(lr2_st_id_));
+  SetText(LR2Flag::GetText(lr2_st_id_));
   return true;
 }
 

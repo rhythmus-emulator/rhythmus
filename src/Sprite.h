@@ -1,53 +1,51 @@
 #pragma once
+#include "BaseObject.h"
 #include "Image.h"
-#include "Animation.h"
+#include <vector>
 #include <string>
 
 namespace rhythmus
 {
 
-class Sprite
+/* @brief Renderable object with texture */
+class Sprite : public BaseObject
 {
 public:
   Sprite();
-  Sprite(const Sprite& spr);
+  Sprite(const Sprite& spr) = default;
   virtual ~Sprite();
 
-  SpriteAnimation& get_animation();
   void SetImage(ImageAuto img);
-  void SetPos(int x, int y);
-  void SetSize(int w, int h);
-  void SetAlpha(float a);
-  void SetRGB(float r, float g, float b);
-  void SetScale(float x, float y);
-  void SetRotation(float x, float y, float z);
-  void SetCenter(float x, float y);
 
-  void Hide();
-  void Show();
-
-  /* @brief Update before rendering */
-  virtual void Update();
-
-  /* @brief Render based on updated information */
-  virtual void Render();
-
-  /* @brief Get Sprite name */
-  const std::string& get_name() const;
+  virtual void LoadProperty(const std::string& prop_name, const std::string& value);
 
 protected:
-  const DrawInfo& get_drawinfo() const;
-  DrawInfo& get_drawinfo();
-
   ImageAuto img_;
-  SpriteAnimation ani_;
-  DrawInfo di_;
 
-  /* invalidate drawinfo with force (internal use) */
-  bool invalidate_drawinfo_;
+  // sprite animation property
+  // divx : sprite division by x pos
+  // divy : sprite division by y pos
+  // cnt : total frame (smaller than divx * divy)
+  // interval : loop time for sprite animation (milisecond)
+  int divx_, divy_, cnt_, interval_;
 
-  /* sprite name */
-  std::string sprite_name_;
+  // current sprite animation frame
+  int idx_;
+
+  // eclipsed time of sprite animation
+  int eclipsed_time_;
+
+  // texture coordination of original
+  float sx_, sy_, sw_, sh_;
+
+  // texture attribute (TODO)
+  float tex_attribute_;
+
+  // TODO: should be removed later.
+  VertexInfo vi_[4];
+
+  virtual void doUpdate(float delta);
+  virtual void doRender();
 };
 
 /* Sprite may not need to be shared. */

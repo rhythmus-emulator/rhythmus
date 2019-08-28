@@ -13,11 +13,9 @@ public:
   TestScene();
   virtual ~TestScene();
 
-  virtual void LoadScene(SceneLoader *scene_loader);
+  virtual void LoadScene();
   virtual void StartScene();
   virtual void CloseScene();
-  virtual void Update();
-  virtual void Render();
   virtual bool ProcessEvent(const EventMessage& e);
 
   virtual const std::string GetSceneName() const;

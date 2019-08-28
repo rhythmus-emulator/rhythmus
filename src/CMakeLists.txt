@@ -9,6 +9,7 @@ endif (MSVC)
 set (RHYTHMUS_SOURCES
     ResourceManager.cpp
     Image.cpp
+	BaseObject.cpp
     Sprite.cpp
     Animation.cpp
     Font.cpp
@@ -29,13 +30,12 @@ set (RHYTHMUS_SOURCES
     LR2/LR2SceneLoader.cpp
     LR2/LR2Flag.cpp
     LR2/LR2Sprite.cpp
-    LR2/LR2SpriteDummy.cpp
-    LR2/LR2SpriteSelectBar.cpp
     )
 
 set (RHYTHMUS_HEADERS
     ResourceManager.h
     Image.h
+	BaseObject.h
     Sprite.h
     Animation.h
     Font.h
@@ -56,8 +56,6 @@ set (RHYTHMUS_HEADERS
     LR2/LR2SceneLoader.h
     LR2/LR2Flag.h
     LR2/LR2Sprite.h
-    LR2/LR2SpriteDummy.h
-    LR2/LR2SpriteSelectBar.h
     )
 
 include_directories(

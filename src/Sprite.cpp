@@ -2,41 +2,20 @@
 #include "Game.h"
 #include "SceneManager.h" // to use scene timer
 #include <iostream>
+#include <algorithm>
 
 namespace rhythmus
 {
 
 Sprite::Sprite()
+  : divx_(1), divy_(1), cnt_(1), interval_(0),
+    idx_(0), eclipsed_time_(0),
+    sx_(0), sy_(0), sw_(1.0f), sh_(1.0f), tex_attribute_(0)
 {
-  memset(&di_, 0, sizeof(di_));
-}
-
-Sprite::Sprite(const Sprite& spr)
-{
-  img_ = spr.img_;
-  ani_ = spr.ani_;
-  di_ = spr.di_;
-  invalidate_drawinfo_ = spr.invalidate_drawinfo_;
-  sprite_name_ = spr.sprite_name_;
 }
 
 Sprite::~Sprite()
 {
-}
-
-SpriteAnimation& Sprite::get_animation()
-{
-  return ani_;
-}
-
-const DrawInfo& Sprite::get_drawinfo() const
-{
-  return di_;
-}
-
-DrawInfo& Sprite::get_drawinfo()
-{
-  return di_;
 }
 
 void Sprite::SetImage(ImageAuto img)
@@ -44,91 +23,93 @@ void Sprite::SetImage(ImageAuto img)
   img_ = img;
 }
 
-void Sprite::SetPos(int x, int y)
+void Sprite::LoadProperty(const std::string& prop_name, const std::string& value)
 {
-  // ani_.StopAnimation();
-  ani_.SetPosition(x, y);
-  invalidate_drawinfo_ = true;
+  /* below is for LR2 type commands */
+  if (strnicmp(prop_name.c_str(), "#SRC_", 5) == 0)
+  {
+    std::vector<std::string> params;
+    MakeParamCountSafe(value, params, 13);
+    int attr = atoi(params[0].c_str());
+    int imgidx = atoi(params[1].c_str());
+    int sx = atoi(params[2].c_str());
+    int sy = atoi(params[3].c_str());
+    int sw = atoi(params[4].c_str());
+    int sh = atoi(params[5].c_str());
+    int divx = atoi(params[6].c_str());
+    int divy = atoi(params[7].c_str());
+    int cycle = atoi(params[8].c_str());    /* total loop time */
+    int timer = atoi(params[9].c_str());    /* timer id in LR2 form */
+#if 0
+    int op1 = atoi_op(params[10].c_str());
+    int op2 = atoi_op(params[11].c_str());
+    int op3 = atoi_op(params[12].c_str());
+#endif
+
+    auto img = SceneManager::getInstance().get_current_scene()->GetImageByName(params[1]);
+    SetImage(img);
+    if (img)
+    {
+      sx_ = sx / (float)img->get_width();
+      sy_ = sy / (float)img->get_height();
+      if (sw < 0) sw_ = 1.0f;
+      else sw_ = sw / (float)img->get_width();
+      if (sh < 0) sh_ = 1.0f;
+      else sh_ = sh / (float)img->get_height();
+      divx_ = divx > 0 ? divx : 1;
+      divy_ = divy > 0 ? divy : 1;
+      interval_ = cycle;
+    }
+
+    // this attribute will be processed in LR2Objects
+    SetAttribute("src_timer", params[9]);
+
+    return;
+  }
+
+  BaseObject::LoadProperty(prop_name, value);
 }
 
-void Sprite::SetSize(int w, int h)
-{
-  // ani_.StopAnimation();
-  ani_.SetSize(w, h);
-  invalidate_drawinfo_ = true;
-}
-
-void Sprite::SetAlpha(float a)
-{
-  ani_.SetAlpha(a);
-  invalidate_drawinfo_ = true;
-}
-
-void Sprite::SetRGB(float r, float g, float b)
-{
-  ani_.SetRGB(r, g, b);
-  invalidate_drawinfo_ = true;
-}
-
-void Sprite::SetScale(float x, float y)
-{
-  ani_.SetScale(x, y);
-  invalidate_drawinfo_ = true;
-}
-
-void Sprite::SetRotation(float x, float y, float z)
-{
-  ani_.SetRotation(x, y, z);
-  invalidate_drawinfo_ = true;
-}
-
-void Sprite::SetCenter(float x, float y)
-{
-  ani_.SetCenter(x, y);
-  invalidate_drawinfo_ = true;
-}
-
-void Sprite::Hide()
-{
-  ani_.Hide();
-  invalidate_drawinfo_ = true;
-}
-
-void Sprite::Show()
-{
-  ani_.Show();
-  invalidate_drawinfo_ = true;
-}
-
-const std::string& Sprite::get_name() const
-{
-  return sprite_name_;
-}
-
-void Sprite::Render()
+void Sprite::doRender()
 {
   // If hide, then not draw
-  if (!ani_.IsDisplay())
+  if (!IsVisible())
     return;
 
-  // Render with given frame
+  // TODO: update tex coordinate into VertexInfo. how?
+  // TODO: need to care animated sprite
+#if 0
+  ti.sw = ani_texture_.sw / ani_texture_.divx;
+  ti.sh = ani_texture_.sh / ani_texture_.divy;
+  ti.sx = ani_texture_.sx + ti.sw * (ani_texture_.idx % ani_texture_.divx);
+  ti.sy = ani_texture_.sy + ti.sh * (ani_texture_.idx / ani_texture_.divx % ani_texture_.divy);
+#endif
+  GetVertexInfo(vi_);
+  vi_[0].sx = sx_;
+  vi_[0].sy = sy_;
+  vi_[1].sx = sx_ + sw_;
+  vi_[1].sy = sy_;
+  vi_[2].sx = sx_ + sw_;
+  vi_[2].sy = sy_ + sh_;
+  vi_[3].sx = sx_;
+  vi_[3].sy = sy_ + sh_;
+
   if (img_)
     glBindTexture(GL_TEXTURE_2D, img_->get_texture_ID());
-  Graphic::RenderQuad(di_);
+  Graphic::getInstance().SetProj(get_draw_property().pi);
+  Graphic::RenderQuad(vi_);
 }
 
-void Sprite::Update()
+// milisecond
+void Sprite::doUpdate(float delta)
 {
-  // Before Tick(), check is there any motion
-  // If not, we don't need to update DrawInfo.
-  bool update_drawinfo = ani_.IsActive() || invalidate_drawinfo_;
-  invalidate_drawinfo_ = false;
-
-  // always Tick() to update tween
-  ani_.Tick(SceneManager::GetSceneTickTime());
-
-  if (update_drawinfo)
-    ani_.GetDrawInfo(di_);
+  // update sprite info
+  if (interval_ > 0)
+  {
+    eclipsed_time_ += delta;
+    idx_ = eclipsed_time_ * divx_ * divy_ / interval_ % cnt_;
+    eclipsed_time_ = fmod(eclipsed_time_, interval_);
+  }
 }
 
 }

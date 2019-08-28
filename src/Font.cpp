@@ -192,6 +192,16 @@ Font::~Font()
     FT_Done_FreeType(ftLib);
 }
 
+void Font::set_name(const std::string& name)
+{
+  name_ = name;
+}
+
+const std::string& Font::get_name() const
+{
+  return name_;
+}
+
 bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
 {
   /* invalid font ... */
@@ -635,15 +645,13 @@ void Text::Clear()
   text_.clear();
 }
 
-void Text::Update()
+void Text::doUpdate()
 {
-  Sprite::Update();
-
   // set alignment-related options
-  if (get_animation().GetCurrentTweenInfo().w > 0
+  if (get_draw_property().w > 0
     && text_render_ctx_.width > 0 && text_render_ctx_.height > 0)
   {
-    const float w = get_animation().GetCurrentTweenInfo().w;
+    const float w = get_draw_property().w;
     float ratio = 1.0f;
     switch (font_alignment_)
     {
@@ -651,41 +659,41 @@ void Text::Update()
       break;
     case FontAlignments::kFontAlignFitMaxsize:
       ratio = std::min(1.0f, w / text_render_ctx_.width);
-      get_drawinfo().pi.sx *= ratio;
+      get_draw_property().pi.sx *= ratio;
       break;
     case FontAlignments::kFontAlignCenter:
       if (text_render_ctx_.width < w)
-        get_drawinfo().pi.x += (text_render_ctx_.width - w) / 2;
+        get_draw_property().pi.x += (text_render_ctx_.width - w) / 2;
       break;
     case FontAlignments::kFontAlignCenterFitMaxsize:
       ratio = std::min(1.0f, w / text_render_ctx_.width);
-      get_drawinfo().pi.sx *= ratio;
+      get_draw_property().pi.sx *= ratio;
       if (ratio >= 1.0f)
-        get_drawinfo().pi.x += (w - text_render_ctx_.width) / 2;
+        get_draw_property().pi.x += (w - text_render_ctx_.width) / 2;
       break;
     case FontAlignments::kFontAlignRight:
       if (text_render_ctx_.width < w)
-        get_drawinfo().pi.x += text_render_ctx_.width - w;
+        get_draw_property().pi.x += text_render_ctx_.width - w;
       break;
     case FontAlignments::kFontAlignRightFitMaxsize:
       ratio = std::min(1.0f, w / text_render_ctx_.width);
-      get_drawinfo().pi.sx *= ratio;
+      get_draw_property().pi.sx *= ratio;
       if (ratio >= 1.0f)
-        get_drawinfo().pi.x += w - text_render_ctx_.width;
+        get_draw_property().pi.x += w - text_render_ctx_.width;
       break;
     case FontAlignments::kFontAlignStretch:
       ratio = w / text_render_ctx_.width;
-      get_drawinfo().pi.sx *= ratio;
+      get_draw_property().pi.sx *= ratio;
       break;
     }
   }
 }
 
-void Text::Render()
+void Text::doRender()
 {
   // Set Proj / View matrix
   Graphic::getInstance().SetProjOrtho();
-  Graphic::getInstance().SetModel(get_drawinfo().pi);
+  Graphic::getInstance().SetModel(get_draw_property().pi);
 
   // Draw vertex by given quad
   // XXX: is it better to cache vertex?

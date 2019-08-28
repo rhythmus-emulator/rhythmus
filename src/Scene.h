@@ -2,6 +2,7 @@
 
 #include "Game.h"
 #include "Timer.h"
+#include "BaseObject.h"
 #include "ResourceManager.h"
 #include "Event.h"
 #include <string>
@@ -64,65 +65,28 @@ struct ThemeOption
   std::string GetSelectedValue();
 };
 
-class Scene;
-
-/* @brief util to help scene loading */
-class SceneLoader
-{
-public:
-  SceneLoader(Scene *s);
-  virtual ~SceneLoader();
-
-  virtual void Load(const std::string& filepath) = 0;
-
-  void GetThemeOptions(std::vector<ThemeOption>& theme_options);
-  void GetSpriteObjects(std::vector<SpriteAuto>& sprites);
-  void GetImages(std::vector<ImageAuto>& images);
-  void GetFonts(std::vector<FontAuto>& fonts);
-  const ThemeParameter& GetThemeParameter();
-
-protected:
-  Scene *scene_;
-
-  ThemeParameter theme_param_;
-  std::vector<ImageAuto> images_;
-  std::vector<FontAuto> fonts_;
-  std::vector<ThemeOption> theme_options_;
-  std::vector<SpriteAuto> sprites_;
-};
-
 /* @brief A screen which is renderable */
-class Scene
+class Scene : public BaseObject
 {
 public:
   virtual ~Scene() { };
 
   /* @brief load scene resource and prepare to start */
-  virtual void LoadScene(SceneLoader *scene_loader);
+  virtual void LoadScene();
 
   /* @brief start scene e.g. start scene timer */
   virtual void StartScene() = 0;
 
   /* @brief prepare to finish scene e.g. prepare next scene */
-  virtual void CloseScene() = 0;
-
-  /* @brief Preprocess work for rendering */
-  virtual void Update() = 0;
-
-  /* @brief Render scene */
-  virtual void Render() = 0;
+  virtual void CloseScene();
 
   /* @brief Process event in this scene */
   virtual bool ProcessEvent(const EventMessage& e) = 0;
 
-  void LoadOptions();
-  void SaveOptions();
+  void RegisterImage(ImageAuto img);
+  ImageAuto GetImageByName(const std::string& name);
 
-  virtual const std::string GetSceneName() const = 0;
-
-  bool operator==(const Scene& s) {
-    return s.GetSceneName() == GetSceneName();
-  }
+  virtual void LoadProperty(const std::string& prop_name, const std::string& value);
 
 protected:
   // User-customizable theme option
@@ -137,10 +101,16 @@ protected:
   // font resource loaded by this scene
   std::vector<FontAuto> fonts_;
 
-  // sprites to be rendered
-  std::vector<SpriteAuto> sprites_;
+private:
+  virtual void doUpdate(float delta);
 
-protected:
+  void LoadOptions();
+  void SaveOptions();
+
+  void LoadFromCsv(const std::string& filepath);
+  void SetThemeConfig(const std::string& key, const std::string& value);
+  ThemeOption* GetThemeOption(const std::string& key);
+
   // Generate select list from theme option by second parameter
   // return select list count.
   static void GetThemeOptionSelectList(

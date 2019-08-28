@@ -9,11 +9,6 @@
 namespace rhythmus
 {
 
-struct LR2FontSRC
-{
-  int fontidx, st, align, edit;
-};
-
 class LR2Font : public Font
 {
 public:
@@ -26,37 +21,23 @@ private:
   void UploadTextureFile(const char* p, size_t len);
 };
 
-class LR2Text : public Text
+class LR2Text : public Text, EventReceiver
 {
 public:
   LR2Text();
   virtual ~LR2Text();
 
-  LR2SprInfo& get_sprinfo();
-  LR2FontSRC& get_fontsrc();
+  virtual void LoadProperty(const std::string& prop_name, const std::string& value);
+  virtual bool IsVisible() const;
 
-  /* @brief upload LR2 SRC/DST data into tweens */
-  void SetSpriteFromLR2Data();
-
-  virtual void Update();
-
-  virtual void Render();
+  virtual bool OnEvent(const EventMessage &e);
 
 private:
-  /* Internally stored lr2 string ptr.
-   * When this pointer changed, we need to invalidate text vertices. */
-  const char* lr2_str_ptr_;
+  // lr2 text code
+  int lr2_st_id_;
 
-  LR2SprInfo spr_info_;
-
-  /* Event handler for some sprite */
-  class LR2EventReceiver : public EventReceiver
-  {
-  public:
-    virtual bool OnEvent(const EventMessage &e);
-    LR2Text* t_;
-    int lr2_st_id_;
-  } e_;
+  int op_[3];
+  int timer_id_;
 };
 
 }

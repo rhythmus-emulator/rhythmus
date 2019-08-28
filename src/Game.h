@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace rhythmus
 {
@@ -78,6 +79,10 @@ public:
   /* Trigger scene changing. */
   void ChangeGameMode();
 
+  template<typename T>
+  T GetAttribute(const std::string& key) const;
+  void SetAttribute(const std::string& key, const std::string& value);
+
   void set_setting_path(const std::string& path);
   uint16_t get_window_width() const;
   uint16_t get_window_height() const;
@@ -100,6 +105,9 @@ private:
   uint16_t width_, height_;
   std::string log_path_;
   bool do_logging_;
+
+  // misc attributes
+  std::map<std::string, std::string> attributes_;
 
   // game theme related variables.
   GameThemeOption theme_option_;

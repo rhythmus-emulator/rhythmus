@@ -1,8 +1,6 @@
 #include "LR2SceneLoader.h"
 #include "LR2Flag.h"
 #include "LR2Sprite.h"
-#include "LR2SpriteDummy.h"
-#include "LR2SpriteSelectBar.h"
 #include "LR2Font.h"
 #include "rutil.h" /* utf-8 file load */
 #include <iostream>
@@ -10,96 +8,41 @@
 namespace rhythmus
 {
 
-LR2SceneLoader::LR2SceneLoader(Scene *s) : SceneLoader(s)
+LR2SceneLoader::LR2SceneLoader()
+  : substitute_path_from("LR2files/Theme")
 {
-  ASSERT(scene_);
-  base_theme_folder_ = "../themes";
 }
 
 LR2SceneLoader::~LR2SceneLoader()
 {
 }
 
+void LR2SceneLoader::SetSubStitutePath(const std::string& theme_path)
+{
+  substitute_path_to = theme_path;
+}
+
+std::string LR2SceneLoader::SubstitutePath(const std::string& path_)
+{
+  std::string path = path_;
+  for (int i = 0; i < path.size(); ++i)
+    if (path[i] == '\\') path[i] = '/';
+  if (strncmp(path.c_str(), "./", 2) == 0)
+    path = path.substr(2);
+  if (strnicmp(path.c_str(),
+    substitute_path_from.c_str(),
+    substitute_path_from.size()) == 0)
+  {
+    path = substitute_path_to + path.substr(substitute_path_from.size());
+  }
+  return path;
+}
+
 void LR2SceneLoader::Load(const std::string& path)
 {
   scene_filepath_ = path;
-  folder_ = rutil::GetDirectory(path);
 
   LoadCSV(path);
-
-  // Attempt to load images from imgname
-  for (const auto& imgname : imgnames_)
-  {
-    ImageAuto img;
-    std::string imgpath;
-    ThemeOption* option = GetThemeOption(imgname);
-    if (option)
-    {
-      // create img path from option
-      imgpath = option->GetSelectedValue();
-    }
-    else
-    {
-      imgpath = imgname;
-    }
-    imgpath = ConvertLR2Path(imgpath);
-    img = ResourceManager::getInstance().LoadImage(imgpath);
-    // TODO: set colorkey
-    img->CommitImage();
-    images_.push_back(img);
-  }
-
-  // Load all fonts
-  for (const auto& fntname: lr2fontnames_)
-  {
-    std::string fntpath = ConvertLR2Path(fntname);
-    // convert filename path to .dxa
-    auto ri = fntpath.rfind('/');
-    if (ri != std::string::npos && stricmp(fntpath.substr(ri).c_str(), "/font.lr2font") == 0)
-      fntpath = fntpath.substr(0, ri) + ".dxa";
-    fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fntpath));
-  }
-
-  for (const auto& s : sprites_)
-  {
-    if (s->get_name() == "LR2Sprite")
-    {
-      LR2Sprite* sp = (LR2Sprite*)s.get();
-      if (images_.size() < sp->get_sprinfo().get_src().imgidx)
-      {
-        // TODO: Some imgidx is special(e.g. CoverImage, BG ...)
-        // need to deal with it.
-        std::cerr << "LR2SceneLoader: Sprite invalid imgidx(" <<
-          sp->get_sprinfo().get_src().imgidx << "), ignored." << std::endl;
-        continue;
-      }
-
-      // TODO: get real image path from imgname
-      const auto& img = images_[sp->get_sprinfo().get_src().imgidx];
-      sp->SetImage(img);
-      sp->SetSpriteFromLR2Data();
-    }
-    else if (s->get_name() == "LR2Text")
-    {
-      LR2Text* text = (LR2Text*)s.get();
-
-      if (fonts_.size() < text->get_fontsrc().fontidx)
-      {
-        std::cerr << "LR2SceneLoader: Font invalid idx(" <<
-          text->get_fontsrc().fontidx << "), ignored." << std::endl;
-        continue;
-      }
-
-      auto& fnt = fonts_[text->get_fontsrc().fontidx];
-      text->SetFont(fnt.get());
-      text->SetText("DEMOTEXT");
-      text->SetSpriteFromLR2Data();
-    }
-    /* Below is for special objects */
-    else if (s->get_name() == "BAR_BODY")
-    {
-    }
-  }
 }
 
 void MakeParamCountSafe(std::vector<std::string> &v, size_t expected_count)
@@ -116,7 +59,7 @@ void LR2SceneLoader::LoadCSV(const std::string& filepath)
   ParseCSV((char*)data.p, data.len);
 }
 
-inline int atoi_op(const char* op)
+int atoi_op(const char* op)
 {
   if (*op == '!')
     return atoi(op + 1);
@@ -146,23 +89,20 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     if (s.size() < 2) continue;
     if (s[0] != '#') continue;
 
-    std::vector<std::string> params;
-    rutil::split(s, ',', params);
-    params[0] = rutil::upper(params[0]);
-
-    /* TODO: make these clauses into command-mapping functors */
+    std::string cmd, val;
+    rutil::split(s, ',', cmd, val);
+    cmd = rutil::upper(cmd);
 
     /* conditional statement first */
-    if (params[0] == "#IF")
+    if (cmd == "#IF")
     {
-      MakeParamCountSafe(params, 2);
-      int cond = atoi_op(params[1].c_str());
+      int cond = atoi_op(val.c_str());
       if (LR2Flag::GetFlag(cond))
         if_stack_.emplace_back(IfStmt{ 0, false });
       else
         if_stack_.emplace_back(IfStmt{ 1, true });
     }
-    else if (params[0] == "#ELSEIF")
+    else if (cmd == "#ELSEIF")
     {
       if (if_stack_.empty())
         continue;
@@ -173,15 +113,14 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
         continue;
       }
 
-      MakeParamCountSafe(params, 2);
-      int cond = atoi_op(params[1].c_str());
+      int cond = atoi_op(val.c_str());
       if (LR2Flag::GetFlag(cond))
       {
         if_stack_.back().cond_is_true = true;
         if_stack_.back().cond_match_count++;
       }
     }
-    else if (params[0] == "#ELSE")
+    else if (cmd == "#ELSE")
     {
       if (if_stack_.empty())
         continue;
@@ -194,7 +133,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       if_stack_.back().cond_is_true = true;
       if_stack_.back().cond_match_count++;
     }
-    else if (params[0] == "#ENDIF")
+    else if (cmd == "#ENDIF")
     {
       if (if_stack_.empty())
       {
@@ -208,9 +147,19 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     if (!if_stack_.empty() && !if_stack_.back().cond_is_true)
       continue;
 
-    /* General commands
-     * Compare SRC, DST first as they used a lot. */
-    if (strncmp(params[0].c_str(), "#SRC_", 5) == 0)
+    /* special command: INCLUDE */
+    if (cmd == "#INCLUDE")
+    {
+      // before continue, need to change path of LR2
+      std::string path = SubstitutePath(val);
+      LoadCSV(path);
+    }
+
+    /* General commands : just add to commands */
+    commands_.push_back({ cmd, val });
+
+#if 0
+    if (strncmp(cmd.c_str(), "#SRC_", 5) == 0)
     {
       std::string objtype = params[0].substr(5);
 
@@ -337,13 +286,6 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     {
       // TODO: set attribute to theme_param_
     }
-    else if (params[0] == "#INCLUDE")
-    {
-      MakeParamCountSafe(params, 2);
-      // before continue, need to change path of LR2
-      std::string path = ConvertLR2Path(params[1]);
-      LoadCSV(path);
-    }
     else if (params[0] == "#INFORMATION")
     {
       MakeParamCountSafe(params, 5);
@@ -418,37 +360,8 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     else if (params[0] == "#HELPFILE")
     {
     }*/
+#endif
   }
-}
-
-// we need to change path of LR2 into general relative path.
-std::string LR2SceneLoader::ConvertLR2Path(const std::string& lr2path)
-{
-  std::string path = lr2path;
-  for (int i = 0; i < path.size(); ++i)
-    if (path[i] == '\\') path[i] = '/';
-  if (strncmp(path.c_str(), "./", 2) == 0)
-    path = path.substr(2);
-  if (strnicmp(path.c_str(), "LR2files/Theme", 14) == 0)
-  {
-    std::vector<std::string> path_seps;
-    rutil::split(path, '/', path_seps);
-    path = base_theme_folder_;
-
-    for (int i = 2; i < path_seps.size(); ++i)
-    {
-      path += "/" + path_seps[i];
-    }
-  }
-  return path;
-}
-
-ThemeOption* LR2SceneLoader::GetThemeOption(const std::string& option_name)
-{
-  for (auto& toption : theme_options_)
-    if (toption.name == option_name)
-      return &toption;
-  return nullptr;
 }
 
 }

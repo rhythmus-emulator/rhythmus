@@ -5,17 +5,29 @@
 namespace rhythmus
 {
 
-class LR2SceneLoader : public SceneLoader
+class LR2SceneLoader
 {
 public:
-  LR2SceneLoader(Scene *s);
+  LR2SceneLoader();
   ~LR2SceneLoader();
-  virtual void Load(const std::string& filepath);
+  void SetSubStitutePath(const std::string& theme_path);
+  std::string SubstitutePath(const std::string& path);
+  void Load(const std::string& filepath);
+
+  std::vector<std::pair<std::string, std::string> >::iterator begin()
+  {
+    return commands_.begin();
+  }
+
+  std::vector<std::pair<std::string, std::string> >::iterator end()
+  {
+    return commands_.end();
+  }
 
 private:
   std::string scene_filepath_;
-  std::string folder_;
-  std::string base_theme_folder_;
+  std::string substitute_path_from;
+  std::string substitute_path_to;
 
   struct IfStmt
   {
@@ -25,16 +37,12 @@ private:
 
   std::vector<IfStmt> if_stack_;
 
-  std::vector<std::string> imgnames_;     // #IMAGE param
-  std::vector<std::string> fontnames_;    // #FONT param (not used)
-  std::vector<std::string> lr2fontnames_; // #LR2FONT param
+  std::vector<std::pair<std::string, std::string> > commands_;
 
   void LoadCSV(const std::string& filepath);
   void ParseCSV(const char* p, size_t len);
-  std::string ConvertLR2Path(const std::string& lr2path);
-
-  /* @brief Get theme option by name. nullptr if no name found. */
-  ThemeOption* GetThemeOption(const std::string& option_name);
 };
+
+int atoi_op(const char* op);
 
 }

@@ -132,6 +132,9 @@ public:
   Font();
   virtual ~Font();
 
+  void set_name(const std::string& name);
+  const std::string& get_name() const;
+
   bool LoadFont(const char* ttfpath, const FontAttributes& attrs);
   void PrepareText(const std::string& text_utf8);
   void PrepareGlyph(uint32_t *chrs, int count);
@@ -156,6 +159,9 @@ protected:
   // Font data path. used for identification.
   std::string path_;
 
+  // font resource name
+  std::string name_;
+
   // is bitmap font or ttf font?
   bool is_ttf_font_;
 
@@ -177,7 +183,7 @@ protected:
   FontBitmap* GetWritableBitmapCache(int w, int h);
 };
 
-class Text : public Sprite
+class Text : public BaseObject
 {
 public:
   Text();
@@ -190,10 +196,6 @@ public:
   void SetAlignment(FontAlignments align);
   void SetLineBreaking(bool enable_line_break);
   void Clear();
-
-  virtual void Render();
-
-  virtual void Update();
 
 private:
   // Font.
@@ -224,6 +226,9 @@ private:
 
   // is line-breaking enabled?
   bool do_line_breaking_;
+
+  virtual void doRender();
+  virtual void doUpdate();
 };
 
 using FontAuto = std::shared_ptr<Font>;

@@ -40,7 +40,7 @@ void SceneManager::Update()
   LR2Flag::Update();
 
   if (current_scene_)
-    current_scene_->Update();
+    current_scene_->Update(timer_scene_.GetDeltaTime() * 1000);
 }
 
 void SceneManager::Render()
@@ -68,18 +68,10 @@ void SceneManager::ChangeScene(bool force)
     return;
   }
 
-  // load scene
-  // TODO: use general SceneLoader class
-  // TODO: TestScene won't need SceneLoader. need to take care of it.
-  SceneLoader *scene_loader = nullptr;
-  if (new_scene->GetSceneName() != "TestScene")
-  {
-    scene_loader = new LR2SceneLoader(new_scene);
-    scene_loader->Load("../themes/WMIX_HD/select/select.lr2skin");
-  }
-  new_scene->LoadScene(scene_loader);
-  delete scene_loader;
+  // load scene first to maximize shared resource between two scene
+  new_scene->LoadScene();
 
+  // now delete previous scene
   delete current_scene_;
   current_scene_ = new_scene;
 

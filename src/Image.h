@@ -10,6 +10,9 @@ class Image
 public:
   Image();
   ~Image();
+  void set_name(const std::string& name);
+  std::string get_name() const;
+  std::string get_path() const;
   void LoadFromPath(const std::string& path);
   void LoadFromData(uint8_t* p, size_t len);
   void CommitImage(bool delete_data = true);
@@ -26,6 +29,9 @@ public:
   void RestartMovie();
 
 private:
+  std::string name_;
+  std::string path_;
+
   void* bitmap_ctx_;
   uint8_t *data_ptr_;
   uint16_t width_, height_;
