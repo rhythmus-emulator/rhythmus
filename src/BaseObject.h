@@ -1,3 +1,14 @@
+/**
+ * @brief
+ * This file declare BaseObject, which is common interface
+ * to all renderable objects.
+ * It includes attribute with child/parent, coordinate value
+ * just as DOM object, but without Texture attributes.
+ * (Texture attribute is implemented in Sprite class)
+ * Also, coordinate related utility functions declared in
+ * this file.
+ */
+
 #pragma once
 
 #include "Graphic.h"
