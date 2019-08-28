@@ -78,7 +78,8 @@ void Scene::LoadScene()
 
 void Scene::CloseScene()
 {
-  SaveOptions();
+  if (!get_name().empty())
+    SaveOptions();
 }
 
 void Scene::RegisterImage(ImageAuto img)
