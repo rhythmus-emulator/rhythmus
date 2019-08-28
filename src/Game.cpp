@@ -1,7 +1,6 @@
 #include "Game.h"
 #include "Timer.h"
 #include "Logger.h"
-#include "tinyxml2.h"
 #include "SceneManager.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -17,6 +16,11 @@ Game Game::game_;
 Game& Game::getInstance()
 {
   return game_;
+}
+
+Setting& Game::getSetting()
+{
+  return game_.setting_;
 }
 
 Game::Game()
@@ -90,22 +94,17 @@ std::string GetValueConverted(const char* v)
 
 bool Game::Load()
 {
-  using namespace tinyxml2;
-  XMLDocument doc;
-  XMLError errcode;
-  if ((errcode = doc.LoadFile(setting_path_.c_str())) != XML_SUCCESS)
-  {
-    std::cerr << "Game settings reading failed, TinyXml2 ErrorCode: " << errcode << std::endl;
-    return false;
-  }
-  XMLElement* settings = doc.RootElement();
-
   // Set default value - in case of key is not existing.
   Default();
 
+  if (!setting_.Open(setting_path_))
+  {
+    std::cerr << "Failed to game load settings, use default value." << std::endl;
+    return false;
+  }
+
 #define XMLATTR(var, attrname, type) \
-{ XMLElement *e = settings->FirstChildElement(attrname); \
-  if (e) { var = GetValueConverted<type>(e->GetText()); } }
+setting_.Load(attrname, var);
 #define XMLATTRS(a,b,c) XMLATTR(a,b,c)
   XML_SETTINGS;
 #undef XMLATTRS
@@ -116,19 +115,14 @@ bool Game::Load()
 
 bool Game::Save()
 {
-  using namespace tinyxml2;
-  XMLDocument doc;
-  XMLElement* settings = doc.NewElement("Settings");
-
 #define XMLATTR(var, attrname, type) \
-{ XMLElement* e = doc.NewElement(attrname); e->SetText(var); settings->LinkEndChild(e); }
-#define XMLATTRS(a,b,c) XMLATTR(a.c_str(),b,c)
+setting_.Set(attrname, var);
+#define XMLATTRS(a,b,c) XMLATTR(a,b,c)
   XML_SETTINGS;
 #undef XMLATTRS
 #undef XMLATTR
 
-  doc.LinkEndChild(settings);
-  return doc.SaveFile(setting_path_.c_str()) == XML_SUCCESS;
+  return setting_.Save();
 }
 
 void Game::Default()

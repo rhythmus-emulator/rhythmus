@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Timer.h"
+#include "Setting.h"
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -65,6 +66,7 @@ class Game
 {
 public:
   static Game& getInstance();
+  static Setting& getSetting();
   bool Load();
   bool Save();
   void Default();
@@ -101,7 +103,11 @@ private:
 
   static Game game_;
 
+  // setting of game context
+  Setting setting_;
+
   std::string setting_path_;
+
   uint16_t width_, height_;
   std::string log_path_;
   bool do_logging_;

@@ -1,12 +1,13 @@
 #include "Setting.h"
 #include <iostream>
-#include <vector>
 #include <sstream>
 
 using namespace tinyxml2;
 
 namespace rhythmus
 {
+
+constexpr char* kDefaultRootName = "setting";
 
 Setting::Setting()
   : root_(0)
@@ -24,6 +25,11 @@ bool Setting::Open(const std::string& setting_path)
     return false;
   }
   root_ = doc_.RootElement();
+  if (!root_)
+  {
+    root_ = doc_.NewElement(kDefaultRootName);
+    doc_.InsertFirstChild(root_);
+  }
   path_ = setting_path;
   return true;
 }
@@ -40,7 +46,8 @@ void Setting::Close()
 {
   doc_.Clear();
   path_.clear();
-  root_ = doc_.NewElement("setting");
+  root_ = doc_.NewElement(kDefaultRootName);
+  doc_.InsertFirstChild(root_);
 }
 
 void Setting::SetPreferenceGroup(const std::string& preference_name)
@@ -57,31 +64,20 @@ void Setting::SetPreferenceGroup(const std::string& preference_name)
   root_ = e;
 }
 
-template<typename T>
-void Setting::Load(const std::string& key, T& value) const
-{
-  XMLElement *e = root_->FirstChildElement(key.c_str());
-  if (!e) return;
-  const char* t = e->GetText();
-  ConvertFromString(t ? t : "", value);
-}
-
-template<typename T>
-void Setting::Set(const std::string& key, const T& value)
-{
-  std::string v = ConvertToString(key);
-  XMLElement *e = root_->FirstChildElement(key.c_str());
-  if (!e)
-  {
-    e = doc_.NewElement(key.c_str());
-    root_->InsertEndChild(e);
-  }
-  e->SetText(v.c_str());
-}
-
 bool Setting::Exist(const std::string& key) const
 {
   return root_->FirstChildElement(key.c_str()) != nullptr;
+}
+
+void Setting::GetAllPreference(SettingList& pref_list)
+{
+  XMLElement *e = root_->FirstChildElement();
+  while (e)
+  {
+    const char* t = e->GetText();
+    pref_list.push_back({e->Name(), t ? t : ""});
+    e = e->NextSiblingElement();
+  }
 }
 
 
@@ -108,6 +104,18 @@ template <>
 void ConvertFromString(const std::string& src, double& dst)
 {
   dst = atof(src.c_str());
+}
+
+template <>
+void ConvertFromString(const std::string& src, bool& dst)
+{
+  dst = (stricmp(src.c_str(), "true") == 0);
+}
+
+template <>
+void ConvertFromString(const std::string& src, unsigned short& dst)
+{
+  dst = static_cast<unsigned short>(atoi(src.c_str()));
 }
 
 template <>
@@ -163,6 +171,12 @@ template <>
 std::string ConvertToString(const double& dst)
 {
   return std::to_string(dst);
+}
+
+template <>
+std::string ConvertToString(const bool& dst)
+{
+  return dst ? "true" : "false";
 }
 
 template <>

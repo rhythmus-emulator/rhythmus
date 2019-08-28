@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include "SceneManager.h"       /* preference */
 #include "LR2/LR2SceneLoader.h" /* for lr2skin file load */
 #include "LR2/LR2Sprite.h"
 #include "LR2/LR2Font.h"
@@ -94,19 +95,28 @@ ImageAuto Scene::GetImageByName(const std::string& name)
 
 void Scene::LoadOptions()
 {
-  // TODO
-#if 0
-  Config config = Game::getInstance().LoadConfig(scene_name);
-  for (auto ii : config)
+  ASSERT(get_name().size() > 0);
+  auto& setting = SceneManager::getSetting();
+  setting.SetPreferenceGroup(get_name());
+
+  SettingList slist;
+  setting.GetAllPreference(slist);
+  for (auto ii : slist)
   {
     SetThemeConfig(ii.first, ii.second);
   }
-#endif
 }
 
 void Scene::SaveOptions()
 {
-  // TODO
+  ASSERT(get_name().size() > 0);
+  auto& setting = SceneManager::getSetting();
+  setting.SetPreferenceGroup(get_name());
+
+  for (auto& t : theme_options_)
+  {
+    setting.Set(t.id, t.selected);
+  }
 }
 
 void Scene::doUpdate(float delta)

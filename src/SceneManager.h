@@ -16,13 +16,16 @@ public:
   void ChangeScene(bool force=false);
   Scene* get_current_scene();
 
-  Timer& GetSceneTimer();
+  static Timer& GetSceneTimer();
   static uint32_t GetSceneTickTime();
-
   static SceneManager& getInstance();
+  static Setting& getSetting();
 private:
   SceneManager();
   ~SceneManager();
+
+  // Scene preferences
+  Setting setting_;
 
   // currently displaying scene
   Scene* current_scene_;

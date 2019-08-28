@@ -3,6 +3,7 @@
 #include "scene/SelectScene.h"
 #include "LR2/LR2SceneLoader.h"
 #include "LR2/LR2Flag.h"
+#include <iostream>
 
 namespace rhythmus
 {
@@ -23,12 +24,22 @@ SceneManager::~SceneManager()
     current_scene_->CloseScene();
     delete current_scene_;
   }
+
+  // automatically save scene settings
+  if (!setting_.Save())
+  {
+    std::cerr << "Cannot save Scene preference file." << std::endl;
+  }
 }
 
 void SceneManager::Initialize()
 {
-  // TODO: load scenemanager(global scene) settings if necessary.
-
+  // load scenemanager(global scene) settings.
+  if (!setting_.Open("../config/scene.xml"))
+  {
+    std::cerr << "Cannot open Scene preference file." << std::endl;
+    return;
+  }
 }
 
 void SceneManager::Update()
@@ -90,12 +101,6 @@ Scene* SceneManager::get_current_scene()
   return current_scene_;
 }
 
-SceneManager& SceneManager::getInstance()
-{
-  static SceneManager scenemanager_;
-  return scenemanager_;
-}
-
 Scene* SceneManager::CreateNextScene()
 {
   auto mode = Game::getInstance().get_game_mode();
@@ -126,12 +131,23 @@ Scene* SceneManager::CreateNextScene()
 
 Timer& SceneManager::GetSceneTimer()
 {
-  return timer_scene_;
+  return getInstance().timer_scene_;
 }
 
 uint32_t SceneManager::GetSceneTickTime()
 {
   return getInstance().timer_scene_.GetDeltaTimeInMillisecond();
+}
+
+SceneManager& SceneManager::getInstance()
+{
+  static SceneManager scenemanager_;
+  return scenemanager_;
+}
+
+Setting& SceneManager::getSetting()
+{
+  return getInstance().setting_;
 }
 
 }
