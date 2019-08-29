@@ -18,10 +18,14 @@ Setting::Setting()
 // @warn  automatically node is cleared when LoadFile is called.
 bool Setting::Open(const std::string& setting_path)
 {
+  path_ = setting_path;
   XMLError errcode;
   if ((errcode = doc_.LoadFile(setting_path.c_str())) != XML_SUCCESS)
   {
     std::cerr << "Game settings reading failed, TinyXml2 ErrorCode: " << errcode << std::endl;
+    // insert root node to use Setting class though file opening failed
+    root_ = doc_.NewElement(kDefaultRootName);
+    doc_.InsertFirstChild(root_);
     return false;
   }
   root_ = doc_.RootElement();
@@ -30,7 +34,6 @@ bool Setting::Open(const std::string& setting_path)
     root_ = doc_.NewElement(kDefaultRootName);
     doc_.InsertFirstChild(root_);
   }
-  path_ = setting_path;
   return true;
 }
 
@@ -163,6 +166,18 @@ std::string ConvertToString(const std::string& dst)
 
 template <>
 std::string ConvertToString(const int& dst)
+{
+  return std::to_string(dst);
+}
+
+template <>
+std::string ConvertToString(const unsigned& dst)
+{
+  return std::to_string(dst);
+}
+
+template <>
+std::string ConvertToString(const unsigned short& dst)
 {
   return std::to_string(dst);
 }

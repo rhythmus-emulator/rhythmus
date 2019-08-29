@@ -42,7 +42,7 @@ public:
   template <typename T>
   void Set(const std::string& key, const T& value)
   {
-    std::string v = ConvertToString(key);
+    std::string v = ConvertToString(value);
     tinyxml2::XMLElement *e = root_->FirstChildElement(key.c_str());
     if (!e)
     {
