@@ -405,28 +405,32 @@ void BaseObject::UpdateTween(float delta_ms)
     {
       delta_ms -= t.time_duration - t.time_eclipsed;
 
+      //
       // kind of trick: if single tween with loop,
       // It's actually useless. turn off loop attr.
-      if (tween_.size() == 1)
-        t.loop = false;
-
-      // loop tween by push it again.
-      if (t.loop)
-      {
-        t.time_eclipsed = t.time_loopstart;
-        tween_.push_back(t);
-      }
-
+      //
       // kind of trick: if current tween is last one,
       // Do UpdateTween here. We expect last tween state
       // should be same as current tween in that case.
+      //
       if (tween_.size() == 1)
+      {
+        t.loop = false;
         current_prop_ = t.draw_prop;
+      }
 
       // trigger event if exist
       if (!t.event_name.empty())
         EventManager::SendEvent(t.event_name);
-      tween_.pop_front();
+
+      // loop tween by push it again.
+      // -> use more efficient method splice
+      if (t.loop)
+      {
+        t.time_eclipsed = t.time_loopstart;
+        tween_.splice(tween_.begin(), tween_, std::prev(tween_.end()));
+      }
+      else tween_.pop_front();
     }
     else
     {

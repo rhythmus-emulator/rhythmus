@@ -160,8 +160,6 @@ protected:
 
   Tween tween_;
 
-  int tween_length_;
-
   // current drawing state
   DrawProperty current_prop_;
 
