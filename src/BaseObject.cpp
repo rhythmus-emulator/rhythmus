@@ -6,7 +6,7 @@ namespace rhythmus
 {
 
 BaseObject::BaseObject()
-  : parent_(nullptr), draw_order_(0), tween_length_(0), tween_loop_start_(0)
+  : parent_(nullptr), draw_order_(0)
 {
   memset(&current_prop_, 0, sizeof(DrawProperty));
   current_prop_.sw = current_prop_.sh = 1.0f;
@@ -166,7 +166,7 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
     int op2 = atoi_op(params[18].c_str());
     int op3 = atoi_op(params[19].c_str());
 
-    SetTime(time);
+    SetTweenTime(time);
     SetPos(x, y);
     SetSize(w, h);
     SetRGB(r, g, b);
@@ -175,8 +175,7 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
 
     if (loop > 0)
     {
-      // trick: save loop information
-      tween_loop_start_ = loop;
+      SetTweenLoopTime(loop);
     }
 
     // these attribute will be processed in LR2Objects
@@ -214,6 +213,34 @@ void BaseObject::AddTweenState(const DrawProperty &draw_prop, uint32_t time_dura
     });
 }
 
+void BaseObject::SetTweenTime(int time_msec)
+{
+  auto tween_length = GetTweenLength();
+  if (tween_length <= time_msec) return;
+  SetDeltaTweenTime(time_msec - tween_length);
+}
+
+void BaseObject::SetDeltaTweenTime(int time_msec)
+{
+  tween_.push_back({
+    GetDestDrawProperty(),
+    (uint32_t)time_msec, 0, 0, false, EaseTypes::kEaseOut
+    });
+}
+
+void BaseObject::StopTween()
+{
+  tween_.clear();
+}
+
+uint32_t BaseObject::GetTweenLength() const
+{
+  uint32_t r = 0;
+  for (auto &t : tween_)
+    r += t.time_duration - t.time_eclipsed;
+  return r;
+}
+
 DrawProperty& BaseObject::GetDestDrawProperty()
 {
   if (tween_.empty())
@@ -225,21 +252,6 @@ DrawProperty& BaseObject::GetDestDrawProperty()
 DrawProperty& BaseObject::get_draw_property()
 {
   return current_prop_;
-}
-
-void BaseObject::SetTime(int time_msec)
-{
-  if (tween_length_ <= time_msec) return;
-  SetDeltaTime(time_msec - tween_length_);
-}
-
-void BaseObject::SetDeltaTime(int time_msec)
-{
-  tween_.push_back({
-    GetDestDrawProperty(),
-    (uint32_t)time_msec, 0, 0, false, EaseTypes::kEaseOut
-    });
-  tween_length_ += time_msec;
 }
 
 void BaseObject::SetPos(int x, int y)

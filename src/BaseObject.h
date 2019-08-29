@@ -114,10 +114,13 @@ public:
   void LoadTween(const Tween& tween);
   void AddTweenState(const DrawProperty &draw_prop, uint32_t time_duration,
     int ease_type = EaseTypes::kEaseOut, bool loop = false);
+  void SetTweenTime(int time_msec);
+  void SetDeltaTweenTime(int time_msec);
+  void StopTween();
+  uint32_t GetTweenLength() const;
+
   DrawProperty& GetDestDrawProperty();
   DrawProperty& get_draw_property();
-  void SetTime(int time_msec);
-  void SetDeltaTime(int time_msec);
   void SetPos(int x, int y);
   void MovePos(int x, int y);
   void SetSize(int w, int h);
@@ -158,7 +161,6 @@ protected:
   Tween tween_;
 
   int tween_length_;
-  int tween_loop_start_;
 
   // current drawing state
   DrawProperty current_prop_;
