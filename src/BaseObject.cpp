@@ -177,7 +177,6 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
     {
       // trick: save loop information
       tween_loop_start_ = loop;
-      tween_original_ = tween_;
     }
 
     // these attribute will be processed in LR2Objects
@@ -381,14 +380,50 @@ int BaseObject::GetDrawOrder() const
 }
 
 // milisecond
-void BaseObject::UpdateTween(float delta)
+void BaseObject::UpdateTween(float delta_ms)
 {
-  // TODO: process delta
-  // TODO: calculate loop
-
   DrawProperty& ti = current_prop_;
+  bool tween_processed_ = false;
 
-  // DST calculation start.
+  // time process
+  while (IsTweening() && delta_ms > 0)
+  {
+    TweenState &t = tween_.front();
+    if (delta_ms + t.time_eclipsed >= t.time_duration)  // in case of last tween
+    {
+      delta_ms -= t.time_duration - t.time_eclipsed;
+
+      // kind of trick: if single tween with loop,
+      // It's actually useless. turn off loop attr.
+      if (tween_.size() == 1)
+        t.loop = false;
+
+      // loop tween by push it again.
+      if (t.loop)
+      {
+        t.time_eclipsed = t.time_loopstart;
+        tween_.push_back(t);
+      }
+
+      // kind of trick: if current tween is last one,
+      // Do UpdateTween here. We expect last tween state
+      // should be same as current tween in that case.
+      if (tween_.size() == 1)
+        current_prop_ = t.draw_prop;
+
+      // trigger event if exist
+      if (!t.event_name.empty())
+        EventManager::SendEvent(t.event_name);
+      tween_.pop_front();
+    }
+    else
+    {
+      t.time_eclipsed += delta_ms;
+      delta_ms = 0; // actually break loop.
+    }
+  }
+
+  // Now calculate DrawState if necessary.
   if (IsTweening())
   {
     if (tween_.size() == 1)
@@ -407,6 +442,25 @@ void BaseObject::UpdateTween(float delta)
         float r = (float)t1.time_eclipsed / t1.time_duration;
         MakeTween(ti, t1.draw_prop, t2.draw_prop, r, t1.ease_type);
       }
+    }
+  }
+}
+
+/* This method should be called just after all fixed tween is appended. */
+void BaseObject::SetTweenLoopTime(uint32_t time_msec)
+{
+  for (auto& t : tween_)
+  {
+    if (time_msec < t.time_duration)
+    {
+      t.time_loopstart = time_msec;
+      t.loop = true;
+      time_msec = 0;
+    }
+    else {
+      t.time_loopstart = 0;
+      t.loop = false;
+      time_msec -= t.time_duration;
     }
   }
 }

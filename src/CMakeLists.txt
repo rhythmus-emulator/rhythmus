@@ -11,7 +11,6 @@ set (RHYTHMUS_SOURCES
     Image.cpp
 	BaseObject.cpp
     Sprite.cpp
-    Animation.cpp
     Font.cpp
     Game.cpp
     Graphic.cpp
@@ -40,7 +39,6 @@ set (RHYTHMUS_HEADERS
     Image.h
 	BaseObject.h
     Sprite.h
-    Animation.h
     Font.h
     Game.h
     Logger.h

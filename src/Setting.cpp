@@ -183,7 +183,7 @@ template <>
 std::string ConvertToString(const std::vector<std::string>& dst)
 {
   std::stringstream ss;
-  int i = 0;
+  unsigned i = 0;
   for (auto& s : dst)
   {
     ss << s;
@@ -196,7 +196,7 @@ template <>
 std::string ConvertToString(const std::vector<int>& dst)
 {
   std::stringstream ss;
-  int i = 0;
+  unsigned i = 0;
   for (auto& s : dst)
   {
     ss << s;
@@ -209,7 +209,7 @@ template <>
 std::string ConvertToString(const std::vector<double>& dst)
 {
   std::stringstream ss;
-  int i = 0;
+  unsigned i = 0;
   for (auto& s : dst)
   {
     ss << s;

@@ -1,10 +1,12 @@
 /**
  * @brief
+ *
  * This file declare BaseObject, which is common interface
  * to all renderable objects.
  * It includes attribute with child/parent, coordinate value
  * just as DOM object, but without Texture attributes.
  * (Texture attribute is implemented in Sprite class)
+ *
  * Also, coordinate related utility functions declared in
  * this file.
  */
@@ -43,15 +45,25 @@ enum EaseTypes
   kEaseInOutBack,
 };
 
-/** @brief For animated draw with time property */
+/**
+ * @brief
+ * Declaration for state of current tween
+ * State includes:
+ * - Drawing state (need to be animated)
+ * - Tween itself information: Easetype, Time (duration), ...
+ * - Loop
+ * - Tween ease type
+ * - Event to be called (kind of triggering)
+ */
 struct TweenState
 {
   DrawProperty draw_prop;
   uint32_t time_duration;   // original duration time of this loop
   uint32_t time_loopstart;  // time to start when looping
   uint32_t time_eclipsed;   // current tween's eclipsed time
-  bool loop;                // should this tween loop?
+  bool loop;                // should this tween reused?
   int ease_type;            // tween ease type
+  std::string event_name;   // event to be triggered when this tween starts
 };
 
 using Tween = std::list<TweenState>;
@@ -135,14 +147,16 @@ protected:
 
   BaseObject *parent_;
 
+  // children for rendering (not released when this object is destructed)
   std::vector<BaseObject*> children_;
 
+  // owned children list (released when its destruction)
   std::vector<BaseObject*> owned_children_;
 
   int draw_order_;
 
   Tween tween_;
-  Tween tween_original_;
+
   int tween_length_;
   int tween_loop_start_;
 
@@ -152,7 +166,10 @@ protected:
   // misc attributes
   std::map<std::string, std::string> attributes_;
 
+  // Tween
   void UpdateTween(float delta);
+  void SetTweenLoopTime(uint32_t loopstart_time_msec);
+
   virtual void doUpdate(float delta);
   virtual void doRender();
 };

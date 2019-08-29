@@ -125,6 +125,39 @@ bool EventReceiver::OnEvent(const EventMessage& msg)
 
 // ------------------------- class EventManager
 
+/* system-defined event names in string */
+const char* kEventNames[Events::kEventLast] = {
+  "None",
+
+  "KeyDown",
+  "KeyPress",
+  "KeyUp",
+  "KeyText",
+  "CursorMove",
+  "CursorClick",
+  "Joystick",
+
+  "SceneChanged",
+  "SongSelectChanged",
+  "SongSelected",
+  "PlayStarted",
+  "PlayAborted",
+  "Cleared",
+
+  0,
+};
+
+EventManager::EventManager()
+{
+  // initialize events with name
+  for (current_evtidx_ = 0; current_evtidx_ < Events::kEventLast; ++current_evtidx_)
+  {
+    if (!kEventNames[current_evtidx_])
+      continue;
+    evtname_to_evtid_[kEventNames[current_evtidx_]] = current_evtidx_;
+  }
+}
+
 void EventManager::Subscribe(EventReceiver& e, int event_id)
 {
   e.SubscribeTo(event_id);
@@ -145,6 +178,19 @@ void EventManager::SendEvent(int event_id)
 {
   EventMessage msg(event_id);
   SendEvent(msg);
+}
+
+void EventManager::SendEvent(const std::string& event_name)
+{
+  auto &e = getInstance();
+  auto ii = e.evtname_to_evtid_.find(event_name);
+  if (ii != e.evtname_to_evtid_.end())
+    SendEvent(ii->second);
+  else
+  {
+    e.evtname_to_evtid_[event_name] = ++e.current_evtidx_;
+    SendEvent(e.current_evtidx_);
+  }
 }
 
 void EventManager::SendEvent(const EventMessage &msg)

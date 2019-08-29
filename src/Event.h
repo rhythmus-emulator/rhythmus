@@ -30,6 +30,8 @@ enum Events
   kEventPlayStarted,
   kEventPlayAborted,
   kEventCleared,
+
+  kEventLast    /* unused event; just for last index */
 };
 
 class EventMessage
@@ -87,6 +89,7 @@ public:
 
   /* broadcast event to whole subscriber of it. */
   static void SendEvent(int event_id);
+  static void SendEvent(const std::string& event_name);
   static void SendEvent(const EventMessage &msg);
   static void SendEvent(EventMessage &&msg);
 
@@ -99,11 +102,15 @@ public:
 
   static EventManager& getInstance();
 private:
+  EventManager();
+
   /* subscribers are stored in it */
   std::map<int, std::set<EventReceiver*> > event_subscribers_;
 
   /* for conversion: event name to id (not implemented yet) */
   std::map<std::string, int> evtname_to_evtid_;
+
+  int current_evtidx_;
 
   friend class EventReceiver;
 };
