@@ -350,11 +350,11 @@ void BaseObject::GetVertexInfo(VertexInfo* vi)
   vi[0].b = ti.b;
   vi[0].a = ti.aTL;
 
-  vi[1].x = x1;
-  vi[1].y = y2;
+  vi[1].x = x2;
+  vi[1].y = y1;
   vi[1].z = 0;
-  vi[1].sx = sx1;
-  vi[1].sy = sy2;
+  vi[1].sx = sx2;
+  vi[1].sy = sy1;
   vi[1].r = ti.r;
   vi[1].g = ti.g;
   vi[1].b = ti.b;
@@ -370,11 +370,11 @@ void BaseObject::GetVertexInfo(VertexInfo* vi)
   vi[2].b = ti.b;
   vi[2].a = ti.aBR;
 
-  vi[3].x = x2;
-  vi[3].y = y1;
+  vi[3].x = x1;
+  vi[3].y = y2;
   vi[3].z = 0;
-  vi[3].sx = sx2;
-  vi[3].sy = sy1;
+  vi[3].sx = sx1;
+  vi[3].sy = sy2;
   vi[3].r = ti.r;
   vi[3].g = ti.g;
   vi[3].b = ti.b;

@@ -80,9 +80,10 @@ void TestScene::LoadScene()
   lr2text_.SetScale(1.5, 1.5);
 
   // AddChild for rendering!
+  // (order is important!)
+  AddChild(&spr_bg_);
   AddChild(&spr_);
   AddChild(&spr2_);
-  AddChild(&spr_bg_);
   AddChild(&text_);
   AddChild(&lr2text_);
 
