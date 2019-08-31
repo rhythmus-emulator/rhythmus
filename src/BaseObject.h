@@ -178,7 +178,7 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
   double r, int ease_type);
 
 void MakeParamCountSafe(const std::string& in,
-  std::vector<std::string> &vsOut, char sep = ',', int required_size = -1);
+  std::vector<std::string> &vsOut, int required_size = -1, char sep = ',');
 
 std::string GetFirstParam(const std::string& in, char sep = ',');
 

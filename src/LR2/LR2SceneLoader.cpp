@@ -101,6 +101,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
         if_stack_.emplace_back(IfStmt{ 0, false });
       else
         if_stack_.emplace_back(IfStmt{ 1, true });
+      continue;
     }
     else if (cmd == "#ELSEIF")
     {
@@ -119,6 +120,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
         if_stack_.back().cond_is_true = true;
         if_stack_.back().cond_match_count++;
       }
+      continue;
     }
     else if (cmd == "#ELSE")
     {
@@ -132,6 +134,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       }
       if_stack_.back().cond_is_true = true;
       if_stack_.back().cond_match_count++;
+      continue;
     }
     else if (cmd == "#ENDIF")
     {
@@ -141,6 +144,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
         break;
       }
       if_stack_.pop_back();
+      continue;
     }
 
     /* if conditional statement failed, cannot pass over it. */
@@ -151,8 +155,10 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     if (cmd == "#INCLUDE")
     {
       // before continue, need to change path of LR2
+      while (val.back() == ',') val.pop_back();
       std::string path = SubstitutePath(val);
       LoadCSV(path);
+      continue;
     }
 
     /* General commands : just add to commands */

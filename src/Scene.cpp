@@ -227,7 +227,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     theme_param_.maker = params[2];
     theme_param_.preview = params[3];
   }
-  else if (params[0] == "#CUSTOMOPTION")
+  else if (prop_name == "#CUSTOMOPTION")
   {
     MakeParamCountSafe(value, params, 4);
     ThemeOption options;
@@ -241,7 +241,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     options.selected = params[i];
     theme_options_.push_back(options);
   }
-  else if (params[0] == "#CUSTOMFILE")
+  else if (prop_name == "#CUSTOMFILE")
   {
     MakeParamCountSafe(value, params, 3);
     ThemeOption options;
@@ -252,36 +252,36 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     options.selected = params[2];
     theme_options_.push_back(options);
   }
-  else if (params[0] == "#TRANSCLOLR")
+  else if (prop_name == "#TRANSCLOLR")
   {
     MakeParamCountSafe(value, params, 3);
     theme_param_.transcolor[0] = atoi(params[0].c_str());
     theme_param_.transcolor[1] = atoi(params[1].c_str());
     theme_param_.transcolor[2] = atoi(params[2].c_str());
   }
-  else if (params[0] == "#STARTINPUT")
+  else if (prop_name == "#STARTINPUT")
   {
     std::string v = GetFirstParam(value);
     theme_param_.begin_input_time = atoi(v.c_str());
   }
-  else if (params[0] == "#FADEOUT")
+  else if (prop_name == "#FADEOUT")
   {
     std::string v = GetFirstParam(value);
-    theme_param_.fade_out_time = atoi(params[0].c_str());
+    theme_param_.fade_out_time = atoi(GetFirstParam(value).c_str());
   }
-  else if (params[0] == "#FADEIN")
+  else if (prop_name == "#FADEIN")
   {
     std::string v = GetFirstParam(value);
-    theme_param_.fade_in_time = atoi(params[0].c_str());
+    theme_param_.fade_in_time = atoi(GetFirstParam(value).c_str());
   }
   /*
-  else if (params[0] == "#LR2FONT")
+  else if (prop_name == "#LR2FONT")
   {
     MakeParamCountSafe(params, 1);
     lr2fontnames_.push_back(params[1]);
     return true;
   }
-  else if (params[0] == "#HELPFILE")
+  else if (prop_name == "#HELPFILE")
   {
   }*/
 }

@@ -620,7 +620,7 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
 }
 
 void MakeParamCountSafe(const std::string& in,
-  std::vector<std::string> &vsOut, char sep, int required_size)
+  std::vector<std::string> &vsOut, int required_size, char sep)
 {
   rutil::split(in, sep, vsOut);
   for (auto i = vsOut.size(); i < required_size; ++i)

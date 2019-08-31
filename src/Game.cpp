@@ -25,7 +25,7 @@ Setting& Game::getSetting()
 
 Game::Game()
   : setting_path_(kSettingPath),
-    game_boot_mode_(GameBootMode::kBootTest),
+    game_boot_mode_(GameBootMode::kBootNormal),
     game_mode_(GameMode::kGameModeNone),
     do_game_mode_change_(false)
 {
@@ -224,7 +224,7 @@ std::string Game::GetAttribute(const std::string& key) const
 {
   const auto ii = attributes_.find(key);
   if (ii != attributes_.end())
-    return ii->first;
+    return ii->second;
   else return std::string();
 }
 

@@ -71,6 +71,7 @@ void SceneManager::ChangeScene(bool force)
 {
   // create scene suitable for current game mode
   Scene *new_scene = CreateNextScene();
+  Scene *prev_scene = current_scene_;
 
   // if same scene, don't change scene
   if (current_scene_ && *current_scene_ == *new_scene && !force)
@@ -80,11 +81,11 @@ void SceneManager::ChangeScene(bool force)
   }
 
   // load scene first to maximize shared resource between two scene
+  current_scene_ = new_scene;
   new_scene->LoadScene();
 
   // now delete previous scene
-  delete current_scene_;
-  current_scene_ = new_scene;
+  delete prev_scene;
 
   // Reset SceneManager timer
   // Need to refresh whole timing to set exact scene start timing
