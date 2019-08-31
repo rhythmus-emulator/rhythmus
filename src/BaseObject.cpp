@@ -623,6 +623,7 @@ void MakeParamCountSafe(const std::string& in,
   std::vector<std::string> &vsOut, int required_size, char sep)
 {
   rutil::split(in, sep, vsOut);
+  if (required_size < 0) return;
   for (auto i = vsOut.size(); i < required_size; ++i)
     vsOut.emplace_back(std::string());
 }
