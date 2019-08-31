@@ -124,7 +124,9 @@ public:
   void SetPos(int x, int y);
   void MovePos(int x, int y);
   void SetSize(int w, int h);
+  void SetAlpha(unsigned a);
   void SetAlpha(float a);
+  void SetRGB(unsigned r, unsigned g, unsigned b);
   void SetRGB(float r, float g, float b);
   void SetScale(float x, float y);
   void SetRotation(float x, float y, float z);

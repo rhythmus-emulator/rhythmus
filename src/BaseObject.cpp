@@ -169,8 +169,8 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
     SetTweenTime(time);
     SetPos(x, y);
     SetSize(w, h);
-    SetRGB(r, g, b);
-    SetAlpha(a);
+    SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
+    SetAlpha((unsigned)a);
     SetRotation(0, 0, angle);
 
     if (loop > 0)
@@ -275,10 +275,20 @@ void BaseObject::SetSize(int w, int h)
   p.h = h;
 }
 
+void BaseObject::SetAlpha(unsigned a)
+{
+  SetAlpha(a / 255.0f);
+}
+
 void BaseObject::SetAlpha(float a)
 {
   auto& p = GetDestDrawProperty();
   p.aBL = p.aBR = p.aTL = p.aTR = a;
+}
+
+void BaseObject::SetRGB(unsigned r, unsigned g, unsigned b)
+{
+  SetRGB(r / 255.0f, g / 255.0f, b / 255.0f);
 }
 
 void BaseObject::SetRGB(float r, float g, float b)
@@ -630,7 +640,7 @@ void MakeParamCountSafe(const std::string& in,
 
 std::string GetFirstParam(const std::string& in, char sep)
 {
-  return in[0] != sep ? in.substr(0, in.find(',') - 1) : std::string();
+  return in[0] != sep ? in.substr(0, in.find(',')) : std::string();
 }
 
 }
