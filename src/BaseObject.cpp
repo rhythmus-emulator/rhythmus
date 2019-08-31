@@ -166,7 +166,20 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
     int op2 = atoi_op(params[18].c_str());
     int op3 = atoi_op(params[19].c_str());
 
-    SetTweenTime(time);
+    // DST specifies time information as the time of motion
+    // So we need to calculate 'duration' of that motion.
+
+    // calculate previous tween's duration
+    if (!tween_.empty())
+    {
+      auto cur_motion_length = GetTweenLength();
+      tween_.back().time_duration = time - cur_motion_length;
+    }
+
+    // New tween's initial time is always zero
+    SetDeltaTweenTime(0);
+    
+    // Now specify current tween.
     SetPos(x, y);
     SetSize(w, h);
     SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
@@ -216,7 +229,7 @@ void BaseObject::AddTweenState(const DrawProperty &draw_prop, uint32_t time_dura
 void BaseObject::SetTweenTime(int time_msec)
 {
   auto tween_length = GetTweenLength();
-  if (tween_length <= time_msec) return;
+  if (tween_length > time_msec) return;
   SetDeltaTweenTime(time_msec - tween_length);
 }
 

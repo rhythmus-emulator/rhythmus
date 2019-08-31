@@ -189,7 +189,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     {
       imgpath = imgname;
     }
-    imgpath = loader.SubstitutePath(imgname);
+    imgpath = loader.SubstitutePath(imgpath);
     img = ResourceManager::getInstance().LoadImage(imgpath);
     // TODO: set colorkey
     img->CommitImage();
@@ -232,7 +232,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     MakeParamCountSafe(value, params, 4);
     ThemeOption options;
     options.type = 1;
-    options.name = params[1];
+    options.id = options.name = params[1];
     options.desc = params[0];
     int i;
     for (i = 2; i < params.size() - 1; ++i)
@@ -246,7 +246,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     MakeParamCountSafe(value, params, 3);
     ThemeOption options;
     options.type = 2;
-    options.name = params[1];
+    options.id = options.name = params[1];
     options.desc = params[0];
     options.options = params[1];
     options.selected = params[2];
