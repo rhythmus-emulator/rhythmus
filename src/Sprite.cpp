@@ -58,6 +58,7 @@ void Sprite::LoadProperty(const std::string& prop_name, const std::string& value
       else sh_ = sh / (float)img->get_height();
       divx_ = divx > 0 ? divx : 1;
       divy_ = divy > 0 ? divy : 1;
+      cnt_ = divx_ * divy_;
       interval_ = cycle;
     }
 
@@ -123,22 +124,20 @@ void Sprite::doRender()
   vi_[3].b = ti.b;
   vi_[3].a = ti.aTR;
 
-  // TODO: update tex coordinate into VertexInfo. how?
-  // TODO: need to care animated sprite
-#if 0
-  ti.sw = ani_texture_.sw / ani_texture_.divx;
-  ti.sh = ani_texture_.sh / ani_texture_.divy;
-  ti.sx = ani_texture_.sx + ti.sw * (ani_texture_.idx % ani_texture_.divx);
-  ti.sy = ani_texture_.sy + ti.sh * (ani_texture_.idx / ani_texture_.divx % ani_texture_.divy);
-#endif
-  vi_[0].sx = sx_;
-  vi_[0].sy = sy_;
-  vi_[1].sx = sx_ + sw_;
-  vi_[1].sy = sy_;
-  vi_[2].sx = sx_ + sw_;
-  vi_[2].sy = sy_ + sh_;
-  vi_[3].sx = sx_;
-  vi_[3].sy = sy_ + sh_;
+
+  float sw = sw_ / divx_;
+  float sh = sh_ / divy_;
+  float sx = sx_ + sw * (idx_ % divx_);
+  float sy = sy_ + sh * (idx_ / divx_ % divy_);
+
+  vi_[0].sx = sx;
+  vi_[0].sy = sy;
+  vi_[1].sx = sx + sw;
+  vi_[1].sy = sy;
+  vi_[2].sx = sx + sw;
+  vi_[2].sy = sy + sh;
+  vi_[3].sx = sx;
+  vi_[3].sy = sy + sh;
 
   if (img_)
     glBindTexture(GL_TEXTURE_2D, img_->get_texture_ID());
@@ -154,7 +153,7 @@ void Sprite::doUpdate(float delta)
   {
     eclipsed_time_ += delta;
     idx_ = eclipsed_time_ * divx_ * divy_ / interval_ % cnt_;
-    eclipsed_time_ = fmod(eclipsed_time_, interval_);
+    //eclipsed_time_ = fmod(eclipsed_time_, interval_);
   }
 }
 

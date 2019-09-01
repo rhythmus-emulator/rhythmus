@@ -173,6 +173,9 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
     if (!tween_.empty())
     {
       auto cur_motion_length = GetTweenLength();
+      // to prevent overflow bug
+      if (time < cur_motion_length)
+        time = cur_motion_length;
       tween_.back().time_duration = time - cur_motion_length;
     }
 
@@ -357,30 +360,40 @@ int BaseObject::GetDrawOrder() const
 // milisecond
 void BaseObject::UpdateTween(float delta_ms)
 {
-  DrawProperty& ti = current_prop_;
-  bool tween_processed_ = false;
+  if (!IsTweening())
+    return;
 
   // time process
-  while (IsTweening() && delta_ms > 0)
+  while (1)
   {
+    //
+    // kind of trick: if single tween with loop,
+    // It's actually useless. turn off loop attr.
+    //
+    // kind of trick: if current tween is last one,
+    // Do UpdateTween here. We expect last tween state
+    // should be same as current tween in that case.
+    //
+    // By this logic, two or more tweens exist
+    // if we exit this loop with delta_ms <= 0.
+    //
+    if (tween_.size() == 1)
+    {
+      current_prop_ = tween_.front().draw_prop;
+      tween_.clear();
+      return;
+    }
+
+    //
+    // actual loop condition
+    //
+    if (delta_ms <= 0)
+      break;
+
     TweenState &t = tween_.front();
-    if (delta_ms + t.time_eclipsed >= t.time_duration)  // in case of last tween
+    if (delta_ms + t.time_eclipsed >= t.time_duration)  // tween end
     {
       delta_ms -= t.time_duration - t.time_eclipsed;
-
-      //
-      // kind of trick: if single tween with loop,
-      // It's actually useless. turn off loop attr.
-      //
-      // kind of trick: if current tween is last one,
-      // Do UpdateTween here. We expect last tween state
-      // should be same as current tween in that case.
-      //
-      if (tween_.size() == 1)
-      {
-        t.loop = false;
-        current_prop_ = t.draw_prop;
-      }
 
       // trigger event if exist
       if (!t.event_name.empty())
@@ -391,37 +404,31 @@ void BaseObject::UpdateTween(float delta_ms)
       if (t.loop)
       {
         t.time_eclipsed = t.time_loopstart;
-        tween_.splice(tween_.begin(), tween_, std::prev(tween_.end()));
+        //tween_.splice(tween_.end(), tween_, tween_.begin(), std::next(tween_.begin()));
+        tween_.pop_front();
       }
       else tween_.pop_front();
     }
-    else
+    else  // ongoing tween
     {
       t.time_eclipsed += delta_ms;
-      delta_ms = 0; // actually break loop.
+      delta_ms = 0;  // actually same as exiting tween
     }
   }
 
-  // Now calculate DrawState if necessary.
-  if (IsTweening())
-  {
-    if (tween_.size() == 1)
-    {
-      ti = tween_.front().draw_prop;
-    }
-    else
-    {
-      const TweenState &t1 = tween_.front();
-      const TweenState &t2 = *std::next(tween_.begin());
-      ti.display = t1.draw_prop.display;
+  //
+  // Now calculate DrawState
+  //
+  DrawProperty& ti = current_prop_;
+  const TweenState &t1 = tween_.front();
+  const TweenState &t2 = *std::next(tween_.begin());
+  ti.display = t1.draw_prop.display;
 
-      // If not display, we don't need to calculate further away.
-      if (ti.display)
-      {
-        float r = (float)t1.time_eclipsed / t1.time_duration;
-        MakeTween(ti, t1.draw_prop, t2.draw_prop, r, t1.ease_type);
-      }
-    }
+  // If not display, we don't need to calculate further away.
+  if (ti.display)
+  {
+    float r = (float)t1.time_eclipsed / t1.time_duration;
+    MakeTween(ti, t1.draw_prop, t2.draw_prop, r, t1.ease_type);
   }
 }
 

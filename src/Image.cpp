@@ -34,6 +34,7 @@ public:
   int get_width() { return width_; }
   int get_height() { return height_; }
   bool is_eof() { return is_eof_ && is_eof_packet_; }
+  bool is_image() { return is_image_; }
   float get_duration() { return duration_; }
   AVFrame* get_frame() { return frame; }
 
@@ -67,6 +68,9 @@ private:
   // EOF of video stream
   bool is_eof_;
 
+  // is file image actually, not video.
+  bool is_image_;
+
   // last frame duration
   float last_frame_duration;
 
@@ -77,7 +81,7 @@ private:
 FFmpegContext::FFmpegContext()
   : codec(0), context(0), formatctx(0), stream(0), packet(0), frame(0), video_stream_idx(0),
     duration_(0), time_(0), time_offset_(0), packet_offset(-1), frame_no_(0),
-    is_eof_(false), is_eof_packet_(false),
+    is_eof_(false), is_eof_packet_(false), is_image_(false),
     last_frame_duration(0), width_(0), height_(0)
 {
   /* ffmpeg initialization */
@@ -154,6 +158,17 @@ bool FFmpegContext::Open(const std::string& path)
     std::cerr << "Movie stream codec failed: " << path << std::endl;
     Unload();
     return false;
+  }
+
+  // mark for image
+  switch (formatctx->streams[video_stream_idx]->codecpar->codec_id)
+  {
+  case AV_CODEC_ID_BMP:
+  case AV_CODEC_ID_JPEGLS:
+  case AV_CODEC_ID_JPEG2000:
+  case AV_CODEC_ID_GIF:
+  case AV_CODEC_ID_PNG:
+    is_image_ = true;
   }
 
   context = avcodec_alloc_context3(codec);
@@ -320,7 +335,7 @@ bool IsMovieFile(const std::string& path)
 
 Image::Image()
   : bitmap_ctx_(0), data_ptr_(nullptr), width_(0), height_(0),
-    textureID_(0), movie_start_time(0), ffmpeg_ctx_(0)
+    textureID_(0), movie_start_time(0), ffmpeg_ctx_(0), loop_movie_(true)
 {
 }
 
@@ -362,6 +377,7 @@ void Image::LoadImageFromPath(const std::string& path)
   height_ = FreeImage_GetHeight(bitmap);
   data_ptr_ = FreeImage_GetBits(bitmap);
   bitmap_ctx_ = (void*)bitmap;
+  path_ = path;
 }
 
 /* Return boolean value: whether is image file */
@@ -386,6 +402,7 @@ bool Image::LoadImageFromMemory(uint8_t* p, size_t len)
   height_ = FreeImage_GetHeight(bitmap);
   data_ptr_ = FreeImage_GetBits(bitmap);
   bitmap_ctx_ = (void*)bitmap;
+  path_ = "(memory)";
 
   FreeImage_CloseMemory(memstream);
   return true;
@@ -411,6 +428,7 @@ void Image::LoadMovieFromPath(const std::string& path)
 
   width_ = ffmpeg_ctx->get_width();
   height_ = ffmpeg_ctx->get_height();
+  path_ = path;
 
   // create empty bitmap
   data_ptr_ = (uint8_t*)malloc(width_ * height_ * 4);
@@ -488,8 +506,8 @@ void Image::Update()
   FFmpegContext *fctx = (FFmpegContext*)ffmpeg_ctx_;
   int target_time = (int)(Timer::GetGameTime() * 1000);// /* TODO */ % (int)(fctx->get_duration() + 1000);
 
-  // If EOF, restart (if necessary)
-  if (loop_movie_ && fctx->is_eof())
+  // If EOF and not image, restart (if necessary)
+  if (loop_movie_ && !fctx->is_image() && fctx->is_eof())
   {
     fctx->Rewind();
     movie_start_time = target_time;

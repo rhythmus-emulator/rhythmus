@@ -35,7 +35,7 @@ protected:
   // eclipsed time of sprite animation
   int eclipsed_time_;
 
-  // texture coordination of original
+  // texture coordination
   float sx_, sy_, sw_, sh_;
 
   // texture attribute (TODO)
