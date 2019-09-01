@@ -16,7 +16,7 @@ public:
   void LoadFromPath(const std::string& path);
   void LoadFromData(uint8_t* p, size_t len);
   void CommitImage(bool delete_data = true);
-  void Update();
+  void Update(float delta_ms);
   void UnloadAll();
   void UnloadTexture();
   void UnloadBitmap();
@@ -37,14 +37,14 @@ private:
   uint16_t width_, height_;
   GLuint textureID_;
 
-  /* movie timer related */
-  int movie_start_time;
-
   /*
    * Context used for ffmpeg playing.
    * Must call Update() method to update movie.
    */
   void *ffmpeg_ctx_;
+
+  /* video target time */
+  float video_time_;
 
   /* loop in case of movie */
   bool loop_movie_;

@@ -15,8 +15,12 @@ public:
 
 private:
   int op_[3];
+  int loop_;
   int timer_id_;
   int src_timer_id_;
+
+  // to make specific attribute is only loaded for once
+  bool attr_loaded_;
 };
 
 }

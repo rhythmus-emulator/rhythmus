@@ -7,7 +7,8 @@ namespace rhythmus
 
 // ---------------------------- class LR2Sprite
 
-LR2Sprite::LR2Sprite() : timer_id_(0), src_timer_id_(0)
+LR2Sprite::LR2Sprite()
+  : loop_(0), timer_id_(0), src_timer_id_(0), attr_loaded_(false)
 {
   set_name("LR2Sprite");
   memset(op_, 0, sizeof(op_));
@@ -24,10 +25,16 @@ void LR2Sprite::LoadProperty(const std::string& prop_name, const std::string& va
   }
   else if (prop_name == "#DST_IMAGE")
   {
-    op_[0] = GetAttribute<int>("op0");
-    op_[1] = GetAttribute<int>("op1");
-    op_[2] = GetAttribute<int>("op2");
-    timer_id_ = GetAttribute<int>("timer");
+    if (!attr_loaded_)
+    {
+      op_[0] = GetAttribute<int>("op0");
+      op_[1] = GetAttribute<int>("op1");
+      op_[2] = GetAttribute<int>("op2");
+      timer_id_ = GetAttribute<int>("timer");
+      loop_ = GetAttribute<int>("loop");
+      attr_loaded_ = true;
+    }
+    else SetTweenLoopTime(loop_); /* a bit ineffcient but works well anyway. */
   }
 }
 

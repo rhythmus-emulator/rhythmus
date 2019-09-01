@@ -160,11 +160,13 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
     int filter = atoi(params[12].c_str());
     int angle = atoi(params[13].c_str());
     int center = atoi(params[14].c_str());
+#if 0
     int loop = atoi(params[15].c_str());
     int timer = atoi(params[16].c_str());
     int op1 = atoi_op(params[17].c_str());
     int op2 = atoi_op(params[18].c_str());
     int op3 = atoi_op(params[19].c_str());
+#endif
 
     // DST specifies time information as the time of motion
     // So we need to calculate 'duration' of that motion.
@@ -179,22 +181,28 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
       tween_.back().time_duration = time - cur_motion_length;
     }
 
-    // New tween's initial time is always zero
+    // If first tween and starting time is not zero,
+    // then add dummy tween (invisible).
+    if (tween_.empty() && time > 0)
+    {
+      // dummy tween should invisible
+      Hide();
+      SetDeltaTweenTime(time);
+    }
+
+    // make current tween
     SetDeltaTweenTime(0);
     
     // Now specify current tween.
+    GetDestDrawProperty().display = true;
     SetPos(x, y);
     SetSize(w, h);
     SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
     SetAlpha((unsigned)a);
     SetRotation(0, 0, angle);
 
-    if (loop > 0)
-    {
-      SetTweenLoopTime(loop);
-    }
-
     // these attribute will be processed in LR2Objects
+    if (!IsAttribute("loop")) SetAttribute("loop", params[15]);
     if (!IsAttribute("timer")) SetAttribute("timer", params[16]);
     if (!IsAttribute("op1")) SetAttribute("op1", params[17]);
     if (!IsAttribute("op2")) SetAttribute("op2", params[18]);
@@ -404,8 +412,7 @@ void BaseObject::UpdateTween(float delta_ms)
       if (t.loop)
       {
         t.time_eclipsed = t.time_loopstart;
-        //tween_.splice(tween_.end(), tween_, tween_.begin(), std::next(tween_.begin()));
-        tween_.pop_front();
+        tween_.splice(tween_.end(), tween_, tween_.begin());
       }
       else tween_.pop_front();
     }
@@ -422,6 +429,7 @@ void BaseObject::UpdateTween(float delta_ms)
   DrawProperty& ti = current_prop_;
   const TweenState &t1 = tween_.front();
   const TweenState &t2 = *std::next(tween_.begin());
+
   ti.display = t1.draw_prop.display;
 
   // If not display, we don't need to calculate further away.
@@ -435,13 +443,17 @@ void BaseObject::UpdateTween(float delta_ms)
 /* This method should be called just after all fixed tween is appended. */
 void BaseObject::SetTweenLoopTime(uint32_t time_msec)
 {
+  // all tweens should loop after a tween is marked to be looped.
+  bool loopstart = false;
+
   for (auto& t : tween_)
   {
-    if (time_msec < t.time_duration)
+    if (loopstart || time_msec < t.time_duration)
     {
       t.time_loopstart = time_msec;
       t.loop = true;
       time_msec = 0;
+      loopstart = true;
     }
     else {
       t.time_loopstart = 0;

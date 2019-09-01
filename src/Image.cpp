@@ -26,7 +26,7 @@ public:
   ~FFmpegContext();
 
   bool Open(const std::string& path);
-  int DecodePacket(int target_time);
+  int DecodePacket(float target_time);
   int ReadPacket();
   void Unload();
   void Rewind();
@@ -50,7 +50,7 @@ private:
   // microsecond duration
   float duration_;
 
-  // current time
+  // current video frame time
   float time_;
 
   // timestamp offset for current movie
@@ -198,7 +198,7 @@ bool FFmpegContext::Open(const std::string& path)
 }
 
 /* may multiple frame reside in same packet. */
-int FFmpegContext::DecodePacket(int target_time)
+int FFmpegContext::DecodePacket(float target_time)
 {
   /* No packet. Read first. */
   if (!is_eof_ && packet_offset == -1)
@@ -335,7 +335,7 @@ bool IsMovieFile(const std::string& path)
 
 Image::Image()
   : bitmap_ctx_(0), data_ptr_(nullptr), width_(0), height_(0),
-    textureID_(0), movie_start_time(0), ffmpeg_ctx_(0), loop_movie_(true)
+    textureID_(0), ffmpeg_ctx_(0), video_time_(.0f), loop_movie_(true)
 {
 }
 
@@ -498,21 +498,20 @@ void Image::CommitImage(bool delete_data)
   }
 }
 
-void Image::Update()
+void Image::Update(float delta)
 {
   if (!ffmpeg_ctx_)
     return;
 
   FFmpegContext *fctx = (FFmpegContext*)ffmpeg_ctx_;
-  int target_time = (int)(Timer::GetGameTime() * 1000);// /* TODO */ % (int)(fctx->get_duration() + 1000);
 
   // If EOF and not image, restart (if necessary)
   if (loop_movie_ && !fctx->is_image() && fctx->is_eof())
   {
     fctx->Rewind();
-    movie_start_time = target_time;
+    video_time_ = 0;
   }
-  int movie_time = target_time - movie_start_time;
+  video_time_ += delta;
 
   // Decode first, Read later.
   // If both failed, video stream is completely end. exit loop.
@@ -522,7 +521,7 @@ void Image::Update()
     // DecodePacket == 0 --> EOF or decoding failure.
     // We read next packet in this case.
     // If successfully decode packet, exit loop.
-    if (ret = fctx->DecodePacket(movie_time))
+    if (ret = fctx->DecodePacket(video_time_))
       break;
 
     // ReadPacket() might fail, But we can retry.

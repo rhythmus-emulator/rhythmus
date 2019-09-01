@@ -153,7 +153,7 @@ void Sprite::doUpdate(float delta)
   {
     eclipsed_time_ += delta;
     idx_ = eclipsed_time_ * divx_ * divy_ / interval_ % cnt_;
-    //eclipsed_time_ = fmod(eclipsed_time_, interval_);
+    eclipsed_time_ = fmod(eclipsed_time_, interval_);
   }
 }
 
