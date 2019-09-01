@@ -3,9 +3,15 @@
  *
  * This file declare BaseObject, which is common interface
  * to all renderable objects.
+ *
  * It includes attribute with child/parent, coordinate value
  * just as DOM object, but without Texture attributes.
  * (Texture attribute is implemented in Sprite class)
+ *
+ * BaseObject itself is AST tree, which parses command to
+ * fill rendering semantic.
+ * TODO: detach parser from BaseObject and change input like
+ * xml tree, instead of string command.
  *
  * Also, coordinate related utility functions declared in
  * this file.

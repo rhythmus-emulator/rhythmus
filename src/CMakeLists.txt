@@ -27,6 +27,8 @@ set (RHYTHMUS_SOURCES
     scene/TestScene.cpp
     scene/SelectScene.cpp
 
+	object/SelectWheel.cpp
+
     LR2/exdxa.cpp
     LR2/LR2Font.cpp
     LR2/LR2SceneLoader.cpp
@@ -54,6 +56,8 @@ set (RHYTHMUS_HEADERS
 
     scene/TestScene.h
     scene/SelectScene.h
+
+	object/SelectWheel.h
 
     LR2/exdxa.h
     LR2/LR2Font.h

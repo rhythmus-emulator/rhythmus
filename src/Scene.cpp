@@ -167,9 +167,6 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
       std::cout << "LR2Skin Load warning : DST command found without SRC, ignored." << std::endl;
       return;
     }
-    // skip BAR related object now
-    if (prop_name == "#DST_BAR_BODY_ON" || prop_name == "#DST_BAR_BODY_OFF")
-      return;
     obj->LoadProperty(prop_name, value);
   }
   // XXX: register such objects first?
