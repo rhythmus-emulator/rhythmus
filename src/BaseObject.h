@@ -133,7 +133,6 @@ public:
   void SetCenter(float x, float y);
   void Hide();
   void Show();
-  void GetVertexInfo(VertexInfo* vi);
   void SetDrawOrder(int order);
   int GetDrawOrder() const;
 
