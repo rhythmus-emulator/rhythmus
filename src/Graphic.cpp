@@ -9,6 +9,7 @@
 
 #define RENDER_WITH_HLSL 1
 int errorcode_;
+constexpr int kVertexMaxSize = 1024 * 4;
 
 namespace rhythmus
 {
@@ -108,6 +109,9 @@ void Graphic::Initialize()
 
   // set rendering context
   current_proj_mode_ = -1;  // no projection mode initially.
+  vi_idx_ = 0;
+  vi_ = (VertexInfo*)malloc(sizeof(VertexInfo) * kVertexMaxSize);
+  ASSERT(vi_);
 
   // FPS timer start
   FpsTimer.Start();
@@ -156,6 +160,12 @@ void Graphic::Cleanup()
     glfwDestroyWindow(window_);
     glfwTerminate();
     window_ = 0;
+  }
+
+  if (vi_)
+  {
+    free(vi_);
+    vi_ = 0;
   }
 }
 
@@ -411,26 +421,24 @@ void Graphic::SetModel(const ProjectionInfo& pi)
  * @brief Renders quad
  * @warn  MUST set glBindTexture() if it is necessary!
  */
-void Graphic::RenderQuad(const VertexInfo* vi)
+void Graphic::RenderQuad()
 {
   Graphic& g = Graphic::getInstance();
+  if (g.vi_idx_ <= 0) return;
 
   // write buffer
   glBindBuffer(GL_ARRAY_BUFFER, g.quad_shader_.buffer_id);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(VertexInfo) * 4, nullptr, GL_STATIC_DRAW);
-  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VertexInfo) * 4, vi);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(VertexInfo) * 4 * g.vi_idx_, nullptr, GL_STREAM_DRAW);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VertexInfo) * 4 * g.vi_idx_, g.vi_);
   glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   // read buffer
   glUseProgram(g.quad_shader_.prog_id);
   glBindVertexArray(g.quad_shader_.VAO_id);
   glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-}
 
-void Graphic::RenderQuad(const DrawInfo& di)
-{
-  SetProj(di.pi);
-  RenderQuad(di.vi);
+  // now flushed buffer. clear vertex index.
+  g.vi_idx_ = 0;
 }
 
 void Graphic::SetProj(const ProjectionInfo& pi)
@@ -444,6 +452,18 @@ void Graphic::SetProj(const ProjectionInfo& pi)
     g.SetProjPerspectiveCenter();
 
   g.SetModel(pi);
+}
+
+VertexInfo* Graphic::get_vertex_buffer()
+{
+  return get_vertex_buffer(1);
+}
+
+VertexInfo* Graphic::get_vertex_buffer(int size)
+{
+  int _ = vi_idx_;
+  vi_idx_ += size;
+  return vi_ + _ * 4;
 }
 
 #else

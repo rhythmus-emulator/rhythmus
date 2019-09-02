@@ -108,6 +108,7 @@ void Sprite::doRender()
   if (ti.sh == -1) sy1 = 0.0, sy2 = 1.0;
 #endif
 
+  VertexInfo* vi_ = Graphic::getInstance().get_vertex_buffer();
   vi_[0].x = x1;
   vi_[0].y = y1;
   vi_[0].z = 0;
@@ -158,7 +159,7 @@ void Sprite::doRender()
   if (img_)
     glBindTexture(GL_TEXTURE_2D, img_->get_texture_ID());
   Graphic::getInstance().SetProj(get_draw_property().pi);
-  Graphic::RenderQuad(vi_);
+  Graphic::RenderQuad();
 }
 
 // milisecond

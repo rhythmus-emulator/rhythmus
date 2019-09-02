@@ -700,7 +700,10 @@ void Text::doRender()
   for (const TextVertexInfo& tvi : text_render_ctx_.textvertex)
   {
     glBindTexture(GL_TEXTURE_2D, tvi.texid);
-    Graphic::RenderQuad(tvi.vi);
+    memcpy(Graphic::getInstance().get_vertex_buffer(),
+      tvi.vi,
+      sizeof(VertexInfo));
+    Graphic::RenderQuad();
   }
 
   /* TESTCODE for rendering whole glyph texture */

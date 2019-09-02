@@ -51,9 +51,6 @@ protected:
   // texture attribute (TODO)
   float tex_attribute_;
 
-  // TODO: should be removed later.
-  VertexInfo vi_[4];
-
   virtual void doUpdate(float delta);
   virtual void doRender();
 };

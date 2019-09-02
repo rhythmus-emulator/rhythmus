@@ -78,9 +78,10 @@ public:
 
   static Graphic& getInstance();
 
-  static void RenderQuad(const VertexInfo* vi);
-  static void RenderQuad(const DrawInfo& di);
+  static void RenderQuad();
   static void SetProj(const ProjectionInfo& pi);
+  VertexInfo* get_vertex_buffer();
+  VertexInfo* get_vertex_buffer(int size);
 
   static double GetFPS();
 private:
@@ -95,6 +96,9 @@ private:
   ShaderInfo quad_shader_;
   int current_proj_mode_;
   glm::mat4 m_projection_, m_view_, m_model_;
+
+  VertexInfo *vi_;
+  int vi_idx_;
 };
 
 }
