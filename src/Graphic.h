@@ -80,8 +80,9 @@ public:
 
   static void RenderQuad();
   static void SetProj(const ProjectionInfo& pi);
-  VertexInfo* get_vertex_buffer();
-  VertexInfo* get_vertex_buffer(int size);
+  static VertexInfo* get_vertex_buffer();
+  static VertexInfo* get_vertex_buffer(int size);
+  static void SetTextureId(GLuint tex_id);
 
   static double GetFPS();
 private:
@@ -99,6 +100,7 @@ private:
 
   VertexInfo *vi_;
   int vi_idx_;
+  GLuint tex_id_;
 };
 
 }

@@ -93,6 +93,9 @@ void Sprite::doRender()
   if (!IsVisible())
     return;
 
+  if (img_)
+    Graphic::SetTextureId(img_->get_texture_ID());
+
   const DrawProperty &ti = current_prop_;
 
   float x1, y1, x2, y2;
@@ -156,8 +159,6 @@ void Sprite::doRender()
   vi_[3].sx = sx;
   vi_[3].sy = sy + sh;
 
-  if (img_)
-    glBindTexture(GL_TEXTURE_2D, img_->get_texture_ID());
   Graphic::getInstance().SetProj(get_draw_property().pi);
   Graphic::RenderQuad();
 }

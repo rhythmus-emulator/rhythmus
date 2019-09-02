@@ -699,12 +699,12 @@ void Text::doRender()
   // XXX: is it better to cache vertex?
   for (const TextVertexInfo& tvi : text_render_ctx_.textvertex)
   {
-    glBindTexture(GL_TEXTURE_2D, tvi.texid);
-    memcpy(Graphic::getInstance().get_vertex_buffer(),
+    Graphic::SetTextureId(tvi.texid);
+    memcpy(Graphic::get_vertex_buffer(),
       tvi.vi,
-      sizeof(VertexInfo));
-    Graphic::RenderQuad();
+      sizeof(VertexInfo) * 4);
   }
+  Graphic::RenderQuad();
 
   /* TESTCODE for rendering whole glyph texture */
 #if 0

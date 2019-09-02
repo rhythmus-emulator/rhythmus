@@ -109,6 +109,7 @@ void Graphic::Initialize()
 
   // set rendering context
   current_proj_mode_ = -1;  // no projection mode initially.
+  tex_id_ = 0;
   vi_idx_ = 0;
   vi_ = (VertexInfo*)malloc(sizeof(VertexInfo) * kVertexMaxSize);
   ASSERT(vi_);
@@ -418,8 +419,7 @@ void Graphic::SetModel(const ProjectionInfo& pi)
 }
 
 /**
- * @brief Renders quad
- * @warn  MUST set glBindTexture() if it is necessary!
+ * @brief Renders quad with cached vertices.
  */
 void Graphic::RenderQuad()
 {
@@ -435,7 +435,7 @@ void Graphic::RenderQuad()
   // read buffer
   glUseProgram(g.quad_shader_.prog_id);
   glBindVertexArray(g.quad_shader_.VAO_id);
-  glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+  glDrawArrays(GL_QUADS, 0, 4 * g.vi_idx_);
 
   // now flushed buffer. clear vertex index.
   g.vi_idx_ = 0;
@@ -461,9 +461,24 @@ VertexInfo* Graphic::get_vertex_buffer()
 
 VertexInfo* Graphic::get_vertex_buffer(int size)
 {
-  int _ = vi_idx_;
-  vi_idx_ += size;
-  return vi_ + _ * 4;
+  Graphic &g = Graphic::getInstance();
+  int _ = g.vi_idx_;
+  g.vi_idx_ += size;
+  return g.vi_ + _ * 4;
+}
+
+/* @warn MUST call texture first before setting vertices */
+void Graphic::SetTextureId(GLuint tex_id)
+{
+  Graphic &g = Graphic::getInstance();
+  if (g.tex_id_ != tex_id)
+  {
+    // flush out previous vertices
+    RenderQuad();
+    glBindTexture(GL_TEXTURE_2D, tex_id);
+    g.tex_id_ = tex_id;
+  }
+  else return;
 }
 
 #else
