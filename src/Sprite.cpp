@@ -23,6 +23,22 @@ void Sprite::SetImage(ImageAuto img)
   img_ = img;
 }
 
+void Sprite::LoadSprite(const Sprite& spr)
+{
+  SetImage(spr.img_);
+  divx_ = spr.divx_;
+  divy_ = spr.divy_;
+  cnt_ = spr.cnt_;
+  interval_ = spr.interval_;
+  idx_ = spr.idx_;
+  eclipsed_time_ = spr.eclipsed_time_;
+  sx_ = spr.sx_;
+  sy_ = spr.sy_;
+  sw_ = spr.sw_;
+  sh_ = spr.sh_;
+  tex_attribute_ = spr.tex_attribute_;
+}
+
 void Sprite::LoadProperty(const std::string& prop_name, const std::string& value)
 {
   /* below is for LR2 type commands */

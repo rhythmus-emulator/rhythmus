@@ -15,7 +15,17 @@ public:
   Sprite(const Sprite& spr) = default;
   virtual ~Sprite();
 
+  /* Set sprite's image */
   void SetImage(ImageAuto img);
+
+  /**
+   * Not only image but also copy all sprite information from other sprite.
+   * (But it does not copy Tween information)
+   *
+   * @depreciated
+   * We should not try to use this function. Use copy constructor instead.
+   */
+  void LoadSprite(const Sprite& spr);
 
   virtual void LoadProperty(const std::string& prop_name, const std::string& value);
 
