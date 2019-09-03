@@ -113,6 +113,7 @@ void Graphic::Initialize()
   vi_idx_ = 0;
   vi_ = (VertexInfo*)malloc(sizeof(VertexInfo) * kVertexMaxSize);
   ASSERT(vi_);
+  m_model_ = glm::mat4(1.0f);   // set identitfy matrix by default
 
   // FPS timer start
   FpsTimer.Start();
@@ -382,8 +383,6 @@ void Graphic::SetModelIdentity()
 
 void Graphic::SetModel(const ProjectionInfo& pi)
 {
-  m_model_ = glm::mat4(1.0f);
-
   if (pi.rotx == 0 && pi.roty == 0 && pi.rotz == 0)
   {
     /* Just do translation */
@@ -441,7 +440,7 @@ void Graphic::RenderQuad()
   g.vi_idx_ = 0;
 }
 
-void Graphic::SetProj(const ProjectionInfo& pi)
+void Graphic::SetMatrix(const ProjectionInfo& pi)
 {
   Graphic &g = Graphic::getInstance();
 
@@ -452,6 +451,19 @@ void Graphic::SetProj(const ProjectionInfo& pi)
     g.SetProjPerspectiveCenter();
 
   g.SetModel(pi);
+}
+
+void Graphic::PushMatrix()
+{
+  Graphic &g = Graphic::getInstance();
+  g.m_model_stack_.push_back(g.m_model_);
+}
+
+void Graphic::PopMatrix()
+{
+  Graphic &g = Graphic::getInstance();
+  g.m_model_ = g.m_model_stack_.back();
+  g.m_model_stack_.pop_back();
 }
 
 VertexInfo* Graphic::get_vertex_buffer()

@@ -159,7 +159,6 @@ void Sprite::doRender()
   vi_[3].sx = sx;
   vi_[3].sy = sy + sh;
 
-  Graphic::getInstance().SetProj(get_draw_property().pi);
   Graphic::RenderQuad();
 }
 

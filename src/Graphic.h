@@ -3,6 +3,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
+#include <vector>
 #include "Error.h"
 
 namespace rhythmus
@@ -79,7 +80,9 @@ public:
   static Graphic& getInstance();
 
   static void RenderQuad();
-  static void SetProj(const ProjectionInfo& pi);
+  static void SetMatrix(const ProjectionInfo& pi);
+  static void PushMatrix();
+  static void PopMatrix();
   static VertexInfo* get_vertex_buffer();
   static VertexInfo* get_vertex_buffer(int size);
   static void SetTextureId(GLuint tex_id);
@@ -97,6 +100,7 @@ private:
   ShaderInfo quad_shader_;
   int current_proj_mode_;
   glm::mat4 m_projection_, m_view_, m_model_;
+  std::vector<glm::mat4> m_model_stack_;
 
   VertexInfo *vi_;
   int vi_idx_;

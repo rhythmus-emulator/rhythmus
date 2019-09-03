@@ -489,9 +489,17 @@ void BaseObject::Update(float delta)
 
 void BaseObject::Render()
 {
+  Graphic::PushMatrix();
+
+  // set matrix
+  Graphic::getInstance().SetMatrix(get_draw_property().pi);
+
+  // render vertices
   doRender();
+
   for (auto* p : children_)
     p->Render();
+  Graphic::PopMatrix();
 }
 
 void BaseObject::doUpdate(float delta)
