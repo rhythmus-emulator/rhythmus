@@ -112,7 +112,7 @@ protected:
 
   virtual void SetItemPosByIndex(SelectItem& item, int idx, double r);
 
-  virtual void doUpdate();
+  virtual void doUpdate(float delta);
 
   void UpdateItemPos();
 };

@@ -95,6 +95,8 @@ public:
   /* Remove child to be updated / rendered. */
   void RemoveChild(BaseObject* obj);
 
+  void RemoveAllChild();
+
   /**
    * @brief
    * Make cacsading relationship to object.

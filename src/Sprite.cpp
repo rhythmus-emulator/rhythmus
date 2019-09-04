@@ -95,6 +95,7 @@ void Sprite::doRender()
 
   if (img_)
     Graphic::SetTextureId(img_->get_texture_ID());
+  else return;
 
   const DrawProperty &ti = current_prop_;
 
@@ -111,7 +112,7 @@ void Sprite::doRender()
   if (ti.sh == -1) sy1 = 0.0, sy2 = 1.0;
 #endif
 
-  VertexInfo* vi_ = Graphic::getInstance().get_vertex_buffer();
+  VertexInfo* vi_ = Graphic::get_vertex_buffer();
   vi_[0].x = x1;
   vi_[0].y = y1;
   vi_[0].z = 0;

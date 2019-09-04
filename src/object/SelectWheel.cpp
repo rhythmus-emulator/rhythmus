@@ -186,12 +186,18 @@ void SelectWheel::SetItemPosByIndex(SelectItem& item, int idx, double r)
     BaseObject *obj1, *obj2;
     obj1 = bar_pos_fixed_[idx];
     obj2 = bar_pos_fixed_[idx + 1];
+    if (!obj1 || !obj2)
+    {
+      item.Hide();
+      return;
+    }
     DrawProperty d;
     MakeTween(d,
       obj1->get_draw_property(),
       obj2->get_draw_property(),
       r, EaseTypes::kEaseLinear);
     item.LoadDrawProperty(d);
+    item.Show();
 
     break;
   }
@@ -201,6 +207,12 @@ void SelectWheel::SetItemPosByIndex(SelectItem& item, int idx, double r)
 void SelectWheel::RebuildItems()
 {
   size_t disp_cnt = bar_.size();
+
+  // reconstruct children - delete previous children
+  for (auto i = 0; i < disp_cnt; ++i)
+    RemoveChild(bar_[i]->img_sprite_.get());
+
+  // now create new child.
   for (auto i = 0; i < disp_cnt; ++i)
   {
     int dataindex = mod_pos(focused_index_ + i, select_data_.size());
@@ -216,6 +228,9 @@ void SelectWheel::RebuildItems()
     bar.text_sprite_->SetText(data.name);
     bar.dataindex = dataindex;
     bar.barindex = i;
+
+    // add to child to render
+    bar.AddChild(bar.img_sprite_.get());
   }
 }
 
@@ -243,8 +258,14 @@ void SelectWheel::ScrollUp()
   RebuildItems();
 }
 
-void SelectWheel::doUpdate()
+void SelectWheel::doUpdate(float delta)
 {
+  if (-delta < scroll_pos_ && scroll_pos_ < delta)
+    scroll_pos_ = 0;
+  else if (scroll_pos_ < 0)
+    scroll_pos_ += delta / 1000.0f;
+  else if (scroll_pos_ > 0)
+    scroll_pos_ -= delta / 1000.0f;
   UpdateItemPos();
 }
 

@@ -20,6 +20,10 @@ void SelectScene::LoadScene()
     "SelectScene", "../themes/WMIX_HD/select/select.lr2skin"
   );
 
+  // Add wheel children first, as scene parameter may need it.
+  // (e.g. LR2 command)
+  AddChild(&wheel_);
+
   Scene::LoadScene();
 
   // TODO: set SelectWheel properties from Theme properties
@@ -30,6 +34,9 @@ void SelectScene::LoadScene()
   wheel_.PushData({ 0, "TestSong1", "Art1" });
   wheel_.PushData({ 1, "TestSong2", "Art2" });
   wheel_.PushData({ 2, "TestSong3", "Art3" });
+
+  // Should build wheel items
+  wheel_.RebuildItems();
 }
 
 void SelectScene::StartScene()
@@ -72,9 +79,10 @@ void SelectScene::LoadProperty(const std::string& prop_name, const std::string& 
       prop_name == "#DST_BAR_BODY_OFF" ||
       prop_name == "#SRC_BAR_BODY")
   {
-    // add to rendering
-    if (std::find(children_.begin(), children_.end(), &wheel_) == children_.end())
-      children_.push_back(&wheel_);
+    // change order: move wheel to end
+    auto it = std::find(children_.begin(), children_.end(), &wheel_);
+    ASSERT(it != children_.end());
+    std::rotate(it, it + 1, children_.end());
     // set property
     wheel_.LoadProperty(prop_name, value);
     return;

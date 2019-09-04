@@ -476,6 +476,13 @@ VertexInfo* Graphic::get_vertex_buffer(int size)
   Graphic &g = Graphic::getInstance();
   int _ = g.vi_idx_;
   g.vi_idx_ += size;
+  if (g.vi_idx_ >= kVertexMaxSize)
+  {
+    ASSERT(size < kVertexMaxSize);
+    // prevent vertex buffer overflow
+    RenderQuad();
+    return get_vertex_buffer(size);
+  }
   return g.vi_ + _ * 4;
 }
 

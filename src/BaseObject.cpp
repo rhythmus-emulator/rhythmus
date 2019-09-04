@@ -53,6 +53,11 @@ void BaseObject::RemoveChild(BaseObject* obj)
     children_.erase(it);
 }
 
+void BaseObject::RemoveAllChild()
+{
+  children_.clear();
+}
+
 void BaseObject::RegisterChild(BaseObject* obj)
 {
   owned_children_.push_back(obj);

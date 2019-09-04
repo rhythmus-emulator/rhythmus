@@ -704,12 +704,13 @@ void Text::doRender()
       tvi.vi,
       sizeof(VertexInfo) * 4);
   }
+
   Graphic::RenderQuad();
 
   /* TESTCODE for rendering whole glyph texture */
 #if 0
-  VertexInfo vi[4];
-  glBindTexture(GL_TEXTURE_2D, text_render_ctx_.textvertex[0].texid);
+  Graphic::SetTextureId(text_render_ctx_.textvertex[0].texid);
+  VertexInfo *vi = Graphic::get_vertex_buffer();
   vi[0].x = 10;
   vi[0].y = 10;
   vi[0].sx = .0f;
@@ -735,8 +736,7 @@ void Text::doRender()
   vi[2].r = vi[2].g = vi[2].b = vi[2].a = 1.0f;
   vi[3].r = vi[3].g = vi[3].b = vi[3].a = 1.0f;
 
-  Graphic::getInstance().SetModelIdentity();
-  Graphic::RenderQuad(vi);
+  Graphic::RenderQuad();
 #endif
 }
 
