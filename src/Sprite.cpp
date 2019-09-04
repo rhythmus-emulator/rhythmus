@@ -23,6 +23,12 @@ void Sprite::SetImage(ImageAuto img)
   img_ = img;
 }
 
+void Sprite::SetImageByName(const std::string& name)
+{
+  auto img = SceneManager::getInstance().get_current_scene()->GetImageByName(name);
+  SetImage(img);
+}
+
 void Sprite::LoadSprite(const Sprite& spr)
 {
   SetImage(spr.img_);
@@ -62,16 +68,16 @@ void Sprite::LoadProperty(const std::string& prop_name, const std::string& value
     int op3 = atoi_op(params[12].c_str());
 #endif
 
-    auto img = SceneManager::getInstance().get_current_scene()->GetImageByName(params[1]);
-    SetImage(img);
-    if (img)
+    SetImageByName(params[1]);
+
+    if (img_)
     {
-      sx_ = sx / (float)img->get_width();
-      sy_ = sy / (float)img->get_height();
+      sx_ = sx / (float)img_->get_width();
+      sy_ = sy / (float)img_->get_height();
       if (sw < 0) sw_ = 1.0f;
-      else sw_ = sw / (float)img->get_width();
+      else sw_ = sw / (float)img_->get_width();
       if (sh < 0) sh_ = 1.0f;
-      else sh_ = sh / (float)img->get_height();
+      else sh_ = sh / (float)img_->get_height();
       divx_ = divx > 0 ? divx : 1;
       divy_ = divy > 0 ? divy : 1;
       cnt_ = divx_ * divy_;

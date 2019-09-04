@@ -74,10 +74,9 @@ const std::string SelectScene::GetSceneName() const
 
 void SelectScene::LoadProperty(const std::string& prop_name, const std::string& value)
 {
-  // Check and process for some exclusive commands first
-  if (prop_name == "#DST_BAR_BODY_ON" ||
-      prop_name == "#DST_BAR_BODY_OFF" ||
-      prop_name == "#SRC_BAR_BODY")
+  // Check and process for LR2 exclusive commands
+  if (prop_name.compare(0, 9, "#DST_BAR_") == 0 ||
+      prop_name.compare(0, 9, "#SRC_BAR_") == 0)
   {
     // change order: move wheel to end
     auto it = std::find(children_.begin(), children_.end(), &wheel_);

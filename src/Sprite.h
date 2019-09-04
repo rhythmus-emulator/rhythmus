@@ -18,6 +18,9 @@ public:
   /* Set sprite's image */
   void SetImage(ImageAuto img);
 
+  /* Set sprite's image from current scene resource scope. */
+  void SetImageByName(const std::string& name);
+
   /**
    * Not only image but also copy all sprite information from other sprite.
    * (But it does not copy Tween information)

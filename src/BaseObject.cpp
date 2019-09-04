@@ -504,6 +504,7 @@ void BaseObject::Render()
 
   for (auto* p : children_)
     p->Render();
+
   Graphic::PopMatrix();
 }
 

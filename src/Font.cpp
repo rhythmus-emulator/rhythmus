@@ -1,4 +1,5 @@
 #include "Font.h"
+#include "SceneManager.h"
 #include "rutil.h"  /* Text encoding to UTF32 */
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -611,6 +612,12 @@ void Text::SetFont(Font* font)
   font_ = font;
 }
 
+void Text::SetFontByName(const std::string& name)
+{
+  auto *font = SceneManager::getInstance().get_current_scene()->GetFontByName(name).get();
+  SetFont(font);
+}
+
 void Text::SetText(const std::string& s)
 {
   if (!font_) return;
@@ -691,10 +698,6 @@ void Text::doUpdate()
 
 void Text::doRender()
 {
-  // Set Proj / View matrix
-  Graphic::getInstance().SetProjOrtho();
-  Graphic::getInstance().SetModel(get_draw_property().pi);
-
   // Draw vertex by given quad
   // XXX: is it better to cache vertex?
   for (const TextVertexInfo& tvi : text_render_ctx_.textvertex)

@@ -191,7 +191,12 @@ public:
   ~Text();
 
   float GetTextWidth();
+
   void SetFont(Font* font);
+
+  /* Set font by its name from current scene resource scope. */
+  void SetFontByName(const std::string& name);
+
   void SetText(const std::string& s);
   void SetAlignment(FontAlignments align);
   void SetLineBreaking(bool enable_line_break);

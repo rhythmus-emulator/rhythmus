@@ -183,6 +183,11 @@ void LR2Text::LoadProperty(const std::string& prop_name, const std::string& valu
       SubscribeTo(Events::kEventSongSelectChanged);
       break;
     }
+
+    SetFontByName(params[1]);
+
+    // TODO: test. remove this code later.
+    SetText("ABCD");
   }
   else if (prop_name == "#DST_TEXT")
   {

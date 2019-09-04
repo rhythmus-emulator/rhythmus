@@ -94,6 +94,13 @@ ImageAuto Scene::GetImageByName(const std::string& name)
   return nullptr;
 }
 
+FontAuto Scene::GetFontByName(const std::string& name)
+{
+  for (const auto& font : fonts_)
+    if (font->get_name() == name) return font;
+  return nullptr;
+}
+
 void Scene::LoadOptions()
 {
   ASSERT(get_name().size() > 0);
@@ -198,7 +205,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     img->set_name(name);
     images_.push_back(img);
   }
-  else if (prop_name == "#FONT")
+  else if (prop_name == "#LR2FONT")
   {
     // TODO: nasty, need to remove this code
     LR2SceneLoader loader;

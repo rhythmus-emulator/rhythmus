@@ -316,7 +316,24 @@ void SelectWheel::LoadProperty(const std::string& prop_name, const std::string& 
     }
     select_bar_src_[attr]->LoadProperty(prop_name, value);
   }
-  // TODO: BAR_LEVEL, BAR_TEXT, ...
+  else if (prop_name == "#SRC_BAR_TITLE")
+  {
+    // MUST be called after BAR_BODY commands
+    std::vector<std::string> params;
+    MakeParamCountSafe(value, params, 2);
+    if (params[0] != "0") return;
+    for (auto* b : bar_)
+      b->text_sprite_->SetFontByName(params[1]);
+  }
+  else if (prop_name == "#DST_BAR_TITLE")
+  {
+    // TODO: only for "0" attribute now ...
+    std::string wh = GetFirstParam(value);
+    if (wh != "0") return;
+    for (auto* b : bar_)
+      b->text_sprite_->LoadProperty(prop_name, value);
+  }
+  // TODO: BAR_LEVEL, ...
 }
 
 #if 0
