@@ -196,8 +196,8 @@ void SelectWheel::SetItemPosByIndex(SelectItem& item, int idx, double r)
       obj1->get_draw_property(),
       obj2->get_draw_property(),
       r, EaseTypes::kEaseLinear);
-    item.LoadDrawProperty(d);
-    item.Show();
+    item.img_sprite_->LoadDrawProperty(d);
+    item.img_sprite_->Show();
 
     break;
   }
@@ -221,16 +221,22 @@ void SelectWheel::RebuildItems()
     auto& bar = *bar_[barindex];
 
     if (select_bar_src_[data.type] != nullptr)
+    {
       bar.img_sprite_ =
         std::make_unique<Sprite>(*select_bar_src_[data.type]);
+      bar.img_sprite_->set_name("SELITEM_" + std::to_string(i)); // XXX: for debug
+    }
     else
+    {
       bar.img_sprite_.reset();
+      continue;
+    }
     bar.text_sprite_->SetText(data.name);
     bar.dataindex = dataindex;
     bar.barindex = i;
 
     // add to child to render
-    bar.AddChild(bar.img_sprite_.get());
+    AddChild(bar.img_sprite_.get());
   }
 }
 
@@ -269,6 +275,11 @@ void SelectWheel::doUpdate(float delta)
   UpdateItemPos();
 }
 
+void SelectWheel::doRender()
+{
+
+}
+
 void SelectWheel::LoadProperty(const std::string& prop_name, const std::string& value)
 {
   /* LR2 type commands */
@@ -293,6 +304,7 @@ void SelectWheel::LoadProperty(const std::string& prop_name, const std::string& 
     if (!bar_pos_fixed_[attr])
     {
       auto *o = new BaseObject();
+      o->set_name("DST_BAR_BODY_OFF_" + std::to_string(attr));
       bar_pos_fixed_[attr] = o;
       RegisterChild(o);
       AddChild(o);    // not for rendering but for updating

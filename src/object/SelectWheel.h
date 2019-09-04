@@ -114,6 +114,8 @@ protected:
 
   virtual void doUpdate(float delta);
 
+  virtual void doRender();
+
   void UpdateItemPos();
 };
 
