@@ -16,9 +16,7 @@ inline int mod_pos(int a, int b)
 
 SelectItem::SelectItem()
 {
-  img_sprite_ = std::make_unique<Sprite>();
   text_sprite_ = std::make_unique<Text>();
-  AddChild(img_sprite_.get());
   AddChild(text_sprite_.get());
 }
 
@@ -123,14 +121,19 @@ void SelectWheel::SetSelectBarImage(int type_no, ImageAuto img)
 void SelectWheel::Prepare(int visible_bar_count)
 {
   for (auto *obj : bar_)
+  {
+    RemoveChild(obj);
     delete obj;
+  }
   bar_.clear();
 
   for (int i = 0; i < visible_bar_count; ++i)
   {
     bar_.push_back(new SelectItem());
+    AddChild(bar_.back());
     bar_pos_fixed_.push_back(nullptr);
   }
+
   // bar_pos can contain one more element
   bar_pos_fixed_.push_back(nullptr);
 }
@@ -196,8 +199,8 @@ void SelectWheel::SetItemPosByIndex(SelectItem& item, int idx, double r)
       obj1->get_draw_property(),
       obj2->get_draw_property(),
       r, EaseTypes::kEaseLinear);
-    item.img_sprite_->LoadDrawProperty(d);
-    item.img_sprite_->Show();
+    item.LoadDrawProperty(d);
+    item.Show();
 
     break;
   }
@@ -208,11 +211,6 @@ void SelectWheel::RebuildItems()
 {
   size_t disp_cnt = bar_.size();
 
-  // reconstruct children - delete previous children
-  for (auto i = 0; i < disp_cnt; ++i)
-    RemoveChild(bar_[i]->img_sprite_.get());
-
-  // now create new child.
   for (auto i = 0; i < disp_cnt; ++i)
   {
     int dataindex = mod_pos(focused_index_ + i, select_data_.size());
@@ -221,22 +219,13 @@ void SelectWheel::RebuildItems()
     auto& bar = *bar_[barindex];
 
     if (select_bar_src_[data.type] != nullptr)
-    {
-      bar.img_sprite_ =
-        std::make_unique<Sprite>(*select_bar_src_[data.type]);
-      bar.img_sprite_->set_name("SELITEM_" + std::to_string(i)); // XXX: for debug
-    }
+      bar.LoadSprite(*select_bar_src_[data.type]);
     else
-    {
-      bar.img_sprite_.reset();
       continue;
-    }
+
     bar.text_sprite_->SetText(data.name);
     bar.dataindex = dataindex;
     bar.barindex = i;
-
-    // add to child to render
-    AddChild(bar.img_sprite_.get());
   }
 }
 

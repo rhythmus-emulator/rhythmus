@@ -25,12 +25,11 @@ struct SelectItemData
 };
 
 /* @brief Context of rendering select item */
-class SelectItem : public BaseObject
+class SelectItem : public Sprite
 {
 public:
   SelectItem();
 
-  SpriteAuto img_sprite_;
   std::unique_ptr<Text> text_sprite_;
 
   // actual dataindex for this item
