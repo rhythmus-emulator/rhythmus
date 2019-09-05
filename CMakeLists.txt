@@ -12,6 +12,8 @@ if (MSVC)
 	#set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 	set(CMAKE_CXX_FLAGS_RELEASE "/MT /Ot")
 	set(CMAKE_CXX_FLAGS_DEBUG "/MTd /Zi /Od")
+	set(CMAKE_C_FLAGS_RELEASE "/MT /Ot")
+	set(CMAKE_C_FLAGS_DEBUG "/MTd /Zi /Od")
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
@@ -51,6 +53,9 @@ find_package(GLEW)
 find_package(FreeImage)
 find_package(FreeType)
 find_package(FFmpeg)
+find_package(OGG)
+find_package(Vorbis)
+find_package(FLAC)
 
 #
 # Tinyxml2
@@ -65,5 +70,17 @@ add_subdirectory("${CMAKE_SOURCE_DIR}/../rparser/src"
                  "${CMAKE_SOURCE_DIR}/build/rparser"
                  EXCLUDE_FROM_ALL)
 set (RPARSER_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../rparser/src")
+
+# #######################
+# Add rencoder          #
+#########################
+add_subdirectory("${CMAKE_SOURCE_DIR}/../rencoder/timidity"
+                 "${CMAKE_SOURCE_DIR}/build/timidity"
+                 EXCLUDE_FROM_ALL)
+set (TIMIDITY_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../rencoder/timidity")
+add_subdirectory("${CMAKE_SOURCE_DIR}/../rencoder/src"
+                 "${CMAKE_SOURCE_DIR}/build/rencoder"
+                 EXCLUDE_FROM_ALL)
+set (RENCODER_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../rencoder/src")
 
 add_subdirectory(src)
