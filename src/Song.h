@@ -1,7 +1,6 @@
 #pragma once
 
-// XXX: fix include directory to include rparser/Song.h
-//#include "Song.h"
+#include "rhythmus.h"
 #include "Sound.h"
 #include <memory>
 #include <vector>
@@ -29,6 +28,7 @@ public:
   bool Load(const std::string& path);
 
 private:
+  rparser::Song song_;
 
   friend class SongList;
 };

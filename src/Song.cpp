@@ -14,7 +14,7 @@ void SongList::Save()
 
 bool Song::Load(const std::string& path)
 {
-  return false;
+  return song_.Open(path);
 }
 
 void SongPlayable::Play()
