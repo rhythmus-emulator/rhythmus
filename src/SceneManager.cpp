@@ -99,7 +99,7 @@ void SceneManager::ChangeScene(bool force)
 
 Scene* SceneManager::get_current_scene()
 {
-  return current_scene_;
+  return getInstance().current_scene_;
 }
 
 Scene* SceneManager::CreateNextScene()

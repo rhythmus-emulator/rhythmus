@@ -31,9 +31,9 @@ void SelectScene::LoadScene()
 
   // Add select data
   // XXX: Test code
-  wheel_.PushData({ 0, "TestSong1", "Art1" });
-  wheel_.PushData({ 1, "TestSong2", "Art2" });
-  wheel_.PushData({ 2, "TestSong3", "Art3" });
+  wheel_.AddData(new MusicWheelItemData{ "TestSong1", "Art1", 0, 10, nullptr });
+  wheel_.AddData(new MusicWheelItemData{ "TestSong2", "Art2", 1, 10, nullptr });
+  wheel_.AddData(new MusicWheelItemData{ "TestSong3", "Art3", 2, 11, nullptr });
 
   // Should build wheel items
   wheel_.RebuildItems();
@@ -90,7 +90,7 @@ void SelectScene::LoadProperty(const std::string& prop_name, const std::string& 
   Scene::LoadProperty(prop_name, value);
 }
 
-SelectWheel& SelectScene::get_wheel()
+MusicWheel& SelectScene::get_wheel()
 {
   return wheel_;
 }

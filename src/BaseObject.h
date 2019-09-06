@@ -104,6 +104,7 @@ public:
    */
   void RegisterChild(BaseObject* obj);
 
+  void set_parent(BaseObject* obj);
   BaseObject* get_parent();
   BaseObject* FindChildByName(const std::string& name);
   BaseObject* FindRegisteredChildByName(const std::string& name);

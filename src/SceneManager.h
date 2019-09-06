@@ -14,8 +14,8 @@ public:
   void Render();
   virtual bool OnEvent(const EventMessage& msg);
   void ChangeScene(bool force=false);
-  Scene* get_current_scene();
 
+  static Scene* get_current_scene();
   static Timer& GetSceneTimer();
   static uint32_t GetSceneTickTime();
   static SceneManager& getInstance();

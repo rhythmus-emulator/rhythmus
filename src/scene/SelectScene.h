@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Scene.h"
-#include "object/SelectWheel.h"
+#include "object/MusicWheel.h"
 
 namespace rhythmus
 {
@@ -21,10 +21,10 @@ public:
 
   virtual void LoadProperty(const std::string& prop_name, const std::string& value);
 
-  SelectWheel& get_wheel();
+  MusicWheel& get_wheel();
 
 private:
-  SelectWheel wheel_;
+  MusicWheel wheel_;
 };
 
 }

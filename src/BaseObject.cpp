@@ -63,6 +63,11 @@ void BaseObject::RegisterChild(BaseObject* obj)
   owned_children_.push_back(obj);
 }
 
+void BaseObject::set_parent(BaseObject* obj)
+{
+  parent_ = obj;
+}
+
 BaseObject* BaseObject::get_parent()
 {
   return parent_;
