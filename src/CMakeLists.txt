@@ -80,6 +80,11 @@ include_directories(SYSTEM
     ${TINYXML2_INCLUDE_DIR}
     ${FFMPEG_INCLUDE_DIR}
     ${RPARSER_INCLUDE_DIR}
+    ${RENCODER_INCLUDE_DIR}
+	${OGG_INCLUDE_DIR}
+	${VORBIS_INCLUDE_DIR}
+	${FLAC_INCLUDE_DIR}
+    ${TIMIDITY_INCLUDE_DIR}
     )
 
 if (WIN32)
@@ -97,4 +102,6 @@ target_link_libraries(rhythmus_bin
     ${FFMPEG_LIBRARY}
     tinyxml2
     rparser
+	rencoder_lib
+	timidity
     )
