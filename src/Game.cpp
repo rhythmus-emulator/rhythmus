@@ -26,7 +26,7 @@ Setting& Game::getSetting()
 Game::Game()
   : setting_path_(kSettingPath),
     game_boot_mode_(GameBootMode::kBootNormal),
-    game_mode_(GameMode::kGameModeNone),
+    game_mode_(GameMode::kGameModeLoading),
     do_game_mode_change_(false)
 {
 }
@@ -167,7 +167,7 @@ void Game::Update()
       case GameBootMode::kBootNormal:
         switch (game_mode_)
         {
-        case GameMode::kGameModeNone:
+        case GameMode::kGameModeLoading:
           // We now need to decide whether start game in select scene -
           // or in main scene. It is decided by option... If main scene
           // is null, we start game in select scene.
@@ -217,6 +217,19 @@ void Game::SetNextGameMode(GameMode next_game_mode)
 void Game::ChangeGameMode()
 {
   do_game_mode_change_ = true;
+}
+
+void Game::LoadArgument(const std::string& argv)
+{
+  if (argv[0] != '-') return;
+  if (argv == "-test")
+    game_boot_mode_ = GameBootMode::kBootTest;
+  else if (argv == "-reset")
+  {
+  } // TODO
+  else if (argv == "-reloadsong")
+  {
+  } // TODO
 }
 
 template<>

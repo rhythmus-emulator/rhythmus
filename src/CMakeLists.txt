@@ -23,7 +23,8 @@ set (RHYTHMUS_SOURCES
 	Song.cpp
 	Sound.cpp
 	Setting.cpp
-
+	
+    scene/LoadingScene.cpp
     scene/TestScene.cpp
     scene/SelectScene.cpp
 	
@@ -54,7 +55,8 @@ set (RHYTHMUS_HEADERS
 	Song.h
 	Sound.h
 	Setting.h
-
+	
+    scene/LoadingScene.h
     scene/TestScene.h
     scene/SelectScene.h
 

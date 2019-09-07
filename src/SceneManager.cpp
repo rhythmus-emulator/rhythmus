@@ -1,5 +1,6 @@
 #include "SceneManager.h"
 #include "scene/TestScene.h"
+#include "scene/LoadingScene.h"
 #include "scene/SelectScene.h"
 #include "LR2/LR2SceneLoader.h"
 #include "LR2/LR2Flag.h"
@@ -40,6 +41,9 @@ void SceneManager::Initialize()
     std::cerr << "Cannot open Scene preference file." << std::endl;
     return;
   }
+
+  // create starting scene.
+  ChangeScene();
 }
 
 void SceneManager::Update()
@@ -112,9 +116,9 @@ Scene* SceneManager::CreateNextScene()
   
   switch (mode)
   {
+  case GameMode::kGameModeLoading:
+    return new LoadingScene();
   case GameMode::kGameModeSelect:
-    // TODO: LR2Scene or other type of scene?
-    // LR2Scene is really necessary?
     return new SelectScene();
   case GameMode::kGameModeNone:
     /* return nullptr, which indicates not to process anything */

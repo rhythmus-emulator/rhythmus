@@ -21,6 +21,7 @@ enum GameBootMode
 enum GameMode
 {
   kGameModeNone,
+  kGameModeLoading,
   kGameModeMain,
   kGameModeLogin,
   kGameModeSelectMode,
@@ -80,6 +81,9 @@ public:
 
   /* Trigger scene changing. */
   void ChangeGameMode();
+
+  /* Load execute argument */
+  void LoadArgument(const std::string& argv);
 
   template<typename T>
   T GetAttribute(const std::string& key) const;

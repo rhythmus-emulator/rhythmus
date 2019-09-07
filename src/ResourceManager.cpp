@@ -16,7 +16,8 @@ ImageAuto ResourceManager::LoadImage(const std::string& path)
 
 FontAuto ResourceManager::LoadFont(const std::string& path, FontAttributes& attrs)
 {
-  for (const auto f : fonts_)
+  auto &r = getInstance();
+  for (const auto f : r.fonts_)
   {
     if (f->get_path() == path && f->is_ttf_font() && f->get_attribute() == attrs)
       return f;
@@ -24,13 +25,14 @@ FontAuto ResourceManager::LoadFont(const std::string& path, FontAttributes& attr
 
   FontAuto f = std::make_shared<Font>();
   f->LoadFont(path.c_str(), attrs);
-  fonts_.push_back(f);
+  r.fonts_.push_back(f);
   return f;
 }
 
 FontAuto ResourceManager::LoadLR2Font(const std::string& path)
 {
-  for (const auto f : fonts_)
+  auto &r = getInstance();
+  for (const auto f : r.fonts_)
   {
     if (f->get_path() == path && !f->is_ttf_font())
       return f;
@@ -45,16 +47,17 @@ void ResourceManager::ReleaseImage(ImageAuto img)
 {
 }
 
-void ResourceManager::ReleaseFont(FontAuto font)
+void ResourceManager::ReleaseFont(const FontAuto& font)
 {
-  auto ii = fonts_.begin();
-  for (; ii != fonts_.end(); ++ii)
+  auto &r = getInstance();
+  auto ii = r.fonts_.begin();
+  for (; ii != r.fonts_.end(); ++ii)
   {
     if (*ii == font)
       break;
   }
-  if (ii != fonts_.end())
-    fonts_.erase(ii);
+  if (ii != r.fonts_.end())
+    r.fonts_.erase(ii);
 }
 
 ResourceManager& ResourceManager::getInstance()

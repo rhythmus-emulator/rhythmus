@@ -16,11 +16,11 @@ namespace rhythmus
 class ResourceManager
 {
 public:
-  ImageAuto LoadImage(const std::string& path);
-  FontAuto LoadFont(const std::string& path, FontAttributes& attrs);
-  FontAuto LoadLR2Font(const std::string& path);
-  void ReleaseImage(ImageAuto img);
-  void ReleaseFont(FontAuto font);
+  static ImageAuto LoadImage(const std::string& path);
+  static FontAuto LoadFont(const std::string& path, FontAttributes& attrs);
+  static FontAuto LoadLR2Font(const std::string& path);
+  static void ReleaseImage(ImageAuto img);
+  static void ReleaseFont(const FontAuto& font);
 
   static ResourceManager& getInstance();
 private:

@@ -23,6 +23,9 @@ enum Events
   kOnCursorClick,
   kOnJoystick,
 
+  kEventSongListLoaded,
+  kEventSongListLoadFinished,
+
   kEventSceneChanged,
   kEventSongSelectChanged,
   kEventSongSelected,

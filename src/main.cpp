@@ -9,6 +9,7 @@
 #include "SceneManager.h"
 #include "LR2/LR2Flag.h"  // For updating LR2 flag
 #include "Event.h"
+#include "rutil.h"        // convert wargv
 #include <iostream>
 
 using namespace rhythmus;
@@ -27,7 +28,9 @@ int APIENTRY _tWinMain(
   memset(argv, 0, sizeof(argv));
   for (int i = 0; i < argc && i < 256; i++)
   {
-    // TODO: convert wargv into utf8 string
+    // convert wargv into utf8 string
+    rutil::EncodeFromWStr(wargv[i], argv_str[i], rutil::E_UTF8);
+    argv[i] = argv_str[i].c_str();
   }
 #else
 int main(int argc, char **argv)
@@ -39,6 +42,8 @@ int main(int argc, char **argv)
    */
   Graphic &graphic = Graphic::getInstance();
   Game &game = Game::getInstance();
+  for (int i = 0; i < argc; i++)
+    game.LoadArgument(argv[i]);
 
   // Load/Set settings first before initialize other objects
   game.LoadOrDefault();
@@ -52,9 +57,6 @@ int main(int argc, char **argv)
   // Event Initialization
   EventManager::Initialize();
   LR2Flag::SubscribeEvent(); // Don't need to do if you won't support LR2 skin
-
-  // after all settings are done, start scene translation
-  game.ChangeGameMode();
 
   /**
    * Main game loop
