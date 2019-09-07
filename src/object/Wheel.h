@@ -10,7 +10,7 @@ namespace rhythmus
 
 constexpr int NUM_SELECT_BAR_TYPES = 10;
 constexpr int kDefaultBarCount = 30;
-constexpr int kScrollPosMaxDiff = 3;
+constexpr int kScrollPosMaxDiff = 1;
 
 enum WheelItemPosMethod
 {
@@ -129,6 +129,8 @@ protected:
     BaseObject tween_bar[kDefaultBarCount + 1];
     BaseObject tween_bar_focus[kDefaultBarCount + 1];
   } pos_fixed_param_;
+
+  void UpdateItemPos();
 
   void UpdateItemPosByExpr();
 

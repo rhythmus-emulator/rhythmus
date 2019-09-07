@@ -6,7 +6,11 @@ namespace rhythmus
 {
 
 MusicWheelItem::MusicWheelItem(int index)
-  : WheelItem(index) {}
+  : WheelItem(index)
+{
+  AddChild(&title_);
+  AddChild(&level_);
+}
 
 Text& MusicWheelItem::title() { return title_; }
 
@@ -22,16 +26,13 @@ void MusicWheelItem::Invalidate()
   if (!get_data())
     return;
 
-  // set Sprite
-  if (get_data()->type)
-  {
-    Sprite* obj =
-      dynamic_cast<Sprite*>(get_parent()->FindChildByName(
-        "BARIMG" + std::to_string(get_data()->type)
-      ));
-    if (obj)
-      LoadSprite(*obj);
-  }
+  // set Sprite background
+  Sprite* obj =
+    dynamic_cast<Sprite*>(get_parent()->FindChildByName(
+      "BARIMG" + std::to_string(get_data()->type)
+    ));
+  if (obj)
+    LoadSprite(*obj);
 
   // update title text
   title().SetText(get_data()->title);
