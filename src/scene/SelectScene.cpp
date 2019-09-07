@@ -86,6 +86,11 @@ void SelectScene::LoadProperty(const std::string& prop_name, const std::string& 
     wheel_.LoadProperty(prop_name, value);
     return;
   }
+  else if (prop_name == "#BAR_CENTER")
+  {
+    wheel_.LoadProperty(prop_name, value);
+    return;
+  }
 
   Scene::LoadProperty(prop_name, value);
 }

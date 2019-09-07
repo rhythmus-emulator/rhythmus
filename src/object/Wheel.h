@@ -73,7 +73,12 @@ public:
 
   size_t get_select_list_size() const;
   double get_select_bar_scroll() const;
+
   int get_selected_index() const;
+
+  int get_selected_dataindex() const;
+
+  WheelItem* get_item(int index);
 
   /* Add wheel item data 
    * Should be suitable form to current Wheel class.
@@ -83,6 +88,7 @@ public:
   virtual void Prepare(int visible_bar_count);
   virtual void RebuildItems();
 
+  void set_infinite_scroll(bool inf_scroll);
   void ScrollDown();
   void ScrollUp();
 
@@ -105,6 +111,9 @@ protected:
 
   // current scroll pos, relative to current focused index.
   double scroll_pos_;
+
+  // enable for infinite scroll.
+  bool inf_scroll_;
 
   // type of calculating select bar position
   // If false, some extern method should update bar position manually.

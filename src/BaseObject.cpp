@@ -499,6 +499,9 @@ void BaseObject::Update(float delta)
 
 void BaseObject::Render()
 {
+  if (!current_prop_.display)
+    return;
+
   Graphic::PushMatrix();
 
   // set matrix

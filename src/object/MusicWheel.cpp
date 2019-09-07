@@ -49,14 +49,14 @@ MusicWheel::MusicWheel()
 
 const char* MusicWheel::get_selected_title()
 {
-  return GetItem(get_selected_index()).get_data()->title.c_str();
+  return get_data(get_selected_dataindex()).title.c_str();
 }
 
-MusicWheelItemData* MusicWheel::NewData()
+MusicWheelItemData& MusicWheel::NewData()
 {
   auto *p = new MusicWheelItemData();
   AddData(p);
-  return p;
+  return *p;
 }
 
 WheelItem* MusicWheel::CreateWheelItem(int index)
@@ -64,9 +64,14 @@ WheelItem* MusicWheel::CreateWheelItem(int index)
   return new MusicWheelItem(index);
 }
 
-MusicWheelItem& MusicWheel::GetItem(int index)
+MusicWheelItem& MusicWheel::get_item(int index)
 {
-  return *static_cast<MusicWheelItem*>(bar_[index]);
+  return *static_cast<MusicWheelItem*>(Wheel::get_item(index));
+}
+
+MusicWheelItemData& MusicWheel::get_data(int dataindex)
+{
+  return *static_cast<MusicWheelItemData*>(select_data_[dataindex]);
 }
 
 void MusicWheel::LoadProperty(const std::string& prop_name, const std::string& value)
@@ -78,7 +83,7 @@ void MusicWheel::LoadProperty(const std::string& prop_name, const std::string& v
     MakeParamCountSafe(value, params, 2);
     if (params[0] != "0") return;
     for (int i = 0; i < bar_.size(); ++i)
-      GetItem(i).title().SetFontByName(params[1]);
+      get_item(i).title().SetFontByName(params[1]);
     return;
   }
   else if (prop_name == "#DST_BAR_TITLE")
@@ -87,7 +92,7 @@ void MusicWheel::LoadProperty(const std::string& prop_name, const std::string& v
     std::string wh = GetFirstParam(value);
     if (wh != "0") return;
     for (int i = 0; i < bar_.size(); ++i)
-      GetItem(i).title().LoadProperty(prop_name, value);
+      get_item(i).title().LoadProperty(prop_name, value);
     return;
   }
   // TODO: BAR_LEVEL, ...

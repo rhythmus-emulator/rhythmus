@@ -47,7 +47,7 @@ void WheelItem::set_is_selected(int current_index)
 // -------------------------------- class Wheel
 
 Wheel::Wheel()
-  : focused_index_(0), center_index_(0), scroll_pos_(0),
+  : focused_index_(0), center_index_(0), scroll_pos_(0), inf_scroll_(true),
     pos_method_(WheelItemPosMethod::kBarPosExpression)
 {
   memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
@@ -104,6 +104,18 @@ int Wheel::get_selected_index() const
   return focused_index_;
 }
 
+/* should consider center index */
+WheelItem* Wheel::get_item(int index)
+{
+  return bar_[(index + center_index_) % bar_.size()];
+}
+
+int Wheel::get_selected_dataindex() const
+{
+  /* bar 0 index : center */
+  return bar_[0]->get_dataindex();
+}
+
 void Wheel::AddData(void* data)
 {
   select_data_.push_back(data);
@@ -133,16 +145,25 @@ void Wheel::RebuildItems()
 
   for (auto i = 0; i < disp_cnt; ++i)
   {
+    int ii = (i + focused_index_ + center_index_) % disp_cnt;
     int dataindex = mod_pos(focused_index_ + i, select_data_.size());
     auto& data = select_data_[dataindex];
-    auto& bar = *bar_[i];
+    auto& bar = *bar_[i]; /* XXX: 0 index bar is center bar! */
     bar.set_data(dataindex, select_data_[dataindex]);
     bar.Invalidate();
   }
 }
 
+void Wheel::set_infinite_scroll(bool inf_scroll)
+{
+  inf_scroll_ = inf_scroll;
+}
+
 void Wheel::ScrollDown()
 {
+  if (!inf_scroll_ && focused_index_ + 1 >= select_data_.size())
+    return;
+
   focused_index_ = (focused_index_ + 1) % select_data_.size();
   scroll_pos_ -= 0.9999;  // a trick to avoid zero by mod 1
   if (scroll_pos_ < -kScrollPosMaxDiff)
@@ -153,6 +174,9 @@ void Wheel::ScrollDown()
 
 void Wheel::ScrollUp()
 {
+  if (!inf_scroll_ && focused_index_ < 1)
+    return;
+
   focused_index_--;
   if (focused_index_ < 0) focused_index_ += select_data_.size();
   scroll_pos_ += 0.9999;  // a trick to avoid zero by mod 1
@@ -211,15 +235,25 @@ void Wheel::UpdateItemPosByFixed()
 
   for (int i = 0; i < bar_.size(); ++i)
   {
-    int ii = i;
+    // break if index is out of data and not infinite scrolling
+    if (!inf_scroll_ &&
+      i >= select_data_.size() - focused_index_ &&
+      i < bar_.size() - focused_index_)
+    {
+      bar_[i]->Hide();
+      continue;
+    }
+
+    // get tween index used for current bar.
+    int ii = (i + center_index_) % bar_.size() - 1 /* LR2 compat. */;
     float ri = r;
     if (r < 0) {
       ii++;
-      ri += 1.0f;
+      ri += 1.0f; // XXX: bad code
     }
     if (ii < 0 || ii > kDefaultBarCount)
     {
-      bar_[i]->Hide();
+      //bar_[ii]->Hide();
       continue;
     }
 
@@ -285,6 +319,10 @@ void Wheel::LoadProperty(const std::string& prop_name, const std::string& value)
     spr->Hide();
 
     spr->LoadProperty(prop_name, value);
+  }
+  else if (prop_name == "#BAR_CENTER")
+  {
+    center_index_ = atoi(GetFirstParam(value).c_str());
   }
 }
 

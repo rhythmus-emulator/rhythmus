@@ -36,9 +36,11 @@ class MusicWheel : public Wheel
 public:
   MusicWheel();
   const char* get_selected_title();
+  MusicWheelItem& get_item(int index);
+  MusicWheelItemData& get_data(int dataindex);
 
   /* @brief Add new item data and get it's pointer. */
-  MusicWheelItemData* NewData();
+  MusicWheelItemData& NewData();
 
   void LoadProperty(const std::string& prop_name, const std::string& value);
 
@@ -47,8 +49,6 @@ private:
   Sprite* select_bar_src_[NUM_SELECT_BAR_TYPES];
 
   virtual WheelItem* CreateWheelItem(int index);
-
-  MusicWheelItem& GetItem(int index);
 };
 
 }
