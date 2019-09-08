@@ -35,6 +35,10 @@ void SelectScene::LoadScene()
 
   // Should build wheel items
   wheel_.RebuildItems();
+
+  // Send some initial events to invalidate specific object
+  // (e.g. song title text object)
+  EventManager::SendEvent(Events::kEventSongSelectChanged);
 }
 
 void SelectScene::StartScene()

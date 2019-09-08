@@ -141,7 +141,7 @@ void LR2Font::UploadTextureFile(const char* p, size_t len)
   // from here, font bitmap texture must uploaded to memory.
   FIBITMAP *bitmap, *temp;
   temp = FreeImage_LoadFromMemory(fmt, memstream);
-  // I don't know why, but image need to be flipped
+  // image need to be flipped
   FreeImage_FlipVertical(temp);
   bitmap = FreeImage_ConvertTo32Bits(temp);
   FreeImage_Unload(temp);

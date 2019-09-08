@@ -498,6 +498,10 @@ void Font::GetTextVertexInfo(const std::string& s,
     cur_x += g->adv_x - g->pos_x;
     tvi.texid = g->texidx;
 
+    // skip in case of special character
+    if (g->codepoint == ' ' || g->codepoint == '\r')
+      continue;
+
     vtvi.push_back(tvi);
   }
 }
