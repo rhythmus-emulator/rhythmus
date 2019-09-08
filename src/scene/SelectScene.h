@@ -25,6 +25,8 @@ public:
 
 private:
   MusicWheel wheel_;
+
+  void MakeSelectDataList();
 };
 
 }

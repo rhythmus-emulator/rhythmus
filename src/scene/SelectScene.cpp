@@ -1,6 +1,7 @@
 #include "SelectScene.h"
 #include "Event.h"
 #include "SceneManager.h"
+#include "Song.h"
 
 namespace rhythmus
 {
@@ -30,10 +31,7 @@ void SelectScene::LoadScene()
   //
 
   // Add select data
-  // XXX: Test code
-  wheel_.AddData(new MusicWheelItemData{ "TestSong1", "Art1", 0, 10, nullptr });
-  wheel_.AddData(new MusicWheelItemData{ "TestSong2", "Art2", 1, 10, nullptr });
-  wheel_.AddData(new MusicWheelItemData{ "TestSong3", "Art3", 2, 11, nullptr });
+  MakeSelectDataList();
 
   // Should build wheel items
   wheel_.RebuildItems();
@@ -98,6 +96,32 @@ void SelectScene::LoadProperty(const std::string& prop_name, const std::string& 
 MusicWheel& SelectScene::get_wheel()
 {
   return wheel_;
+}
+
+void SelectScene::MakeSelectDataList()
+{
+  // XXX: Test code
+  wheel_.AddData(new MusicWheelItemData{ "TestSong1", "Art1", 0, 10, nullptr });
+  wheel_.AddData(new MusicWheelItemData{ "TestSong2", "Art2", 1, 10, nullptr });
+  wheel_.AddData(new MusicWheelItemData{ "TestSong3", "Art3", 2, 11, nullptr });
+  
+  for (auto &song : SongList::getInstance())
+  {
+    int cnt = song->GetChartCount();
+    for (int i = 0; i < cnt; ++i)
+    {
+      auto &item = wheel_.NewData();
+      rparser::Chart* chart = song->GetChart(i);
+      chart->GetMetaData().SetMetaFromAttribute();
+      chart->GetMetaData().SetUtf8Encoding();
+      item.title = chart->GetMetaData().title;
+      item.artist = chart->GetMetaData().artist;
+      item.type = 0;
+      item.level = chart->GetMetaData().level;
+      item.song = nullptr;
+      song->CloseChart();
+    }
+  }
 }
 
 }

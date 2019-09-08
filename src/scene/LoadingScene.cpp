@@ -25,12 +25,14 @@ void LoadingScene::LoadScene()
   FontAttributes fnt_attr_;
   memset(&fnt_attr_, 0, sizeof(fnt_attr_));
   fnt_attr_.color = 0xFFFFFFFF;
-  fnt_attr_.size = 10;
+  fnt_attr_.size = 5;
   sys_font_ = ResourceManager::LoadFont("../system/default.ttf", fnt_attr_);
   if (!sys_font_)
   {
     std::cerr << "Failed to read system font." << std::endl;
   }
+  // commit default glyphs
+  sys_font_->Commit();
 
   message_text_.SetFont(sys_font_.get());
   current_file_text_.SetFont(sys_font_.get());
@@ -89,6 +91,7 @@ void LoadingScene::doUpdate(float)
     std::string path = SongList::getInstance().get_loading_filename();
     int prog = static_cast<int>(SongList::getInstance().get_progress() * 100);
     sys_font_->PrepareText(path);
+    sys_font_->Commit();
     message_text_.SetText("Loading " + std::to_string(prog) + "%");
     current_file_text_.SetText(path);
   }

@@ -78,6 +78,8 @@ include_directories(SYSTEM
     ${OPENGL_INCLUDE_DIR}
     ${GLFW_INCLUDE_DIR}
     ${GLEW_INCLUDE_DIR}
+    ${ZLIB_INCLUDE_DIR}
+    ${ZIP_INCLUDE_DIR}
     ${FREEIMAGE_INCLUDE_DIR}
     ${TINYXML2_INCLUDE_DIR}
     ${FFMPEG_INCLUDE_DIR}
@@ -102,6 +104,9 @@ target_link_libraries(rhythmus_bin
     ${FREEIMAGE_LIBRARY}
     ${FREETYPE_LIBRARY}
     ${FFMPEG_LIBRARY}
+    ${ZLIB_LIBRARY}
+    ${ZIP_LIBRARY}
+    ${OPENSSL_LIBRARY}
     tinyxml2
     rparser
 	rencoder_lib

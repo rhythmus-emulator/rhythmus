@@ -10,7 +10,7 @@ namespace rhythmus
 {
 
 class Song;
-using SongAuto = std::shared_ptr<Song>;
+using SongAuto = std::shared_ptr<rparser::Song>;
 
 /* @brief A singleton class which contains currently loaded Song DB */
 class SongList

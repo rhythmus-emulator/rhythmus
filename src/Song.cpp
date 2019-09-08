@@ -123,13 +123,13 @@ void SongList::song_loader_thr_body()
       lock.unlock();
       break;
     }
-    filepath = l.get_loading_filename();
+    filepath = song_dir_ + "/" + l.get_loading_filename();
     invalidate_list_.pop_back();
     lock.unlock();
 
     // attempt song loading.
-    SongAuto song = std::make_shared<Song>();
-    if (!song->Load(filepath))
+    SongAuto song = std::make_shared<rparser::Song>();
+    if (!song->Open(filepath))
       continue;
     songs_.push_back(song);
   }
