@@ -95,6 +95,7 @@ include_directories(SYSTEM
 	${VORBIS_INCLUDE_DIR}
 	${FLAC_INCLUDE_DIR}
     ${TIMIDITY_INCLUDE_DIR}
+    ${OPENAL_INCLUDE_DIR}
     )
 
 if (WIN32)
@@ -113,6 +114,7 @@ target_link_libraries(rhythmus_bin
     ${ZLIB_LIBRARY}
     ${ZIP_LIBRARY}
     ${OPENSSL_LIBRARY}
+    ${OPENAL_LIBRARY}
     tinyxml2
     rparser
 	rencoder_lib

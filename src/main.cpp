@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "Graphic.h"
 #include "Game.h"
+#include "Sound.h"
 #include "Timer.h"
 #include "SceneManager.h"
 #include "LR2/LR2Flag.h"  // For updating LR2 flag
@@ -53,6 +54,7 @@ int main(int argc, char **argv)
   graphic.Initialize();
   SceneManager::getInstance().Initialize();
   Timer::Initialize();
+  Mixer::getInstance().Initialize();
 
   // Event Initialization
   EventManager::Initialize();
@@ -66,6 +68,7 @@ int main(int argc, char **argv)
   /**
    * Cleanup
    */
+  Mixer::getInstance().Destroy();
   graphic.Cleanup();
   if (!game.Save())
   {

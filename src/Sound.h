@@ -17,6 +17,13 @@ using SoundAuto = std::shared_ptr<Sound>;
 class Mixer
 {
 public:
+  Mixer();
+  ~Mixer();
+
+  void Initialize();
+  void Destroy();
+  void GetDevices(std::vector<std::string> &names);
+
   SoundAuto LoadSound(const std::string& path);
   SoundAuto LoadSound(const char* ptr, size_t len);
 
