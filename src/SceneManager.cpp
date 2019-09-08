@@ -2,6 +2,9 @@
 #include "scene/TestScene.h"
 #include "scene/LoadingScene.h"
 #include "scene/SelectScene.h"
+#include "scene/DecideScene.h"
+#include "scene/PlayScene.h"
+#include "scene/ResultScene.h"
 #include "LR2/LR2SceneLoader.h"
 #include "LR2/LR2Flag.h"
 #include <iostream>
@@ -120,6 +123,12 @@ Scene* SceneManager::CreateNextScene()
     return new LoadingScene();
   case GameMode::kGameModeSelect:
     return new SelectScene();
+  case GameMode::kGameModeDecide:
+    return new DecideScene();
+  case GameMode::kGameModePlay:
+    return new PlayScene();
+  case GameMode::kGameModeResult:
+    return new ResultScene();
   case GameMode::kGameModeNone:
     /* return nullptr, which indicates not to process anything */
     Graphic::getInstance().ExitRendering();

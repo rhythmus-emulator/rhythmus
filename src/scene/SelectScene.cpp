@@ -67,6 +67,20 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
       EventManager::SendEvent(Events::kEventSongSelectChanged);
     }
   }
+
+  if (e.IsKeyUp())
+  {
+    if (e.GetKeycode() == GLFW_KEY_ESCAPE)
+    {
+      Graphic::getInstance().ExitRendering();
+    }
+    else if (e.GetKeycode() == GLFW_KEY_ENTER)
+    {
+      Game::getInstance().SetNextGameMode(GameMode::kGameModeDecide);
+      Game::getInstance().ChangeGameMode();
+    }
+  }
+
   return true;
 }
 

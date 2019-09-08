@@ -27,6 +27,9 @@ set (RHYTHMUS_SOURCES
     scene/LoadingScene.cpp
     scene/TestScene.cpp
     scene/SelectScene.cpp
+    scene/DecideScene.cpp
+    scene/PlayScene.cpp
+    scene/ResultScene.cpp
 	
 	object/Wheel.cpp
 	object/MusicWheel.cpp
@@ -59,6 +62,9 @@ set (RHYTHMUS_HEADERS
     scene/LoadingScene.h
     scene/TestScene.h
     scene/SelectScene.h
+    scene/DecideScene.h
+    scene/PlayScene.h
+    scene/ResultScene.h
 
 	object/Wheel.h
 	object/MusicWheel.h
