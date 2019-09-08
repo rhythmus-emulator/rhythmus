@@ -159,7 +159,7 @@ void LR2Font::UploadTextureFile(const char* p, size_t len)
 
 // ------------------------------ class LR2Text
 
-LR2Text::LR2Text() : lr2_st_id_(0)
+LR2Text::LR2Text() : lr2_st_id_(0), align_(0), editable_(0)
 {
   set_name("LR2Text");
 }
@@ -172,24 +172,50 @@ void LR2Text::LoadProperty(const std::string& prop_name, const std::string& valu
 {
   Text::LoadProperty(prop_name, value);
 
-  if (prop_name == "#SRC_TEXT")
+  if (prop_name.compare(0, 5, "#SRC_") == 0)
   {
     std::vector<std::string> params;
     MakeParamCountSafe(value, params, 5);
     lr2_st_id_ = atoi(params[2].c_str());
+    align_ = atoi(params[3].c_str());
+    editable_ = atoi(params[4].c_str());
+
     switch (lr2_st_id_)
     {
     case 10:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+    case 17:
+    case 18:
       SubscribeTo(Events::kEventSongSelectChanged);
       break;
     }
 
-    SetFontByName(params[1]);
+    switch (align_)
+    {
+    case 0:
+      // left
+      SetAlignment(FontAlignments::kFontAlignFitMaxsize);
+      break;
+    case 1:
+      // center
+      SetAlignment(FontAlignments::kFontAlignCenterFitMaxsize);
+      SetTextPosition(1);
+      break;
+    case 2:
+      // right
+      SetAlignment(FontAlignments::kFontAlignRightFitMaxsize);
+      SetTextPosition(2);
+      break;
+    }
 
-    // TODO: test. remove this code later.
-    SetText("ABCD");
+    SetFontByName(params[1]);
   }
-  else if (prop_name == "#DST_TEXT")
+  else if (prop_name.compare(0, 5, "#DST_") == 0)
   {
     op_[0] = GetAttribute<int>("op0");
     op_[1] = GetAttribute<int>("op1");

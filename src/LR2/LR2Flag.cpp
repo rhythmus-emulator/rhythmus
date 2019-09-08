@@ -20,6 +20,8 @@ namespace rhythmus
     // current timer status.
     bool LR2Timer_curr_activated[1000];
 
+    std::string LR2Text_str[1000];
+
     // strings for TEXT
     const char* LR2Text[1000];
 
@@ -74,11 +76,21 @@ namespace rhythmus
         switch (e.GetEventID())
         {
         case Events::kEventSongSelectChanged:
+        {
           // XXX: Better to check current scene is really SelectScene
           // before do casting.
-          LR2Text[10] = static_cast<SelectScene*>(SceneManager::getInstance().get_current_scene())
-            ->get_wheel().get_selected_title();
+          SelectScene* scene =
+            static_cast<SelectScene*>(SceneManager::getInstance().get_current_scene());
+          auto& sel_data = scene->get_wheel().get_selected_data();
+          LR2Text[10] = sel_data.title.c_str();
+          LR2Text[11] = sel_data.subtitle.c_str();
+          LR2Text_str[12] = sel_data.title + " " + sel_data.subtitle;
+          LR2Text[12] = LR2Text_str[12].c_str();
+          LR2Text[13] = sel_data.genre.c_str();
+          LR2Text[14] = sel_data.artist.c_str();
+          LR2Text[15] = sel_data.subartist.c_str();
           break;
+        }
         }
         return true;
       }

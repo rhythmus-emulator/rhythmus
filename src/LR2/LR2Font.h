@@ -35,6 +35,8 @@ public:
 private:
   // lr2 text code
   int lr2_st_id_;
+  int align_;
+  int editable_;
 
   int op_[3];
   int timer_id_;

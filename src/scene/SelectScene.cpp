@@ -38,6 +38,7 @@ void SelectScene::LoadScene()
 
   // Send some initial events to invalidate specific object
   // (e.g. song title text object)
+  // - should be called AFTER wheel / LR2objects(LoadScene) are loaded.
   EventManager::SendEvent(Events::kEventSongSelectChanged);
 }
 
@@ -105,9 +106,9 @@ MusicWheel& SelectScene::get_wheel()
 void SelectScene::MakeSelectDataList()
 {
   // XXX: Test code
-  wheel_.AddData(new MusicWheelItemData{ "TestSong1", "Art1", 0, 10, nullptr });
-  wheel_.AddData(new MusicWheelItemData{ "TestSong2", "Art2", 1, 10, nullptr });
-  wheel_.AddData(new MusicWheelItemData{ "TestSong3", "Art3", 2, 11, nullptr });
+  wheel_.AddData(new MusicWheelItemData{ "TestSong1", "sub", "gen", "Art1", "", 0, 10, nullptr });
+  wheel_.AddData(new MusicWheelItemData{ "TestSong2", "sub", "gen", "Art2", "", 1, 10, nullptr });
+  wheel_.AddData(new MusicWheelItemData{ "TestSong3", "sub", "gen", "Art3", "", 2, 11, nullptr });
   
   for (auto &song : SongList::getInstance())
   {

@@ -10,7 +10,10 @@ namespace rhythmus
 struct MusicWheelItemData
 {
   std::string title;
+  std::string subtitle;
+  std::string genre;
   std::string artist;
+  std::string subartist;
   int type;
   int level;
   void *song;
@@ -35,9 +38,9 @@ class MusicWheel : public Wheel
 {
 public:
   MusicWheel();
-  const char* get_selected_title();
   MusicWheelItem& get_item(int index);
   MusicWheelItemData& get_data(int dataindex);
+  MusicWheelItemData& get_selected_data();
 
   /* @brief Add new item data and get it's pointer. */
   MusicWheelItemData& NewData();

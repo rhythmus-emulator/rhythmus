@@ -199,6 +199,7 @@ public:
 
   void SetText(const std::string& s);
   void SetAlignment(FontAlignments align);
+  void SetTextPosition(int position_attr);
   void SetLineBreaking(bool enable_line_break);
   void Clear();
 
@@ -218,8 +219,13 @@ private:
     float width, height;
   } text_render_ctx_;
 
-  // font alignment(stretch) option
-  FontAlignments font_alignment_;
+  // text alignment(stretch) option
+  FontAlignments text_alignment_;
+
+  // text position option
+  // 0 : normal / 1 : offset -50% of text width / 2 : offset -100% of text width
+  // (LR2 legacy option)
+  int text_position_;
 
   // additional font attributes, which is set internally by font_alignment_ option.
   struct {
@@ -233,7 +239,7 @@ private:
   bool do_line_breaking_;
 
   virtual void doRender();
-  virtual void doUpdate();
+  virtual void doUpdate(float);
 };
 
 using FontAuto = std::shared_ptr<Font>;

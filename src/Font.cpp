@@ -585,7 +585,8 @@ const FontAttributes& Font::get_attribute() const
 // --------------------------------- class Text
 
 Text::Text()
-  : font_alignment_(FontAlignments::kFontAlignLeft), do_line_breaking_(true)
+  : text_alignment_(FontAlignments::kFontAlignLeft),
+    text_position_(0), do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
@@ -594,7 +595,8 @@ Text::Text()
 }
 
 Text::Text(Font* font)
-  : font_alignment_(FontAlignments::kFontAlignLeft), do_line_breaking_(true)
+  : text_alignment_(FontAlignments::kFontAlignLeft),
+    text_position_(0), do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
@@ -641,7 +643,12 @@ void Text::SetText(const std::string& s)
 // XXX: Font alignment to right won't work when text is multiline.
 void Text::SetAlignment(FontAlignments align)
 {
-  font_alignment_ = align;
+  text_alignment_ = align;
+}
+
+void Text::SetTextPosition(int position_attr)
+{
+  text_position_ = position_attr;
 }
 
 void Text::SetLineBreaking(bool enable_line_break)
@@ -656,52 +663,71 @@ void Text::Clear()
   text_.clear();
 }
 
-void Text::doUpdate()
+void Text::doUpdate(float)
 {
+}
+
+void Text::doRender()
+{
+  // use additional translation for text
+  ProjectionInfo pi;
+  memset(&pi, 0, sizeof(ProjectionInfo));
+  pi.sx = pi.sy = 1.0f;
+
   // set alignment-related options
   if (get_draw_property().w > 0
     && text_render_ctx_.width > 0 && text_render_ctx_.height > 0)
   {
     const float w = get_draw_property().w;
     float ratio = 1.0f;
-    switch (font_alignment_)
+    switch (text_alignment_)
     {
     case FontAlignments::kFontAlignLeft:
       break;
     case FontAlignments::kFontAlignFitMaxsize:
       ratio = std::min(1.0f, w / text_render_ctx_.width);
-      get_draw_property().pi.sx *= ratio;
+      pi.sx = ratio;
       break;
     case FontAlignments::kFontAlignCenter:
       if (text_render_ctx_.width < w)
-        get_draw_property().pi.x += (text_render_ctx_.width - w) / 2;
+        pi.x = (text_render_ctx_.width - w) / 2;
       break;
     case FontAlignments::kFontAlignCenterFitMaxsize:
       ratio = std::min(1.0f, w / text_render_ctx_.width);
-      get_draw_property().pi.sx *= ratio;
+      pi.sx = ratio;
       if (ratio >= 1.0f)
-        get_draw_property().pi.x += (w - text_render_ctx_.width) / 2;
+        pi.x = (w - text_render_ctx_.width) / 2;
       break;
     case FontAlignments::kFontAlignRight:
       if (text_render_ctx_.width < w)
-        get_draw_property().pi.x += text_render_ctx_.width - w;
+        pi.x = text_render_ctx_.width - w;
       break;
     case FontAlignments::kFontAlignRightFitMaxsize:
       ratio = std::min(1.0f, w / text_render_ctx_.width);
-      get_draw_property().pi.sx *= ratio;
+      pi.sx = ratio;
       if (ratio >= 1.0f)
-        get_draw_property().pi.x += w - text_render_ctx_.width;
+        pi.x = w - text_render_ctx_.width;
       break;
     case FontAlignments::kFontAlignStretch:
       ratio = w / text_render_ctx_.width;
-      get_draw_property().pi.sx *= ratio;
+      pi.sx = ratio;
       break;
     }
   }
-}
 
-void Text::doRender()
-{
+  switch (text_position_)
+  {
+  case 1:
+    pi.x -= get_draw_property().w / 2;
+    break;
+  case 2:
+    pi.x -= get_draw_property().w;
+    break;
+  }
+
+  Graphic::PushMatrix();
+  Graphic::SetMatrix(pi);
+
   // Draw vertex by given quad
   // XXX: is it better to cache vertex?
   for (const TextVertexInfo& tvi : text_render_ctx_.textvertex)
@@ -713,6 +739,7 @@ void Text::doRender()
   }
 
   Graphic::RenderQuad();
+  Graphic::PopMatrix();
 
   /* TESTCODE for rendering whole glyph texture */
 #if 0

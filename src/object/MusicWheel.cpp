@@ -47,9 +47,9 @@ void MusicWheelItem::Invalidate()
 MusicWheel::MusicWheel()
 {}
 
-const char* MusicWheel::get_selected_title()
+MusicWheelItemData& MusicWheel::get_selected_data()
 {
-  return get_data(get_selected_dataindex()).title.c_str();
+  return get_data(get_selected_dataindex());
 }
 
 MusicWheelItemData& MusicWheel::NewData()
