@@ -67,6 +67,9 @@ Wheel::Wheel()
     AddChild(&pos_fixed_param_.tween_bar[i]);
     AddChild(&pos_fixed_param_.tween_bar_focus[i]);
   }
+
+  // XXX: temp
+  wheel_sound_.Load("../sound/SelfEvolution/scratch.wav");
 }
 
 Wheel::~Wheel()
@@ -170,6 +173,7 @@ void Wheel::ScrollDown()
     scroll_pos_ = -kScrollPosMaxDiff;
   RebuildItems();
   UpdateItemPos();
+  wheel_sound_.Play();
 }
 
 void Wheel::ScrollUp()
@@ -184,6 +188,7 @@ void Wheel::ScrollUp()
     scroll_pos_ = kScrollPosMaxDiff;
   RebuildItems();
   UpdateItemPos();
+  wheel_sound_.Play();
 }
 
 void Wheel::doUpdate(float delta)

@@ -2,6 +2,7 @@
 
 #include "Sprite.h"
 #include "Font.h"
+#include "Sound.h"
 #include <string>
 #include <memory>
 
@@ -138,6 +139,8 @@ protected:
     BaseObject tween_bar[kDefaultBarCount + 1];
     BaseObject tween_bar_focus[kDefaultBarCount + 1];
   } pos_fixed_param_;
+
+  GameSound wheel_sound_;
 
   void UpdateItemPos();
 

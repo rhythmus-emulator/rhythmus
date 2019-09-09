@@ -77,7 +77,7 @@ public:
   double GetSongEclipsedTime();
 
 private:
-  std::vector<SoundAuto> keysounds_;
+  std::vector<GameSoundAuto> keysounds_;
 };
 
 }

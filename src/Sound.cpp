@@ -3,6 +3,9 @@
 #include <iostream>
 #include <algorithm>
 
+/* rencoder mixer */
+#include "rmixer.h"
+
 /* OpenAL */
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -14,19 +17,43 @@
 namespace rhythmus
 {
 
+constexpr int kMixerBitsize = 16;
+constexpr int kMixerSampleRate = 44100;
+constexpr int kMixerChannel = 2;
+constexpr size_t kBufferCount = 4;
+constexpr size_t kDefaultMixSize = 4096;
+
 ALCdevice *device;
 ALCcontext *context;
 ALuint source_id;
-ALuint buffer_id;
+ALuint buffer_id[kBufferCount];
 int buffer_index;
 int buffer_size;
 std::thread sound_thread;
 bool sound_thread_finish;
 
+// software mixer which allocates channel virtually
+Mixer* mixer;
+
 void sound_thread_body()
 {
   char* pData = (char*)malloc(buffer_size);
   int iBuffersProcessed = 0;
+  ALuint cur_buffer_id;
+  int audio_fmt = 0;
+  switch (kMixerBitsize)
+  {
+  case 8:
+    audio_fmt = AL_FORMAT_STEREO8;
+    break;
+  case 16:
+    audio_fmt = AL_FORMAT_STEREO16;
+    break;
+  default:
+    // SHOULD not happen
+    // ASSERT
+    break;
+  }
 
   while (!sound_thread_finish)
   {
@@ -35,9 +62,10 @@ void sound_thread_body()
 
     while (iBuffersProcessed)
     {
-      alSourceUnqueueBuffers(source_id, 1, &buffer_id);
-      alBufferData(buffer_id, AL_FORMAT_STEREO16, pData, buffer_size, 44100);
-      alSourceQueueBuffers(source_id, 1, &buffer_id);
+      alSourceUnqueueBuffers(source_id, 1, &cur_buffer_id);
+      mixer->Mix(pData, buffer_size);
+      alBufferData(cur_buffer_id, audio_fmt, pData, buffer_size, kMixerSampleRate);
+      alSourceQueueBuffers(source_id, 1, &cur_buffer_id);
       iBuffersProcessed--;
     }
 
@@ -48,14 +76,15 @@ void sound_thread_body()
 
 // -------------------------------- class Mixer
 
-Mixer::Mixer() {}
+GameMixer::GameMixer() : buffer_size_(kDefaultMixSize)
+{}
 
-Mixer::~Mixer()
+GameMixer::~GameMixer()
 {
   Destroy();
 }
 
-void Mixer::Initialize()
+void GameMixer::Initialize()
 {
   // get output device from Game settings
   auto& setting = Game::getInstance().getSetting();
@@ -89,29 +118,44 @@ void Mixer::Initialize()
   alSource3f(source_id, AL_VELOCITY, 0, 0, 0);
   alSourcei(source_id, AL_LOOPING, AL_FALSE);
 
-  //alGenBuffers(1, &buffer_id);
-  buffer_size = 4096;
+  alGenBuffers(kBufferCount, buffer_id);
+  buffer_size = buffer_size_;
   sound_thread_finish = false;
   sound_thread = std::thread(sound_thread_body);
+
+  // now mixer initialization
+  SoundInfo mixinfo;
+  mixinfo.bitsize = kMixerBitsize;
+  mixinfo.rate = kMixerSampleRate;
+  mixinfo.channels = kMixerChannel;
+  mixer = new Mixer(mixinfo);
+
+  // okay start stream
+  alSourceQueueBuffers(source_id, 4, buffer_id);
+  alSourcePlay(source_id);
 }
 
-void Mixer::Destroy()
+void GameMixer::Destroy()
 {
   if (device)
   {
+    alSourceStop(source_id);
+
     sound_thread_finish = true;
     sound_thread.join();
 
     alDeleteSources(1, &source_id);
-    //alDeleteBuffers(2, buffer_id);
+    alDeleteBuffers(kBufferCount, buffer_id);
     alcMakeContextCurrent(0);
     alcDestroyContext(context);
     alcCloseDevice(device);
     device = 0;
+
+    delete mixer;
   }
 }
 
-void Mixer::GetDevices(std::vector<std::string> &names)
+void GameMixer::GetDevices(std::vector<std::string> &names)
 {
   int enumeration = alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT");
   if (enumeration == AL_FALSE)
@@ -129,48 +173,99 @@ void Mixer::GetDevices(std::vector<std::string> &names)
   }
 }
 
-SoundAuto Mixer::LoadSound(const std::string& path)
+GameSoundAuto GameMixer::LoadSound(const std::string& path)
 {
-  SoundAuto s = std::make_unique<Sound>();
-  s->is_loaded_ = true;
+  GameSoundAuto s = std::make_unique<GameSound>();
+  //s->is_loaded_ = true;
   return s;
 }
 
-SoundAuto Mixer::LoadSound(const char* ptr, size_t len)
+GameSoundAuto GameMixer::LoadSound(const char* ptr, size_t len)
 {
-  SoundAuto s = std::make_unique<Sound>();
-  s->is_loaded_ = true;
+  GameSoundAuto s = std::make_unique<GameSound>();
+  //s->is_loaded_ = true;
   return s;
 }
 
-/* @warn Sound is automatically unloaded when destructed. */
-void Mixer::UnloadSound(Sound* s)
+GameMixer& GameMixer::getInstance()
 {
-  if (!s->is_loaded_)
-    return;
-
-  s->is_loaded_ = false;
-  sounds_.erase(std::find(sounds_.begin(), sounds_.end(), s));
-}
-
-Mixer& Mixer::getInstance()
-{
-  static Mixer mixer;
+  static GameMixer mixer;
   return mixer;
+}
+
+void GameMixer::set_buffer_size(int bytes)
+{
+  buffer_size_ = bytes;
 }
 
 
 // -------------------------------- class Sound
 
 
-Sound::Sound()
-  : is_loaded_(false)
+GameSound::GameSound()
+  : channel_id_(-1)
 {
 }
 
-Sound::~Sound()
+GameSound::~GameSound()
 {
-  Mixer::getInstance().UnloadSound(this);
+  Unload();
+}
+
+void GameSound::Load(const std::string& path)
+{
+  Unload();
+  int ch = allocate_channel();
+  if (!mixer->LoadSound(ch, path))
+  {
+    std::cerr << "Failed to load audio: " << path << std::endl;
+    return;
+  }
+  channel_id_ = ch;
+}
+
+void GameSound::LoadFromMemory(const char* p, size_t len)
+{
+  rutil::FileData fd;
+  fd.p = (uint8_t*)p;
+  fd.len = len;
+  LoadFromMemory(fd);
+}
+
+void GameSound::LoadFromMemory(const rutil::FileData &fd)
+{
+  Unload();
+  int ch = allocate_channel();
+  if (!mixer->LoadSound(ch, fd))
+  {
+    std::cerr << "Failed to load audio from memory ..." << std::endl;
+    return;
+  }
+  channel_id_ = ch;
+}
+
+void GameSound::Unload()
+{
+  if (channel_id_ == -1)
+    return;
+  mixer->FreeSound(channel_id_);
+}
+
+void GameSound::Play()
+{
+  if (channel_id_ < 0) return;
+  mixer->Play(channel_id_);
+}
+
+bool GameSound::is_loaded() const
+{
+  return channel_id_ >= 0;
+}
+
+int GameSound::allocate_channel()
+{
+  static int channel_idx = 0;
+  return channel_idx++;
 }
 
 

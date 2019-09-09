@@ -78,6 +78,8 @@ set (RHYTHMUS_HEADERS
 
 include_directories(
     ${PROJECT_SOURCE_DIR}
+    ${RPARSER_INCLUDE_DIR}
+	${RENCODER_INCLUDE_DIR}
     )
 
 include_directories(SYSTEM
@@ -89,7 +91,6 @@ include_directories(SYSTEM
     ${FREEIMAGE_INCLUDE_DIR}
     ${TINYXML2_INCLUDE_DIR}
     ${FFMPEG_INCLUDE_DIR}
-    ${RPARSER_INCLUDE_DIR}
     ${RENCODER_INCLUDE_DIR}
 	${OGG_INCLUDE_DIR}
 	${VORBIS_INCLUDE_DIR}

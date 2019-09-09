@@ -4,49 +4,62 @@
 #include <string>
 #include <stdint.h>
 #include <vector>
+#include "rutil.h"
 
 namespace rhythmus
 {
 
-class Sound;
+class GameSound;
 
-using SoundAuto = std::shared_ptr<Sound>;
+using GameSoundAuto = std::shared_ptr<GameSound>;
 
 
 /* @brief Do total sound management */
-class Mixer
+class GameMixer
 {
 public:
-  Mixer();
-  ~Mixer();
+  GameMixer();
+  ~GameMixer();
 
   void Initialize();
   void Destroy();
   void GetDevices(std::vector<std::string> &names);
 
-  SoundAuto LoadSound(const std::string& path);
-  SoundAuto LoadSound(const char* ptr, size_t len);
+  GameSoundAuto LoadSound(const std::string& path);
+  GameSoundAuto LoadSound(const char* ptr, size_t len);
 
-  /* @warn Sound is automatically unloaded when destructed. */
-  void UnloadSound(Sound* s);
+  static GameMixer& getInstance();
 
-  static Mixer& getInstance();
+  /* @brief set buffer size. this should be called before Initialize() */
+  void set_buffer_size(int bytes);
 
 private:
-  std::vector<Sound*> sounds_;
+  int buffer_size_;
 };
 
 /* @brief Contains real sound to be played */
-class Sound
+class GameSound
 {
 public:
-  Sound();
-  ~Sound();
+  GameSound();
+  ~GameSound();
+
+  void Load(const std::string& path);
+  void LoadFromMemory(const char* p, size_t len);
+  void LoadFromMemory(const rutil::FileData &fd);
+  void Unload();
+  void Play();
+
+  bool is_loaded() const;
 
 private:
-  bool is_loaded_;
+  /* allocated channel id in mixer object
+   * -1 indicates not loaded */
+  int channel_id_;
 
-  friend class Mixer;
+  static int allocate_channel();
+
+  friend class GameMixer;
 };
 
 }

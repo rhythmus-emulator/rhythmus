@@ -54,7 +54,7 @@ int main(int argc, char **argv)
   graphic.Initialize();
   SceneManager::getInstance().Initialize();
   Timer::Initialize();
-  Mixer::getInstance().Initialize();
+  GameMixer::getInstance().Initialize();
 
   // Event Initialization
   EventManager::Initialize();
@@ -68,7 +68,7 @@ int main(int argc, char **argv)
   /**
    * Cleanup
    */
-  Mixer::getInstance().Destroy();
+  GameMixer::getInstance().Destroy();
   graphic.Cleanup();
   if (!game.Save())
   {
