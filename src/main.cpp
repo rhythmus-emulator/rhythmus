@@ -68,8 +68,9 @@ int main(int argc, char **argv)
   /**
    * Cleanup
    */
-  GameMixer::getInstance().Destroy();
+  SceneManager::getInstance().Cleanup();
   graphic.Cleanup();
+  GameMixer::getInstance().Destroy();
   if (!game.Save())
   {
     std::cerr << "Settings not saved." << std::endl;

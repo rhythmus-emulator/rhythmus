@@ -10,6 +10,7 @@ class SceneManager : public EventReceiver
 {
 public:
   void Initialize();
+  void Cleanup();
   void Update();
   void Render();
   virtual bool OnEvent(const EventMessage& msg);

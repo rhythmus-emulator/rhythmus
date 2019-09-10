@@ -23,17 +23,7 @@ SceneManager::SceneManager()
 
 SceneManager::~SceneManager()
 {
-  if (current_scene_)
-  {
-    current_scene_->CloseScene();
-    delete current_scene_;
-  }
-
-  // automatically save scene settings
-  if (!setting_.Save())
-  {
-    std::cerr << "Cannot save Scene preference file." << std::endl;
-  }
+  Cleanup();
 }
 
 void SceneManager::Initialize()
@@ -47,6 +37,22 @@ void SceneManager::Initialize()
 
   // create starting scene.
   ChangeScene();
+}
+
+void SceneManager::Cleanup()
+{
+  if (current_scene_)
+  {
+    current_scene_->CloseScene();
+    delete current_scene_;
+    current_scene_ = 0;
+
+    // automatically save scene settings
+    if (!setting_.Save())
+    {
+      std::cerr << "Cannot save Scene preference file." << std::endl;
+    }
+  }
 }
 
 void SceneManager::Update()
