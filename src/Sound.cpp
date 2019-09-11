@@ -36,25 +36,30 @@ bool sound_thread_finish;
 // software mixer which allocates channel virtually
 Mixer* mixer;
 
-void sound_thread_body()
+int get_audio_fmt()
 {
-  char* pData = (char*)malloc(buffer_size);
-  int iBuffersProcessed = 0;
-  ALuint cur_buffer_id;
-  int audio_fmt = 0;
   switch (kMixerBitsize)
   {
   case 8:
-    audio_fmt = AL_FORMAT_STEREO8;
+    return AL_FORMAT_STEREO8;
     break;
   case 16:
-    audio_fmt = AL_FORMAT_STEREO16;
+    return AL_FORMAT_STEREO16;
     break;
   default:
     // SHOULD not happen
     // ASSERT
     break;
   }
+  return -1;
+}
+
+void sound_thread_body()
+{
+  char* pData = (char*)malloc(buffer_size);
+  int iBuffersProcessed = 0;
+  ALuint cur_buffer_id;
+  int audio_fmt = get_audio_fmt();
 
   while (!sound_thread_finish)
   {
@@ -150,7 +155,7 @@ void GameMixer::Initialize()
   for (int i = 0; i < kBufferCount; ++i)
   {
     /* Don't know why but always need to cache dummy data into buffer ... */
-    alBufferData(buffer_id[i], AL_FORMAT_STEREO16, pData, buffer_size, 44100);
+    alBufferData(buffer_id[i], get_audio_fmt(), pData, buffer_size, 44100);
     alSourceQueueBuffers(source_id, 1, &buffer_id[i]);
     ASSERT(alGetError() == 0);
   }
