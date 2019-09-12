@@ -53,7 +53,8 @@ void MakeParamCountSafe(std::vector<std::string> &v, size_t expected_count)
 
 void LR2SceneLoader::LoadCSV(const std::string& filepath)
 {
-  auto data = rutil::ReadFileData(filepath);
+  rutil::FileData data;
+  rutil::ReadFileData(filepath, data);
   if (data.IsEmpty())
     return;
   ParseCSV((char*)data.p, data.len);

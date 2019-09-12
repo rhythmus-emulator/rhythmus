@@ -6,6 +6,8 @@
 namespace rhythmus
 {
   
+constexpr bool kUseCache = true;
+
 ImageAuto ResourceManager::LoadImage(const std::string& path)
 {
   /* Most image won't be shared from scene to scene, so just load it now */
@@ -17,10 +19,13 @@ ImageAuto ResourceManager::LoadImage(const std::string& path)
 FontAuto ResourceManager::LoadFont(const std::string& path, FontAttributes& attrs)
 {
   auto &r = getInstance();
-  for (const auto f : r.fonts_)
+  if (kUseCache)
   {
-    if (f->get_path() == path && f->is_ttf_font() && f->get_attribute() == attrs)
-      return f;
+    for (const auto f : r.fonts_)
+    {
+      if (f->get_path() == path && f->is_ttf_font() && f->get_attribute() == attrs)
+        return f;
+    }
   }
 
   FontAuto f = std::make_shared<Font>();
@@ -32,14 +37,18 @@ FontAuto ResourceManager::LoadFont(const std::string& path, FontAttributes& attr
 FontAuto ResourceManager::LoadLR2Font(const std::string& path)
 {
   auto &r = getInstance();
-  for (const auto f : r.fonts_)
+  if (kUseCache)
   {
-    if (f->get_path() == path && !f->is_ttf_font())
-      return f;
+    for (const auto f : r.fonts_)
+    {
+      if (f->get_path() == path && !f->is_ttf_font())
+        return f;
+    }
   }
 
   FontAuto fa = std::make_shared<LR2Font>();
   ((LR2Font*)fa.get())->ReadLR2Font(path.c_str());
+  r.fonts_.push_back(fa);
   return fa;
 }
 

@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <atomic>
 
 namespace rhythmus
 {
@@ -40,8 +41,8 @@ private:
 
   // songs to invalidate
   std::vector<std::string> invalidate_list_;
+  std::atomic<int> active_thr_count_;
   int total_inval_size_;
-  int active_thr_count_;
 
   std::string song_dir_;
 

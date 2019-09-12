@@ -1,6 +1,7 @@
 #include "Song.h"
 #include "Timer.h"
 #include "Event.h"
+#include "Util.h"
 #include <map>
 #include <thread>
 #include <mutex>
@@ -24,10 +25,10 @@ void SongList::Load()
   /* (path, timestamp) key */
   std::map<std::string, int> mod_dir;
   std::map<std::string, int> mod_db;
-  rutil::DirFileList dir;
+  std::vector<DirItem> dir;
 
   // 1. attempt to read file/folder list in directory
-  if (!rutil::GetDirectoryFiles(song_dir_, dir, 0))
+  if (!GetDirectoryItems(song_dir_, dir))
   {
     std::cerr <<
       "SongList: Failed to generate songlist. make sure song library path exists." <<
@@ -41,7 +42,7 @@ void SongList::Load()
   // 3. comparsion modified date with DB to invalidate any song necessary. (TODO)
   for (auto &d : dir)
   {
-    invalidate_list_.push_back(d.first);
+    invalidate_list_.push_back(d.filename);
   }
   total_inval_size_ = invalidate_list_.size();
   EventManager::SendEvent(Events::kEventSongListLoaded);
@@ -79,7 +80,7 @@ double SongList::get_progress() const
 
 bool SongList::is_loading() const
 {
-  return !invalidate_list_.empty() && active_thr_count_ > 0;
+  return active_thr_count_ > 0;
 }
 
 std::string SongList::get_loading_filename() const
