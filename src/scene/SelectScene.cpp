@@ -84,11 +84,6 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
   return true;
 }
 
-const std::string SelectScene::GetSceneName() const
-{
-  return "SelectScene";
-}
-
 void SelectScene::LoadProperty(const std::string& prop_name, const std::string& value)
 {
   // Check and process for LR2 exclusive commands

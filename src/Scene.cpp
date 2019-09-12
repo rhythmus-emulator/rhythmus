@@ -164,7 +164,9 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
       RegisterChild(obj);
       AddChild(obj);
     }
-    obj->LoadProperty(prop_name, value);
+
+    if (obj)
+      obj->LoadProperty(prop_name, value);
   }
   else if (strncmp(prop_name.c_str(), "#DST_", 5) == 0)
   {

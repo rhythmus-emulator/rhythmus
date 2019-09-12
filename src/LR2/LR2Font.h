@@ -21,7 +21,7 @@ private:
   void UploadTextureFile(const char* p, size_t len);
 };
 
-class LR2Text : public Text, EventReceiver
+class LR2Text : public Text, public EventReceiver
 {
 public:
   LR2Text();

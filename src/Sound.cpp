@@ -56,10 +56,20 @@ int get_audio_fmt()
 
 void sound_thread_body()
 {
-  char* pData = (char*)malloc(buffer_size);
+  char* pData = (char*)calloc(1, buffer_size);
   int iBuffersProcessed = 0;
   ALuint cur_buffer_id;
   int audio_fmt = get_audio_fmt();
+
+  // stream initialization
+  for (int i = 0; i < kBufferCount; ++i)
+  {
+    /* Don't know why but always need to cache dummy data into buffer ... */
+    alBufferData(buffer_id[i], get_audio_fmt(), pData, buffer_size, 44100);
+    alSourceQueueBuffers(source_id, 1, &buffer_id[i]);
+    ASSERT(alGetError() == 0);
+  }
+  alSourcePlay(source_id);
 
   while (!sound_thread_finish)
   {
@@ -151,18 +161,7 @@ void GameMixer::Initialize()
   mixinfo.channels = kMixerChannel;
   mixer = new Mixer(mixinfo);
 
-  char* pData = (char*)calloc(1, buffer_size);
-  for (int i = 0; i < kBufferCount; ++i)
-  {
-    /* Don't know why but always need to cache dummy data into buffer ... */
-    alBufferData(buffer_id[i], get_audio_fmt(), pData, buffer_size, 44100);
-    alSourceQueueBuffers(source_id, 1, &buffer_id[i]);
-    ASSERT(alGetError() == 0);
-  }
-  free(pData);
-
   // okay start stream
-  alSourcePlay(source_id);
   sound_thread_finish = false;
   sound_thread = std::thread(sound_thread_body);
   if (alGetError() != AL_NO_ERROR)

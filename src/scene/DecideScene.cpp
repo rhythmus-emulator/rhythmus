@@ -3,6 +3,11 @@
 namespace rhythmus
 {
 
+DecideScene::DecideScene()
+{
+  set_name("DecideScene");
+}
+
 void DecideScene::LoadScene()
 {
 }
@@ -20,12 +25,6 @@ void DecideScene::CloseScene()
 bool DecideScene::ProcessEvent(const EventMessage& e)
 {
   return true;
-}
-
-
-const std::string DecideScene::GetSceneName() const
-{
-  return "DecideScene";
 }
 
 }

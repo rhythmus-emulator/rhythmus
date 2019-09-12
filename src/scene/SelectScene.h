@@ -18,8 +18,6 @@ public:
   virtual void CloseScene();
   virtual bool ProcessEvent(const EventMessage& e);
 
-  virtual const std::string GetSceneName() const;
-
   virtual void LoadProperty(const std::string& prop_name, const std::string& value);
 
   MusicWheel& get_wheel();

@@ -3,6 +3,11 @@
 namespace rhythmus
 {
 
+PlayScene::PlayScene()
+{
+  set_name("PlayScene");
+}
+
 void PlayScene::LoadScene()
 {
 }
@@ -20,12 +25,6 @@ void PlayScene::CloseScene()
 bool PlayScene::ProcessEvent(const EventMessage& e)
 {
   return true;
-}
-
-
-const std::string PlayScene::GetSceneName() const
-{
-  return "PlayScene";
 }
 
 }

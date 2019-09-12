@@ -91,17 +91,18 @@ bool EventMessage::IsKeyUp() const { return id_ == Events::kOnKeyUp; }
 int EventMessage::GetKeycode() const { return params_[0]; }
 
 
+
+// ------------------------- class EventReceiver
+
 EventReceiver::~EventReceiver()
 {
   UnsubscribeAll();
 }
 
-
-// ------------------------- class EventReceiver
-
 void EventReceiver::SubscribeTo(int id)
 {
   EventManager& em = EventManager::getInstance();
+  subscription_.push_back((Events)id);
   em.event_subscribers_[id].insert(this);
 }
 

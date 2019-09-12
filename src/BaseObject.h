@@ -84,7 +84,7 @@ class BaseObject
 public:
   BaseObject();
   BaseObject(const BaseObject& obj);
-  ~BaseObject();
+  virtual ~BaseObject();
 
   void set_name(const std::string& name);
   const std::string& get_name() const;

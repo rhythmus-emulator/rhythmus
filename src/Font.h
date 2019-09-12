@@ -188,7 +188,7 @@ class Text : public BaseObject
 public:
   Text();
   Text(Font* font);
-  ~Text();
+  virtual ~Text();
 
   float GetTextWidth();
 
