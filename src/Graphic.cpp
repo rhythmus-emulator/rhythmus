@@ -130,12 +130,15 @@ void Graphic::LoopRendering()
     Timer::Update();
     FpsTimer.Tick();
 
+    /* Process cached events in main thread.
+     * COMMENT: Event must be processed before Update() method
+     * (e.g. Wheel flickering when items Rebuild after Event flush)
+     */
+    EventManager::Flush();
+
     /* Update whole game context */
     Game::getInstance().Update();
     SceneManager::getInstance().Update();
-
-    /* Process cached events in main thread. */
-    EventManager::Flush();
 
     /* Main Rendering */
     SceneManager::getInstance().Render();

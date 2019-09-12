@@ -145,11 +145,16 @@ void Wheel::Prepare(int visible_bar_count)
 void Wheel::RebuildItems()
 {
   size_t disp_cnt = bar_.size();
+  int last_bar_idx = disp_cnt - center_index_;
 
   for (auto i = 0; i < disp_cnt; ++i)
   {
-    int ii = (i + focused_index_ + center_index_) % disp_cnt;
-    int dataindex = mod_pos(focused_index_ + i, select_data_.size());
+    //int ii = (i + focused_index_ + center_index_) % disp_cnt;
+    int dataindex;
+    if (i < last_bar_idx)
+      dataindex = mod_pos(focused_index_ + i, select_data_.size());
+    else
+      dataindex = mod_pos(focused_index_ + i - disp_cnt, select_data_.size());
     auto& data = select_data_[dataindex];
     auto& bar = *bar_[i]; /* XXX: 0 index bar is center bar! */
     bar.set_data(dataindex, select_data_[dataindex]);
@@ -242,8 +247,14 @@ void Wheel::UpdateItemPosByFixed()
   {
     // break if index is out of data and not infinite scrolling
     if (!inf_scroll_ &&
-      i >= select_data_.size() - focused_index_ &&
-      i < bar_.size() - focused_index_)
+      i >= (int)select_data_.size() - focused_index_ &&
+      i < (int)bar_.size() - focused_index_)
+    {
+      bar_[i]->Hide();
+      continue;
+    }
+    if (!inf_scroll_ && ((i < center_index_ && i + focused_index_ > select_data_.size()) ||
+      (i >= center_index_ && (int)bar_.size() - i > focused_index_)))
     {
       bar_[i]->Hide();
       continue;
@@ -275,6 +286,7 @@ void Wheel::UpdateItemPosByFixed()
       obj1->get_draw_property(),
       obj2->get_draw_property(),
       ri, EaseTypes::kEaseLinear);
+    bar_[i]->Show();
     bar_[i]->LoadDrawProperty(d);
   }
 }
