@@ -267,9 +267,10 @@ void Wheel::UpdateItemPosByFixed()
       ii++;
       ri += 1.0f; // XXX: bad code
     }
-    if (ii < 0 || ii > kDefaultBarCount)
+    if (ii < 0 || ii > kDefaultBarCount - 1)
     {
-      //bar_[ii]->Hide();
+      if (ii >= 0)
+        bar_[ii]->Hide();
       continue;
     }
 
