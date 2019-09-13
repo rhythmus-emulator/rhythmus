@@ -124,6 +124,7 @@ protected:
   struct {
     double curve_level;
     double curve_size;
+    int bar_width;
     int bar_height;
     int bar_margin;
     int bar_offset_x;

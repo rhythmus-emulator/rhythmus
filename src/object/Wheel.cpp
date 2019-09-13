@@ -53,9 +53,13 @@ Wheel::Wheel()
   memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
 
   // Set bar position expr param with default
-  pos_expr_param_.bar_offset_x = Game::getInstance().get_window_width() - 400;
+  pos_expr_param_.bar_offset_x = Game::getInstance().get_window_width() - 540;
   pos_expr_param_.bar_center_y = Game::getInstance().get_window_height() / 2;
   pos_expr_param_.bar_height = 40;
+  pos_expr_param_.bar_width = 540;
+  pos_expr_param_.bar_margin = 1;
+  pos_expr_param_.curve_size = 80;
+  pos_expr_param_.curve_level = 5;
 
   // Add all tween_bar objects for tween updating & searching
   for (int i = 0; i < kDefaultBarCount + 1; ++i)
@@ -157,7 +161,7 @@ void Wheel::RebuildItems()
       dataindex = mod_pos(focused_index_ + i - disp_cnt, select_data_.size());
     auto& data = select_data_[dataindex];
     auto& bar = *bar_[i]; /* XXX: 0 index bar is center bar! */
-    bar.set_data(dataindex, select_data_[dataindex]);
+    bar.set_data(dataindex, data);
     bar.Invalidate();
   }
 }
@@ -225,15 +229,37 @@ void Wheel::UpdateItemPos()
 void Wheel::UpdateItemPosByExpr()
 {
   float pos = scroll_pos_;
-  float r = pos - center_index_;
+  int disp_cnt = (int)bar_.size();
+  int x, y;
 
-  for (int i = 0; i < bar_.size(); ++i)
+  for (int i = 0; i < disp_cnt; ++i)
   {
-    bar_[i]->SetPos(pos_expr_param_.bar_offset_x + 10,
-      pos_expr_param_.bar_center_y +
-        (pos_expr_param_.bar_height + pos_expr_param_.bar_margin) * r -
-        pos_expr_param_.bar_height * 0.5f
-    );
+    // break if index is out of data and not infinite scrolling
+    if (!inf_scroll_ &&
+      i >= (int)select_data_.size() - focused_index_ &&
+      i < (int)bar_.size() - focused_index_)
+    {
+      bar_[i]->Hide();
+      continue;
+    }
+    if (!inf_scroll_ && ((i < center_index_ && i + focused_index_ >= select_data_.size()) ||
+      (i >= center_index_ && (int)bar_.size() - i > focused_index_)))
+    {
+      bar_[i]->Hide();
+      continue;
+    }
+
+
+    int ii = i < disp_cnt - center_index_ ?
+      i : i - disp_cnt;
+    x = pos_expr_param_.bar_offset_x + pos_expr_param_.curve_size *
+      (1.0 - cos((double)(ii - pos) / pos_expr_param_.curve_level));
+    y = pos_expr_param_.bar_center_y +
+      (pos_expr_param_.bar_height + pos_expr_param_.bar_margin) * (ii - pos) -
+      pos_expr_param_.bar_height * 0.5f;
+    bar_[i]->SetPos(x, y);
+    bar_[i]->SetSize(pos_expr_param_.bar_width, pos_expr_param_.bar_height);
+    bar_[i]->Show();
   }
 }
 
@@ -253,7 +279,7 @@ void Wheel::UpdateItemPosByFixed()
       bar_[i]->Hide();
       continue;
     }
-    if (!inf_scroll_ && ((i < center_index_ && i + focused_index_ > select_data_.size()) ||
+    if (!inf_scroll_ && ((i < center_index_ && i + focused_index_ >= select_data_.size()) ||
       (i >= center_index_ && (int)bar_.size() - i > focused_index_)))
     {
       bar_[i]->Hide();
@@ -303,8 +329,8 @@ void Wheel::LoadProperty(const std::string& prop_name, const std::string& value)
   {
     if (bar_.empty()) Prepare(kDefaultBarCount);
 
-    pos_method_ =
-      WheelItemPosMethod::kBarPosFixed;
+    //pos_method_ =
+    //  WheelItemPosMethod::kBarPosFixed;
 
     int attr = atoi(GetFirstParam(value).c_str());
     if (attr < 0 || attr >= kDefaultBarCount) return;
@@ -316,8 +342,8 @@ void Wheel::LoadProperty(const std::string& prop_name, const std::string& value)
     if (bar_.empty()) Prepare(kDefaultBarCount);
 
     // set pos type automatically
-    pos_method_ =
-      WheelItemPosMethod::kBarPosFixed;
+    //pos_method_ =
+    //  WheelItemPosMethod::kBarPosFixed;
 
     int attr = atoi(GetFirstParam(value).c_str());
     if (attr < 0 || attr > kDefaultBarCount) return;
