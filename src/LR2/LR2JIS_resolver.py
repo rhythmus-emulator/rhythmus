@@ -21,6 +21,9 @@ def getJISord(c):
     '''
     return ord(c)
 
+# cache some necessary char first
+chars.append(' ')
+chars.append('\n')
 
 # load original file SHIFT-JIS.txt
 # and we add tab / break char for special.

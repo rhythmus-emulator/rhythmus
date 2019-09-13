@@ -725,11 +725,12 @@ void Text::doRender()
     break;
   }
 
+  // XXX: must flush vertices before setting matrix ...
+  // Graphic::SetTextureId(0);
   Graphic::PushMatrix();
   Graphic::SetMatrix(pi);
 
   // Draw vertex by given quad
-  // XXX: is it better to cache vertex?
   for (const TextVertexInfo& tvi : text_render_ctx_.textvertex)
   {
     Graphic::SetTextureId(tvi.texid);

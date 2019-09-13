@@ -126,12 +126,13 @@ void SelectScene::MakeSelectDataList()
     {
       auto &item = wheel_.NewData();
       rparser::Chart* chart = song->GetChart(i);
-      chart->GetMetaData().SetMetaFromAttribute();
-      chart->GetMetaData().SetUtf8Encoding();
-      item.title = chart->GetMetaData().title;
-      item.artist = chart->GetMetaData().artist;
+      auto &meta = chart->GetMetaData();
+      meta.SetMetaFromAttribute();
+      meta.SetUtf8Encoding();
+      item.title = meta.title;
+      item.artist = meta.artist;
       item.type = 0;
-      item.level = chart->GetMetaData().level;
+      item.level = meta.level;
       item.song = nullptr;
       song->CloseChart();
     }

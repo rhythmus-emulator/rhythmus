@@ -76,6 +76,7 @@ void TestScene::LoadScene()
 
   lr2text_.SetFont(lr2font_.get());
   lr2text_.SetText(u8"1234abcdΘΙΚΛあえいおう楽しい熙ⅷ黑");
+  //lr2text_.SetText(u8"!\"#$%&'()/df");
   lr2text_.SetPos(30, 200);
   lr2text_.SetScale(1.5, 1.5);
 

@@ -142,7 +142,7 @@ void Graphic::LoopRendering()
 
     /* Main Rendering */
     SceneManager::getInstance().Render();
-    glFlush();
+    Flush();
 
     glfwSwapBuffers(window_);
     glfwPollEvents();
@@ -469,6 +469,18 @@ void Graphic::PopMatrix()
   g.m_model_stack_.pop_back();
 }
 
+void Graphic::Flush()
+{
+  Graphic &g = Graphic::getInstance();
+
+  /* need to clear texture idx.
+     texture idx should be resetted in next rendering. */
+  g.tex_id_ = 0;
+
+  glFlush();
+}
+
+/* Returns single quad vertex buffer. */
 VertexInfo* Graphic::get_vertex_buffer()
 {
   return get_vertex_buffer(1);

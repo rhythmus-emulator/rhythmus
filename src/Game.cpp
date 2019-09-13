@@ -26,7 +26,7 @@ Setting& Game::getSetting()
 Game::Game()
   : setting_path_(kSettingPath),
     game_boot_mode_(GameBootMode::kBootNormal),
-    game_mode_(GameMode::kGameModeLoading),
+    game_mode_(GameMode::kGameModeNone),
     do_game_mode_change_(false)
 {
 }
@@ -167,6 +167,9 @@ void Game::Update()
       case GameBootMode::kBootNormal:
         switch (game_mode_)
         {
+        case GameMode::kGameModeNone:
+          game_mode_ = GameMode::kGameModeLoading;
+          break;
         case GameMode::kGameModeLoading:
           // We now need to decide whether start game in select scene -
           // or in main scene. It is decided by option... If main scene
