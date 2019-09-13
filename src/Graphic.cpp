@@ -91,6 +91,7 @@ void Graphic::Initialize()
   glMatrixMode(GL_PROJECTION);
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
+  glBlendFunc(GL_ONE, GL_SRC_ALPHA);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

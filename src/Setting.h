@@ -33,7 +33,8 @@ public:
   template <typename T>
   void Load(const std::string& key, T& value) const
   {
-    tinyxml2::XMLElement *e = root_->FirstChildElement(key.c_str());
+    std::string find_key = ConvertToSafeKey(key);
+    tinyxml2::XMLElement *e = root_->FirstChildElement(find_key.c_str());
     if (!e) return;
     const char* t = e->GetText();
     ConvertFromString(t ? t : "", value);
@@ -42,11 +43,12 @@ public:
   template <typename T>
   void Set(const std::string& key, const T& value)
   {
+    std::string find_key = ConvertToSafeKey(key);
     std::string v = ConvertToString(value);
-    tinyxml2::XMLElement *e = root_->FirstChildElement(key.c_str());
+    tinyxml2::XMLElement *e = root_->FirstChildElement(find_key.c_str());
     if (!e)
     {
-      e = doc_.NewElement(key.c_str());
+      e = doc_.NewElement(find_key.c_str());
       root_->InsertEndChild(e);
     }
     e->SetText(v.c_str());
@@ -63,6 +65,8 @@ private:
   // current root of preference keys.
   // set by SetPreferenceGroup.
   tinyxml2::XMLElement* root_;
+
+  static std::string ConvertToSafeKey(const std::string& key);
 };
 
 template <typename T>

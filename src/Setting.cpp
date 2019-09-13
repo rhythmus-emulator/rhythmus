@@ -83,6 +83,16 @@ void Setting::GetAllPreference(SettingList& pref_list)
   }
 }
 
+std::string Setting::ConvertToSafeKey(const std::string& key)
+{
+  std::string find_key = key;
+  if (find_key[0] >= '0' && find_key[0] <= '9')
+    find_key = "N" + find_key;
+  for (int i = 0; i < find_key.size(); i++)
+    if (find_key[i] == '/' || find_key[i] == '\\' || find_key[i] == '*') find_key[i] = '_';
+  return find_key;
+}
+
 
 
 // ------------------------ Serialization

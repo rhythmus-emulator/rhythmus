@@ -205,7 +205,7 @@ void Scene::doRenderAfter()
     vi[3].x = -1000;
     vi[3].y = h;
     //glDisable(GL_TEXTURE_2D);
-    //glColor4f(0, 0, 0, fade_alpha_);
+    glColor4f(0, 0, 0, fade_alpha_);
     //Graphic::SetTextureId(1);
     memcpy(Graphic::get_vertex_buffer(), vi, sizeof(VertexInfo) * 4);
     Graphic::RenderQuad();
