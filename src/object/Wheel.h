@@ -72,7 +72,7 @@ public:
   /* @brief Clear all list items and item data. */
   void Clear();
 
-  size_t get_select_list_size() const;
+  size_t get_data_size() const;
   double get_select_bar_scroll() const;
 
   int get_selected_index() const;

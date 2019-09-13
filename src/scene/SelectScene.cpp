@@ -127,10 +127,12 @@ MusicWheel& SelectScene::get_wheel()
 
 void SelectScene::MakeSelectDataList()
 {
+#if 0
   // XXX: Test code
   wheel_.AddData(new MusicWheelItemData{ "TestSong1", "sub", "gen", "Art1", "", 0, 10, nullptr });
   wheel_.AddData(new MusicWheelItemData{ "TestSong2", "sub", "gen", "Art2", "", 1, 10, nullptr });
   wheel_.AddData(new MusicWheelItemData{ "TestSong3", "sub", "gen", "Art3", "", 2, 11, nullptr });
+#endif
   
   for (auto &song : SongList::getInstance())
   {
@@ -149,6 +151,11 @@ void SelectScene::MakeSelectDataList()
       item.song = nullptr;
       song->CloseChart();
     }
+  }
+
+  if (wheel_.get_data_size() == 0)
+  {
+    wheel_.AddData(new MusicWheelItemData{ "(No Song)", "-", "-", "-", "", 0, 0, nullptr });
   }
 }
 

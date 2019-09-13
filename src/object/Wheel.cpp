@@ -95,7 +95,7 @@ void Wheel::Clear()
   select_data_.clear();
 }
 
-size_t Wheel::get_select_list_size() const
+size_t Wheel::get_data_size() const
 {
   return select_data_.size();
 }
@@ -148,6 +148,10 @@ void Wheel::Prepare(int visible_bar_count)
 
 void Wheel::RebuildItems()
 {
+  /* Won't rebuild (or build default null item) */
+  if (get_data_size() == 0)
+    return;
+
   size_t disp_cnt = bar_.size();
   int last_bar_idx = disp_cnt - center_index_;
 
@@ -329,8 +333,8 @@ void Wheel::LoadProperty(const std::string& prop_name, const std::string& value)
   {
     if (bar_.empty()) Prepare(kDefaultBarCount);
 
-    //pos_method_ =
-    //  WheelItemPosMethod::kBarPosFixed;
+    pos_method_ =
+      WheelItemPosMethod::kBarPosFixed;
 
     int attr = atoi(GetFirstParam(value).c_str());
     if (attr < 0 || attr >= kDefaultBarCount) return;
@@ -342,8 +346,8 @@ void Wheel::LoadProperty(const std::string& prop_name, const std::string& value)
     if (bar_.empty()) Prepare(kDefaultBarCount);
 
     // set pos type automatically
-    //pos_method_ =
-    //  WheelItemPosMethod::kBarPosFixed;
+    pos_method_ =
+      WheelItemPosMethod::kBarPosFixed;
 
     int attr = atoi(GetFirstParam(value).c_str());
     if (attr < 0 || attr > kDefaultBarCount) return;
