@@ -86,15 +86,16 @@ void sound_thread_body()
       iBuffersProcessed--;
     }
 
-#if 0
+#if 1
     ALint state, errcode;
     alGetSourcei(source_id, AL_SOURCE_STATE, &state);
     if (state != AL_PLAYING)
     {
       ASSERT((errcode = alGetError()) == 0);
       /**
-       * Actually, unreachable logic. flickering sound.
+       * This logic shouldn't reached too much due to flickering sound.
        * If reached this logic, then might problem with alSourceQueueBuffers() ...
+       * Or just program is stopped (e.g. debugging)
        */
       alSourcePlay(source_id);
     }
