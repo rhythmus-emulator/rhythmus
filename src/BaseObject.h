@@ -182,6 +182,8 @@ protected:
 
   virtual void doUpdate(float delta);
   virtual void doRender();
+  virtual void doUpdateAfter(float delta);
+  virtual void doRenderAfter();
 };
 
 void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,

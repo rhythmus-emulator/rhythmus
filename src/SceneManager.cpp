@@ -19,6 +19,8 @@ SceneManager::SceneManager()
   SubscribeTo(Events::kOnKeyDown);
   SubscribeTo(Events::kOnKeyPress);
   SubscribeTo(Events::kOnKeyUp);
+  SubscribeTo(Events::kEventSceneTimeEnd);
+  SubscribeTo(Events::kEventSceneChange);
 }
 
 SceneManager::~SceneManager()
@@ -75,8 +77,19 @@ void SceneManager::Render()
 
 bool SceneManager::OnEvent(const EventMessage& e)
 {
+  switch (e.GetEventID())
+  {
+  case Events::kEventSceneChange:
+    Game::getInstance().ChangeGameMode();
+    break;
+  case Events::kEventSceneTimeEnd:
+    current_scene_->CloseScene();
+    break;
+  }
+
   if (current_scene_)
     return current_scene_->ProcessEvent(e);
+
   return true;
 }
 

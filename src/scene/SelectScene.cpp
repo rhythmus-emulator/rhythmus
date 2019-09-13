@@ -44,11 +44,15 @@ void SelectScene::LoadScene()
 
 void SelectScene::StartScene()
 {
+  Scene::StartScene();
+
   // TODO
 }
 
 void SelectScene::CloseScene()
 {
+  Scene::CloseScene();
+
   // TODO
 }
 
@@ -76,8 +80,17 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
     }
     else if (e.GetKeycode() == GLFW_KEY_ENTER)
     {
+      // Song selection - immediately change scene mode
       Game::getInstance().SetNextGameMode(GameMode::kGameModeDecide);
       Game::getInstance().ChangeGameMode();
+    }
+    else if (e.GetKeycode() == GLFW_KEY_A)
+    {
+      TriggerFadeIn(1000);
+    }
+    else if (e.GetKeycode() == GLFW_KEY_S)
+    {
+      TriggerFadeOut(1000);
     }
   }
 

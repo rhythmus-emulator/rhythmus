@@ -10,16 +10,24 @@ DecideScene::DecideScene()
 
 void DecideScene::LoadScene()
 {
+  // TODO: place this code to Game setting
+  Game::getInstance().SetAttribute(
+    "DecideScene", "../themes/WMIX_HD/decide/decide.lr2skin"
+  );
+
+  Scene::LoadScene();
 }
 
 void DecideScene::StartScene()
 {
+  // default action: go to GamePlay scene
   Game::getInstance().SetNextGameMode(GameMode::kGameModePlay);
-  Game::getInstance().ChangeGameMode();
+  Scene::StartScene();
 }
 
 void DecideScene::CloseScene()
 {
+  Scene::CloseScene();
 }
 
 bool DecideScene::ProcessEvent(const EventMessage& e)

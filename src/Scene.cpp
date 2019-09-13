@@ -47,6 +47,12 @@ std::string ThemeOption::GetSelectedValue()
 
 // -------------------------------- Scene
 
+Scene::Scene()
+  : fade_time_(0), fade_duration_(0), is_input_available_(1), focused_object_(nullptr)
+{
+  memset(&theme_param_, 0, sizeof(theme_param_));
+}
+
 void Scene::LoadScene()
 {
   // Check is preference file exist for current scene
@@ -76,10 +82,23 @@ void Scene::LoadScene()
   }
 }
 
+void Scene::StartScene()
+{
+  // Prepare to trigger scenetime if necessary
+  if (theme_param_.next_scene_time > 0)
+  {
+    QueueSceneEvent(theme_param_.next_scene_time, Events::kEventSceneTimeEnd);
+  }
+}
+
 void Scene::CloseScene()
 {
   if (!get_name().empty())
     SaveOptions();
+
+  // Trigger FadeOut & ChangeScene event
+  TriggerFadeOut(theme_param_.fade_out_time);
+  QueueSceneEvent(theme_param_.fade_out_time, Events::kEventSceneChange);
 }
 
 void Scene::RegisterImage(ImageAuto img)
@@ -132,6 +151,85 @@ void Scene::doUpdate(float delta)
   // Update images
   for (const auto& img: images_)
     img->Update(delta);
+
+  // scheduled events
+  for (auto ii = events_.begin(); ii != events_.end(); )
+  {
+    ii->time_delta -= delta;
+    if (ii->time_delta < 0)
+    {
+      EventManager::SendEvent(ii->event_id);
+      auto ii_e = ii;
+      ii++;
+      events_.erase(ii_e);
+    }
+    else ii++;
+  }
+
+  // fade in/out processing
+  if (fade_duration_ != 0)
+  {
+    fade_time_ += delta;
+    if (fade_duration_ > 0 && fade_time_ > fade_duration_)
+    {
+      fade_duration_ = 0;
+      fade_time_ = 0;
+    }
+  }
+}
+
+void Scene::doRenderAfter()
+{
+  static VertexInfo vi[4] = {
+    {0, 0, 0, 0, 0, 1, 1, 1, 1},
+    {0, 0, 0, 1, 0, 1, 1, 1, 1},
+    {0, 0, 0, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0, 0, 1, 1, 1, 1, 1}
+  };
+
+  // implementation of fadeout effect
+  if (true)//(fade_duration_ != 0)
+  {
+    float fade_alpha_ = fade_duration_ > 0 ?
+      1.0f - fade_time_ / fade_duration_ :
+      fade_time_ / -fade_duration_;
+    if (fade_alpha_ > 1)
+      fade_alpha_ = 1;
+    float w = Game::getInstance().get_window_width();
+    float h = Game::getInstance().get_window_height();
+    vi[0].x = vi[0].y = -1000;
+    vi[1].x = w;
+    vi[1].y = -1000;
+    vi[2].x = w;
+    vi[2].y = h;
+    vi[3].x = -1000;
+    vi[3].y = h;
+    //glDisable(GL_TEXTURE_2D);
+    //glColor4f(0, 0, 0, fade_alpha_);
+    //Graphic::SetTextureId(1);
+    memcpy(Graphic::get_vertex_buffer(), vi, sizeof(VertexInfo) * 4);
+    Graphic::RenderQuad();
+    //glEnable(GL_TEXTURE_2D);
+  }
+}
+
+void Scene::TriggerFadeIn(float duration)
+{
+  fade_duration_ = duration;
+  fade_time_ = 0;
+}
+
+void Scene::TriggerFadeOut(float duration)
+{
+  fade_duration_ = -duration;
+  fade_time_ = 0;
+}
+
+void Scene::QueueSceneEvent(float delta, int event_id)
+{
+  events_.emplace_back(SceneEvent{
+    delta, event_id
+    });
 }
 
 constexpr char* kSubstitutePath = "../themes";
@@ -268,28 +366,24 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     theme_param_.transcolor[1] = atoi(params[1].c_str());
     theme_param_.transcolor[2] = atoi(params[2].c_str());
   }
-  else if (prop_name == "#STARTINPUT")
+  else if (prop_name == "#STARTINPUT" || prop_name == "#IGNOREINPUT")
   {
     std::string v = GetFirstParam(value);
     theme_param_.begin_input_time = atoi(v.c_str());
   }
   else if (prop_name == "#FADEOUT")
   {
-    std::string v = GetFirstParam(value);
     theme_param_.fade_out_time = atoi(GetFirstParam(value).c_str());
   }
   else if (prop_name == "#FADEIN")
   {
-    std::string v = GetFirstParam(value);
     theme_param_.fade_in_time = atoi(GetFirstParam(value).c_str());
   }
-  /*
-  else if (prop_name == "#LR2FONT")
+  else if (prop_name == "#SCENETIME")
   {
-    MakeParamCountSafe(params, 1);
-    lr2fontnames_.push_back(params[1]);
-    return true;
+    theme_param_.next_scene_time = atoi(GetFirstParam(value).c_str());
   }
+  /*
   else if (prop_name == "#HELPFILE")
   {
   }*/

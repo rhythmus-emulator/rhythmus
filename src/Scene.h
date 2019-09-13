@@ -26,15 +26,12 @@ struct ThemeParameter
   // input starting time of current scene begin
   int begin_input_time;
 
-  // input prohibit time when countdown is done
-  int end_input_time;
-
   // fade in / out time
   int fade_in_time, fade_out_time;
 
-  // scene maximum / minimum time to be shown.
-  // @warn  might not work in some type of scene.
-  int min_time, max_time;
+  // time to move next scene (in milisecond)
+  // 0 : don't move scene to next scene automatically
+  int next_scene_time;
 };
 
 // User-customizable theme option
@@ -69,18 +66,21 @@ struct ThemeOption
 class Scene : public BaseObject
 {
 public:
+  Scene();
   virtual ~Scene() { };
 
   /* @brief load scene resource and prepare to start */
   virtual void LoadScene();
 
   /* @brief start scene e.g. start scene timer */
-  virtual void StartScene() = 0;
+  virtual void StartScene();
 
-  /* @brief prepare to finish scene e.g. prepare next scene */
+  /* @brief prepare to finish scene
+   * @warn it does not mean changing scene instantly,
+   * which triggers fadeout/transition. */
   virtual void CloseScene();
 
-  /* @brief Process event in this scene */
+  /* @brief Event processing */
   virtual bool ProcessEvent(const EventMessage& e) = 0;
 
   /* @brief Add images to be updated constantly. e.g. Movie */
@@ -91,6 +91,10 @@ public:
   FontAuto GetFontByName(const std::string& name);
 
   virtual void LoadProperty(const std::string& prop_name, const std::string& value);
+
+  void TriggerFadeIn(float duration);
+  void TriggerFadeOut(float duration);
+  void QueueSceneEvent(float delta, int event_id);
 
 protected:
   // User-customizable theme option
@@ -105,8 +109,17 @@ protected:
   // font resource loaded by this scene
   std::vector<FontAuto> fonts_;
 
+  // events triggered after specified time
+  struct SceneEvent
+  {
+    float time_delta;   // remain time of this event
+    int event_id;       // event to trigger
+  };
+  std::list<SceneEvent> events_;
+
 private:
   virtual void doUpdate(float delta);
+  virtual void doRenderAfter();
 
   void LoadOptions();
   void SaveOptions();
@@ -119,6 +132,17 @@ private:
   // return select list count.
   static void GetThemeOptionSelectList(
     const ThemeOption &option, std::vector<std::string>& selectable);
+
+  // fade in/out specified time
+  // fade_duration with positive: fade-in
+  // fade_duration with negative: fade-out
+  float fade_time_, fade_duration_;
+
+  // is input event available?
+  int is_input_available_;
+
+  // currently focused object (if exists)
+  BaseObject* focused_object_;
 };
 
 }

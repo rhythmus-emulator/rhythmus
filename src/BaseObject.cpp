@@ -495,6 +495,7 @@ void BaseObject::Update(float delta)
   doUpdate(delta);
   for (auto* p : children_)
     p->Update(delta);
+  doUpdateAfter(delta);
 }
 
 void BaseObject::Render()
@@ -513,18 +514,15 @@ void BaseObject::Render()
   for (auto* p : children_)
     p->Render();
 
+  doRenderAfter();
+
   Graphic::PopMatrix();
 }
 
-void BaseObject::doUpdate(float delta)
-{
-  // Implement on your own
-}
-
-void BaseObject::doRender()
-{
-  // Implement on your own
-}
+void BaseObject::doUpdate(float delta) {}
+void BaseObject::doRender() {}
+void BaseObject::doUpdateAfter(float delta) {}
+void BaseObject::doRenderAfter() {}
 
 
 #define TWEEN_ATTRS \
