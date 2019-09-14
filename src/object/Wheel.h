@@ -96,6 +96,7 @@ public:
   /* TODO: curve & rot with z pos? */
 
   virtual void LoadProperty(const std::string& prop_name, const std::string& value);
+  virtual void Load();
 
 protected:
   // select item data

@@ -71,9 +71,6 @@ Wheel::Wheel()
     AddChild(&pos_fixed_param_.tween_bar[i]);
     AddChild(&pos_fixed_param_.tween_bar_focus[i]);
   }
-
-  // XXX: temp
-  wheel_sound_.Load("../sound/SelfEvolution/scratch.wav");
 }
 
 Wheel::~Wheel()
@@ -372,6 +369,12 @@ void Wheel::LoadProperty(const std::string& prop_name, const std::string& value)
   {
     center_index_ = atoi(GetFirstParam(value).c_str());
   }
+}
+
+void Wheel::Load()
+{
+  // XXX: need to load using wheel param
+  wheel_sound_.Load("../sound/SelfEvolution/scratch.wav");
 }
 
 WheelItem* Wheel::CreateWheelItem(int index)

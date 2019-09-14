@@ -117,7 +117,9 @@ protected:
   };
   std::list<SceneEvent> events_;
 
-  bool IsInputAvailable(uint32_t time) const;
+  // is event triggered at valid time, so it need to be processed?
+  // (e.g. input event during scene loading or #IGNOREINPUT --> ignore)
+  bool IsEventValidTime(const EventMessage& e) const;
 
 private:
   virtual void doUpdate(float delta);

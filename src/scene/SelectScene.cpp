@@ -58,7 +58,7 @@ void SelectScene::CloseScene()
 
 bool SelectScene::ProcessEvent(const EventMessage& e)
 {
-  if (!IsInputAvailable(e.GetTimeInMilisecond()))
+  if (e.IsInput() && !IsEventValidTime(e))
     return true;
 
   if (e.IsKeyDown() || e.IsKeyPress())

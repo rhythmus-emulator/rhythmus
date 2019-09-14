@@ -98,6 +98,15 @@ void EventMessage::SetParam(int *params, int param_len)
 bool EventMessage::IsKeyDown() const { return id_ == Events::kOnKeyDown; }
 bool EventMessage::IsKeyPress() const { return id_ == Events::kOnKeyPress; /* indicates constant key press */ }
 bool EventMessage::IsKeyUp() const { return id_ == Events::kOnKeyUp; }
+bool EventMessage::IsInput() const
+{
+  return id_ == Events::kOnKeyDown ||
+    id_ == Events::kOnKeyPress ||
+    id_ == Events::kOnKeyUp ||
+    id_ == kOnCursorMove ||
+    id_ == kOnCursorClick ||
+    id_ == kOnJoystick;
+}
 int EventMessage::GetKeycode() const { return params_[0]; }
 
 

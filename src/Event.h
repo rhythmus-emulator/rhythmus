@@ -62,6 +62,7 @@ public:
   bool IsKeyDown() const;
   bool IsKeyPress() const;
   bool IsKeyUp() const;
+  bool IsInput() const;
   int GetKeycode() const;
 
 private:

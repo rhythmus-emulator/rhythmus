@@ -152,9 +152,9 @@ void Scene::SaveOptions()
   }
 }
 
-bool Scene::IsInputAvailable(uint32_t time) const
+bool Scene::IsEventValidTime(const EventMessage& e) const
 {
-  return input_available_time_ < time;
+  return input_available_time_ < e.GetTimeInMilisecond();
 }
 
 void Scene::doUpdate(float delta)
