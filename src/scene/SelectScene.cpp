@@ -87,14 +87,6 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
       Game::getInstance().SetNextGameMode(GameMode::kGameModeDecide);
       Game::getInstance().ChangeGameMode();
     }
-    else if (e.GetKeycode() == GLFW_KEY_A)
-    {
-      TriggerFadeIn(1000);
-    }
-    else if (e.GetKeycode() == GLFW_KEY_S)
-    {
-      TriggerFadeOut(1000);
-    }
   }
 
   return true;

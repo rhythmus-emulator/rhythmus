@@ -86,4 +86,4 @@ with open('LR2JIS.h', 'w') as f:
   if (lr2_code > %d) return 0;
   return _LR2GlyphID[lr2_code];
 }
-''' % maxglyphid)
+''' % (maxglyphid + 1))

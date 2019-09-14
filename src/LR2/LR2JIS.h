@@ -15309,6 +15309,6 @@ uint16_t _LR2GlyphID[15307] = {0,
 
 uint16_t ConvertLR2JIStoUTF16(uint16_t lr2_code)
 {
-  if (lr2_code > 15306) return 0;
+  if (lr2_code > 15307) return 0;
   return _LR2GlyphID[lr2_code];
 }
