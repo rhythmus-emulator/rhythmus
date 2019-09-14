@@ -491,6 +491,8 @@ void Image::CommitImage(bool delete_data)
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+  glBindTexture(GL_TEXTURE_2D, 0);
+
   /* movie type: won't remove bitmap (need to update continously) */
   if (delete_data && ffmpeg_ctx_ == 0)
   {
@@ -552,6 +554,7 @@ void Image::Update(float delta)
     glBindTexture(GL_TEXTURE_2D, textureID_);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0,
       GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data_ptr_);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     // Free mem
     av_frame_free(&frame_conv);

@@ -181,35 +181,32 @@ void Scene::doUpdate(float delta)
 void Scene::doRenderAfter()
 {
   static VertexInfo vi[4] = {
-    {0, 0, 0, 0, 0, 1, 1, 1, 1},
-    {0, 0, 0, 1, 0, 1, 1, 1, 1},
-    {0, 0, 0, 1, 1, 1, 1, 1, 1},
-    {0, 0, 0, 0, 1, 1, 1, 1, 1}
+    {0, 0, 0.1f, 0, 0, 1, 1, 1, 1},
+    {0, 0, 0.1f, 1, 0, 1, 1, 1, 1},
+    {0, 0, 0.1f, 1, 1, 1, 1, 1, 1},
+    {0, 0, 0.1f, 0, 1, 1, 1, 1, 1}
   };
 
   // implementation of fadeout effect
-  if (true)//(fade_duration_ != 0)
+  if (fade_duration_ != 0)
   {
     float fade_alpha_ = fade_duration_ > 0 ?
       1.0f - fade_time_ / fade_duration_ :
       fade_time_ / -fade_duration_;
     if (fade_alpha_ > 1)
       fade_alpha_ = 1;
+
     float w = Game::getInstance().get_window_width();
     float h = Game::getInstance().get_window_height();
-    vi[0].x = vi[0].y = -1000;
     vi[1].x = w;
-    vi[1].y = -1000;
     vi[2].x = w;
     vi[2].y = h;
-    vi[3].x = -1000;
     vi[3].y = h;
-    //glDisable(GL_TEXTURE_2D);
-    glColor4f(0, 0, 0, fade_alpha_);
-    //Graphic::SetTextureId(1);
+    vi[0].a = vi[1].a = vi[2].a = vi[3].a = fade_alpha_;
+    Graphic::SetTextureId(0);
+    glColor3f(0, 0, 0);
     memcpy(Graphic::get_vertex_buffer(), vi, sizeof(VertexInfo) * 4);
     Graphic::RenderQuad();
-    //glEnable(GL_TEXTURE_2D);
   }
 }
 

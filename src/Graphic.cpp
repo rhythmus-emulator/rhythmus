@@ -468,6 +468,7 @@ void Graphic::PopMatrix()
   Graphic &g = Graphic::getInstance();
   g.m_model_ = g.m_model_stack_.back();
   g.m_model_stack_.pop_back();
+  glUniformMatrix4fv(2, 1, GL_FALSE, &g.m_model_[0][0]);
 }
 
 void Graphic::Flush()
@@ -476,7 +477,7 @@ void Graphic::Flush()
 
   /* need to clear texture idx.
      texture idx should be resetted in next rendering. */
-  g.tex_id_ = 0;
+  g.tex_id_ = 9999;
 
   glFlush();
 }
