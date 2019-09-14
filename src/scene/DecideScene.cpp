@@ -32,7 +32,13 @@ void DecideScene::CloseScene()
 
 bool DecideScene::ProcessEvent(const EventMessage& e)
 {
-  return true;
+  if (e.IsInput() && !IsEventValidTime(e))
+    return true;
+
+  if (e.IsKeyUp() && e.GetKeycode() == GLFW_KEY_ESCAPE)
+  {
+    CloseScene();
+  }
 }
 
 }

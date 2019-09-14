@@ -3,6 +3,7 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <list>
 
 namespace rhythmus
 {
@@ -120,6 +121,30 @@ private:
   int current_evtidx_;
 
   friend class EventReceiver;
+};
+
+/* @brief simple utility to use delayed events */
+class QueuedEventCache
+{
+public:
+  void QueueEvent(int event_id, float timeout_msec);
+  void QueueEvent(const std::string& queue_name, int event_id, float timeout_msec);
+  float GetRemainingTime(const std::string& queue_name);
+  bool IsQueued(const std::string& queue_name);
+  void Update(float delta);
+
+  /* @brief process all queued events regardless of remaining time */
+  void FlushAll();
+
+  void DeleteAll();
+private:
+  struct QueuedEvent
+  {
+    std::string queue_name;
+    float time_delta;   // remain time of this event
+    int event_id;       // event to trigger
+  };
+  std::list<QueuedEvent> events_;
 };
 
 }

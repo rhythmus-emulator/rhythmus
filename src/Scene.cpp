@@ -164,18 +164,7 @@ void Scene::doUpdate(float delta)
     img->Update(delta);
 
   // scheduled events
-  for (auto ii = events_.begin(); ii != events_.end(); )
-  {
-    ii->time_delta -= delta;
-    if (ii->time_delta < 0)
-    {
-      EventManager::SendEvent(ii->event_id);
-      auto ii_e = ii;
-      ii++;
-      events_.erase(ii_e);
-    }
-    else ii++;
-  }
+  eventqueue_.Update(delta);
 
   // fade in/out processing
   if (fade_duration_ != 0)
@@ -223,21 +212,21 @@ void Scene::doRenderAfter()
 
 void Scene::TriggerFadeIn(float duration)
 {
+  if (fade_duration_ != 0) return;
   fade_duration_ = duration;
   fade_time_ = 0;
 }
 
 void Scene::TriggerFadeOut(float duration)
 {
+  if (fade_duration_ != 0) return;
   fade_duration_ = -duration;
   fade_time_ = 0;
 }
 
 void Scene::QueueSceneEvent(float delta, int event_id)
 {
-  events_.emplace_back(SceneEvent{
-    delta, event_id
-    });
+  eventqueue_.QueueEvent(event_id, delta);
 }
 
 constexpr char* kSubstitutePath = "../themes";

@@ -33,6 +33,15 @@ void PlayScene::CloseScene()
 
 bool PlayScene::ProcessEvent(const EventMessage& e)
 {
+  if (e.IsInput() && !IsEventValidTime(e))
+    return true;
+
+  if (e.IsKeyDown())
+  {
+    if (e.GetKeycode() == GLFW_KEY_ESCAPE)
+      CloseScene();
+  }
+
   return true;
 }
 

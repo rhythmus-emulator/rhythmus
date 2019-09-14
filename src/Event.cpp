@@ -270,4 +270,71 @@ EventManager& EventManager::getInstance()
   return em;
 }
 
+
+// ------------------------------- QueuedEvents
+
+
+void QueuedEventCache::QueueEvent(int event_id, float timeout_msec)
+{
+  events_.emplace_back(QueuedEvent{ std::string(), timeout_msec, event_id });
+}
+
+void QueuedEventCache::QueueEvent(const std::string& queue_name, int event_id, float timeout_msec)
+{
+  events_.emplace_back(QueuedEvent{ queue_name, timeout_msec, event_id });
+}
+
+float QueuedEventCache::GetRemainingTime(const std::string& queue_name)
+{
+  if (queue_name.empty()) return 0;
+  for (auto &e : events_)
+  {
+    if (e.queue_name == queue_name)
+      return e.time_delta;
+  }
+  return 0;
+}
+
+bool QueuedEventCache::IsQueued(const std::string& queue_name)
+{
+  if (queue_name.empty()) return false;
+  for (auto &e : events_)
+  {
+    if (e.queue_name == queue_name)
+      return true;
+  }
+  return false;
+}
+
+void QueuedEventCache::Update(float delta)
+{
+  for (auto ii = events_.begin(); ii != events_.end(); )
+  {
+    ii->time_delta -= delta;
+    if (ii->time_delta < 0)
+    {
+      EventManager::SendEvent(ii->event_id);
+      auto ii_e = ii;
+      ii++;
+      events_.erase(ii_e);
+    }
+    else ii++;
+  }
+}
+
+void QueuedEventCache::FlushAll()
+{
+  for (auto &e : events_)
+  {
+    EventManager::SendEvent(e.event_id);
+  }
+  events_.clear();
+}
+
+void QueuedEventCache::DeleteAll()
+{
+  events_.clear();
+}
+
+
 }

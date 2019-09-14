@@ -109,13 +109,7 @@ protected:
   // font resource loaded by this scene
   std::vector<FontAuto> fonts_;
 
-  // events triggered after specified time
-  struct SceneEvent
-  {
-    float time_delta;   // remain time of this event
-    int event_id;       // event to trigger
-  };
-  std::list<SceneEvent> events_;
+  QueuedEventCache eventqueue_;
 
   // is event triggered at valid time, so it need to be processed?
   // (e.g. input event during scene loading or #IGNOREINPUT --> ignore)
