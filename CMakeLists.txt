@@ -71,7 +71,14 @@ endif ()
 # Tinyxml2
 #
 add_subdirectory("${PROJECT_SOURCE_DIR}/../rhythmus-lib/src/tinyxml2"
-                 "${PROJECT_SOURCE_DIR}/build/lib")
+                 "${PROJECT_SOURCE_DIR}/build/tinyxml2")
+
+#
+# sqlite
+#
+add_subdirectory("${PROJECT_SOURCE_DIR}/../rhythmus-lib/src/sqlite"
+                 "${PROJECT_SOURCE_DIR}/build/sqlite")
+set (SQLITE_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../rhythmus-lib/src/sqlite")
 
 # #######################
 # Add rparser           #

@@ -39,6 +39,8 @@ bool DecideScene::ProcessEvent(const EventMessage& e)
   {
     CloseScene();
   }
+
+  return true;
 }
 
 }

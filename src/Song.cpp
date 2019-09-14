@@ -4,6 +4,9 @@
 #include "Util.h"
 #include <map>
 
+#include <sqlite3.h>
+
+
 namespace rhythmus
 {
 
@@ -34,8 +37,16 @@ void SongList::Load()
     return;
   }
 
-  // 2. attempt to load DB (TODO)
-
+  // 2. attempt to load DB
+  sqlite3 *db = 0;
+  int rc = sqlite3_open("../system/song.db", &db);
+  if (rc) {
+    std::cout << "Cannot open song database, regarding as database file is missing." << std::endl;
+  } else
+  {
+    // TODO: load all song db
+    sqlite3_close(db);
+  }
 
   // 3. comparsion modified date with DB to invalidate any song necessary. (TODO)
   for (auto &d : dir)

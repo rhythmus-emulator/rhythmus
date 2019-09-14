@@ -99,6 +99,7 @@ include_directories(SYSTEM
 	${FLAC_INCLUDE_DIR}
     ${TIMIDITY_INCLUDE_DIR}
     ${OPENAL_INCLUDE_DIR}
+    ${SQLITE_INCLUDE_DIR}
     )
 
 if (WIN32)
@@ -122,4 +123,5 @@ target_link_libraries(rhythmus_bin
     rparser
 	rencoder_lib
 	timidity
+    sqlite
     )
