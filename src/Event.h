@@ -31,6 +31,7 @@ enum Events
   kEventSceneChange,
   kEventSongSelectChanged,
   kEventSongSelected,
+  kEventSongLoadFinished,
   kEventSongStarted,
   kEventPlayStarted,
   kEventPlayAborted,

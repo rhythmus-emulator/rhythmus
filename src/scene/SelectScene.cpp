@@ -131,21 +131,14 @@ void SelectScene::MakeSelectDataList()
   
   for (auto &song : SongList::getInstance())
   {
-    int cnt = song->GetChartCount();
-    for (int i = 0; i < cnt; ++i)
-    {
-      auto &item = wheel_.NewData();
-      rparser::Chart* chart = song->GetChart(i);
-      auto &meta = chart->GetMetaData();
-      meta.SetMetaFromAttribute();
-      meta.SetUtf8Encoding();
-      item.title = meta.title;
-      item.artist = meta.artist;
-      item.type = 0;
-      item.level = meta.level;
-      item.song = nullptr;
-      song->CloseChart();
-    }
+    auto &item = wheel_.NewData();
+    item.title = song.title;
+    item.artist = song.artist;
+    item.subtitle = song.subtitle;
+    item.subartist = song.subartist;
+    item.type = 0;
+    item.level = song.level;
+    item.song = nullptr;
   }
 
   if (wheel_.get_data_size() == 0)

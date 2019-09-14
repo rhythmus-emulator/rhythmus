@@ -1,17 +1,36 @@
 #pragma once
 
 #include "rhythmus.h"
+#include "Image.h"
 #include "Sound.h"
 #include <string>
 #include <memory>
 #include <vector>
+#include <queue>
 #include <atomic>
+#include <mutex>
+#include <list>
+#include <vector>
+#include <thread>
 
 namespace rhythmus
 {
 
 class Song;
 using SongAuto = std::shared_ptr<rparser::Song>;
+
+struct SongListData
+{
+  std::string title;
+  std::string subtitle;
+  std::string artist;
+  std::string subartist;
+  std::string genre;
+  std::string songpath;
+  std::string chartpath;
+  int level;
+  int judgediff;
+};
 
 /* @brief A singleton class which contains currently loaded Song DB */
 class SongList
@@ -28,21 +47,23 @@ public:
   std::string get_loading_filename() const;
 
   size_t size();
-  std::vector<SongAuto>::iterator begin();
-  std::vector<SongAuto>::iterator end();
-  const SongAuto& get(int i) const;
-  SongAuto get(int i);
+  std::vector<SongListData>::iterator begin();
+  std::vector<SongListData>::iterator end();
+  const SongListData& get(int i) const;
+  SongListData get(int i);
 
   static SongList& getInstance();
 
 private:
   // loaded songs
-  std::vector<SongAuto> songs_;
+  std::vector<SongListData> songs_;
 
   // songs to invalidate
-  std::vector<std::string> invalidate_list_;
+  std::list<std::string> invalidate_list_;
+  std::string current_loading_file_;
   std::atomic<int> active_thr_count_;
   int total_inval_size_;
+  std::atomic<int> load_count_;
 
   std::string song_dir_;
 
@@ -54,31 +75,75 @@ private:
   void song_loader_thr_body();
 };
 
-/* @brief Song data optimized for game context. */
-class Song
+/* @brief A singleton class. Song data with playing context. */
+class SongPlayable
 {
 public:
-  bool Load(const std::string& path);
+  SongPlayable();
+  void Load(const std::string& path, const std::string& chartpath);
+  void CancelLoad();
+  void Play();
+  void Stop();
+  void Update(float delta);
+  void Clear();
+
+  bool IsPlaying();
+  bool IsFinished();
+  double GetProgress();
+  double GetSongStartTime();
+  int GetSongEclipsedTime();
+
+  /* @brief make judgement, sound, and score change with input */
+  void Input(int keycode, uint32_t gametime);
+
+private:
+  void LoadResourceThreadBody();
+  void FinishLoadResource();
 
 private:
   rparser::Song song_;
+  rparser::Chart* chart_;
 
-  friend class SongList;
-};
+  /* tappable notes */
+  struct SongNote {
+    int lane;
+    int channel;
+    int time;
+    double beat;
+  };
+  std::vector<SongNote> notes_;
+  int note_current_idx_;
 
-/* @brief A singleton class. song data with playing context. */
-class SongPlayable : public Song
-{
-public:
-  void Play();
-  void Stop();
+  /* events like bg / trigger / bgm ... */
+  struct EventNote {
+    int type; // 0: bgm, 1: bga
+    int channel;
+    int time;
+  };
+  std::vector<EventNote> events_;
+  int event_current_idx_;
 
-  bool IsPlaying();
-  double GetSongStartTime();
-  double GetSongEclipsedTime();
+  int load_thread_count_;
+  std::atomic<int> active_thread_count_;
+  int load_total_count_;
+  std::atomic<int> load_count_;
+  struct LoadInfo
+  {
+    int type; // 0: sound, 1: image
+    int channel;
+    std::string path;
+  };
+  std::list<LoadInfo> loadinfo_list_;
+  std::list<std::thread> load_thread_;
+  std::mutex loadinfo_list_mutex_;
 
-private:
-  std::vector<GameSoundAuto> keysounds_;
+  uint32_t song_start_time_;
+  uint32_t song_current_time_;
+
+  GameSound keysounds_[1000];
+  Image bg_[1000];
+
+  // TODO: input settings.
 };
 
 }
