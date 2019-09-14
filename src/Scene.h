@@ -117,6 +117,8 @@ protected:
   };
   std::list<SceneEvent> events_;
 
+  bool IsInputAvailable(uint32_t time) const;
+
 private:
   virtual void doUpdate(float delta);
   virtual void doRenderAfter();
@@ -138,8 +140,8 @@ private:
   // fade_duration with negative: fade-out
   float fade_time_, fade_duration_;
 
-  // is input event available?
-  int is_input_available_;
+  // input available gametime
+  uint32_t input_available_time_;
 
   // currently focused object (if exists)
   BaseObject* focused_object_;

@@ -19,7 +19,7 @@ SceneManager::SceneManager()
   SubscribeTo(Events::kOnKeyDown);
   SubscribeTo(Events::kOnKeyPress);
   SubscribeTo(Events::kOnKeyUp);
-  SubscribeTo(Events::kEventSceneTimeEnd);
+  SubscribeTo(Events::kEventSceneTimeout);
   SubscribeTo(Events::kEventSceneChange);
 }
 
@@ -82,7 +82,7 @@ bool SceneManager::OnEvent(const EventMessage& e)
   case Events::kEventSceneChange:
     Game::getInstance().ChangeGameMode();
     break;
-  case Events::kEventSceneTimeEnd:
+  case Events::kEventSceneTimeout:
     current_scene_->CloseScene();
     break;
   }

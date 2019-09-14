@@ -79,6 +79,16 @@ void EventMessage::SetNewTimeUncached()
   time_ = Timer::GetUncachedGameTime();
 }
 
+uint32_t EventMessage::GetTimeInMilisecond() const
+{
+  return static_cast<uint32_t>(time_ * 1000);
+}
+
+double EventMessage::GetTime() const
+{
+  return time_;
+}
+
 void EventMessage::SetParam(int *params, int param_len)
 {
   while (param_len-- > 0)

@@ -115,8 +115,11 @@ public:
   void DeleteAttribute(const std::string& key);
   template <typename T>
   T GetAttribute(const std::string& key) const;
+
+  /* @brief Load command(property) manually. */
   virtual void LoadProperty(const std::map<std::string, std::string>& properties);
   virtual void LoadProperty(const std::string& prop_name, const std::string& value);
+
   void LoadDrawProperty(const BaseObject& other);
   void LoadDrawProperty(const DrawProperty& draw_prop);
   void LoadTween(const BaseObject& other);
@@ -150,6 +153,10 @@ public:
 
   void Update(float delta);
   void Render();
+
+  /* @brief Load property(resource) by itself.
+   * generally called when LoadScene() is called. */
+  virtual void Load();
 
   bool operator==(const BaseObject& o) {
     return o.get_name() == get_name();

@@ -231,9 +231,18 @@ bool LR2Text::IsVisible() const
     LR2Flag::GetFlag(op_[2]) && LR2Flag::IsTimerActive(timer_id_);
 }
 
+void LR2Text::Load()
+{
+  const char* c;
+  if (lr2_st_id_ && (c = LR2Flag::GetText(lr2_st_id_)) != 0)
+    SetText(c);
+}
+
 bool LR2Text::OnEvent(const EventMessage &e)
 {
-  SetText(LR2Flag::GetText(lr2_st_id_));
+  const char* c;
+  if ((c = LR2Flag::GetText(lr2_st_id_)) != 0)
+    SetText(LR2Flag::GetText(lr2_st_id_));
   return true;
 }
 

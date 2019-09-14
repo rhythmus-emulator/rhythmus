@@ -26,7 +26,7 @@ enum Events
   kEventSongListLoaded,
   kEventSongListLoadFinished,
 
-  kEventSceneTimeEnd,
+  kEventSceneTimeout,
   kEventSceneChange,
   kEventSongSelectChanged,
   kEventSongSelected,
@@ -49,6 +49,8 @@ public:
   int GetEventID() const;
   void SetNewTime();
   void SetParam(int *params, int param_len);
+  uint32_t GetTimeInMilisecond() const;
+  double GetTime() const;
 
   /**
    * This methods only called

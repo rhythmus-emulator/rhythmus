@@ -519,6 +519,7 @@ void BaseObject::Render()
   Graphic::PopMatrix();
 }
 
+void BaseObject::Load() {}
 void BaseObject::doUpdate(float delta) {}
 void BaseObject::doRender() {}
 void BaseObject::doUpdateAfter(float delta) {}

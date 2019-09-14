@@ -58,6 +58,9 @@ void SelectScene::CloseScene()
 
 bool SelectScene::ProcessEvent(const EventMessage& e)
 {
+  if (!IsInputAvailable(e.GetTimeInMilisecond()))
+    return true;
+
   if (e.IsKeyDown() || e.IsKeyPress())
   {
     if (e.GetKeycode() == GLFW_KEY_UP)

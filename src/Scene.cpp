@@ -48,7 +48,7 @@ std::string ThemeOption::GetSelectedValue()
 // -------------------------------- Scene
 
 Scene::Scene()
-  : fade_time_(0), fade_duration_(0), is_input_available_(1), focused_object_(nullptr)
+  : fade_time_(0), fade_duration_(0), input_available_time_(0), focused_object_(nullptr)
 {
   memset(&theme_param_, 0, sizeof(theme_param_));
 }
@@ -80,6 +80,9 @@ void Scene::LoadScene()
   {
     std::cerr << "[Warning] Scene has no name." << std::endl;
   }
+
+  for (auto *obj : children_)
+    obj->Load();
 }
 
 void Scene::StartScene()
@@ -87,8 +90,11 @@ void Scene::StartScene()
   // Prepare to trigger scenetime if necessary
   if (theme_param_.next_scene_time > 0)
   {
-    QueueSceneEvent(theme_param_.next_scene_time, Events::kEventSceneTimeEnd);
+    QueueSceneEvent(theme_param_.next_scene_time, Events::kEventSceneTimeout);
   }
+
+  // set input avail time
+  input_available_time_ = Timer::GetGameTimeInMillisecond() + theme_param_.begin_input_time;
 }
 
 void Scene::CloseScene()
@@ -144,6 +150,11 @@ void Scene::SaveOptions()
   {
     setting.Set(t.id, t.selected);
   }
+}
+
+bool Scene::IsInputAvailable(uint32_t time) const
+{
+  return input_available_time_ < time;
 }
 
 void Scene::doUpdate(float delta)

@@ -30,6 +30,8 @@ public:
   virtual void LoadProperty(const std::string& prop_name, const std::string& value);
   virtual bool IsVisible() const;
 
+  virtual void Load();
+
   virtual bool OnEvent(const EventMessage &e);
 
 private:
