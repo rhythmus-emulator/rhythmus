@@ -15,6 +15,8 @@ public:
   std::string genre;
   std::string artist;
   std::string subartist;
+  std::string songpath;
+  std::string chartname;
   int type;
   int level;
 };

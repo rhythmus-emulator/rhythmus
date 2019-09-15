@@ -88,14 +88,17 @@ public:
   void Update(float delta);
   void Clear();
 
-  bool IsPlaying();
-  bool IsFinished();
+  bool IsLoaded() const;
+  bool IsPlaying() const;
+  bool IsFinished() const;
   double GetProgress();
   double GetSongStartTime();
   int GetSongEclipsedTime();
 
   /* @brief make judgement, sound, and score change with input */
   void Input(int keycode, uint32_t gametime);
+
+  static SongPlayable& getInstance();
 
 private:
   void LoadResourceThreadBody();
@@ -104,6 +107,7 @@ private:
 private:
   rparser::Song song_;
   rparser::Chart* chart_;
+  int is_loaded_;
 
   /* tappable notes */
   struct SongNote {

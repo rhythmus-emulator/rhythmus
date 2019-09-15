@@ -385,8 +385,6 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
     );
     load_thread_.back().detach();
   }
-
-  song_.CloseChart();
 }
 
 void SongPlayable::LoadResourceThreadBody()
@@ -448,6 +446,7 @@ void SongPlayable::FinishLoadResource()
   load_count_ = 0;
 
   // trigger event
+  is_loaded_ = 1;
   EventManager::SendEvent(Events::kEventSongLoadFinished);
 }
 
@@ -523,15 +522,25 @@ void SongPlayable::Clear()
 
   for (int i = 0; i < 1000; ++i)
     bg_[i].UnloadAll();
+
+  song_.CloseChart();
+  song_.Close();
+  is_loaded_ = 0;
 }
 
-bool SongPlayable::IsPlaying()
+bool SongPlayable::IsLoaded() const
+{
+  return is_loaded_ > 0;
+}
+
+bool SongPlayable::IsPlaying() const
 {
   return song_start_time_ > 0;
 }
 
-bool SongPlayable::IsFinished()
+bool SongPlayable::IsFinished() const
 {
+  // TODO
   return false;
 }
 
@@ -556,6 +565,12 @@ int SongPlayable::GetSongEclipsedTime()
 void SongPlayable::Input(int keycode, uint32_t gametime)
 {
   // TODO
+}
+
+SongPlayable& SongPlayable::getInstance()
+{
+  static SongPlayable s;
+  return s;
 }
 
 }

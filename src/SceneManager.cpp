@@ -21,6 +21,8 @@ SceneManager::SceneManager()
   SubscribeTo(Events::kOnKeyUp);
   SubscribeTo(Events::kEventSceneTimeout);
   SubscribeTo(Events::kEventSceneChange);
+  SubscribeTo(Events::kEventSongLoadFinished);
+  SubscribeTo(Events::kEventSongStarted);
 }
 
 SceneManager::~SceneManager()

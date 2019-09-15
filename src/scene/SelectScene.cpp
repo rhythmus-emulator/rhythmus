@@ -78,6 +78,11 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
     }
     else if (e.GetKeycode() == GLFW_KEY_ENTER)
     {
+      // Trick: preload selected song from here
+      // we can play song almost without loading time ...!
+      auto &d = wheel_.get_selected_data();
+      SongPlayable::getInstance().Load(d.songpath, d.chartname);
+
       // Song selection - immediately change scene mode
       Game::getInstance().SetNextGameMode(GameMode::kGameModeDecide);
       Game::getInstance().ChangeGameMode();
@@ -124,6 +129,8 @@ void SelectScene::MakeSelectDataList()
     item.artist = song.artist;
     item.subtitle = song.subtitle;
     item.subartist = song.subartist;
+    item.songpath = song.songpath;
+    item.chartname = song.chartpath;
     item.type = 0;
     item.level = song.level;
   }
