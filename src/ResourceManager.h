@@ -19,6 +19,7 @@ public:
   static ImageAuto LoadImage(const std::string& path);
   static FontAuto LoadFont(const std::string& path, FontAttributes& attrs);
   static FontAuto LoadLR2Font(const std::string& path);
+  static FontAuto GetSystemFont();
   static void ReleaseImage(ImageAuto img);
   static void ReleaseFont(const FontAuto& font);
 

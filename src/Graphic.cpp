@@ -421,6 +421,26 @@ void Graphic::SetModel(const ProjectionInfo& pi)
   glUniformMatrix4fv(2, 1, GL_FALSE, &m_model_[0][0]);
 }
 
+void Graphic::GetResolutions(std::vector<std::string>& out)
+{
+  int totalMonitor;
+  GLFWmonitor** monitors = glfwGetMonitors(&totalMonitor);
+  for (int currMonitor = 0; currMonitor < totalMonitor; currMonitor++)
+  {
+    //printf("\n monitor name: [%s]", glfwGetMonitorName(monitors[currMonitor]));
+    int count;
+    const GLFWvidmode* modes = glfwGetVideoModes(monitors[currMonitor], &count);
+    for (int i = 0; i < count; i++)
+    {
+      // ignore refresh rate
+      std::string s;
+      s = std::to_string(modes[i].width) + "x" + std::to_string(modes[i].height);
+      if (std::find(out.begin(), out.end(), s) == out.end())
+        out.push_back(s);
+    }
+  }
+}
+
 /**
  * @brief Renders quad with cached vertices.
  */

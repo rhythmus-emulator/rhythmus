@@ -52,6 +52,27 @@ FontAuto ResourceManager::LoadLR2Font(const std::string& path)
   return fa;
 }
 
+FontAuto ResourceManager::GetSystemFont()
+{
+  static FontAuto sys_font;
+  if (!sys_font)
+  {
+    FontAttributes fnt_attr_;
+    memset(&fnt_attr_, 0, sizeof(fnt_attr_));
+    fnt_attr_.color = 0xFFFFFFFF;
+    fnt_attr_.size = 5;
+    sys_font = ResourceManager::LoadFont("../system/default.ttf", fnt_attr_);
+    if (!sys_font)
+    {
+      std::cerr << "Failed to read system font." << std::endl;
+      return nullptr;
+    }
+    // commit default glyphs
+    sys_font->Commit();
+  }
+  return sys_font;
+}
+
 void ResourceManager::ReleaseImage(ImageAuto img)
 {
 }

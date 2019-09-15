@@ -5,8 +5,7 @@
 namespace rhythmus
 {
 
-MusicWheelItem::MusicWheelItem(int index)
-  : WheelItem(index)
+MusicWheelItem::MusicWheelItem()
 {
   AddChild(&title_);
   AddChild(&level_);
@@ -16,12 +15,12 @@ Text& MusicWheelItem::title() { return title_; }
 
 Text& MusicWheelItem::level() { return level_; }
 
-MusicWheelItemData* MusicWheelItem::get_data()
+MusicWheelData* MusicWheelItem::get_data()
 {
-  return static_cast<MusicWheelItemData*>(WheelItem::get_data());
+  return static_cast<MusicWheelData*>(MenuItem::get_data());
 }
 
-void MusicWheelItem::Invalidate()
+void MusicWheelItem::Load()
 {
   if (!get_data())
     return;
@@ -45,33 +44,30 @@ void MusicWheelItem::Invalidate()
 // --------------------------- class MusicWheel
 
 MusicWheel::MusicWheel()
-{}
-
-MusicWheelItemData& MusicWheel::get_selected_data()
 {
-  return get_data(get_selected_dataindex());
+  set_infinite_scroll(true);
+  set_display_count(24);
+  set_focus_max_index(12);
+  set_focus_min_index(12);
+  set_focus_index(12);
 }
 
-MusicWheelItemData& MusicWheel::NewData()
+MusicWheelData& MusicWheel::get_data(int dataindex)
 {
-  auto *p = new MusicWheelItemData();
-  AddData(p);
-  return *p;
+  return static_cast<MusicWheelData&>(Menu::GetMenuDataByIndex(dataindex));
 }
 
-WheelItem* MusicWheel::CreateWheelItem(int index)
+MusicWheelData& MusicWheel::get_selected_data()
 {
-  return new MusicWheelItem(index);
+  return static_cast<MusicWheelData&>(Menu::GetSelectedMenuData());
 }
 
-MusicWheelItem& MusicWheel::get_item(int index)
+MenuItem* MusicWheel::CreateMenuItem()
 {
-  return *static_cast<MusicWheelItem*>(Wheel::get_item(index));
-}
-
-MusicWheelItemData& MusicWheel::get_data(int dataindex)
-{
-  return *static_cast<MusicWheelItemData*>(select_data_[dataindex]);
+  MusicWheelItem* item = new MusicWheelItem();
+  item->title().SetFontByName(title_font_);
+  item->title().LoadTween(title_dst_);
+  return item;
 }
 
 void MusicWheel::LoadProperty(const std::string& prop_name, const std::string& value)
@@ -83,7 +79,7 @@ void MusicWheel::LoadProperty(const std::string& prop_name, const std::string& v
     MakeParamCountSafe(value, params, 2);
     if (params[0] != "0") return;
     for (int i = 0; i < bar_.size(); ++i)
-      get_item(i).title().SetFontByName(params[1]);
+      title_font_ = params[1];
     return;
   }
   else if (prop_name == "#DST_BAR_TITLE")
@@ -92,12 +88,12 @@ void MusicWheel::LoadProperty(const std::string& prop_name, const std::string& v
     std::string wh = GetFirstParam(value);
     if (wh != "0") return;
     for (int i = 0; i < bar_.size(); ++i)
-      get_item(i).title().LoadProperty(prop_name, value);
+      title_dst_.LoadProperty(prop_name, value);
     return;
   }
   // TODO: BAR_LEVEL, ...
 
-  Wheel::LoadProperty(prop_name, value);
+  Menu::LoadProperty(prop_name, value);
 }
 
 }

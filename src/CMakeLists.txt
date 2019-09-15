@@ -31,9 +31,11 @@ set (RHYTHMUS_SOURCES
     scene/DecideScene.cpp
     scene/PlayScene.cpp
     scene/ResultScene.cpp
+    scene/OptionScene.cpp
 	
-	object/Wheel.cpp
+	object/Menu.cpp
 	object/MusicWheel.cpp
+    object/OptionMenu.cpp
 
     LR2/exdxa.cpp
     LR2/LR2Font.cpp
@@ -67,9 +69,11 @@ set (RHYTHMUS_HEADERS
     scene/DecideScene.h
     scene/PlayScene.h
     scene/ResultScene.h
+    scene/OptionScene.h
 
-	object/Wheel.h
+	object/Menu.h
 	object/MusicWheel.h
+    object/OptionMenu.h
 
     LR2/exdxa.h
     LR2/LR2Font.h

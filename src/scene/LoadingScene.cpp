@@ -22,18 +22,7 @@ const std::string LoadingScene::GetSceneName() const
 
 void LoadingScene::LoadScene()
 {
-  FontAttributes fnt_attr_;
-  memset(&fnt_attr_, 0, sizeof(fnt_attr_));
-  fnt_attr_.color = 0xFFFFFFFF;
-  fnt_attr_.size = 5;
-  sys_font_ = ResourceManager::LoadFont("../system/default.ttf", fnt_attr_);
-  if (!sys_font_)
-  {
-    std::cerr << "Failed to read system font." << std::endl;
-  }
-  // commit default glyphs
-  sys_font_->Commit();
-
+  sys_font_ = ResourceManager::GetSystemFont();
   message_text_.SetFont(sys_font_.get());
   current_file_text_.SetFont(sys_font_.get());
 
