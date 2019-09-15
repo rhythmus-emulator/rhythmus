@@ -10,6 +10,13 @@
 namespace rhythmus
 {
 
+struct SongInvalidateData
+{
+  std::string songpath;
+  int modified_date;
+  int hit_count;
+};
+
 // ----------------------------- class SongList
 
 SongList::SongList()
@@ -26,6 +33,7 @@ void SongList::Load()
   /* (path, timestamp) key */
   std::map<std::string, int> mod_dir;
   std::map<std::string, int> mod_db;
+  std::vector<SongInvalidateData> songcheck;
   std::vector<DirItem> dir;
 
   // 1. attempt to read file/folder list in directory
@@ -36,6 +44,14 @@ void SongList::Load()
       std::endl;
     return;
   }
+  for (auto& d : dir)
+  {
+    SongInvalidateData s;
+    s.songpath = song_dir_ + "/" + d.filename;
+    s.modified_date = d.timestamp_modified;
+    s.hit_count = 0;
+    songcheck.push_back(s);
+  }
 
   // 2. attempt to load DB
   sqlite3 *db = 0;
@@ -44,19 +60,55 @@ void SongList::Load()
     std::cout << "Cannot open song database, regarding as database file is missing." << std::endl;
   } else
   {
-    // TODO: load all song db
+    // Load all previously loaded songs
+    char *errmsg;
+    sqlite3_exec(db,
+      "SELECT title, subtitle, artist, subartist, genre, "
+      "songpath, chartpath, level, judgediff, modified_date "
+      "from songs;",
+      &SongList::sql_songlist_callback, this, &errmsg);
+    if (rc != SQLITE_OK)
+    {
+      std::cerr << "Failed to query song database, maybe corrupted? (" << errmsg << ")" << std::endl;
+      sqlite3_free(errmsg);
+    }
     sqlite3_close(db);
+
+    // mark hit count to check a song should be loaded
+    // - also check current song is invalid or not.
+    //   if invalid, it will removed from array...
+    std::vector<SongListData> songs_new;
+    for (auto& s : songs_)
+    {
+      int marked = 0;
+      for (auto &check : songcheck)
+      {
+        if (s.songpath == check.songpath && s.modified_date == check.modified_date)
+        {
+          marked++;
+          check.hit_count++;
+          break;
+        }
+      }
+      if (marked > 0)
+        songs_new.push_back(s);
+    }
+    songs_.swap(songs_new);
   }
 
-  // 3. comparsion modified date with DB to invalidate any song necessary. (TODO)
-  for (auto &d : dir)
+  // from now,
+  // * songs_ : contains all confirmed chart lists (don't need to be reloaded)
+  // * songcheck : hit_count == 0 if song is new, which means need to be (re)loaded.
+
+  // 3. Now load necessary songs with multi-threading
+  for (auto &check : songcheck)
   {
-    invalidate_list_.push_back(d.filename);
+    if (check.hit_count == 0)
+      invalidate_list_.push_back(check.songpath);
   }
   total_inval_size_ = invalidate_list_.size();
   EventManager::SendEvent(Events::kEventSongListLoaded);
 
-  // 4. Now load all songs with multi-threading
   ASSERT(thread_count_ > 0);
   active_thr_count_ = thread_count_;
   for (int i = 0; i < thread_count_; ++i)
@@ -68,7 +120,52 @@ void SongList::Load()
 
 void SongList::Save()
 {
-  // TODO
+  sqlite3 *db = 0;
+  int rc = sqlite3_open("../system/song.db", &db);
+  if (rc) {
+    std::cout << "Cannot save song database." << std::endl;
+  }
+  else
+  {
+    // Load all previously loaded songs
+    char *errmsg;
+    sqlite3_exec(db, "TRUNCATE TABLE songs;",
+      &SongList::sql_songlist_callback, this, &errmsg);
+    if (rc != SQLITE_OK)
+    {
+      std::cerr << "Failed SQL: " << errmsg << ")" << std::endl;
+      sqlite3_free(errmsg);
+      sqlite3_close(db);
+      return;
+    }
+    sqlite3_close(db);
+  }
+}
+
+int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **colnames)
+{
+  SongList *self = static_cast<SongList*>(_self);
+  for (int i = 0; i < argc; ++i)
+  {
+    SongListData sdata;
+    sdata.title = argv[0];
+    sdata.subtitle = argv[1];
+    sdata.artist = argv[2];
+    sdata.subartist = argv[3];
+    sdata.genre = argv[4];
+    sdata.songpath = argv[5];
+    sdata.chartpath = argv[6];
+    sdata.level = atoi(argv[7]);
+    sdata.judgediff = atoi(argv[8]);
+    sdata.modified_date = atoi(argv[9]);
+    self->songs_.push_back(sdata);
+  }
+  return 0;
+}
+
+int SongList::sql_dummy_callback(void*, int argc, char **argv, char **colnames)
+{
+  return 0;
 }
 
 void SongList::Clear()
@@ -110,11 +207,6 @@ std::vector<SongListData>::iterator SongList::end() { return songs_.end(); }
 const SongListData& SongList::get(int i) const { return songs_[i]; }
 SongListData SongList::get(int i) { return songs_[i]; }
 
-void SongList::PrepareSongpathlistFromDirectory()
-{
-
-}
-
 void SongList::song_loader_thr_body()
 {
   static std::mutex lock;
@@ -131,7 +223,7 @@ void SongList::song_loader_thr_body()
       lock.unlock();
       break;
     }
-    filepath = song_dir_ + "/" + invalidate_list_.front();
+    filepath = invalidate_list_.front();
     invalidate_list_.pop_front();
     current_loading_file_ = filepath;
     lock.unlock();

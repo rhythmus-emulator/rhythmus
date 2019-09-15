@@ -29,15 +29,15 @@ void LoadingScene::LoadScene()
 
   message_text_.SetPos(
     320,
-    Game::getInstance().get_window_height() - 260
+    Game::getInstance().get_window_height() - 160
   );
   current_file_text_.SetPos(
     320,
-    Game::getInstance().get_window_height() - 200
+    Game::getInstance().get_window_height() - 120
   );
   loading_bar_.SetPos(
     240,
-    Game::getInstance().get_window_height() - 200
+    Game::getInstance().get_window_height() - 120
   );
 
   // Register childs

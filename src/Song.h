@@ -30,6 +30,7 @@ struct SongListData
   std::string chartpath;
   int level;
   int judgediff;
+  int modified_date;
 };
 
 /* @brief A singleton class which contains currently loaded Song DB */
@@ -69,8 +70,8 @@ private:
 
   int thread_count_;
 
-  /* @brief read directory and create song path list */
-  void PrepareSongpathlistFromDirectory();
+  static int sql_dummy_callback(void*, int argc, char **argv, char **colnames);
+  static int sql_songlist_callback(void*, int argc, char **argv, char **colnames);
 
   void song_loader_thr_body();
 };
