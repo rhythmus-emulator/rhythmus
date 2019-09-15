@@ -65,8 +65,10 @@ MusicWheelData& MusicWheel::get_selected_data()
 MenuItem* MusicWheel::CreateMenuItem()
 {
   MusicWheelItem* item = new MusicWheelItem();
+  item->set_parent(this);
   item->title().SetFontByName(title_font_);
   item->title().LoadTween(title_dst_);
+  item->title().Show();
   return item;
 }
 
@@ -78,8 +80,7 @@ void MusicWheel::LoadProperty(const std::string& prop_name, const std::string& v
     std::vector<std::string> params;
     MakeParamCountSafe(value, params, 2);
     if (params[0] != "0") return;
-    for (int i = 0; i < bar_.size(); ++i)
-      title_font_ = params[1];
+    title_font_ = params[1];
     return;
   }
   else if (prop_name == "#DST_BAR_TITLE")
@@ -87,8 +88,7 @@ void MusicWheel::LoadProperty(const std::string& prop_name, const std::string& v
     // TODO: only for "0" attribute now ...
     std::string wh = GetFirstParam(value);
     if (wh != "0") return;
-    for (int i = 0; i < bar_.size(); ++i)
-      title_dst_.LoadProperty(prop_name, value);
+    title_dst_.LoadProperty(prop_name, value);
     return;
   }
   // TODO: BAR_LEVEL, ...

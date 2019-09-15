@@ -126,7 +126,10 @@ int Menu::index() const { return data_index_; }
 void Menu::Clear()
 {
   for (auto* p : bar_)
+  {
+    RemoveChild(p);
     delete p;
+  }
   for (auto* p : data_)
     delete p;
   bar_.clear();
@@ -145,7 +148,7 @@ void Menu::set_focus_min_index(int min_index)
 
 void Menu::set_focus_max_index(int max_index)
 {
-  focus_min_ = max_index;
+  focus_max_ = max_index;
 }
 
 void Menu::set_focus_index(int center_idx)
@@ -170,7 +173,9 @@ void Menu::RebuildItems()
   int build_item_count = display_count_ + kScrollPosMaxDiff * 2;
   while (bar_.size() < build_item_count)
   {
-    bar_.push_back(CreateItem());
+    auto *item = CreateMenuItem();
+    AddChild(item);
+    bar_.push_back(item);
   }
   for (int i = build_item_count; i < bar_.size(); ++i)
     bar_[i]->Hide();
@@ -313,7 +318,7 @@ void Menu::UpdateItemPosByExpr()
   // decide range of object to show
   int start_idx_show = kScrollPosMaxDiff + floor(scroll_delta_);
   int end_idx_show = start_idx_show + display_count_;
-  for (i = 0; i < kScrollPosMaxDiff; ++i)
+  for (i = 0; i < display_count_ + kScrollPosMaxDiff * 2; ++i)
   {
     if (i < start_idx_show || i > end_idx_show)
       bar_[i]->Hide();
@@ -328,19 +333,19 @@ void Menu::UpdateItemPosByFixed()
   double ratio = scroll_delta_ - floor(scroll_delta_);
 
   // decide range of object to show
-  int start_idx_show = kScrollPosMaxDiff + floor(scroll_delta_);
+  int start_idx_show = kScrollPosMaxDiff + floor(scroll_delta_) + 1 /* LR2 specific trick */;
   int end_idx_show = start_idx_show +
     display_count_ > 28 ? 28 : display_count_ /* XXX: Number is limited here! */;
-  for (i = 0; i < kScrollPosMaxDiff; ++i)
+  for (i = 0; i < display_count_ + kScrollPosMaxDiff * 2; ++i)
   {
-    if (i < start_idx_show || i > end_idx_show)
+    if (i < start_idx_show || i >= end_idx_show)
       bar_[i]->Hide();
     else
     {
       ii = i - start_idx_show;
-      ASSERT(ii > 0 && ii < 30);
-      BaseObject *obj1 = &pos_fixed_param_.tween_bar[ii];
-      BaseObject *obj2 = &pos_fixed_param_.tween_bar[ii + 1];
+      ASSERT(ii >= 0 && ii < 30);
+      BaseObject *obj1 = &pos_fixed_param_.tween_bar[ii + 1];
+      BaseObject *obj2 = &pos_fixed_param_.tween_bar[ii];
       if (!obj1->get_draw_property().display || !obj2->get_draw_property().display)
       {
         bar_[i]->Hide();
@@ -353,7 +358,7 @@ void Menu::UpdateItemPosByFixed()
         obj2->get_draw_property(),
         ratio, EaseTypes::kEaseLinear);
       bar_[i]->LoadDrawProperty(d);
-      bar_[i]->Show();
+      //bar_[i]->Show();
     }
   }
 }
@@ -374,7 +379,7 @@ void Menu::LoadProperty(const std::string& prop_name, const std::string& value)
     if (attr < 0 || attr >= kDefaultBarCount) return;
     pos_fixed_param_.tween_bar_focus[attr].LoadProperty(prop_name, value);
 
-    if (attr < display_count_) display_count_ = attr;
+    if (attr > display_count_) display_count_ = attr;
   }
   else if (prop_name == "#DST_BAR_BODY_OFF")
   {
@@ -386,7 +391,7 @@ void Menu::LoadProperty(const std::string& prop_name, const std::string& value)
     if (attr < 0 || attr > kDefaultBarCount) return;
     pos_fixed_param_.tween_bar[attr].LoadProperty(prop_name, value);
 
-    if (attr < display_count_) display_count_ = attr;
+    if (attr > display_count_) display_count_ = attr;
   }
   else if (prop_name == "#SRC_BAR_BODY")
   {
@@ -406,14 +411,14 @@ void Menu::LoadProperty(const std::string& prop_name, const std::string& value)
   else if (prop_name == "#BAR_CENTER")
   {
     int idx = atoi(GetFirstParam(value).c_str());
-    set_focus_min_index(idx);
     set_focus_max_index(idx);
+    set_focus_min_index(idx);
     set_focus_index(idx);
 
   }
 }
 
-MenuItem* Menu::CreateItem()
+MenuItem* Menu::CreateMenuItem()
 {
   return new MenuItem();
 }
