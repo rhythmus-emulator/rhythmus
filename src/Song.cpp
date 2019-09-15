@@ -127,16 +127,60 @@ void SongList::Save()
   }
   else
   {
-    // Load all previously loaded songs
+    // Delete all records and rewrite
     char *errmsg;
-    sqlite3_exec(db, "TRUNCATE TABLE songs;",
-      &SongList::sql_songlist_callback, this, &errmsg);
+    sqlite3_exec(db, "DROP TABLE songs;",
+      &SongList::sql_dummy_callback, this, &errmsg);
+    if (rc != SQLITE_OK)
+    {
+      // drop table might be failed, ignore.
+      sqlite3_free(errmsg);
+    }
+    sqlite3_exec(db, "CREATE TABLE songs("
+      "title CHAR(128),"
+      "subtitle CHAR(128),"
+      "artist CHAR(128),"
+      "subartist CHAR(128),"
+      "genre CHAR(64),"
+      "songpath CHAR(1024) NOT NULL,"
+      "chartpath CHAR(512) NOT NULL,"
+      "level INT,"
+      "judgediff INT,"
+      "modified_date INT"
+      ");",
+      &SongList::sql_dummy_callback, this, &errmsg);
     if (rc != SQLITE_OK)
     {
       std::cerr << "Failed SQL: " << errmsg << ")" << std::endl;
       sqlite3_free(errmsg);
       sqlite3_close(db);
       return;
+    }
+
+    for (auto &s : songs_)
+    {
+      std::stringstream ss;
+      ss << "INSERT INTO songs VALUES ('"
+        << s.title << "', '"
+        << s.subtitle << "', '"
+        << s.artist << "', '"
+        << s.subartist << "', '"
+        << s.genre << "', '"
+        << s.songpath << "', '"
+        << s.chartpath << "', "
+        << s.level << ", "
+        << s.judgediff << ", "
+        << s.modified_date << ";"
+        ;
+      sqlite3_exec(db, ss.str().c_str(),
+        &SongList::sql_dummy_callback, this, &errmsg);
+      if (rc != SQLITE_OK)
+      {
+        std::cerr << "Failed SQL: " << errmsg << ")" << std::endl;
+        sqlite3_free(errmsg);
+        sqlite3_close(db);
+        return;
+      }
     }
     sqlite3_close(db);
   }
