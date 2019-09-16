@@ -11,6 +11,7 @@
 #include "LR2/LR2Flag.h"  // For updating LR2 flag
 #include "Event.h"
 #include "rutil.h"        // convert wargv
+#include "./Song.h"
 #include <iostream>
 
 using namespace rhythmus;
@@ -70,7 +71,9 @@ int main(int argc, char **argv)
   /**
    * Cleanup
    */
+  
   SceneManager::getInstance().Cleanup();
+  SongPlayable::getInstance().CancelLoad(); // if loading, than cancel
   graphic.Cleanup();
   GameMixer::getInstance().Destroy();
   if (!game.Save())

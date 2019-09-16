@@ -68,7 +68,17 @@ void PlayScene::doUpdate(float delta)
       play_status_ = 1;
     }
     break;
+  case 1:
+    SongPlayable::getInstance().Update(delta);
+    if (SongPlayable::getInstance().IsFinished())
+    {
+      CloseScene();
+      play_status_ = 3;
+    }
+    break;
+  case 2:
   case 3:
+    // don't do anything
     break;
   }
 }

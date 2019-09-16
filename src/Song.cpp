@@ -2,6 +2,7 @@
 #include "Timer.h"
 #include "Event.h"
 #include "Util.h"
+#include "rhythmus.h"
 #include <map>
 
 #include <sqlite3.h>
@@ -9,6 +10,8 @@
 
 namespace rhythmus
 {
+
+using SongAuto = std::shared_ptr<rparser::Song>;
 
 struct SongInvalidateData
 {
@@ -310,7 +313,8 @@ void SongList::song_loader_thr_body()
 // ------------------------- class SongPlayable
 
 SongPlayable::SongPlayable()
-  : note_current_idx_(0), event_current_idx_(0),
+  : song_(nullptr), chart_(nullptr),
+    note_current_idx_(0), event_current_idx_(0),
     load_thread_count_(4), active_thread_count_(0),
     load_total_count_(0), load_count_(0), song_start_time_(0)
 {
@@ -318,12 +322,13 @@ SongPlayable::SongPlayable()
 
 void SongPlayable::Load(const std::string& path, const std::string& chartpath)
 {
-  if (!song_.Open(path))
+  song_ = new rparser::Song();
+  if (!song_->Open(path))
   {
     std::cerr << "SongPlayable: Failed to open song " << path << std::endl;
     return;
   }
-  chart_ = song_.GetChart(chartpath);
+  chart_ = song_->GetChart(chartpath);
   if (!chart_)
   {
     std::cerr << "SongPlayable: Failed to open song " << path << " with chartpath " << chartpath << std::endl;
@@ -338,7 +343,11 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
     SongNote n;
     n.beat = note.beat;
     n.time = note.time_msec;
-    n.lane = note.GetLane();
+    // if is scorable --> TapNote / else --> BgaNote
+    if (note.IsScoreable())
+      n.lane = note.GetLane();
+    else
+      n.lane = -1;
     n.channel = note.value;
     notes_.push_back(n);
   }
@@ -370,6 +379,7 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
   }
   load_total_count_ = loadinfo_list_.size();
   load_count_ = 0;
+  is_loaded_ = 0;
 
   // create loader thread
   active_thread_count_ = load_thread_count_;
@@ -378,7 +388,6 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
     load_thread_.emplace_back(
       std::thread(&SongPlayable::LoadResourceThreadBody, this)
     );
-    load_thread_.back().detach();
   }
 }
 
@@ -397,11 +406,16 @@ void SongPlayable::LoadResourceThreadBody()
     loadinfo_list_.pop_back();
     loadinfo_list_mutex_.unlock();
 
-    rparser::Directory* dir = song_.GetDirectory();
+    rparser::Directory* dir = song_->GetDirectory();
 
     if (li.type == 0 /* sound */)
     {
-      rparser::FileData *fd = dir->Get(li.path);
+      rparser::FileData *fd = dir->Get(li.path, true);
+      if (!fd)
+      {
+        std::cerr << "SongPlayable: cannot read sound :" << li.path << std::endl;
+        continue;
+      }
       keysounds_[li.channel].LoadFromMemory(*fd);
 #if 0
       /// future code
@@ -416,7 +430,12 @@ void SongPlayable::LoadResourceThreadBody()
     }
     else if (li.type == 1 /* bga */)
     {
-      rparser::FileData *fd = dir->Get(li.path);
+      rparser::FileData *fd = dir->Get(li.path, true);
+      if (!fd)
+      {
+        std::cerr << "SongPlayable: cannot read BGA :" << li.path << std::endl;
+        continue;
+      }
       bg_[li.channel].LoadFromData(fd->p, fd->len);
     }
   }
@@ -425,24 +444,9 @@ void SongPlayable::LoadResourceThreadBody()
   /* should be called only once! */
   if (active_thread_count_ == 0)
   {
-    FinishLoadResource();
+    is_loaded_ = 1;
+    EventManager::SendEvent(Events::kEventSongLoadFinished);
   }
-}
-
-void SongPlayable::FinishLoadResource()
-{
-  // wait all working thread to be done
-  active_thread_count_ = 0;
-  for (auto& thr : load_thread_)
-    thr.join();
-
-  // reset all loading context
-  load_total_count_ = 0;
-  load_count_ = 0;
-
-  // trigger event
-  is_loaded_ = 1;
-  EventManager::SendEvent(Events::kEventSongLoadFinished);
 }
 
 void SongPlayable::CancelLoad()
@@ -451,18 +455,32 @@ void SongPlayable::CancelLoad()
   active_thread_count_ = 0;
   for (auto& thr : load_thread_)
     thr.join();
+  load_thread_.clear();
 
   // reset all loading context
   load_total_count_ = 0;
   load_count_ = 0;
-
-  // clear song data
-  Clear();
 }
 
 void SongPlayable::Play()
 {
   song_start_time_ = Timer::GetGameTimeInMillisecond();
+}
+
+void SongPlayable::Stop()
+{
+  song_start_time_ = 0;
+  //for (int i = 0; i < 1000; ++i)
+  //  keysounds_[i].Stop();
+}
+
+void SongPlayable::Update(float)
+{
+  // TODO: play bgm which is behind current timestamp
+  if (!IsPlaying())
+    return;
+
+  song_current_time_ = Timer::GetGameTimeInMillisecond();
   int songtime = GetSongEclipsedTime();
 
   int i = note_current_idx_;
@@ -492,20 +510,6 @@ void SongPlayable::Play()
   }
 }
 
-void SongPlayable::Stop()
-{
-  song_start_time_ = 0;
-  //for (int i = 0; i < 1000; ++i)
-  //  keysounds_[i].Stop();
-}
-
-void SongPlayable::Update(float)
-{
-  song_current_time_ = Timer::GetGameTimeInMillisecond();
-
-  // TODO: play bgm which is behind current timestamp
-}
-
 void SongPlayable::Clear()
 {
   // should not be called while loading!
@@ -518,8 +522,11 @@ void SongPlayable::Clear()
   for (int i = 0; i < 1000; ++i)
     bg_[i].UnloadAll();
 
-  song_.CloseChart();
-  song_.Close();
+  song_->CloseChart();
+  song_->Close();
+
+  chart_ = nullptr;
+  song_ = nullptr;
   is_loaded_ = 0;
 }
 
@@ -535,23 +542,23 @@ bool SongPlayable::IsPlaying() const
 
 bool SongPlayable::IsFinished() const
 {
-  // TODO
-  return false;
+  // current check with : last object time > song eclipsed time
+  return (IsPlaying() && GetSongEclipsedTime() > notes_.back().time);
 }
 
-double SongPlayable::GetProgress()
+double SongPlayable::GetProgress() const
 {
   if (load_total_count_ == 0)
     return 0;
   else return (float)load_count_ / load_total_count_;
 }
 
-double SongPlayable::GetSongStartTime()
+double SongPlayable::GetSongStartTime() const
 {
   return song_start_time_;
 }
 
-int SongPlayable::GetSongEclipsedTime()
+int SongPlayable::GetSongEclipsedTime() const
 {
   if (song_start_time_ == 0) return 0;
   return static_cast<int>(song_current_time_ - song_start_time_);

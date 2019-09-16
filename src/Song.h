@@ -1,6 +1,5 @@
 #pragma once
 
-#include "rhythmus.h"
 #include "Image.h"
 #include "Sound.h"
 #include <string>
@@ -13,11 +12,10 @@
 #include <vector>
 #include <thread>
 
+namespace rparser { class Song; class Chart; }
+
 namespace rhythmus
 {
-
-class Song;
-using SongAuto = std::shared_ptr<rparser::Song>;
 
 struct SongListData
 {
@@ -91,9 +89,9 @@ public:
   bool IsLoaded() const;
   bool IsPlaying() const;
   bool IsFinished() const;
-  double GetProgress();
-  double GetSongStartTime();
-  int GetSongEclipsedTime();
+  double GetProgress() const;
+  double GetSongStartTime() const;
+  int GetSongEclipsedTime() const;
 
   /* @brief make judgement, sound, and score change with input */
   void Input(int keycode, uint32_t gametime);
@@ -102,10 +100,9 @@ public:
 
 private:
   void LoadResourceThreadBody();
-  void FinishLoadResource();
 
 private:
-  rparser::Song song_;
+  rparser::Song* song_;
   rparser::Chart* chart_;
   int is_loaded_;
 
