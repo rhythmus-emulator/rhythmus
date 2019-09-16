@@ -10,7 +10,7 @@ class LR2SceneLoader
 public:
   LR2SceneLoader();
   ~LR2SceneLoader();
-  void SetSubStitutePath(const std::string& theme_path);
+  void SetSubStitutePath(const std::string& sub_from, const std::string& theme_path);
   std::string SubstitutePath(const std::string& path);
   void Load(const std::string& filepath);
 

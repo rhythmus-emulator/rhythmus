@@ -27,4 +27,8 @@ std::string format_string(const std::string& format, Args ... args)
   return std::string(buf.get(), buf.get() + size - 1);
 }
 
+std::string GetExtension(const std::string& path);
+
+std::string Substitute(const std::string& org, const std::string& startswith, const std::string& relplacewith);
+
 }

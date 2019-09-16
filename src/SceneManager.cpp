@@ -7,6 +7,7 @@
 #include "scene/ResultScene.h"
 #include "LR2/LR2SceneLoader.h"
 #include "LR2/LR2Flag.h"
+#include "Util.h"
 #include <iostream>
 
 namespace rhythmus
@@ -38,6 +39,9 @@ void SceneManager::Initialize()
     std::cerr << "Cannot open Scene preference file." << std::endl;
     return;
   }
+
+  // load soundset.
+  LoadSoundset();
 
   // create starting scene.
   ChangeScene();
@@ -119,10 +123,93 @@ void SceneManager::ChangeScene(bool force)
   // Need to refresh whole timing to set exact scene start timing
   // As much time passed due to scene loading.
   Timer::Update();
-  timer_fadeout_.Stop();
   timer_scene_.Start();
 
   current_scene_->StartScene();
+}
+
+void SceneManager::LoadProperty(const std::string& name, const std::string& value)
+{
+  // Soundset
+  if (name == "#SELECT_SOUND")
+  {
+    soundset_.bgm_free = value;
+    soundset_.bgm_standard = value;
+  }
+  else if (name == "#DECIDE_SOUND")
+  {
+    soundset_.decide = value;
+  }
+  else if (name == "#EXSELECT_SOUND")
+  {
+    soundset_.bgm_extra = value;
+  }
+  else if (name == "#EXDECIDE_SOUND")
+  {
+    // TODO?
+  }
+  else if (name == "#FOLDER_OPEN_SOUND")
+  {
+    soundset_.folder_open = value;
+  }
+  else if (name == "#FOLDER_CLOSE_SOUND")
+  {
+    soundset_.folder_close = value;
+  }
+  else if (name == "#PANEL_OPEN_SOUND")
+  {
+    soundset_.menu_open = value;
+  }
+  else if (name == "#PANEL_CLOSE_SOUND")
+  {
+    soundset_.menu_close = value;
+  }
+  else if (name == "#OPTION_CHANGE_SOUND")
+  {
+    soundset_.change = value;
+  }
+  else if (name == "#DIFFICULTY_SOUND")
+  {
+    soundset_.difficulty_change = value;
+  }
+  else if (name == "#SCREENSHOT_SOUND")
+  {
+    soundset_.screenshot = value;
+  }
+  else if (name == "#CLEAR_SOUND")
+  {
+    soundset_.bgm_result_clear = value;
+  }
+  else if (name == "#FAIL_SOUND")
+  {
+    soundset_.bgm_result_failed = value;
+  }
+  else if (name == "#COURSECLEAR_SOUND")
+  {
+    soundset_.bgm_courseresult_clear = value;
+  }
+  else if (name == "#COURSEFAIL_SOUND")
+  {
+    soundset_.bgm_courseresult_failed = value;
+  }
+  else if (name == "#STOP_SOUND")
+  {
+    soundset_.play_abort = value;
+    soundset_.play_failed = value;
+  }
+  else if (name == "#MINE_SOUND")
+  {
+    soundset_.mine = value;
+  }
+  else if (name == "#SCRATCH_SOUND")
+  {
+    soundset_.scroll = value;
+  }
+  else if (name == "#TAP_SOUND")
+  {
+    // not original feature
+    soundset_.tap = value;
+  }
 }
 
 Scene* SceneManager::get_current_scene()
@@ -183,6 +270,36 @@ SceneManager& SceneManager::getInstance()
 Setting& SceneManager::getSetting()
 {
   return getInstance().setting_;
+}
+
+void SceneManager::LoadSoundset()
+{
+  // TODO: load soundset file path setting from game
+  std::string soundset_path = "../sound/lr2.lr2ss";
+
+  auto &sm = getInstance();
+  std::string ext = GetExtension(soundset_path);
+  if (ext == "lr2ss")
+  {
+    LR2SceneLoader loader;
+    loader.SetSubStitutePath("LR2files", "..");
+    loader.Load(soundset_path);
+    for (auto &v : loader)
+    {
+      std::string vv = Substitute(
+        GetFirstParam(v.second), "LR2files", ".."
+      );
+      sm.LoadProperty(v.first + "_SOUND", vv);
+    }
+  }
+  else {
+    std::cerr << "Soundset file unsupported: " << soundset_path << std::endl;
+  }
+}
+
+const SceneManager::Soundset& SceneManager::getSoundset()
+{
+  return SceneManager::getInstance().soundset_;
 }
 
 }

@@ -1,5 +1,6 @@
 #include "Menu.h"
 #include "Game.h"
+#include "SceneManager.h"
 
 namespace rhythmus
 {
@@ -426,7 +427,8 @@ MenuItem* Menu::CreateMenuItem()
 void Menu::Load()
 {
   // XXX: need to load using wheel param
-  wheel_sound_.Load("../sound/SelfEvolution/scratch.wav");
+  if (!wheel_sound_.is_loaded())
+    wheel_sound_.Load(SceneManager::getSoundset().scroll);
 
   // Build item and set basic position
   RebuildItems();

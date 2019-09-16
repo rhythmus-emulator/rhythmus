@@ -128,4 +128,25 @@ bool GetDirectoryItems(const std::string& path, std::vector<DirItem>& out)
 }
 #endif
 
+std::string GetExtension(const std::string& path)
+{
+  return rutil::GetExtension(path);
+}
+
+std::string Substitute(const std::string& path_, const std::string& startswith, const std::string& relplacewith)
+{
+  std::string path = path_;
+  for (int i = 0; i < path.size(); ++i)
+    if (path[i] == '\\') path[i] = '/';
+  if (strncmp(path.c_str(), "./", 2) == 0)
+    path = path.substr(2);
+  if (strnicmp(path.c_str(),
+    startswith.c_str(),
+    startswith.size()) == 0)
+  {
+    path = relplacewith + path.substr(startswith.size());
+  }
+  return path;
+}
+
 }

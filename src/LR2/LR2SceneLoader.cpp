@@ -2,6 +2,7 @@
 #include "LR2Flag.h"
 #include "LR2Sprite.h"
 #include "LR2Font.h"
+#include "Util.h"
 #include "rutil.h" /* utf-8 file load */
 #include <iostream>
 
@@ -17,25 +18,15 @@ LR2SceneLoader::~LR2SceneLoader()
 {
 }
 
-void LR2SceneLoader::SetSubStitutePath(const std::string& theme_path)
+void LR2SceneLoader::SetSubStitutePath(const std::string& sub_from, const std::string& theme_path)
 {
+  substitute_path_from = sub_from;
   substitute_path_to = theme_path;
 }
 
 std::string LR2SceneLoader::SubstitutePath(const std::string& path_)
 {
-  std::string path = path_;
-  for (int i = 0; i < path.size(); ++i)
-    if (path[i] == '\\') path[i] = '/';
-  if (strncmp(path.c_str(), "./", 2) == 0)
-    path = path.substr(2);
-  if (strnicmp(path.c_str(),
-    substitute_path_from.c_str(),
-    substitute_path_from.size()) == 0)
-  {
-    path = substitute_path_to + path.substr(substitute_path_from.size());
-  }
-  return path;
+  return Substitute(path_, substitute_path_from, substitute_path_to);
 }
 
 void LR2SceneLoader::Load(const std::string& path)

@@ -4,6 +4,7 @@
 #include "LR2/LR2Sprite.h"
 #include "LR2/LR2Font.h"
 #include "rutil.h"              /* for string modification */
+#include "Util.h"
 #include <iostream>
 
 namespace rhythmus
@@ -278,7 +279,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
   {
     // TODO: nasty, need to remove this code
     LR2SceneLoader loader;
-    loader.SetSubStitutePath(kSubstitutePath);
+    loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
 
     ImageAuto img;
     std::string imgname = GetFirstParam(value);
@@ -293,7 +294,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     {
       imgpath = imgname;
     }
-    imgpath = loader.SubstitutePath(imgpath);
+    imgpath = Substitute(imgpath, "LR2files/Theme", kSubstitutePath);
     img = ResourceManager::getInstance().LoadImage(imgpath);
     // TODO: set colorkey
     img->CommitImage();
@@ -304,12 +305,8 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
   }
   else if (prop_name == "#LR2FONT")
   {
-    // TODO: nasty, need to remove this code
-    LR2SceneLoader loader;
-    loader.SetSubStitutePath(kSubstitutePath);
-
     std::string fntname = GetFirstParam(value);
-    std::string fntpath = loader.SubstitutePath(fntname);
+    std::string fntpath = Substitute(fntname, "LR2files/Theme", kSubstitutePath);
     // convert filename path to .dxa
     auto ri = fntpath.rfind('/');
     if (ri != std::string::npos && stricmp(fntpath.substr(ri).c_str(), "/font.lr2font") == 0)
@@ -389,7 +386,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
 void Scene::LoadFromCsv(const std::string& filepath)
 {
   LR2SceneLoader loader;
-  loader.SetSubStitutePath(kSubstitutePath);
+  loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
   loader.Load(filepath);
 
   for (auto &v : loader)
