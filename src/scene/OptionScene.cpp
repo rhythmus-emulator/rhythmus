@@ -55,17 +55,21 @@ void EnumDecideTheme(std::vector<std::string>& out) { EnumTheme("../themes/*/dec
 void EnumPlayTheme(std::vector<std::string>& out) { EnumTheme("../themes/*/play/*.lr2skin", out); }
 void EnumResultTheme(std::vector<std::string>& out) { EnumTheme("../themes/*/decide/*.lr2skin", out); }
 void EnumCourseResultTheme(std::vector<std::string>& out) { EnumTheme("../themes/*/decide/*.lr2skin", out); }
+void EnumThemeSound(std::vector<std::string>& out) { EnumTheme("../themes/*/decide/*.lr2ss", out); }
 
 void BuildOptions()
 {
   option_entries.clear();
 
-  // Graphic and sound settings
+  // Graphic, sound, and game settings
   AddOption("Resolution", EnumResolution);
   AddOption("SkinResolution", { "Auto", "640x480", "800x600", "1024x768", "1280x720", "1920x1080", "1920x1200" });
   AddOption("ScreenMode", { "Window", "Fullscreen (windowed)", "Fullscreen" });
+  AddOption("GameMode", { "Home", "Arcade" });
   AddOption("Vsync", { "No", "Yes" });
   AddOption("SoundVolume", { "0", "10", "20", "30", "40", "50", "60", "70", "80", "90", "100" });
+  AddOption("SoundCacheSize", { "1024", "2048", "4096", "8192", "16384" });
+  AddOption("ThreadCount", { "1", "2", "3", "4", "6", "8" });
 
   // Gameplay settings
   AddOption("JudgeOffset", { "*number", "-999", "999", "1" });  /* number, min -999, max 999, updown 1 */
@@ -91,6 +95,7 @@ void BuildOptions()
   AddOption("ResultTheme", EnumResultTheme);
   AddOption("CourseResultTheme", EnumCourseResultTheme);
   AddOption("ThemeCustomize", { "SelectTheme", "DecideTheme", "PlayTheme(7k)", "PlayTheme(14k)", "PlayTheme(9k)", "ResultTheme", "CourseResultTheme" });
+  AddOption("ThemeSound", EnumThemeSound);
 }
 
 // -------------------------- class OptionScene
