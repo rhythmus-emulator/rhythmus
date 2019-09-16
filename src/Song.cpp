@@ -159,20 +159,15 @@ void SongList::Save()
 
     for (auto &s : songs_)
     {
-      std::stringstream ss;
-      ss << "INSERT INTO songs VALUES ('"
-        << s.title << "', '"
-        << s.subtitle << "', '"
-        << s.artist << "', '"
-        << s.subartist << "', '"
-        << s.genre << "', '"
-        << s.songpath << "', '"
-        << s.chartpath << "', "
-        << s.level << ", "
-        << s.judgediff << ", "
-        << s.modified_date << ";"
-        ;
-      sqlite3_exec(db, ss.str().c_str(),
+      std::string sql = format_string(
+        "INSERT INTO songs VALUES ("
+        "'%s', '%s', '%s', '%s', '%s', '%s', '%s',"
+        "%d, %d, %d"
+        ");",
+        s.title, s.subtitle, s.artist, s.subartist, s.genre,
+        s.songpath, s.chartpath, s.level, s.judgediff, s.modified_date
+      );
+      sqlite3_exec(db, sql.c_str(),
         &SongList::sql_dummy_callback, this, &errmsg);
       if (rc != SQLITE_OK)
       {
