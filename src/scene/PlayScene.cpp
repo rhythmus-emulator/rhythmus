@@ -58,6 +58,8 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
 
 void PlayScene::doUpdate(float delta)
 {
+  Scene::doUpdate(delta);
+
   switch (play_status_)
   {
   case 0:

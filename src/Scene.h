@@ -114,10 +114,10 @@ protected:
   // is event triggered at valid time, so it need to be processed?
   // (e.g. input event during scene loading or #IGNOREINPUT --> ignore)
   bool IsEventValidTime(const EventMessage& e) const;
-
-private:
   virtual void doUpdate(float delta);
   virtual void doRenderAfter();
+
+private:
 
   void LoadOptions();
   void SaveOptions();

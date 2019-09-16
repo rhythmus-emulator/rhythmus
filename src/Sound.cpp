@@ -188,6 +188,7 @@ void GameMixer::Destroy()
     device = 0;
 
     delete mixer;
+    mixer = 0;
   }
 }
 
@@ -287,14 +288,14 @@ void GameSound::LoadFromMemory(const rutil::FileData &fd)
 
 void GameSound::Unload()
 {
-  if (channel_id_ == -1)
+  if (!mixer || channel_id_ == -1)
     return;
   mixer->FreeSound(channel_id_);
 }
 
 void GameSound::Play()
 {
-  if (channel_id_ < 0) return;
+  if (!mixer || channel_id_ < 0) return;
   mixer->Play(channel_id_);
 }
 

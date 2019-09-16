@@ -487,8 +487,9 @@ void SongPlayable::Update(float)
   for (; i < notes_.size(); ++i)
   {
     // TODO: currently autoplay ...
-    if (notes_[i].time > songtime)
+    if (notes_[i].time < songtime)
       keysounds_[notes_[i].channel].Play();
+    else break;
   }
   note_current_idx_ = i;
 
