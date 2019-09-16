@@ -288,14 +288,19 @@ void GameSound::LoadFromMemory(const rutil::FileData &fd)
 
 void GameSound::Unload()
 {
-  if (!mixer || channel_id_ == -1)
+  // Rare case: Mixer may erased eariler than Sound object.
+  // If so, don't do anything.
+  if (!mixer)
+    return;
+  if (channel_id_ == -1)
     return;
   mixer->FreeSound(channel_id_);
+  channel_id_ = -1;
 }
 
 void GameSound::Play()
 {
-  if (!mixer || channel_id_ < 0) return;
+  if (channel_id_ < 0) return;
   mixer->Play(channel_id_);
 }
 

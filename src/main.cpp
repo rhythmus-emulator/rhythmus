@@ -74,6 +74,7 @@ int main(int argc, char **argv)
   
   SceneManager::getInstance().Cleanup();
   SongPlayable::getInstance().CancelLoad(); // if loading, than cancel
+  SongPlayable::getInstance().Clear();
   graphic.Cleanup();
   GameMixer::getInstance().Destroy();
   if (!game.Save())
