@@ -530,9 +530,14 @@ void SongPlayable::Clear()
   is_loaded_ = 0;
 }
 
+bool SongPlayable::IsLoading() const
+{
+  return active_thread_count_ > 0;
+}
+
 bool SongPlayable::IsLoaded() const
 {
-  return is_loaded_ > 0;
+  return song_ && is_loaded_ > 0;
 }
 
 bool SongPlayable::IsPlaying() const
@@ -540,7 +545,7 @@ bool SongPlayable::IsPlaying() const
   return song_start_time_ > 0;
 }
 
-bool SongPlayable::IsFinished() const
+bool SongPlayable::IsPlayFinished() const
 {
   // current check with : last object time > song eclipsed time
   return (IsPlaying() && GetSongEclipsedTime() > notes_.back().time);

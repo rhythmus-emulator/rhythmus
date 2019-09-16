@@ -27,11 +27,14 @@ void PlayScene::StartScene()
   Scene::StartScene();
   //Game::getInstance().ChangeGameMode();
 
-  // COMMENT:
   // Song loading is might be already started from SelectScene.
   // But, if it's not loaded (by some reason),
   // or if it loaded different song, then we need to reload it.
-  // - TODO -
+  if (!SongPlayable::getInstance().IsLoading() &&
+      !SongPlayable::getInstance().IsLoaded())
+  {
+    // TODO: reload song
+  }
 }
 
 void PlayScene::CloseScene()
@@ -70,7 +73,7 @@ void PlayScene::doUpdate(float delta)
     break;
   case 1:
     SongPlayable::getInstance().Update(delta);
-    if (SongPlayable::getInstance().IsFinished())
+    if (SongPlayable::getInstance().IsPlayFinished())
     {
       CloseScene();
       play_status_ = 3;

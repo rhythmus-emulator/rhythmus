@@ -86,9 +86,10 @@ public:
   void Update(float delta);
   void Clear();
 
+  bool IsLoading() const;
   bool IsLoaded() const;
   bool IsPlaying() const;
-  bool IsFinished() const;
+  bool IsPlayFinished() const;
   double GetProgress() const;
   double GetSongStartTime() const;
   int GetSongEclipsedTime() const;
