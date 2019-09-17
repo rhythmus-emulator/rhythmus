@@ -10,42 +10,6 @@
 namespace rhythmus
 {
 
-// -------------------------- ThemeOption
-
-void ThemeOption::GetSelectionList(std::vector<std::string> &list)
-{
-  // TODO
-}
-
-std::string ThemeOption::GetSelectedValue()
-{
-  switch (type)
-  {
-  case 2:
-  {
-    std::string path;
-    const char* opt = options.c_str();
-    while (*opt)
-    {
-      if (*opt == '*')
-        path += selected;
-      else
-        path.push_back(*opt);
-      opt++;
-    }
-    // TODO: if file is not exist, then try to GetSelectionList and set as first one
-    return path;
-  }
-  case 1:
-  default:
-    return selected;
-  }
-
-  // NOT REACHABLE
-  return "";
-}
-
-
 // -------------------------------- Scene
 
 Scene::Scene()
@@ -76,6 +40,9 @@ void Scene::LoadScene()
       }
     }
     LoadOptions();
+
+    // TODO: check for invalid option, and fix if it's invalid
+    // (e.g. invalid file path)
   }
   else
   {
@@ -137,7 +104,7 @@ void Scene::LoadOptions()
   setting.GetAllPreference(slist);
   for (auto ii : slist)
   {
-    SetThemeConfig(ii.first, ii.second);
+    SetThemeConfig(ii.name, ii.value);
   }
 }
 
@@ -149,7 +116,7 @@ void Scene::SaveOptions()
 
   for (auto& t : theme_options_)
   {
-    setting.Set(t.id, t.selected);
+    setting.SetOption(t.name, t.type, t.desc, t.options, t.selected);
   }
 }
 
@@ -230,6 +197,7 @@ void Scene::QueueSceneEvent(float delta, int event_id)
   eventqueue_.QueueEvent(event_id, delta);
 }
 
+constexpr char* kLR2SubstitutePath = "LR2files/Theme";
 constexpr char* kSubstitutePath = "../themes";
 
 void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
@@ -277,10 +245,6 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
   // XXX: register such objects first?
   else if (prop_name == "#IMAGE")
   {
-    // TODO: nasty, need to remove this code
-    LR2SceneLoader loader;
-    loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
-
     ImageAuto img;
     std::string imgname = GetFirstParam(value);
     std::string imgpath;
@@ -288,13 +252,13 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
     if (option)
     {
       // create img path from option
-      imgpath = option->GetSelectedValue();
+      imgpath = option->selected;
     }
     else
     {
       imgpath = imgname;
     }
-    imgpath = Substitute(imgpath, "LR2files/Theme", kSubstitutePath);
+    imgpath = Substitute(imgpath, kLR2SubstitutePath, kSubstitutePath);
     img = ResourceManager::getInstance().LoadImage(imgpath);
     // TODO: set colorkey
     img->CommitImage();
@@ -306,7 +270,7 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
   else if (prop_name == "#LR2FONT")
   {
     std::string fntname = GetFirstParam(value);
-    std::string fntpath = Substitute(fntname, "LR2files/Theme", kSubstitutePath);
+    std::string fntpath = Substitute(fntname, kLR2SubstitutePath, kSubstitutePath);
     // convert filename path to .dxa
     auto ri = fntpath.rfind('/');
     if (ri != std::string::npos && stricmp(fntpath.substr(ri).c_str(), "/font.lr2font") == 0)
@@ -331,27 +295,59 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
   else if (prop_name == "#CUSTOMOPTION")
   {
     MakeParamCountSafe(value, params, 4);
-    ThemeOption options;
-    options.type = 1;
-    options.id = options.name = params[1];
-    options.desc = params[0];
-    int i;
-    for (i = 2; i < params.size() - 1; ++i)
-      options.options += params[i] + ",";
-    options.options.pop_back();
-    options.selected = params[i];
-    theme_options_.push_back(options);
+    std::string name = params[1];
+    ThemeOption *saved_option = GetThemeOption(name);
+    std::string options_str;
+    std::string option_default;
+    {
+      int i;
+      for (i = 2; i < params.size() - 1; ++i)
+        options_str += params[i] + ",";
+      options_str.pop_back();
+      option_default = params[i];
+    }
+
+    if (saved_option)
+    {
+      saved_option->type = "option";
+      saved_option->desc = params[0];
+      saved_option->options = options_str;
+    }
+    else
+    {
+      ThemeOption options;
+      options.type = "option";
+      options.name = name;
+      options.desc = params[0];
+      options.options = options_str;
+      options.selected = option_default;
+      theme_options_.push_back(options);
+    }
   }
   else if (prop_name == "#CUSTOMFILE")
   {
     MakeParamCountSafe(value, params, 3);
-    ThemeOption options;
-    options.type = 2;
-    options.id = options.name = params[1];
-    options.desc = params[0];
-    options.options = params[1];
-    options.selected = params[2];
-    theme_options_.push_back(options);
+    std::string name = params[1];
+    ThemeOption *saved_option = GetThemeOption(name);
+    std::string path_prefix = Substitute(params[1], kLR2SubstitutePath, kSubstitutePath);
+
+    if (saved_option)
+    {
+      saved_option->type = "file";
+      saved_option->name = name;
+      saved_option->desc = params[0];
+      saved_option->options = path_prefix;
+    }
+    else
+    {
+      ThemeOption options;
+      options.type = "file";
+      options.name = name;
+      options.desc = params[0];
+      options.options = path_prefix;
+      options.selected = Replace(options.options, "*", params[2]);
+      theme_options_.push_back(options);
+    }
   }
   else if (prop_name == "#TRANSCLOLR")
   {
@@ -399,7 +395,7 @@ void Scene::SetThemeConfig(const std::string& key, const std::string& value)
 {
   for (auto& t : theme_options_)
   {
-    if (t.id == key)
+    if (t.name == key)
       t.selected = value;
     return;
   }
@@ -409,15 +405,10 @@ ThemeOption* Scene::GetThemeOption(const std::string& key)
 {
   for (auto& t : theme_options_)
   {
-    if (t.id == key)
+    if (t.name == key)
       return &t;
   }
   return nullptr;
-}
-
-void Scene::GetThemeOptionSelectList(
-  const ThemeOption &option, std::vector<std::string>& selectable)
-{
 }
 
 }

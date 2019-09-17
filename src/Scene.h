@@ -37,29 +37,20 @@ struct ThemeParameter
 // User-customizable theme option
 struct ThemeOption
 {
-  // option id (MUST required)
-  std::string id;
-
-  // option name (same to ID if not set)
+  // option name
   std::string name;
 
   // option description (nullable)
   std::string desc;
 
-  // theme option type. hide is 0, option is 1, file is 2.
-  int type;
+  // theme option type. (option or file)
+  std::string type;
 
   // selectable options. separated in comma, or file filter.
   std::string options;
 
   // selected value.
   std::string selected;
-
-  /* @brief Get selection list from current ThemeOption */
-  void GetSelectionList(std::vector<std::string> &list);
-
-  /* @brief Get current selected value */
-  std::string GetSelectedValue();
 };
 
 /* @brief A screen which is renderable */
@@ -125,11 +116,6 @@ private:
   void LoadFromCsv(const std::string& filepath);
   void SetThemeConfig(const std::string& key, const std::string& value);
   ThemeOption* GetThemeOption(const std::string& key);
-
-  // Generate select list from theme option by second parameter
-  // return select list count.
-  static void GetThemeOptionSelectList(
-    const ThemeOption &option, std::vector<std::string>& selectable);
 
   // fade in/out specified time
   // fade_duration with positive: fade-in

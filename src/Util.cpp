@@ -149,4 +149,28 @@ std::string Substitute(const std::string& path_, const std::string& startswith, 
   return path;
 }
 
+std::string Replace(const std::string& org, const std::string& target, const std::string& replaceto)
+{
+  if (target.empty())
+    return org;
+
+  std::string s;
+  for (int i = 0; i < org.size(); ++i)
+  {
+    if (strcmp(org.c_str(), target.c_str()) == 0)
+    {
+      s += replaceto;
+      i += target.size() - 1;
+      continue;
+    }
+    s.push_back(org[i]);
+  }
+  return s;
+}
+
+void Split(const std::string& str, char sep, std::vector<std::string>& vsOut)
+{
+  rutil::split(str, sep, vsOut);
+}
+
 }

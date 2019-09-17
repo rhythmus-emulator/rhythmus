@@ -31,4 +31,8 @@ std::string GetExtension(const std::string& path);
 
 std::string Substitute(const std::string& org, const std::string& startswith, const std::string& relplacewith);
 
+std::string Replace(const std::string& org, const std::string& target, const std::string& replaceto);
+
+void Split(const std::string& str, char sep, std::vector<std::string>& vsOut);
+
 }

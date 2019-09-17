@@ -1,4 +1,5 @@
 #include "Setting.h"
+#include "Util.h"
 #include <iostream>
 #include <sstream>
 
@@ -8,6 +9,19 @@ namespace rhythmus
 {
 
 constexpr char* kDefaultRootName = "setting";
+
+SettingRow* SettingList::Get(const std::string& name)
+{
+  for (auto& ii : *this)
+  {
+    if (ii.name == name)
+      return &ii;
+  }
+  return nullptr;
+}
+
+
+// ------------------------------ class Setting
 
 Setting::Setting()
   : root_(0)
@@ -72,13 +86,47 @@ bool Setting::Exist(const std::string& key) const
   return root_->FirstChildElement(key.c_str()) != nullptr;
 }
 
+void Setting::EnumOption(const std::string& key, std::vector<std::string>& options)
+{
+  tinyxml2::XMLElement *e = root_->FirstChildElement(kSettingFixedPrefName);
+  while (e)
+  {
+    const char* name = e->Attribute("name");
+    if (name && strcmp(name, key.c_str()) == 0)
+      break;
+    e = e->NextSiblingElement(kSettingFixedPrefName);
+  }
+  if (!e)
+    return;
+  std::string desc = e->Attribute("desc", "");
+  std::string optionstr = e->Attribute("options", "");
+
+  if (desc == "option" || desc == "list")
+  {
+    Split(optionstr, ',', options);
+  }
+  else if (desc == "file")
+  {
+    // TODO ...
+  }
+}
+
 void Setting::GetAllPreference(SettingList& pref_list)
 {
   XMLElement *e = root_->FirstChildElement();
   while (e)
   {
+    const char* name = e->Name();
     const char* t = e->GetText();
-    pref_list.push_back({e->Name(), t ? t : ""});
+    t = t ? t : "";
+    if (strcmp(name, kSettingFixedPrefName) != 0)
+    {
+      pref_list.push_back({ name, "", t });
+    }
+    else
+    {
+      pref_list.push_back({ name, e->Attribute("desc", ""), t });
+    }
     e = e->NextSiblingElement();
   }
 }
