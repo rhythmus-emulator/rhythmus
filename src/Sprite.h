@@ -22,6 +22,13 @@ public:
   void SetImageByName(const std::string& name);
 
   /**
+   * 0: Don't use blending (always 100% alpha)
+   * 1: Use basic alpha blending (Default)
+   * 2: Use color blending instead of alpha channel
+   */
+  void SetBlend(int blend_mode);
+
+  /**
    * Not only image but also copy all sprite information from other sprite.
    * (But it does not copy Tween information)
    *
@@ -31,6 +38,8 @@ public:
   void LoadSprite(const Sprite& spr);
 
   virtual void LoadProperty(const std::string& prop_name, const std::string& value);
+
+  virtual void Load();
 
 protected:
   ImageAuto img_;
@@ -47,6 +56,9 @@ protected:
 
   // eclipsed time of sprite animation
   int eclipsed_time_;
+
+  // current sprite blending
+  int blending_;
 
   // texture coordination
   float sx_, sy_, sw_, sh_;

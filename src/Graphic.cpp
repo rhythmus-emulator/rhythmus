@@ -86,13 +86,22 @@ void Graphic::Initialize()
   // Callback function setting (related to graphic)
   glfwSetWindowSizeCallback(window_, on_resize);
 
+  // set rendering context
+  current_proj_mode_ = -1;  // no projection mode initially.
+  tex_id_ = 0;
+  src_blend_mode_ = 0;
+  vi_idx_ = 0;
+  vi_ = (VertexInfo*)malloc(sizeof(VertexInfo) * kVertexMaxSize);
+  ASSERT(vi_);
+  m_model_ = glm::mat4(1.0f);   // set identitfy matrix by default
+
   // GL flag setting
   glClearColor(0, 0, 0, 1);
   glMatrixMode(GL_PROJECTION);
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
   glBlendFunc(GL_ONE, GL_SRC_ALPHA);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  SetBlendMode(GL_ONE_MINUS_SRC_ALPHA);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -107,14 +116,6 @@ void Graphic::Initialize()
 
   // Vsync enabled
   glfwSwapInterval(1);
-
-  // set rendering context
-  current_proj_mode_ = -1;  // no projection mode initially.
-  tex_id_ = 0;
-  vi_idx_ = 0;
-  vi_ = (VertexInfo*)malloc(sizeof(VertexInfo) * kVertexMaxSize);
-  ASSERT(vi_);
-  m_model_ = glm::mat4(1.0f);   // set identitfy matrix by default
 
   // FPS timer start
   FpsTimer.Start();
@@ -497,7 +498,7 @@ void Graphic::Flush()
 
   /* need to clear texture idx.
      texture idx should be resetted in next rendering. */
-  g.tex_id_ = 9999;
+  g.tex_id_ = 0xffffffff;
 
   glFlush();
 }
@@ -535,6 +536,16 @@ void Graphic::SetTextureId(GLuint tex_id)
     g.tex_id_ = tex_id;
   }
   else return;
+}
+
+void Graphic::SetBlendMode(GLuint blend_mode)
+{
+  Graphic &g = Graphic::getInstance();
+  if (g.src_blend_mode_ != blend_mode)
+  {
+    g.src_blend_mode_ = blend_mode;
+    glBlendFunc(GL_SRC_ALPHA, blend_mode);
+  }
 }
 
 #else

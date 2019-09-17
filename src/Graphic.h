@@ -87,6 +87,7 @@ public:
   static VertexInfo* get_vertex_buffer();
   static VertexInfo* get_vertex_buffer(int size);
   static void SetTextureId(GLuint tex_id);
+  static void SetBlendMode(GLuint blend_mode);
   static void Flush();
 
   static double GetFPS();
@@ -107,6 +108,7 @@ private:
   VertexInfo *vi_;
   int vi_idx_;
   GLuint tex_id_;
+  GLuint src_blend_mode_;
 };
 
 }

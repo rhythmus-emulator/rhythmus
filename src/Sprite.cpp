@@ -8,7 +8,7 @@ namespace rhythmus
 {
 
 Sprite::Sprite()
-  : divx_(1), divy_(1), cnt_(1), interval_(0),
+  : divx_(1), divy_(1), cnt_(1), interval_(0), blending_(1),
     idx_(0), eclipsed_time_(0),
     sx_(0), sy_(0), sw_(1.0f), sh_(1.0f), tex_attribute_(0)
 {
@@ -27,6 +27,11 @@ void Sprite::SetImageByName(const std::string& name)
 {
   auto img = SceneManager::getInstance().get_current_scene()->GetImageByName(name);
   SetImage(img);
+}
+
+void Sprite::SetBlend(int blend_mode)
+{
+  blending_ = blend_mode;
 }
 
 void Sprite::LoadSprite(const Sprite& spr)
@@ -93,6 +98,12 @@ void Sprite::LoadProperty(const std::string& prop_name, const std::string& value
   BaseObject::LoadProperty(prop_name, value);
 }
 
+void Sprite::Load()
+{
+  if (IsAttribute("blend"))
+    blending_ = GetAttribute<int>("blend");
+}
+
 void Sprite::doRender()
 {
   // If hide, then not draw
@@ -100,7 +111,21 @@ void Sprite::doRender()
     return;
 
   if (img_)
+  {
     Graphic::SetTextureId(img_->get_texture_ID());
+    switch (blending_)
+    {
+    case 0:
+      Graphic::SetBlendMode(GL_ZERO);
+      break;
+    case 1:
+      Graphic::SetBlendMode(GL_ONE_MINUS_SRC_ALPHA);
+      break;
+    case 2:
+      Graphic::SetBlendMode(GL_ONE);
+      break;
+    }
+  }
   else return;
 
   const DrawProperty &ti = current_prop_;

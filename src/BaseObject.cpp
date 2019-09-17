@@ -212,6 +212,7 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
     SetRotation(0, 0, angle);
 
     // these attribute will be processed in LR2Objects
+    if (!IsAttribute("blend")) SetAttribute("blend", params[11]);
     if (!IsAttribute("loop")) SetAttribute("loop", params[15]);
     if (!IsAttribute("timer")) SetAttribute("timer", params[16]);
     if (!IsAttribute("op1")) SetAttribute("op1", params[17]);

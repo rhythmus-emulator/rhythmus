@@ -523,8 +523,11 @@ void SongPlayable::Clear()
   for (int i = 0; i < 1000; ++i)
     bg_[i].UnloadAll();
 
-  song_->CloseChart();
-  song_->Close();
+  if (song_)
+  {
+    song_->CloseChart();
+    song_->Close();
+  }
 
   chart_ = nullptr;
   song_ = nullptr;
