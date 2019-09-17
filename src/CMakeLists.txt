@@ -13,6 +13,7 @@ set (RHYTHMUS_SOURCES
     Sprite.cpp
     Font.cpp
     Game.cpp
+    Player.cpp
     Graphic.cpp
     Logger.cpp
     Timer.cpp
@@ -51,6 +52,7 @@ set (RHYTHMUS_HEADERS
     Sprite.h
     Font.h
     Game.h
+    Player.h
     Logger.h
     Timer.h
     Graphic.h

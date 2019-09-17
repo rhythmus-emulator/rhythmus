@@ -1,5 +1,6 @@
 #include "PlayScene.h"
 #include "Song.h"
+#include "Player.h"
 
 namespace rhythmus
 {
@@ -27,6 +28,14 @@ void PlayScene::StartScene()
   Scene::StartScene();
   //Game::getInstance().ChangeGameMode();
 
+  // Prepare each player to start recording
+  {
+    Player *p;
+    int i;
+    FOR_EACH_PLAYER(p, i)
+      p->StartPlay();
+  }
+
   // Song loading is might be already started from SelectScene.
   // But, if it's not loaded (by some reason),
   // or if it loaded different song, then we need to reload it.
@@ -39,6 +48,14 @@ void PlayScene::StartScene()
 
 void PlayScene::CloseScene()
 {
+  // Save record & replay for all players
+  {
+    Player *p;
+    int i;
+    FOR_EACH_PLAYER(p, i)
+      p->SavePlay();
+  }
+
   Scene::CloseScene();
 }
 
@@ -67,8 +84,18 @@ void PlayScene::doUpdate(float delta)
     {
       // TODO: need to upload bitmap here
 
+      // TODO: ready? timer
+
       // TODO: Tick game timer manually here,
       // as uploading bitmap may cost much time ...
+
+      // Play song & trigger players to start
+      {
+        int i;
+        Player *p;
+        FOR_EACH_PLAYER(p, i)
+          p->StartPlay();
+      }
       SongPlayable::getInstance().Play();
       play_status_ = 1;
     }
@@ -85,6 +112,14 @@ void PlayScene::doUpdate(float delta)
   case 3:
     // don't do anything
     break;
+  }
+
+  // Update all players
+  {
+    int i;
+    Player *p;
+    FOR_EACH_PLAYER(p, i)
+      p->Update(delta);
   }
 }
 
