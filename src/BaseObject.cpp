@@ -209,9 +209,24 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
     SetSize(w, h);
     SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
     SetAlpha((unsigned)a);
-    SetRotation(0, 0, angle);
+    SetRotationAsRadian(0, 0, angle);
+    switch (acc_type)
+    {
+    case 0:
+      SetAcceleration(EaseTypes::kEaseLinear);
+      break;
+    case 1:
+      SetAcceleration(EaseTypes::kEaseIn);
+      break;
+    case 2:
+      SetAcceleration(EaseTypes::kEaseOut);
+      break;
+    case 3:
+      SetAcceleration(EaseTypes::kEaseInOut);
+      break;
+    }
 
-    // these attribute will be processed in LR2Objects
+    // these attribute will be processed later e.g. LR2Objects
     if (!IsAttribute("blend")) SetAttribute("blend", params[11]);
     if (!IsAttribute("loop")) SetAttribute("loop", params[15]);
     if (!IsAttribute("timer")) SetAttribute("timer", params[16]);
@@ -349,11 +364,34 @@ void BaseObject::SetRotation(float x, float y, float z)
   p.pi.rotz = z;
 }
 
-void BaseObject::SetCenter(float x, float y)
+void BaseObject::SetRotationAsRadian(float x, float y, float z)
 {
+  SetRotation(
+    glm::radians(x),
+    glm::radians(y),
+    glm::radians(z)
+  );
+}
+
+void BaseObject::SetRotationCenter(int rot_center)
+{
+  rot_center_ = rot_center;
+}
+
+void BaseObject::SetRotationCenterCoord(float x, float y)
+{
+  SetRotationCenter(-1);
   auto& p = GetDestDrawProperty();
   p.pi.tx = x;
   p.pi.ty = y;
+}
+
+void BaseObject::SetAcceleration(int acc)
+{
+  if (tween_.empty())
+    return;
+  auto& t = tween_.back();
+  t.ease_type = acc;
 }
 
 void BaseObject::Hide()
@@ -448,6 +486,20 @@ void BaseObject::UpdateTween(float delta_ms)
   {
     float r = (float)t1.time_eclipsed / t1.time_duration;
     MakeTween(ti, t1.draw_prop, t2.draw_prop, r, t1.ease_type);
+
+    // if rotation center need to be calculated
+    if (rot_center_ >= 0 && rot_center_ < 10)
+    {
+      const float rel_pos_arr_x[] =
+      { 0.5f, 0.f, 0.5f, 1.0f, 0.f, 0.5f, 1.0f, 0.f, 0.5f, 1.0f };
+      const float rel_pos_arr_y[] =
+      { 0.5f, 1.0f, 1.0f, 1.0f, 0.5f, 0.5f, 0.5f, 0.f, 0.f, 0.f };
+      const float
+        rel_pos_x = rel_pos_arr_x[rot_center_],
+        rel_pos_y = rel_pos_arr_y[rot_center_];
+      ti.pi.tx = ti.w * rel_pos_x;
+      ti.pi.ty = ti.h * rel_pos_y;
+    }
   }
 }
 

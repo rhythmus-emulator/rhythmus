@@ -142,7 +142,20 @@ public:
   void SetRGB(float r, float g, float b);
   void SetScale(float x, float y);
   void SetRotation(float x, float y, float z);
-  void SetCenter(float x, float y);
+  void SetRotationAsRadian(float x, float y, float z);
+  /**
+   * -1: Use absolute coord
+   * 0: Center
+   * 1: Bottomleft
+   * 2: Bottomcenter
+   * ... (Same as numpad position)
+   */
+  void SetRotationCenter(int rot_center);
+  void SetRotationCenterCoord(float x, float y);
+  /**
+   * refer: enum EaseTypes
+   */
+  void SetAcceleration(int acc);
   void Hide();
   void Show();
   void SetDrawOrder(int order);
@@ -179,6 +192,9 @@ protected:
 
   // current drawing state
   DrawProperty current_prop_;
+
+  // rotation center property
+  int rot_center_;
 
   // misc attributes
   std::map<std::string, std::string> attributes_;
