@@ -41,22 +41,28 @@ struct GameThemeOption
 {
   // general scene master path, which includes parameter for total scene
   // other parameter filled automatically if null.
-  std::string scene_path;
+  std::string theme_path;
+  std::string theme_path_filter;
 
   // select scene path
   std::string select_scene_path;
+  std::string select_scene_path_filter;
 
   // decide scene path
   std::string decide_scene_path;
+  std::string decide_scene_path_filter;
 
   // play scene path
   std::string play_scene_path;
+  std::string play_scene_path_filter;
 
   // result scene path
-  std::string result_path;
+  std::string result_scene_path;
+  std::string result_scene_path_filter;
 
   // course result scene path
   std::string courseresult_scene_path;
+  std::string courseresult_scene_path_filter;
 };
 
 /**
@@ -98,6 +104,7 @@ public:
   float GetAspect() const;
   GameBootMode get_boot_mode() const;
   GameMode get_game_mode() const;
+  GameThemeOption& get_game_theme_option();
 
   void set_do_logging(bool v);
 

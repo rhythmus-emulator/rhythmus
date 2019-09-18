@@ -116,6 +116,7 @@ private:
   void LoadFromCsv(const std::string& filepath);
   void SetThemeConfig(const std::string& key, const std::string& value);
   ThemeOption* GetThemeOption(const std::string& key);
+  ThemeOption* GetThemePathOption(const std::string& pathfilter);
 
   // fade in/out specified time
   // fade_duration with positive: fade-in

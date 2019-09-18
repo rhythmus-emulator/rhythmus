@@ -38,4 +38,21 @@ std::string Replace(const std::string& org, const std::string& target, const std
 
 void Split(const std::string& str, char sep, std::vector<std::string>& vsOut);
 
+bool IsFile(const std::string& path);
+
+void GetFolderNameEntries(const std::string& file_or_filter_path, std::vector<std::string> &out);
+
+/**
+ * @brief Get random file (or specified index) from filtered path.
+ *        Return false if any suitable file is found.
+ *        If existing file path, then it will always return true.
+ */
+bool GetFilepathSmart(const std::string& file_or_filter_path, std::string& out, int index = -1);
+
+/**
+ * @brief Extension of GetFilepathSmart() function with fallback path.
+ *        If file fails, then search for fallback path (filtering support).
+ */
+bool GetFilepathSmartFallback(const std::string& file_path, const std::string& fallback, std::string& out, int index = -1);
+
 RHYTHMUS_NAMESPACE_END

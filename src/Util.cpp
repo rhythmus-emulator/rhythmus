@@ -173,4 +173,40 @@ void Split(const std::string& str, char sep, std::vector<std::string>& vsOut)
   rutil::split(str, sep, vsOut);
 }
 
+bool IsFile(const std::string& path)
+{
+  return rutil::IsFile(path);
+}
+
+void GetFolderNameEntries(const std::string& file_or_filter_path, std::vector<std::string> &out)
+{
+  // TODO: use rparser directory api
+}
+
+bool GetFilepathSmart(const std::string& file_or_filter_path, std::string& out, int index)
+{
+  std::vector<std::string> name_entries;
+  GetFolderNameEntries(file_or_filter_path, name_entries);
+  if (name_entries.empty())
+    return false;
+  if (index < 0)
+  {
+    // random select
+    index = rand();
+  }
+  index %= name_entries.size();
+  out = name_entries[index];
+  return true;
+}
+
+bool GetFilepathSmartFallback(const std::string& file_path, const std::string& fallback, std::string& out, int index)
+{
+  if (IsFile(file_path))
+  {
+    out = file_path;
+    return true;
+  }
+  else return GetFilepathSmart(fallback, out, index);
+}
+
 }

@@ -52,11 +52,11 @@ public:
   {
     if (key == kSettingFixedPrefName)
       return; /* reserved name, not saved */
-    tinyxml2::XMLElement *e = root_->FirstChildElement(key.c_str());
+    const tinyxml2::XMLElement *e = root_->FirstChildElement(key.c_str());
     if (!e)
     {
-      std::string _2, _3, _4;
-      LoadOption<T>(key, _2, _3, _4, value);
+      e = GetOptionByName(key);
+      if (!e) return;
     }
     const char* t = e->GetText();
     ConvertFromString(t ? t : "", value);
@@ -67,14 +67,7 @@ public:
   void LoadOption(const std::string& key, std::string& type,
     std::string& desc, std::string& options, T& value) const
   {
-    tinyxml2::XMLElement *e = root_->FirstChildElement(kSettingFixedPrefName);
-    while (e)
-    {
-      const char* name = e->Attribute("name");
-      if (name && strcmp(name, key.c_str()) == 0)
-        break;
-      e = e->NextSiblingElement(kSettingFixedPrefName);
-    }
+    const tinyxml2::XMLElement *e = GetOptionByName(key);
     if (!e) return;
     const char* t = e->GetText();
     type = e->Attribute("type", "");
@@ -110,14 +103,7 @@ public:
     const std::string& desc, const std::string& options, const T& value)
   {
     std::string v = ConvertToString(value);
-    tinyxml2::XMLElement *e = root_->FirstChildElement(kSettingFixedPrefName);
-    while (e)
-    {
-      const char* name = e->Attribute("name");
-      if (name && strcmp(name, key.c_str()) == 0)
-        break;
-      e = e->NextSiblingElement(kSettingFixedPrefName);
-    }
+    tinyxml2::XMLElement *e = GetOptionByName(key);
     if (!e)
     {
       e = doc_.NewElement(kSettingFixedPrefName);
@@ -127,11 +113,36 @@ public:
     e->SetAttribute("type", type.c_str());
     e->SetAttribute("desc", desc.c_str());
     e->SetAttribute("options", options.c_str());
-
     e->SetText(v.c_str());
   }
 
   bool Exist(const std::string& key) const;
+
+  /**
+   * @brief Get path from path filter
+   * @warn empty string returned if option not exist
+   */
+  std::string GetPathFromFileFilter(const std::string& path_filter);
+
+  /**
+   * @brief Same as GetPathFromPathFilter(), but it checks file existence.
+   *        If setting file is not exist, then it searchs for alternative file(option),
+   *        and update setting automatically.
+   * @warn empty string returned if option not exist
+   */
+  std::string GetPathFromFileFilterFallback(const std::string& path_filter);
+
+  /**
+   * @brief internally calls GetPathFromFilterFallback() to all file options
+   *        to keep selected values valid.
+   */
+  void InvalidateAllFileOptions();
+
+  /**
+   * @brief Set path by path filter
+   * @warn Setting won't saved if option not exist
+   */
+  void SetPathFromPathFilter(const std::string& path_filter, const std::string& value);
 
   /* @brief get options in case of option setting */
   void EnumOption(const std::string& name, std::vector<std::string>& options);
@@ -145,6 +156,13 @@ private:
   // current root of preference keys.
   // set by SetPreferenceGroup.
   tinyxml2::XMLElement* root_;
+
+  /* for internal use. */
+  tinyxml2::XMLElement* GetOptionByName(const std::string& opt_name);
+  const tinyxml2::XMLElement* GetOptionByName(const std::string& opt_name) const;
+
+  /* File option related util, for internal use. */
+  tinyxml2::XMLElement* GetFileOptionByFilter(const std::string& opt_name);
 
   /* @depreciated @brief convert key to xml-safe-name one. */
   static std::string ConvertToSafeKey(const std::string& key);

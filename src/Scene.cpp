@@ -101,6 +101,9 @@ void Scene::LoadOptions()
   auto& setting = SceneManager::getSetting();
   setting.SetPreferenceGroup(get_name());
 
+  // invalidate file options
+  setting.InvalidateAllFileOptions();
+
   SettingList slist;
   setting.GetAllPreference(slist);
   for (auto ii : slist)
@@ -248,18 +251,13 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
   {
     ImageAuto img;
     std::string imgname = GetFirstParam(value);
-    std::string imgpath;
-    ThemeOption* option = GetThemeOption(imgname);
+    std::string imgpath = Substitute(imgname, kLR2SubstitutePath, kSubstitutePath);
+    ThemeOption* option = GetThemePathOption(imgpath);
     if (option)
     {
       // create img path from option
       imgpath = option->selected;
     }
-    else
-    {
-      imgpath = imgname;
-    }
-    imgpath = Substitute(imgpath, kLR2SubstitutePath, kSubstitutePath);
     img = ResourceManager::getInstance().LoadImage(imgpath);
     // TODO: set colorkey
     img->CommitImage();
@@ -407,6 +405,16 @@ ThemeOption* Scene::GetThemeOption(const std::string& key)
   for (auto& t : theme_options_)
   {
     if (t.name == key)
+      return &t;
+  }
+  return nullptr;
+}
+
+ThemeOption* Scene::GetThemePathOption(const std::string& pathfilter)
+{
+  for (auto& t : theme_options_)
+  {
+    if (t.type == "file" && t.options == pathfilter)
       return &t;
   }
   return nullptr;

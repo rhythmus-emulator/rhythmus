@@ -1,6 +1,7 @@
 #include "Game.h"
 #include "Timer.h"
 #include "Logger.h"
+#include "Util.h"
 #include "SceneManager.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -29,6 +30,13 @@ Game::Game()
     game_mode_(GameMode::kGameModeNone),
     do_game_mode_change_(false)
 {
+  /* Initialize filters */
+  theme_option_.theme_path_filter = "";
+  theme_option_.select_scene_path_filter = "../themes/*/select/*.lr2skin";
+  theme_option_.decide_scene_path_filter = "../themes/*/decide/*.lr2skin";
+  theme_option_.play_scene_path_filter = "../themes/*/play/*.lr2skin";
+  theme_option_.result_scene_path_filter = "../themes/*/result/*.lr2skin";
+  theme_option_.courseresult_scene_path_filter = "../themes/*/courseresult/*.lr2skin";
 }
 
 Game::~Game()
@@ -41,11 +49,11 @@ Game::~Game()
   XMLATTR(width_, "width", uint16_t) \
   XMLATTR(height_, "height", uint16_t) \
   XMLATTR(do_logging_, "logging", bool) \
-  XMLATTRS(theme_option_.scene_path, "scene_path", std::string) \
+  XMLATTRS(theme_option_.theme_path, "theme_path", std::string) \
   XMLATTRS(theme_option_.select_scene_path, "select_scene_path", std::string) \
   XMLATTRS(theme_option_.decide_scene_path, "decide_scene_path", std::string) \
   XMLATTRS(theme_option_.play_scene_path, "play_scene_path", std::string) \
-  XMLATTRS(theme_option_.result_path, "result_path", std::string) \
+  XMLATTRS(theme_option_.result_scene_path, "result_path", std::string) \
   XMLATTRS(theme_option_.courseresult_scene_path, "courseresult_scene_path", std::string) \
 
 template<typename A>
@@ -109,6 +117,38 @@ setting_.Load(attrname, var);
   XML_SETTINGS;
 #undef XMLATTRS
 #undef XMLATTR
+
+  /* Game skin path need to be invalidated manually if necessary */
+  if (theme_option_.theme_path.empty())
+  {
+    GetFilepathSmartFallback(
+      theme_option_.select_scene_path,
+      theme_option_.select_scene_path_filter,
+      theme_option_.select_scene_path, 0);
+
+    GetFilepathSmartFallback(
+      theme_option_.decide_scene_path,
+      theme_option_.decide_scene_path_filter,
+      theme_option_.decide_scene_path, 0);
+
+    GetFilepathSmartFallback(
+      theme_option_.play_scene_path,
+      theme_option_.play_scene_path_filter,
+      theme_option_.play_scene_path, 0);
+
+    GetFilepathSmartFallback(
+      theme_option_.result_scene_path,
+      theme_option_.result_scene_path_filter,
+      theme_option_.result_scene_path, 0);
+
+    GetFilepathSmartFallback(
+      theme_option_.courseresult_scene_path,
+      theme_option_.courseresult_scene_path_filter,
+      theme_option_.courseresult_scene_path, 0);
+  }
+
+  /* Now apply game skin path to environment */
+  SetAttribute("SelectScene", "");
 
   return true;
 }
@@ -174,7 +214,7 @@ void Game::Update()
           // We now need to decide whether start game in select scene -
           // or in main scene. It is decided by option... If main scene
           // is null, we start game in select scene.
-          if (!theme_option_.scene_path.empty())
+          if (!theme_option_.theme_path.empty())
             game_mode_ = GameMode::kGameModeMain;
           else
             game_mode_ = GameMode::kGameModeSelect;
@@ -292,6 +332,11 @@ GameBootMode Game::get_boot_mode() const
 GameMode Game::get_game_mode() const
 {
   return game_mode_;
+}
+
+GameThemeOption& Game::get_game_theme_option()
+{
+  return theme_option_;
 }
 
 

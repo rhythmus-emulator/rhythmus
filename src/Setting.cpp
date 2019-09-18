@@ -86,16 +86,105 @@ bool Setting::Exist(const std::string& key) const
   return root_->FirstChildElement(key.c_str()) != nullptr;
 }
 
-void Setting::EnumOption(const std::string& key, std::vector<std::string>& options)
+tinyxml2::XMLElement* Setting::GetOptionByName(const std::string& opt_name)
 {
   tinyxml2::XMLElement *e = root_->FirstChildElement(kSettingFixedPrefName);
+  tinyxml2::XMLElement *r = nullptr;
   while (e)
   {
     const char* name = e->Attribute("name");
-    if (name && strcmp(name, key.c_str()) == 0)
+    if (name && strcmp(name, opt_name.c_str()) == 0)
+    {
+      r = e;
       break;
+    }
     e = e->NextSiblingElement(kSettingFixedPrefName);
   }
+  return r;
+}
+
+const tinyxml2::XMLElement* Setting::GetOptionByName(const std::string& opt_name) const
+{
+  return const_cast<Setting*>(this)->GetOptionByName(opt_name);
+}
+
+tinyxml2::XMLElement* Setting::GetFileOptionByFilter(const std::string& opt_name)
+{
+  tinyxml2::XMLElement *e = root_->FirstChildElement(kSettingFixedPrefName);
+  tinyxml2::XMLElement *r = nullptr;
+  while (e)
+  {
+    const char* name = e->Attribute("name");
+    const char* type = e->Attribute("type");
+    if (name && type &&
+        strcmp(name, opt_name.c_str()) == 0 &&
+        strcmp(type, "file") == 0)
+    {
+      r = e;
+      break;
+    }
+    e = e->NextSiblingElement(kSettingFixedPrefName);
+  }
+  return r;
+}
+
+std::string Setting::GetPathFromFileFilter(const std::string& path_filter)
+{
+  tinyxml2::XMLElement *e = GetFileOptionByFilter(path_filter);
+  if (!e)
+    return std::string();
+  return e->GetText();
+}
+
+std::string Setting::GetPathFromFileFilterFallback(const std::string& path_filter)
+{
+  tinyxml2::XMLElement *e = GetFileOptionByFilter(path_filter);
+  if (!e)
+    return std::string();
+  std::string path = e->GetText();
+  if (IsFile(path)) return path;
+  const char* filter = e->Attribute("options");
+  filter = filter ? filter : "";
+
+  // If not file, then attempt to search alternative path from filter
+  // If found alternative, then change option & return alternative.
+  if (!GetFilepathSmart(filter, path, 0))
+    return std::string();
+  else
+    return path;
+}
+
+void Setting::InvalidateAllFileOptions()
+{
+  tinyxml2::XMLElement *e = root_->FirstChildElement(kSettingFixedPrefName);
+  tinyxml2::XMLElement *r = nullptr;
+  std::string out;
+  while (e)
+  {
+    const char* type = e->Attribute("type");
+    if (type && strcmp(type, "file") == 0)
+    {
+      const char* val = e->GetText();
+      const char* filter = e->Attribute("options");
+      val = val ? val : "";
+      filter = filter ? filter : "";
+      if (GetFilepathSmartFallback(val, filter, out, 0))
+        e->SetText(out.c_str());
+    }
+    e = e->NextSiblingElement(kSettingFixedPrefName);
+  }
+}
+
+void Setting::SetPathFromPathFilter(const std::string& path_filter, const std::string& value)
+{
+  tinyxml2::XMLElement *e = GetFileOptionByFilter(path_filter);
+  if (!e) return;
+  e->SetText(value.c_str());
+}
+
+void Setting::EnumOption(const std::string& key, std::vector<std::string>& options)
+{
+  tinyxml2::XMLElement *e = GetOptionByName(key);
   if (!e)
     return;
   std::string desc = e->Attribute("desc", "");
@@ -107,7 +196,7 @@ void Setting::EnumOption(const std::string& key, std::vector<std::string>& optio
   }
   else if (desc == "file")
   {
-    // TODO ...
+    GetFolderNameEntries(optionstr, options);
   }
 }
 
