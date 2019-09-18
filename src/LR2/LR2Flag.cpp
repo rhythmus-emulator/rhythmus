@@ -103,4 +103,26 @@ namespace rhythmus
     }
   }
 
+  /* class LR2BaseObject */
+
+  LR2BaseObject::LR2BaseObject()
+    : timer_id_(0) { memset(op_, 0, sizeof(op_)); }
+
+  bool LR2BaseObject::IsLR2Visible() const
+  {
+    return LR2Flag::GetFlag(op_[0]) && LR2Flag::GetFlag(op_[1]) &&
+           LR2Flag::GetFlag(op_[2]) && LR2Flag::IsTimerActive(timer_id_);
+  }
+
+  void LR2BaseObject::set_op(int op1, int op2, int op3)
+  {
+    op_[0] = op1;
+    op_[1] = op2;
+    op_[2] = op3;
+  }
+
+  void LR2BaseObject::set_timer_id(int timer_id)
+  {
+    timer_id_ = timer_id;
+  }
 }

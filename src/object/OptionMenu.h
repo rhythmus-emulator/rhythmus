@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Menu.h"
+#include "Text.h"
 
 namespace rhythmus
 {

@@ -3,8 +3,11 @@
 #include <string>
 #include <vector>
 
-namespace rhythmus
-{
+/* To prevent indentation */
+#define RHYTHMUS_NAMESPACE_BEGIN namespace rhythmus {
+#define RHYTHMUS_NAMESPACE_END   }
+
+RHYTHMUS_NAMESPACE_BEGIN
 
 /* @brief Directory item info */
 struct DirItem
@@ -35,4 +38,4 @@ std::string Replace(const std::string& org, const std::string& target, const std
 
 void Split(const std::string& str, char sep, std::vector<std::string>& vsOut);
 
-}
+RHYTHMUS_NAMESPACE_END

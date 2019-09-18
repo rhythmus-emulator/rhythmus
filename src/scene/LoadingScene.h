@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Scene.h"
+#include "object/Text.h"
 
 namespace rhythmus
 {

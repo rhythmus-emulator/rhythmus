@@ -3,6 +3,7 @@
 #include "LR2/LR2SceneLoader.h" /* for lr2skin file load */
 #include "LR2/LR2Sprite.h"
 #include "LR2/LR2Font.h"
+#include "LR2/LR2Text.h"
 #include "rutil.h"              /* for string modification */
 #include "Util.h"
 #include <iostream>

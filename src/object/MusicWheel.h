@@ -2,6 +2,7 @@
 
 #include "Song.h"
 #include "Menu.h"
+#include "Text.h"
 #include <string>
 
 namespace rhythmus
@@ -27,13 +28,13 @@ class MusicWheelItem : public MenuItem
 public:
   MusicWheelItem();
   Text& title();
-  Text& level();
+  NumberText& level();
   MusicWheelData* get_data();
   virtual void Load();
 
 protected:
   Text title_;
-  Text level_;
+  NumberText level_;
 };
 
 class MusicWheel : public Menu

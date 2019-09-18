@@ -37,9 +37,11 @@ set (RHYTHMUS_SOURCES
 	object/Menu.cpp
 	object/MusicWheel.cpp
     object/OptionMenu.cpp
+    object/Text.cpp
 
     LR2/exdxa.cpp
     LR2/LR2Font.cpp
+    LR2/LR2Text.cpp
     LR2/LR2SceneLoader.cpp
     LR2/LR2Flag.cpp
     LR2/LR2Sprite.cpp
@@ -76,9 +78,11 @@ set (RHYTHMUS_HEADERS
 	object/Menu.h
 	object/MusicWheel.h
     object/OptionMenu.h
+    object/Text.h
 
     LR2/exdxa.h
     LR2/LR2Font.h
+    LR2/LR2Text.h
     LR2/LR2SceneLoader.h
     LR2/LR2Flag.h
     LR2/LR2Sprite.h

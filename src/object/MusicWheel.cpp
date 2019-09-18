@@ -13,7 +13,7 @@ MusicWheelItem::MusicWheelItem()
 
 Text& MusicWheelItem::title() { return title_; }
 
-Text& MusicWheelItem::level() { return level_; }
+NumberText& MusicWheelItem::level() { return level_; }
 
 MusicWheelData* MusicWheelItem::get_data()
 {

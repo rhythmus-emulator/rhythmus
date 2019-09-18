@@ -1,6 +1,5 @@
 #include "LR2Sprite.h"
 #include "Timer.h"
-#include "LR2Flag.h"
 
 namespace rhythmus
 {
@@ -8,10 +7,9 @@ namespace rhythmus
 // ---------------------------- class LR2Sprite
 
 LR2Sprite::LR2Sprite()
-  : loop_(0), timer_id_(0), src_timer_id_(0), attr_loaded_(false)
+  : loop_(0), src_timer_id_(0), attr_loaded_(false)
 {
   set_name("LR2Sprite");
-  memset(op_, 0, sizeof(op_));
 }
 
 void LR2Sprite::LoadProperty(const std::string& prop_name, const std::string& value)
@@ -27,10 +25,10 @@ void LR2Sprite::LoadProperty(const std::string& prop_name, const std::string& va
   {
     if (!attr_loaded_)
     {
-      op_[0] = GetAttribute<int>("op0");
-      op_[1] = GetAttribute<int>("op1");
-      op_[2] = GetAttribute<int>("op2");
-      timer_id_ = GetAttribute<int>("timer");
+      set_op(GetAttribute<int>("op0"),
+        GetAttribute<int>("op1"),
+        GetAttribute<int>("op2"));
+      set_timer_id(GetAttribute<int>("timer"));
       loop_ = GetAttribute<int>("loop");
       attr_loaded_ = true;
     }
@@ -40,9 +38,7 @@ void LR2Sprite::LoadProperty(const std::string& prop_name, const std::string& va
 
 bool LR2Sprite::IsVisible() const
 {
-  return Sprite::IsVisible() &&
-    LR2Flag::GetFlag(op_[0]) && LR2Flag::GetFlag(op_[1]) &&
-    LR2Flag::GetFlag(op_[2]) && LR2Flag::IsTimerActive(timer_id_);
+  return IsLR2Visible() && Sprite::IsVisible();
 }
 
 }

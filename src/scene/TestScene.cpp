@@ -65,7 +65,7 @@ void TestScene::LoadScene()
   //text_.SetScale(0.8f, 1.0f);
   //text_.SetRotation(0, 0, 0.3);
   //text_.SetSize(200, 300);
-  text_.SetAlignment(FontAlignments::kFontAlignStretch);
+  text_.SetAlignment(TextAlignments::kTextAlignStretch);
 
   spr_bg_.SetImage(img_movie_);
   spr_bg_.SetPos(0, 0);
