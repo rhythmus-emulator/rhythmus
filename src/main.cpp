@@ -1,7 +1,3 @@
-#ifdef WIN32
-# include <tchar.h>
-# include <Windows.h>
-#endif
 #include "Logger.h"
 #include "Graphic.h"
 #include "Game.h"
@@ -13,6 +9,12 @@
 #include "rutil.h"        // convert wargv
 #include "./Song.h"
 #include <iostream>
+
+// declare windows header latest due to constant conflicts
+#ifdef WIN32
+# include <tchar.h>
+# include <Windows.h>
+#endif
 
 using namespace rhythmus;
 
@@ -38,7 +40,6 @@ int APIENTRY _tWinMain(
 int main(int argc, char **argv)
 {
 #endif
-
   /**
    * Initialization
    */
@@ -57,7 +58,7 @@ int main(int argc, char **argv)
   Game::getInstance().Update();
   SceneManager::getInstance().Initialize();
   Timer::Initialize();
-  GameMixer::getInstance().Initialize();
+  SoundDriver::getInstance().Initialize();
 
   // Event Initialization
   EventManager::Initialize();
@@ -76,7 +77,7 @@ int main(int argc, char **argv)
   SongPlayable::getInstance().CancelLoad(); // if loading, than cancel
   SongPlayable::getInstance().Clear();
   graphic.Cleanup();
-  GameMixer::getInstance().Destroy();
+  SoundDriver::getInstance().Destroy();
   if (!game.Save())
   {
     std::cerr << "Settings not saved." << std::endl;

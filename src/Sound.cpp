@@ -4,9 +4,6 @@
 #include <algorithm>
 #include "Error.h"
 
-/* rencoder mixer */
-#include "rmixer.h"
-
 /* OpenAL */
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -28,13 +25,8 @@ ALCdevice *device;
 ALCcontext *context;
 ALuint source_id;
 ALuint buffer_id[kBufferCount];
-int buffer_index;
-int buffer_size;
 std::thread sound_thread;
 bool sound_thread_finish;
-
-// software mixer which allocates channel virtually
-Mixer* mixer;
 
 int get_audio_fmt()
 {
@@ -54,9 +46,9 @@ int get_audio_fmt()
   return -1;
 }
 
-void sound_thread_body()
+void SoundDriver::sound_thread_body()
 {
-  char* pData = (char*)calloc(1, buffer_size);
+  char* pData = (char*)calloc(1, buffer_size_);
   int iBuffersProcessed = 0;
   ALuint cur_buffer_id;
   int audio_fmt = get_audio_fmt();
@@ -65,7 +57,7 @@ void sound_thread_body()
   for (int i = 0; i < kBufferCount; ++i)
   {
     /* Don't know why but always need to cache dummy data into buffer ... */
-    alBufferData(buffer_id[i], get_audio_fmt(), pData, buffer_size, 44100);
+    alBufferData(buffer_id[i], get_audio_fmt(), pData, buffer_size_, 44100);
     alSourceQueueBuffers(source_id, 1, &buffer_id[i]);
     ASSERT(alGetError() == 0);
   }
@@ -79,9 +71,9 @@ void sound_thread_body()
     while (iBuffersProcessed)
     {
       alSourceUnqueueBuffers(source_id, 1, &cur_buffer_id);
-      memset(pData, 0, buffer_size);
-      mixer->Mix(pData, buffer_size);
-      alBufferData(cur_buffer_id, audio_fmt, pData, buffer_size, kMixerSampleRate);
+      memset(pData, 0, buffer_size_);
+      SoundDriver::getMixer().Mix(pData, buffer_size_);
+      alBufferData(cur_buffer_id, audio_fmt, pData, buffer_size_, kMixerSampleRate);
       alSourceQueueBuffers(source_id, 1, &cur_buffer_id);
       iBuffersProcessed--;
     }
@@ -108,16 +100,18 @@ void sound_thread_body()
 
 // -------------------------------- class Mixer
 
-GameMixer::GameMixer() : buffer_size_(kDefaultMixSize)
+SoundDriver::SoundDriver() : buffer_size_(kDefaultMixSize)
 {}
 
-GameMixer::~GameMixer()
+SoundDriver::~SoundDriver()
 {
   Destroy();
 }
 
-void GameMixer::Initialize()
+void SoundDriver::Initialize()
 {
+  using namespace rmixer;
+
   // get output device from Game settings
   auto& setting = Game::getInstance().getSetting();
   std::string device_name;
@@ -126,6 +120,9 @@ void GameMixer::Initialize()
     setting.Load("SoundDevice", device_name);
     device = alcOpenDevice(device_name.c_str());
   }
+
+  // load sound buffer size (fallback: use default value)
+  setting.Load("SoundBufferSize", buffer_size_);
 
   if (!device)
   {
@@ -153,25 +150,24 @@ void GameMixer::Initialize()
   alSourcei(source_id, AL_LOOPING, AL_FALSE);
 
   alGenBuffers(kBufferCount, buffer_id);
-  buffer_size = buffer_size_;
 
   // now mixer initialization
   SoundInfo mixinfo;
   mixinfo.bitsize = kMixerBitsize;
   mixinfo.rate = kMixerSampleRate;
   mixinfo.channels = kMixerChannel;
-  mixer = new Mixer(mixinfo);
+  mixer_.SetSoundInfo(mixinfo);
 
   // okay start stream
   sound_thread_finish = false;
-  sound_thread = std::thread(sound_thread_body);
+  sound_thread = std::thread(&SoundDriver::sound_thread_body, this);
   if (alGetError() != AL_NO_ERROR)
   {
     std::cerr << "Something wrong happened playing audio.." << std::endl;
   }
 }
 
-void GameMixer::Destroy()
+void SoundDriver::Destroy()
 {
   if (device)
   {
@@ -186,13 +182,10 @@ void GameMixer::Destroy()
     alcDestroyContext(context);
     alcCloseDevice(device);
     device = 0;
-
-    delete mixer;
-    mixer = 0;
   }
 }
 
-void GameMixer::GetDevices(std::vector<std::string> &names)
+void SoundDriver::GetDevices(std::vector<std::string> &names)
 {
   int enumeration = alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT");
   if (enumeration == AL_FALSE)
@@ -215,105 +208,15 @@ void GameMixer::GetDevices(std::vector<std::string> &names)
   }
 }
 
-GameSoundAuto GameMixer::LoadSound(const std::string& path)
+SoundDriver& SoundDriver::getInstance()
 {
-  GameSoundAuto s = std::make_unique<GameSound>();
-  //s->is_loaded_ = true;
-  return s;
+  static SoundDriver driver;
+  return driver;
 }
 
-GameSoundAuto GameMixer::LoadSound(const char* ptr, size_t len)
+rmixer::Mixer& SoundDriver::getMixer()
 {
-  GameSoundAuto s = std::make_unique<GameSound>();
-  //s->is_loaded_ = true;
-  return s;
+  return getInstance().mixer_;
 }
-
-GameMixer& GameMixer::getInstance()
-{
-  static GameMixer mixer;
-  return mixer;
-}
-
-void GameMixer::set_buffer_size(int bytes)
-{
-  buffer_size_ = bytes;
-}
-
-
-// -------------------------------- class Sound
-
-
-GameSound::GameSound()
-  : channel_id_(-1)
-{
-}
-
-GameSound::~GameSound()
-{
-  Unload();
-}
-
-void GameSound::Load(const std::string& path)
-{
-  Unload();
-  int ch = allocate_channel();
-  if (!mixer->LoadSound(ch, path))
-  {
-    std::cerr << "Failed to load audio: " << path << std::endl;
-    return;
-  }
-  channel_id_ = ch;
-}
-
-void GameSound::LoadFromMemory(const char* p, size_t len)
-{
-  rutil::FileData fd;
-  fd.p = (uint8_t*)p;
-  fd.len = len;
-  LoadFromMemory(fd);
-}
-
-void GameSound::LoadFromMemory(const rutil::FileData &fd)
-{
-  Unload();
-  int ch = allocate_channel();
-  if (!mixer->LoadSound(ch, fd))
-  {
-    std::cerr << "Failed to load audio from memory ..." << std::endl;
-    return;
-  }
-  channel_id_ = ch;
-}
-
-void GameSound::Unload()
-{
-  // Rare case: Mixer may erased eariler than Sound object.
-  // If so, don't do anything.
-  if (!mixer)
-    return;
-  if (channel_id_ == -1)
-    return;
-  mixer->FreeSound(channel_id_);
-  channel_id_ = -1;
-}
-
-void GameSound::Play()
-{
-  if (channel_id_ < 0) return;
-  mixer->Play(channel_id_);
-}
-
-bool GameSound::is_loaded() const
-{
-  return channel_id_ >= 0;
-}
-
-int GameSound::allocate_channel()
-{
-  static int channel_idx = 0;
-  return channel_idx++;
-}
-
 
 }

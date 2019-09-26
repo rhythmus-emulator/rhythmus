@@ -270,6 +270,12 @@ void ConvertFromString(const std::string& src, unsigned short& dst)
 }
 
 template <>
+void ConvertFromString(const std::string& src, size_t& dst)
+{
+  dst = static_cast<size_t>(atoi(src.c_str()));
+}
+
+template <>
 void ConvertFromString(const std::string& src, std::vector<std::string>& dst)
 {
   // separated by comma

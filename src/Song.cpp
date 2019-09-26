@@ -2,7 +2,7 @@
 #include "Timer.h"
 #include "Event.h"
 #include "Util.h"
-#include "rhythmus.h"
+#include "rparser.h"
 #include <map>
 
 #include <sqlite3.h>
@@ -408,35 +408,23 @@ void SongPlayable::LoadResourceThreadBody()
 
     rparser::Directory* dir = song_->GetDirectory();
 
+    /* read sound here
+     * TODO: need to convert to load with threads */
+    keysound_.LoadFromChart(*song_, *chart_);
+
     if (li.type == 0 /* sound */)
     {
-      rparser::FileData *fd = dir->Get(li.path, true);
-      if (!fd)
-      {
-        std::cerr << "SongPlayable: cannot read sound :" << li.path << std::endl;
-        continue;
-      }
-      keysounds_[li.channel].LoadFromMemory(*fd);
-#if 0
-      /// future code
-      rparser::FileSystem::SetBaseDirectory(song_.get_path());
-      for (auto& snd : metadata.GetSoundChannel()->fn)
-      {
-        FileData fd = rparser::FileSystem::GetFileData();
-        keysounds_[snd.first].LoadFromMemory(fd);
-      }
-      rparser::FileSystem::ResetBaseDirectory();
-#endif
     }
     else if (li.type == 1 /* bga */)
     {
-      rparser::FileData *fd = dir->Get(li.path, true);
-      if (!fd)
+      const char* file;
+      size_t len;
+      if (!dir->GetFile(li.path, &file, len))
       {
         std::cerr << "SongPlayable: cannot read BGA :" << li.path << std::endl;
         continue;
       }
-      bg_[li.channel].LoadFromData(fd->p, fd->len);
+      bg_[li.channel].LoadFromData((uint8_t*)file, len);
     }
   }
 
@@ -464,6 +452,7 @@ void SongPlayable::CancelLoad()
 
 void SongPlayable::Play()
 {
+  keysound_.RegisterToMixer(SoundDriver::getMixer());
   song_start_time_ = Timer::GetGameTimeInMillisecond();
 }
 
@@ -474,7 +463,7 @@ void SongPlayable::Stop()
   //  keysounds_[i].Stop();
 }
 
-void SongPlayable::Update(float)
+void SongPlayable::Update(float delta)
 {
   // TODO: play bgm which is behind current timestamp
   if (!IsPlaying())
@@ -483,32 +472,25 @@ void SongPlayable::Update(float)
   song_current_time_ = Timer::GetGameTimeInMillisecond();
   int songtime = GetSongEclipsedTime();
 
-  int i = note_current_idx_;
-  for (; i < notes_.size(); ++i)
-  {
-    // TODO: currently autoplay ...
-    if (notes_[i].time < songtime)
-      keysounds_[notes_[i].channel].Play();
-    else break;
-  }
-  note_current_idx_ = i;
+  keysound_.Update(delta);
 
-  i = event_current_idx_;
+  int i = event_current_idx_;
   for (; i < events_.size(); ++i)
   {
-    if (events_[i].time > songtime)
+    if (songtime >= events_[i].time)
     {
       switch (events_[i].type)
       {
       case 0: // bgm
-        keysounds_[events_[i].channel].Play();
         break;
       case 1: // bga
         // TODO: set current_bga ImageAuto.
         break;
       }
     }
+    else break;
   }
+  event_current_idx_ = i;
 }
 
 void SongPlayable::Clear()
@@ -517,8 +499,7 @@ void SongPlayable::Clear()
   if (active_thread_count_ != 0)
     return;
 
-  for (int i = 0; i < 1000; ++i)
-    keysounds_[i].Unload();
+  keysound_.UnregisterAll();
 
   for (int i = 0; i < 1000; ++i)
     bg_[i].UnloadAll();

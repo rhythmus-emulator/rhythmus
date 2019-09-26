@@ -12,6 +12,9 @@
 #include <vector>
 #include <thread>
 
+// rmixer
+#include "SoundPool.h"
+
 namespace rparser { class Song; class Chart; }
 
 namespace rhythmus
@@ -142,8 +145,8 @@ private:
 
   uint32_t song_start_time_;
   uint32_t song_current_time_;
-
-  GameSound keysounds_[1000];
+  
+  rmixer::KeySoundPoolWithTime keysound_;
   Image bg_[1000];
 
   // TODO: input settings.
