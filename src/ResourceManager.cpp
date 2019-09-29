@@ -12,7 +12,7 @@ ImageAuto ResourceManager::LoadImage(const std::string& path)
 {
   /* Most image won't be shared from scene to scene, so just load it now */
   ImageAuto img = std::make_shared<Image>();
-  img->LoadFromPath(path);
+  img->LoadFromPath(getInstance().GetFinalPath(path));
   return img;
 }
 
@@ -94,6 +94,21 @@ ResourceManager& ResourceManager::getInstance()
 {
   static ResourceManager m;
   return m;
+}
+
+
+void ResourceManager::AddPathReplacement(const std::string& path_from, const std::string& path_to)
+{
+  path_replacement_[path_from] = path_to;
+}
+
+std::string ResourceManager::GetFinalPath(const std::string& path)
+{
+  auto i = path_replacement_.find(path);
+  if (i != path_replacement_.end())
+    return i->second;
+  else
+    return path;
 }
 
 ResourceManager::ResourceManager()

@@ -1,6 +1,7 @@
 #include "Sprite.h"
 #include "Game.h"
 #include "SceneManager.h" // to use scene timer
+#include "Util.h"
 #include <iostream>
 #include <algorithm>
 

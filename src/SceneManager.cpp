@@ -86,7 +86,6 @@ bool SceneManager::OnEvent(const EventMessage& e)
   switch (e.GetEventID())
   {
   case Events::kEventSceneChange:
-    Game::getInstance().ChangeGameMode();
     break;
   case Events::kEventSceneTimeout:
     current_scene_->CloseScene();
@@ -219,27 +218,26 @@ Scene* SceneManager::get_current_scene()
 
 Scene* SceneManager::CreateNextScene()
 {
-  auto mode = Game::getInstance().get_game_mode();
+  auto mode = Game::getInstance().get_game_scene_mode();
 
   // if test mode, then directly go into test scene
-  if (mode == GameMode::kGameModeTest)
+  if (mode == GameSceneMode::kGameSceneModeTest)
     return new TestScene();
   
   switch (mode)
   {
-  case GameMode::kGameModeLoading:
+  case GameSceneMode::kGameSceneModeLoading:
     return new LoadingScene();
-  case GameMode::kGameModeSelect:
+  case GameSceneMode::kGameSceneModeSelect:
     return new SelectScene();
-  case GameMode::kGameModeDecide:
+  case GameSceneMode::kGameSceneModeDecide:
     return new DecideScene();
-  case GameMode::kGameModePlay:
+  case GameSceneMode::kGameSceneModePlay:
     return new PlayScene();
-  case GameMode::kGameModeResult:
+  case GameSceneMode::kGameSceneModeResult:
     return new ResultScene();
-  case GameMode::kGameModeNone:
+  case GameSceneMode::kGameSceneModeNone:
     /* return nullptr, which indicates not to process anything */
-    Graphic::getInstance().ExitRendering();
     return nullptr;
   default:
     // NOT IMPLEMENTED or WRONG VALUE

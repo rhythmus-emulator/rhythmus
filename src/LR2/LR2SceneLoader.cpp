@@ -36,12 +36,6 @@ void LR2SceneLoader::Load(const std::string& path)
   LoadCSV(path);
 }
 
-void MakeParamCountSafe(std::vector<std::string> &v, size_t expected_count)
-{
-  while (v.size() < expected_count)
-    v.emplace_back(std::string());
-}
-
 void LR2SceneLoader::LoadCSV(const std::string& filepath)
 {
   rutil::FileData data;

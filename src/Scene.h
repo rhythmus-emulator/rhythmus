@@ -11,7 +11,7 @@
 namespace rhythmus
 {
 
-// Parameters with scene theme.
+// Parameters with scene theme (read-only).
 // All time parameters are in miliseconds.
 struct ThemeParameter
 {
@@ -32,25 +32,9 @@ struct ThemeParameter
   // time to move next scene (in milisecond)
   // 0 : don't move scene to next scene automatically
   int next_scene_time;
-};
 
-// User-customizable theme option
-struct ThemeOption
-{
-  // option name
-  std::string name;
-
-  // option description (nullable)
-  std::string desc;
-
-  // theme option type. (option or file)
-  std::string type;
-
-  // selectable options. separated in comma, or file filter.
-  std::string options;
-
-  // selected value.
-  std::string selected;
+  // other untranslated attributes (may be used later)
+  std::map<std::string, std::string> attributes;
 };
 
 /* @brief A screen which is renderable */
@@ -66,9 +50,12 @@ public:
   /* @brief start scene e.g. start scene timer */
   virtual void StartScene();
 
-  /* @brief prepare to finish scene
+  /* @brief triggered when scene is finished
    * @warn it does not mean changing scene instantly,
    * which triggers fadeout/transition. */
+  virtual void FinishScene();
+
+  /* @brief close scene completely & do some misc (e.g. save setting) */
   virtual void CloseScene();
 
   /* @brief Event processing */
@@ -87,12 +74,14 @@ public:
   void TriggerFadeOut(float duration);
   void QueueSceneEvent(float delta, int event_id);
 
+  const ThemeParameter& get_theme_parameter() const;
+
 protected:
-  // User-customizable theme option
+  // Theme parameter list (read-only)
   ThemeParameter theme_param_;
 
-  // User customizable theme option list.
-  std::vector<ThemeOption> theme_options_;
+  // Theme options
+  Setting setting_;
 
   // image resources loaded by this scene
   std::vector<ImageAuto> images_;
@@ -108,15 +97,13 @@ protected:
   virtual void doUpdate(float delta);
   virtual void doRenderAfter();
 
-private:
+  // next scene mode
+  GameSceneMode next_scene_mode_;
 
+private:
   void LoadOptions();
   void SaveOptions();
-
   void LoadFromCsv(const std::string& filepath);
-  void SetThemeConfig(const std::string& key, const std::string& value);
-  ThemeOption* GetThemeOption(const std::string& key);
-  ThemeOption* GetThemePathOption(const std::string& pathfilter);
 
   // fade in/out specified time
   // fade_duration with positive: fade-in

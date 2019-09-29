@@ -13,57 +13,34 @@ namespace rhythmus
 /* @brief Current game boot mode. */
 enum GameBootMode
 {
-  kBootNormal,
+  kBootNormal, /* normal boot mode (homeplay) */
+  kBootArcade, /* arcade boot mode */
+  kBootLR2, /* LR2 type boot mode */
+  kBootPlay, /* Only for play */
+  kBootRefresh, /* Only for library refresh */
   kBootTest, /* hidden boot mode - only for test purpose */
 };
 
-/* @brief current game mode. */
-enum GameMode
+/* @brief current game scene mode. */
+enum GameSceneMode
 {
-  kGameModeNone,
-  kGameModeLoading,
-  kGameModeMain,
-  kGameModeLogin,
-  kGameModeSelectMode,
-  kGameModeSelect,
-  kGameModeDecide,
-  kGameModePlay,
-  kGameModeResult,
-  kGameModeCourseResult,
-  kGameModeSetting,
-  kGameClose /* End of a game, Unexitable game state. */,
-  kGameModeKeySetting /* Special mode, only for LR2 */,
-  kGameModeTest /* Special mode, only for testing */,
+  kGameSceneModeNone,
+  kGameSceneModeLoading,
+  kGameSceneModeMain,
+  kGameSceneModeLogin,
+  kGameSceneModeSelectMode,
+  kGameSceneModeSelect,
+  kGameSceneModeDecide,
+  kGameSceneModePlay,
+  kGameSceneModeResult,
+  kGameSceneModeCourseResult,
+  kGameSceneModeSetting,
+  kGameSceneModeKeySetting /* Special mode, only for LR2 */,
+  kGameSceneModeTest /* Special mode, only for testing */,
+  kGameSceneClose /* End of a game, Unexitable game state. */,
 };
 
-/* @brief game theme related options */
-struct GameThemeOption
-{
-  // general scene master path, which includes parameter for total scene
-  // other parameter filled automatically if null.
-  std::string theme_path;
-  std::string theme_path_filter;
-
-  // select scene path
-  std::string select_scene_path;
-  std::string select_scene_path_filter;
-
-  // decide scene path
-  std::string decide_scene_path;
-  std::string decide_scene_path_filter;
-
-  // play scene path
-  std::string play_scene_path;
-  std::string play_scene_path_filter;
-
-  // result scene path
-  std::string result_scene_path;
-  std::string result_scene_path_filter;
-
-  // course result scene path
-  std::string courseresult_scene_path;
-  std::string courseresult_scene_path_filter;
-};
+using GameThemeOption = std::vector<Option>;
 
 /**
  * @brief
@@ -83,10 +60,7 @@ public:
   void Update();
 
   /* Set next game mode */
-  void SetNextGameMode(GameMode next_game_mode);
-
-  /* Trigger scene changing. */
-  void ChangeGameMode();
+  void SetNextScene(GameSceneMode next_game_mode);
 
   /* Load execute argument */
   void LoadArgument(const std::string& argv);
@@ -103,7 +77,7 @@ public:
   bool get_do_logging() const;
   float GetAspect() const;
   GameBootMode get_boot_mode() const;
-  GameMode get_game_mode() const;
+  GameSceneMode get_game_scene_mode() const;
   GameThemeOption& get_game_theme_option();
 
   void set_do_logging(bool v);
@@ -132,14 +106,14 @@ private:
   // current game boot mode.
   GameBootMode game_boot_mode_;
 
-  // current game mode.
-  GameMode game_mode_;
+  // current game scene.
+  GameSceneMode game_scene_;
 
-  // reserved next game mode.
-  GameMode next_game_mode_;
+  // reserved next game scene.
+  GameSceneMode next_game_scene_;
 
-  // check is game mode (scene) need to be changed.
-  bool do_game_mode_change_;
+  void InitializeGameSceneMode();
+  void InitializeGameThemeOption();
 };
 
 }

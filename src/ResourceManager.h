@@ -4,6 +4,7 @@
 #include "Font.h"
 #include <string>
 #include <vector>
+#include <map>
 #include <list>
 
 namespace rhythmus
@@ -24,11 +25,19 @@ public:
   static void ReleaseFont(const FontAuto& font);
 
   static ResourceManager& getInstance();
+
+  void AddPathReplacement(const std::string& path_from, const std::string& path_to);
 private:
   ResourceManager();
   ~ResourceManager();
 
+  // cached font
   std::list<FontAuto> fonts_;
+
+  // path replacement
+  std::map<std::string, std::string> path_replacement_;
+
+  std::string GetFinalPath(const std::string& path);
 };
 
 }

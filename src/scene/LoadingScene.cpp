@@ -66,9 +66,9 @@ bool LoadingScene::ProcessEvent(const EventMessage& e)
   }
   else if (e.IsKeyUp() && !SongList::getInstance().is_loading())
   {
-    // manually go to next scene
-    Game::getInstance().SetNextGameMode(GameMode::kGameModeSelect);
-    Game::getInstance().ChangeGameMode();
+    // go to next scene (select) directly
+    next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
+    CloseScene();
   }
   return true;
 }

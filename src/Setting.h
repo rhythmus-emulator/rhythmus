@@ -13,24 +13,96 @@
 
 #include <string>
 #include <vector>
-#include "tinyxml2.h"
 
 namespace rhythmus
 {
 
-constexpr char* kSettingFixedPrefName = "option";
+class Setting;
+constexpr char* kSettingOptionTagName = "option";
+constexpr char* kSettingKeyValueTagName = "value";
 
-struct SettingRow
-{
-  std::string name;
-  std::string desc;
-  std::string value;
-};
-
-class SettingList : public std::vector<SettingRow>
+class Option
 {
 public:
-  SettingRow* Get(const std::string& name);
+  Option(const std::string& key);
+
+  const std::string& name() const;
+  const std::string& value() const;
+  const std::string& type() const;
+  const std::string& desc() const;
+  const std::string& ns() const;
+  void set_namespace(const std::string& ns);
+  void set_description(const std::string& desc);
+
+  // @brief get option string used when calling SetOption()
+  const std::string& get_option_string() const;
+
+  // @brief get value as int (or index)
+  int value_int() const;
+  int value_min() const;
+  int value_max() const;
+
+  void set_op(int op);
+  int value_op() const;
+
+  // @brief select next selectable item / value
+  void Next();
+
+  // @brief select previous selectable item / value
+  void Prev();
+
+  // @brief set general option
+  void SetTextOption(const std::string& text);
+
+  // @brief separate selectable options with comma
+  void SetOption(const std::string& options);
+
+  // @brief file mask(filter) option
+  void SetFileOption(const std::string& file_filter);
+
+  // @brief set as numeric option
+  void SetNumberOption(int min = 0, int max = 0x7FFFFFFF);
+
+  // @brief set value
+  // @warn may be value is changed due to validation check
+  void set_value(const std::string& value);
+
+  // @brief whether to save without option if it exists
+  void set_save_without_option(bool v = true);
+
+  // @brief copy constraint from other option
+  void CopyConstraint(const Option& option);
+
+  friend class Setting;
+
+private:
+  std::string name_;
+  std::string ns_; /* namespace */
+  std::string desc_;
+  std::string value_;
+  std::string type_;
+
+  // selectable options, if necessary.
+  std::vector<std::string> options_;
+
+  // option for original string
+  std::string option_filter_;
+
+  // selected value (for number)
+  int number_;
+
+  // constraint for value (for number)
+  int number_min_, number_max_;
+
+  // kind of id constrain (for LR2)
+  int op_;
+
+  // save force as text
+  // (just for option item but not want to save the options)
+  bool save_without_option_;
+
+  // @brief validate option if it's not existing in selectable options.
+  void Validate();
 };
 
 /* @brief Xml setting load & save class
@@ -39,133 +111,63 @@ class Setting
 {
 public:
   Setting();
+  ~Setting();
 
   bool Open(const std::string& setting_path);
   bool Save();
+  bool SaveAs(const std::string& setting_path);
   void Close();
 
-  void SetPreferenceGroup(const std::string& preference_name = "");
+  // @brief only reloads value, not loading entire options / attributes.
+  bool ReloadValues(const std::string& setting_path = std::string());
+
+  // @brief set scope for searching option
+  void SetNamespace(const std::string& ns = "");
 
   /* @brief if failed to find specified node, then calls LoadPref internally. */
   template <typename T>
-  void Load(const std::string& key, T& value) const
+  void LoadOptionValue(const std::string& key, T& value) const
   {
-    if (key == kSettingFixedPrefName)
-      return; /* reserved name, not saved */
-    const tinyxml2::XMLElement *e = root_->FirstChildElement(key.c_str());
-    if (!e)
-    {
-      e = GetOptionByName(key);
-      if (!e) return;
-    }
-    const char* t = e->GetText();
-    ConvertFromString(t ? t : "", value);
-  }
-
-  /* @brief only searchs for SetPref() */
-  template <typename T>
-  void LoadOption(const std::string& key, std::string& type,
-    std::string& desc, std::string& options, T& value) const
-  {
-    const tinyxml2::XMLElement *e = GetOptionByName(key);
-    if (!e) return;
-    const char* t = e->GetText();
-    type = e->Attribute("type", "");
-    desc = e->Attribute("desc", "");
-    options = e->Attribute("options", "");
-    ConvertFromString(t ? t : "", value);
+    const Option *opt = GetOption(key);
+    if (!opt)
+      return;
+    ConvertFromString(opt->value(), value);
   }
 
   /* @brief Set setting with node with specified name. */
   template <typename T>
-  void Set(const std::string& key, const T& value)
+  void SetOptionValue(const std::string& key, const T& value)
   {
+    Option *opt = GetOption(key);
+    if (!opt)
+      return;
     std::string v = ConvertToString(value);
-    tinyxml2::XMLElement *e = root_->FirstChildElement(key.c_str());
-    if (!e)
-    {
-      e = doc_.NewElement(key.c_str());
-      root_->InsertEndChild(e);
-    }
-    e->SetText(v.c_str());
+    opt->set_value(v);
   }
 
-  /**
-   * @brief Set setting with pref node, which can store option setting.
-   * @param key option key
-   * @param desc option description
-   * @param type type of option (e.g. number, list, file, ...)
-   * @param options selectable list, generally uses file filter.
-   * @param value currently selected value
-   */
-  template <typename T>
-  void SetOption(const std::string& key, const std::string& type,
-    const std::string& desc, const std::string& options, const T& value)
-  {
-    std::string v = ConvertToString(value);
-    tinyxml2::XMLElement *e = GetOptionByName(key);
-    if (!e)
-    {
-      e = doc_.NewElement(kSettingFixedPrefName);
-      e->SetAttribute("name", key.c_str());
-      root_->InsertEndChild(e);
-    }
-    e->SetAttribute("type", type.c_str());
-    e->SetAttribute("desc", desc.c_str());
-    e->SetAttribute("options", options.c_str());
-    e->SetText(v.c_str());
-  }
+  const Option* GetOption(const std::string& name) const;
+  Option* GetOption(const std::string& name);
+
+  /* @brief Set setting with pref node, which can store option setting. */
+  Option* NewOption(const std::string& option_name, bool get_if_exists = true);
+
+  void GetAllOptions(std::vector<Option*> out);
 
   bool Exist(const std::string& key) const;
 
   /**
    * @brief Get path from path filter
-   * @warn empty string returned if option not exist
+   * @warn input string itself will be returned if no proper file option is found
    */
-  std::string GetPathFromFileFilter(const std::string& path_filter);
+  std::string GetPathFromOptions(const std::string& path_filter);
 
-  /**
-   * @brief Same as GetPathFromPathFilter(), but it checks file existence.
-   *        If setting file is not exist, then it searchs for alternative file(option),
-   *        and update setting automatically.
-   * @warn empty string returned if option not exist
-   */
-  std::string GetPathFromFileFilterFallback(const std::string& path_filter);
-
-  /**
-   * @brief internally calls GetPathFromFilterFallback() to all file options
-   *        to keep selected values valid.
-   */
-  void InvalidateAllFileOptions();
-
-  /**
-   * @brief Set path by path filter
-   * @warn Setting won't saved if option not exist
-   */
-  void SetPathFromPathFilter(const std::string& path_filter, const std::string& value);
-
-  /* @brief get options in case of option setting */
-  void EnumOption(const std::string& name, std::vector<std::string>& options);
-
-  void GetAllPreference(SettingList& pref_list);
+  /* @brief command to settings. */
+  void LoadProperty(const std::string& prop_name, const std::string& value);
 
 private:
   std::string path_;
-  tinyxml2::XMLDocument doc_;
-
-  // current root of preference keys.
-  // set by SetPreferenceGroup.
-  tinyxml2::XMLElement* root_;
-
-  /* for internal use. */
-  tinyxml2::XMLElement* GetOptionByName(const std::string& opt_name);
-  const tinyxml2::XMLElement* GetOptionByName(const std::string& opt_name) const;
-
-  /* File option related util, for internal use. */
-  tinyxml2::XMLElement* GetFileOptionByFilter(const std::string& opt_name);
-
-  /* @depreciated @brief convert key to xml-safe-name one. */
-  static std::string ConvertToSafeKey(const std::string& key);
+  std::string ns_; /* currently saelected namespace */
+  std::vector<Option*> options_;
 };
 
 template <typename T>

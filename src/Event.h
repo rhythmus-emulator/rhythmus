@@ -29,6 +29,7 @@ enum Events
 
   kEventSceneTimeout,
   kEventSceneChange,
+  kEventSceneConfigLoaded,
   kEventSongSelectChanged,
   kEventSongSelected,
   kEventSongLoadFinished,

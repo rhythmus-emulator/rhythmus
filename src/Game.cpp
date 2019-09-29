@@ -27,16 +27,9 @@ Setting& Game::getSetting()
 Game::Game()
   : setting_path_(kSettingPath),
     game_boot_mode_(GameBootMode::kBootNormal),
-    game_mode_(GameMode::kGameModeNone),
-    do_game_mode_change_(false)
+    game_scene_(GameSceneMode::kGameSceneModeNone)
 {
-  /* Initialize filters */
-  theme_option_.theme_path_filter = "";
-  theme_option_.select_scene_path_filter = "../themes/*/select/*.lr2skin";
-  theme_option_.decide_scene_path_filter = "../themes/*/decide/*.lr2skin";
-  theme_option_.play_scene_path_filter = "../themes/*/play/*.lr2skin";
-  theme_option_.result_scene_path_filter = "../themes/*/result/*.lr2skin";
-  theme_option_.courseresult_scene_path_filter = "../themes/*/courseresult/*.lr2skin";
+  InitializeGameThemeOption();
 }
 
 Game::~Game()
@@ -48,13 +41,7 @@ Game::~Game()
 #define XML_SETTINGS \
   XMLATTR(width_, "width", uint16_t) \
   XMLATTR(height_, "height", uint16_t) \
-  XMLATTR(do_logging_, "logging", bool) \
-  XMLATTRS(theme_option_.theme_path, "theme_path", std::string) \
-  XMLATTRS(theme_option_.select_scene_path, "select_scene_path", std::string) \
-  XMLATTRS(theme_option_.decide_scene_path, "decide_scene_path", std::string) \
-  XMLATTRS(theme_option_.play_scene_path, "play_scene_path", std::string) \
-  XMLATTRS(theme_option_.result_scene_path, "result_path", std::string) \
-  XMLATTRS(theme_option_.courseresult_scene_path, "courseresult_scene_path", std::string) \
+  XMLATTR(do_logging_, "logging", bool)
 
 template<typename A>
 A GetValueConverted(const char* v);
@@ -105,63 +92,62 @@ bool Game::Load()
   // Set default value - in case of key is not existing.
   Default();
 
-  if (!setting_.Open(setting_path_))
+  // just load option values - not option node itself.
+  if (!setting_.ReloadValues(setting_path_))
   {
     std::cerr << "Failed to game load settings, use default value." << std::endl;
     return false;
   }
 
-#define XMLATTR(var, attrname, type) \
-setting_.Load(attrname, var);
-#define XMLATTRS(a,b,c) XMLATTR(a,b,c)
-  XML_SETTINGS;
-#undef XMLATTRS
-#undef XMLATTR
-
-  /* Game skin path need to be invalidated manually if necessary */
-  if (theme_option_.theme_path.empty())
+  // set constraints & validate with options
+  std::vector<Option*> options;
+  setting_.GetAllOptions(options);
+  for (auto *option : options)
   {
-    GetFilepathSmartFallback(
-      theme_option_.select_scene_path,
-      theme_option_.select_scene_path_filter,
-      theme_option_.select_scene_path, 0);
-
-    GetFilepathSmartFallback(
-      theme_option_.decide_scene_path,
-      theme_option_.decide_scene_path_filter,
-      theme_option_.decide_scene_path, 0);
-
-    GetFilepathSmartFallback(
-      theme_option_.play_scene_path,
-      theme_option_.play_scene_path_filter,
-      theme_option_.play_scene_path, 0);
-
-    GetFilepathSmartFallback(
-      theme_option_.result_scene_path,
-      theme_option_.result_scene_path_filter,
-      theme_option_.result_scene_path, 0);
-
-    GetFilepathSmartFallback(
-      theme_option_.courseresult_scene_path,
-      theme_option_.courseresult_scene_path_filter,
-      theme_option_.courseresult_scene_path, 0);
+    for (auto &con : theme_option_)
+    {
+      if (con.name() == option->name())
+      {
+        option->CopyConstraint(con);
+        break;
+      }
+      // if constraint not exist, then add as new option
+      Option *option = setting_.NewOption(con.name());
+      option->CopyConstraint(con);
+    }
   }
 
-  /* Now apply game skin path to environment */
-  SetAttribute("SelectScene", "");
+  // apply settings into system environment
+  {
+    /* a little trick */
+    std::string res;
+    setting_.LoadOptionValue("Resolution", res);
+    width_ = atoi(res.c_str());
+    height_ = atoi(res.c_str() + (width_ / 10) + 1);
+  }
+
+  setting_.LoadOptionValue("Logging", do_logging_);
+
+#define SET_SCENE_PARAM(scenename) \
+{ Option* o; if ((o = setting_.GetOption(scenename)))\
+SetAttribute(scenename, o->value()); }
+
+  SET_SCENE_PARAM("SelectScene");
+  SET_SCENE_PARAM("DecideScene");
+  SET_SCENE_PARAM("PlayScene");
+  SET_SCENE_PARAM("ResultScene");
+  SET_SCENE_PARAM("CourseResultScene");
+
+#undef SET_SCENE_PARAM
+
+  // set starting game scene mode
+  InitializeGameSceneMode();
 
   return true;
 }
 
 bool Game::Save()
 {
-#define XMLATTR(var, attrname, type) \
-setting_.Set(attrname, var);
-#define XMLATTRS(a,b,c) XMLATTR(a,b,c)
-  XML_SETTINGS;
-#undef XMLATTRS
-#undef XMLATTR
-
   return setting_.Save();
 }
 
@@ -188,78 +174,25 @@ void Game::Update()
   // Tick all game timers
   // TODO
 
-  // Check scene should need to be changed
-  if (do_game_mode_change_)
+
+  /* change game mode. */
+  if (next_game_scene_ != GameSceneMode::kGameSceneModeNone)
   {
-    if (next_game_mode_ != GameMode::kGameModeNone)
-      /* if preserved next game mode exists, use it. */
-      game_mode_ = next_game_mode_;
-    else
+    /* exiting status */
+    if (next_game_scene_ == GameSceneMode::kGameSceneClose)
     {
-      switch (game_boot_mode_)
-      {
-      case GameBootMode::kBootTest:
-        if (game_mode_ == GameMode::kGameModeNone)
-          game_mode_ = GameMode::kGameModeTest;
-        else
-          game_mode_ = GameMode::kGameClose;
-        break;
-      case GameBootMode::kBootNormal:
-        switch (game_mode_)
-        {
-        case GameMode::kGameModeNone:
-          game_mode_ = GameMode::kGameModeLoading;
-          break;
-        case GameMode::kGameModeLoading:
-          // We now need to decide whether start game in select scene -
-          // or in main scene. It is decided by option... If main scene
-          // is null, we start game in select scene.
-          if (!theme_option_.theme_path.empty())
-            game_mode_ = GameMode::kGameModeMain;
-          else
-            game_mode_ = GameMode::kGameModeSelect;
-          break;
-        case GameMode::kGameModeMain:
-          game_mode_ = GameMode::kGameModeSelectMode;
-          break;
-        case GameMode::kGameModeSelectMode:
-          game_mode_ = GameMode::kGameModeSelect;
-          break;
-        case GameMode::kGameModeSelect:
-          game_mode_ = GameMode::kGameModeDecide;
-          break;
-        case GameMode::kGameModeDecide:
-          game_mode_ = GameMode::kGameModePlay;
-          break;
-        case GameMode::kGameModePlay:
-          game_mode_ = GameMode::kGameModeResult;
-          break;
-        case GameMode::kGameModeResult:
-          // TODO: need to go to course result if necessary.
-          // TODO: need to go to Play scene again if course mode.
-          // TODO: need to go to Main scene if it's arcade mode.
-        case GameMode::kGameModeCourseResult:
-          game_mode_ = GameMode::kGameModeSelect;
-          break;
-        }
-        break;
-      }
+      Graphic::getInstance().ExitRendering();
     }
 
-    next_game_mode_ = GameMode::kGameModeNone;
-    do_game_mode_change_ = false;
+    game_scene_ = next_game_scene_;
+    next_game_scene_ = GameSceneMode::kGameSceneModeNone;
     SceneManager::getInstance().ChangeScene();
   }
 }
 
-void Game::SetNextGameMode(GameMode next_game_mode)
+void Game::SetNextScene(GameSceneMode next_game_mode)
 {
-  next_game_mode_ = next_game_mode;
-}
-
-void Game::ChangeGameMode()
-{
-  do_game_mode_change_ = true;
+  next_game_scene_ = next_game_mode;
 }
 
 void Game::LoadArgument(const std::string& argv)
@@ -329,9 +262,9 @@ GameBootMode Game::get_boot_mode() const
   return game_boot_mode_;
 }
 
-GameMode Game::get_game_mode() const
+GameSceneMode Game::get_game_scene_mode() const
 {
-  return game_mode_;
+  return game_scene_;
 }
 
 GameThemeOption& Game::get_game_theme_option()
@@ -343,6 +276,104 @@ GameThemeOption& Game::get_game_theme_option()
 void Game::set_do_logging(bool v)
 {
   do_logging_ = v;
+}
+
+void Game::InitializeGameSceneMode()
+{
+  switch (game_boot_mode_)
+  {
+  case GameBootMode::kBootNormal:
+  case GameBootMode::kBootArcade:
+  case GameBootMode::kBootLR2:
+  case GameBootMode::kBootRefresh:
+    game_scene_ = GameSceneMode::kGameSceneModeLoading;
+    break;
+  case GameBootMode::kBootTest:
+    game_scene_ = GameSceneMode::kGameSceneModeTest;
+    break;
+  }
+}
+
+void Game::InitializeGameThemeOption()
+{
+  /* Initialize game setting constraints */
+  {
+    Option option("Resolution");
+    option.set_description("Game resolution.");
+    // TODO: get exact information from graphic card
+    option.SetOption("640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200");
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("SoundDevice");
+    option.set_description("Set default sound device.");
+    option.SetOption(""); // empty
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("SoundBufferSize");
+    option.set_description("Sound latency increases if sound buffer is big. If sound flickers, use large buffer size.");
+    option.SetOption("1024,2048,3072,4096,8192,16384");
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("Volume");
+    option.set_description("Set game volume.");
+    option.SetOption("0,10,20,30,40,50,60,70,80,90,100");
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("GameMode");
+    option.set_description("Set game mode, whether to run as arcade or home.");
+    option.SetOption("Home,Arcade,LR2");
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("Logging");
+    option.set_description("For development.");
+    option.SetOption("Off,On");
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("SelectScene");
+    option.set_description("File path of select scene.");
+    option.SetFileOption("../themes/*/select/*.lr2skin");
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("DecideScene");
+    option.set_description("File path of decide scene.");
+    option.SetFileOption("../themes/*/decide/*.lr2skin");
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("PlayScene");
+    option.set_description("File path of play scene.");
+    option.SetFileOption("../themes/*/play/*.lr2skin");
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("ResultScene");
+    option.set_description("File path of result scene.");
+    option.SetFileOption("../themes/*/result/*.lr2skin");
+    theme_option_.push_back(option);
+  }
+
+  {
+    Option option("CourseResultScene");
+    option.set_description("File path of course result scene.");
+    option.SetFileOption("../themes/*/courseresult/*.lr2skin");
+    theme_option_.push_back(option);
+  }
 }
 
 }

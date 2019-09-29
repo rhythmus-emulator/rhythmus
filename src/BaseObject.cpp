@@ -1,6 +1,6 @@
 #include "BaseObject.h"
 #include "LR2/LR2SceneLoader.h"   // XXX: atoi_op
-#include "rutil.h"
+#include "Util.h"
 
 namespace rhythmus
 {
@@ -673,20 +673,6 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
     break;
   }
   }
-}
-
-void MakeParamCountSafe(const std::string& in,
-  std::vector<std::string> &vsOut, int required_size, char sep)
-{
-  rutil::split(in, sep, vsOut);
-  if (required_size < 0) return;
-  for (auto i = vsOut.size(); i < required_size; ++i)
-    vsOut.emplace_back(std::string());
-}
-
-std::string GetFirstParam(const std::string& in, char sep)
-{
-  return in[0] != sep ? in.substr(0, in.find(',')) : std::string();
 }
 
 }

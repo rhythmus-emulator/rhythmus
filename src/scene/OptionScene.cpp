@@ -102,6 +102,7 @@ void BuildOptions()
 OptionScene::OptionScene() : option_mode_(1)
 {
   BuildOptions();
+  next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
 }
 
 void OptionScene::LoadScene()
@@ -120,7 +121,6 @@ void OptionScene::StartScene()
 {
   // go to previous start / select scene
   // TODO: go to start scene
-  Game::getInstance().SetNextGameMode(GameMode::kGameModeSelect);
   Scene::StartScene();
 }
 

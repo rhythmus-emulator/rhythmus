@@ -9,6 +9,9 @@ PlayScene::PlayScene()
   : play_status_(0)
 {
   set_name("PlayScene");
+
+  // next scene: result
+  next_scene_mode_ = GameSceneMode::kGameSceneModeResult;
 }
 
 void PlayScene::LoadScene()
@@ -23,8 +26,6 @@ void PlayScene::LoadScene()
 
 void PlayScene::StartScene()
 {
-  // next scene: result
-  Game::getInstance().SetNextGameMode(GameMode::kGameModeResult);
   Scene::StartScene();
   //Game::getInstance().ChangeGameMode();
 
@@ -67,7 +68,7 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
   if (e.IsKeyDown())
   {
     if (e.GetKeycode() == GLFW_KEY_ESCAPE)
-      CloseScene();
+      FinishScene();
   }
 
   return true;

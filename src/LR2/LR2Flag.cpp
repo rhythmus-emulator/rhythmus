@@ -75,6 +75,20 @@ namespace rhythmus
       {
         switch (e.GetEventID())
         {
+        case Events::kEventSceneConfigLoaded:
+        {
+          // update LR2flag status
+          for (int i = 900; i < 1000; ++i)
+            LR2Flag[i] = 0;
+          const auto& theme_param = SceneManager::get_current_scene()->get_theme_parameter();
+          for (auto ii : theme_param.attributes)
+          {
+            int flag_no = atoi(ii.first.c_str());
+            if (flag_no >= 900 && flag_no < 1000)
+              LR2Flag[flag_no] = 1;
+          }
+          break;
+        }
         case Events::kEventSongSelectChanged:
         {
           // XXX: Better to check current scene is really SelectScene
@@ -99,6 +113,7 @@ namespace rhythmus
     void SubscribeEvent()
     {
       static LR2EventReceiver r;
+      r.SubscribeTo(Events::kEventSceneConfigLoaded);
       r.SubscribeTo(Events::kEventSongSelectChanged);
     }
   }

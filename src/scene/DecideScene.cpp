@@ -6,6 +6,8 @@ namespace rhythmus
 DecideScene::DecideScene()
 {
   set_name("DecideScene");
+  // default action: go to GamePlay scene
+  next_scene_mode_ = GameSceneMode::kGameSceneModePlay;
 }
 
 void DecideScene::LoadScene()
@@ -20,8 +22,6 @@ void DecideScene::LoadScene()
 
 void DecideScene::StartScene()
 {
-  // default action: go to GamePlay scene
-  Game::getInstance().SetNextGameMode(GameMode::kGameModePlay);
   Scene::StartScene();
 }
 

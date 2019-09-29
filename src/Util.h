@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -40,7 +41,9 @@ void Split(const std::string& str, char sep, std::vector<std::string>& vsOut);
 
 bool IsFile(const std::string& path);
 
-void GetFolderNameEntries(const std::string& file_or_filter_path, std::vector<std::string> &out);
+void GetFolderpathEntries(const std::string& file_or_filter_path, std::vector<std::string> &out);
+
+void GetFilepathEntries(const std::string& file_or_filter_path, std::vector<std::string> &out);
 
 /**
  * @brief Get random file (or specified index) from filtered path.
@@ -54,5 +57,11 @@ bool GetFilepathSmart(const std::string& file_or_filter_path, std::string& out, 
  *        If file fails, then search for fallback path (filtering support).
  */
 bool GetFilepathSmartFallback(const std::string& file_path, const std::string& fallback, std::string& out, int index = -1);
+
+void MakeParamCountSafe(std::vector<std::string> &v, size_t expected_count);
+
+void MakeParamCountSafe(const std::string &in, std::vector<std::string> &v, size_t expected_count);
+
+std::string GetFirstParam(const std::string& in, char sep = ',');
 
 RHYTHMUS_NAMESPACE_END

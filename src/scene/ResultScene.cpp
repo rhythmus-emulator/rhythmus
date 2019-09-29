@@ -6,6 +6,7 @@ namespace rhythmus
 ResultScene::ResultScene()
 {
   set_name("ResultScene");
+  next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
 }
 
 void ResultScene::LoadScene()
@@ -20,7 +21,6 @@ void ResultScene::LoadScene()
 
 void ResultScene::StartScene()
 {
-  Game::getInstance().SetNextGameMode(GameMode::kGameModeSelect);
 }
 
 void ResultScene::CloseScene()
@@ -35,7 +35,7 @@ bool ResultScene::ProcessEvent(const EventMessage& e)
 
   if (e.IsKeyDown())
   {
-    CloseScene();
+    FinishScene();
   }
 
   return true;

@@ -117,12 +117,12 @@ void SoundDriver::Initialize()
   std::string device_name;
   if (setting.Exist("SoundDevice"))
   {
-    setting.Load("SoundDevice", device_name);
+    setting.LoadOptionValue("SoundDevice", device_name);
     device = alcOpenDevice(device_name.c_str());
   }
 
   // load sound buffer size (fallback: use default value)
-  setting.Load("SoundBufferSize", buffer_size_);
+  setting.LoadOptionValue("SoundBufferSize", buffer_size_);
 
   if (!device)
   {

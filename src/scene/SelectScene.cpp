@@ -12,6 +12,7 @@ namespace rhythmus
 SelectScene::SelectScene()
 {
   set_name("SelectScene");
+  next_scene_mode_ = GameSceneMode::kGameSceneModeDecide;
 }
 
 void SelectScene::LoadScene()
@@ -84,8 +85,7 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
       SongPlayable::getInstance().Load(d.songpath, d.chartname);
 
       // Song selection - immediately change scene mode
-      Game::getInstance().SetNextGameMode(GameMode::kGameModeDecide);
-      Game::getInstance().ChangeGameMode();
+      CloseScene();
     }
   }
 

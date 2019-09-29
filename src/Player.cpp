@@ -39,6 +39,8 @@ void Player::Load()
       << std::endl;
     return;
   }
+  // TODO: use preset options like game setting does
+#if 0
   setting_.Load<double>("speed", game_speed_);
   setting_.Load<bool>("use_hidden", use_hidden_);
   setting_.Load<bool>("use_lane_cover", use_lane_cover_);
@@ -54,6 +56,7 @@ void Player::Load()
   setting_.Load<std::string>("pacemaker_target", pacemaker_target_);
   setting_.Load<int>("bms_sp_class", bms_sp_class_);
   setting_.Load<int>("bms_dp_class", bms_dp_class_);
+#endif
 }
 
 void Player::Save()

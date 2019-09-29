@@ -54,8 +54,6 @@ int main(int argc, char **argv)
   Logger::getInstance().StartLogging();
   Logger::getInstance().HookStdOut();
   graphic.Initialize();
-  Game::getInstance().ChangeGameMode();
-  Game::getInstance().Update();
   SceneManager::getInstance().Initialize();
   Timer::Initialize();
   SoundDriver::getInstance().Initialize();
