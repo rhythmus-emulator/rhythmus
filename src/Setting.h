@@ -44,6 +44,7 @@ public:
 
   void set_op(int op);
   int value_op() const;
+  bool is_constraint() const;
 
   // @brief select next selectable item / value
   void Next();
@@ -52,7 +53,7 @@ public:
   void Prev();
 
   // @brief set general option
-  void SetTextOption(const std::string& text);
+  void SetTextOption();
 
   // @brief separate selectable options with comma
   void SetOption(const std::string& options);
@@ -65,10 +66,12 @@ public:
 
   // @brief set value
   // @warn may be value is changed due to validation check
+  //       in case of constraint exists.
   void set_value(const std::string& value);
+  void set_value(int value);
 
-  // @brief whether to save without option if it exists
-  void set_save_without_option(bool v = true);
+  // @brief whether to save with constraint if it exists
+  void save_with_constraint(bool v = true);
 
   // @brief copy constraint from other option
   void CopyConstraint(const Option& option);
@@ -97,12 +100,13 @@ private:
   // kind of id constrain (for LR2)
   int op_;
 
-  // save force as text
+  // save with constraint, not only option value.
   // (just for option item but not want to save the options)
-  bool save_without_option_;
+  bool save_with_constraint_;
 
   // @brief validate option if it's not existing in selectable options.
-  void Validate();
+  // @param valid_using_number use number first to check validation
+  void Validate(bool valid_using_number = false);
 };
 
 /* @brief Xml setting load & save class

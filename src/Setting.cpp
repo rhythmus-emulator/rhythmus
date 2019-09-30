@@ -24,7 +24,7 @@ inline const char* GetSafeString(const char* p)
 Option::Option(const std::string& name)
   : name_(name), type_("text"),
     number_(0), number_min_(0), number_max_(0x7FFFFFFF),
-    op_(0), save_without_option_(true) {}
+    op_(0), save_with_constraint_(false) {}
 
 const std::string& Option::name() const
 {
@@ -38,7 +38,7 @@ const std::string& Option::value() const
 
 const std::string& Option::type() const
 {
-  if (save_without_option_)
+  if (save_with_constraint_)
     return "text";
   return type_;
 }
@@ -93,6 +93,11 @@ int Option::value_op() const
   return op_;
 }
 
+bool Option::is_constraint() const
+{
+  return save_with_constraint_;
+}
+
 void Option::Next()
 {
   number_ = std::min(number_ + 1, number_max_);
@@ -121,15 +126,13 @@ void Option::Prev()
   }
 }
 
-void Option::SetTextOption(const std::string& v)
+void Option::SetTextOption()
 {
-  type_ = "file";
+  type_ = "text";
   option_filter_.clear();
   options_.clear();
-  value_ = v;
 }
 
-// TODO: do validate?
 void Option::SetOption(const std::string& options)
 {
   type_ = "option";
@@ -137,7 +140,6 @@ void Option::SetOption(const std::string& options)
   Split(options, ',', options_);
 }
 
-// TODO: do validate?
 void Option::SetFileOption(const std::string& file_filter)
 {
   type_ = "file";
@@ -155,17 +157,25 @@ void Option::SetNumberOption(int min, int max)
 void Option::set_value(const std::string& option)
 {
   value_ = option;
+  number_ = atoi(option.c_str());
   Validate();
 }
 
-void Option::set_save_without_option(bool v)
+void Option::set_value(int value)
 {
-  save_without_option_ = v;
+  number_ = value;
+  value_ = std::to_string(value);
+  Validate(true);
+}
+
+void Option::save_with_constraint(bool v)
+{
+  save_with_constraint_ = v;
 }
 
 // @brief validate option properly after setting value_.
 //        internally called in SetSelected(). for internal use.
-void Option::Validate()
+void Option::Validate(bool valid_using_number)
 {
   if (type_ == "text")
   {
@@ -173,7 +183,6 @@ void Option::Validate()
   }
   if (type_ == "number")
   {
-    number_ = atoi(value_.c_str());
     if (number_ > number_max_ || number_ < number_min_)
     {
       // constraint failed, do re-validate
@@ -187,16 +196,30 @@ void Option::Validate()
     if (options_.empty())
       return;
 
-    auto iter = std::find(options_.begin(), options_.end(), value_);
-    if (iter == options_.end())
+    if (!valid_using_number)
     {
-      // constraint failed, set it to first value (or default)
-      value_ = options_.front();
-      number_ = 0;
+      auto iter = std::find(options_.begin(), options_.end(), value_);
+      if (iter == options_.end())
+      {
+        // constraint failed, set it to first value (or default)
+        value_ = options_.front();
+        number_ = 0;
+      }
+      else
+      {
+        number_ = (int)(iter - options_.begin());
+      }
     }
     else
     {
-      number_ = (int)(iter - options_.begin());
+      if (options_.empty())
+      {
+        number_ = 0;
+        value_.clear();
+        return;
+      }
+      number_ = std::max(0, std::min(number_, (int)options_.size() - 1));
+      value_ = options_[number_];
     }
   }
 }
@@ -239,7 +262,7 @@ Option* CreateOptionFromXmlElement(tinyxml2::XMLElement* e)
     opt->SetNumberOption(min, max);
   }
   else /* text */
-    opt->SetTextOption(value);
+    opt->SetTextOption();
 
   // special code for LR2 opt
   if (e->Attribute("op")) opt->set_op(atoi(e->Attribute("op")));
@@ -253,7 +276,14 @@ CreateXmlElementFromOption(const Option& opt, tinyxml2::XMLDocument& doc)
   std::string type = opt.type();
   tinyxml2::XMLElement *e = doc.NewElement(kSettingOptionTagName);
   if (!e) return nullptr;
+
   e->SetName(opt.name().c_str());
+  e->SetAttribute("value", opt.value().c_str());
+
+  /* no constraint : no description (only value) */
+  if (!opt.is_constraint() /* || type == "text"*/)
+    return e;
+
   e->SetAttribute("type", type.c_str());
   if (!opt.desc().empty())
     e->SetAttribute("desc", opt.desc().c_str());
@@ -278,7 +308,6 @@ CreateXmlElementFromOption(const Option& opt, tinyxml2::XMLDocument& doc)
     // XXX: step attribute?
   }
 
-  e->SetText(opt.value().c_str());
   return e;
 }
 
