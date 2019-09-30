@@ -178,15 +178,42 @@ bool IsFile(const std::string& path)
   return rutil::IsFile(path);
 }
 
-void GetFolderNameEntries(const std::string& file_or_filter_path, std::vector<std::string> &out)
+void GetDirectoriesFromPath(const std::string& dir_path, std::vector<std::string> &out)
 {
-  // TODO: use rparser directory api
+  std::vector<DirItem> diritem;
+  GetDirectoryItems(dir_path, diritem);
+  for (auto item : diritem)
+  {
+    if (!item.is_file)
+      out.push_back(item.filename);
+  }
+}
+
+void GetFilesFromPath(const std::string& file_or_filter_path, std::vector<std::string> &out)
+{
+  // check is target path is masking
+  // if not masking, then consider it as directory
+  auto i = file_or_filter_path.find('*');
+  if (i == std::string::npos)
+  {
+    std::vector<DirItem> diritem;
+    GetDirectoryItems(file_or_filter_path, diritem);
+    for (auto item : diritem)
+    {
+      if (item.is_file)
+        out.push_back(item.filename);
+    }
+  }
+  else
+  {
+    rutil::GetDirectoryEntriesMasking(file_or_filter_path, out, false);
+  }
 }
 
 bool GetFilepathSmart(const std::string& file_or_filter_path, std::string& out, int index)
 {
   std::vector<std::string> name_entries;
-  GetFolderNameEntries(file_or_filter_path, name_entries);
+  GetFilesFromPath(file_or_filter_path, name_entries);
   if (name_entries.empty())
     return false;
   if (index < 0)
@@ -216,9 +243,9 @@ void MakeParamCountSafe(std::vector<std::string> &v, size_t expected_count)
 }
 
 void MakeParamCountSafe(const std::string& in,
-  std::vector<std::string> &vsOut, int required_size, char sep)
+  std::vector<std::string> &vsOut, size_t required_size)
 {
-  Split(in, sep, vsOut);
+  Split(in, ',', vsOut);
   if (required_size < 0) return;
   for (auto i = vsOut.size(); i < required_size; ++i)
     vsOut.emplace_back(std::string());

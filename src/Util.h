@@ -41,9 +41,9 @@ void Split(const std::string& str, char sep, std::vector<std::string>& vsOut);
 
 bool IsFile(const std::string& path);
 
-void GetFolderpathEntries(const std::string& file_or_filter_path, std::vector<std::string> &out);
+void GetDirectoriesFromPath(const std::string& dir_path, std::vector<std::string> &out);
 
-void GetFilepathEntries(const std::string& file_or_filter_path, std::vector<std::string> &out);
+void GetFilesFromPath(const std::string& file_or_filter_path, std::vector<std::string> &out);
 
 /**
  * @brief Get random file (or specified index) from filtered path.
