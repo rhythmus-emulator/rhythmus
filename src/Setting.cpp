@@ -244,7 +244,15 @@ Option* CreateOptionFromXmlElement(tinyxml2::XMLElement* e)
   if (!e) return nullptr;
 
   Option *opt = new Option(e->Name());
-  std::string type = GetSafeString(e->Attribute("type"));
+
+  /* no type attr --> no constraint */
+  const char *type_p = e->Attribute("type");
+  if (!type_p)
+  {
+    opt->save_with_constraint(false);
+    type_p = "text";
+  }
+  std::string type = type_p;
   std::string value = GetSafeString(e->Attribute("value"));
   std::string option = GetSafeString(e->Attribute("options"));
 
