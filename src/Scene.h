@@ -15,6 +15,8 @@ namespace rhythmus
 // All time parameters are in miliseconds.
 struct ThemeParameter
 {
+  ThemeParameter();
+
   std::string gamemode;
   std::string title;
   std::string maker;

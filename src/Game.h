@@ -40,8 +40,6 @@ enum GameSceneMode
   kGameSceneClose /* End of a game, Unexitable game state. */,
 };
 
-using GameThemeOption = std::vector<Option>;
-
 /**
  * @brief
  * Contains running status of game, including settings.
@@ -78,7 +76,7 @@ public:
   float GetAspect() const;
   GameBootMode get_boot_mode() const;
   GameSceneMode get_game_scene_mode() const;
-  GameThemeOption& get_game_theme_option();
+  Setting& get_game_setting();
 
   void set_do_logging(bool v);
 
@@ -100,9 +98,6 @@ private:
   // misc attributes
   std::map<std::string, std::string> attributes_;
 
-  // game theme related variables.
-  GameThemeOption theme_option_;
-
   // current game boot mode.
   GameBootMode game_boot_mode_;
 
@@ -113,7 +108,8 @@ private:
   GameSceneMode next_game_scene_;
 
   void InitializeGameSceneMode();
-  void InitializeGameThemeOption();
+  void InitializeGameOption();
+  void ApplyGameOption();
 };
 
 }

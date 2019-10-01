@@ -168,6 +168,9 @@ public:
   /* @brief command to settings. */
   void LoadProperty(const std::string& prop_name, const std::string& value);
 
+  /* @brief validate all options */
+  void ValidateAll();
+
 private:
   std::string path_;
   std::string ns_; /* currently saelected namespace */

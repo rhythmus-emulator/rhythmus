@@ -276,6 +276,7 @@ Option* CreateOptionFromXmlElement(tinyxml2::XMLElement* e)
   if (e->Attribute("op")) opt->set_op(atoi(e->Attribute("op")));
 
   opt->set_value(value);
+  return opt;
 }
 
 tinyxml2::XMLElement*
@@ -566,6 +567,11 @@ void Setting::LoadProperty(const std::string& prop_name, const std::string& valu
   }
 }
 
+void Setting::ValidateAll()
+{
+  for (auto *opt : options_)
+    opt->Validate();
+}
 
 
 // ------------------------ Serialization

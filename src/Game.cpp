@@ -29,7 +29,6 @@ Game::Game()
     game_boot_mode_(GameBootMode::kBootNormal),
     game_scene_(GameSceneMode::kGameSceneModeNone)
 {
-  InitializeGameThemeOption();
 }
 
 Game::~Game()
@@ -92,6 +91,10 @@ bool Game::Load()
   // Set default value - in case of key is not existing.
   Default();
 
+  // before loading option, set constraint & initialize.
+  InitializeGameOption();
+  setting_.ValidateAll();
+
   // just load option values - not option node itself.
   if (!setting_.ReloadValues(setting_path_))
   {
@@ -99,46 +102,8 @@ bool Game::Load()
     return false;
   }
 
-  // set constraints & validate with options
-  std::vector<Option*> options;
-  setting_.GetAllOptions(options);
-  for (auto *option : options)
-  {
-    for (auto &con : theme_option_)
-    {
-      if (con.name() == option->name())
-      {
-        option->CopyConstraint(con);
-        break;
-      }
-      // if constraint not exist, then add as new option
-      Option *option = setting_.NewOption(con.name());
-      option->CopyConstraint(con);
-    }
-  }
-
   // apply settings into system environment
-  {
-    /* a little trick */
-    std::string res;
-    setting_.LoadOptionValue("Resolution", res);
-    width_ = atoi(res.c_str());
-    height_ = atoi(res.c_str() + (width_ / 10) + 1);
-  }
-
-  setting_.LoadOptionValue("Logging", do_logging_);
-
-#define SET_SCENE_PARAM(scenename) \
-{ Option* o; if ((o = setting_.GetOption(scenename)))\
-SetAttribute(scenename, o->value()); }
-
-  SET_SCENE_PARAM("SelectScene");
-  SET_SCENE_PARAM("DecideScene");
-  SET_SCENE_PARAM("PlayScene");
-  SET_SCENE_PARAM("ResultScene");
-  SET_SCENE_PARAM("CourseResultScene");
-
-#undef SET_SCENE_PARAM
+  ApplyGameOption();
 
   // set starting game scene mode
   InitializeGameSceneMode();
@@ -267,9 +232,9 @@ GameSceneMode Game::get_game_scene_mode() const
   return game_scene_;
 }
 
-GameThemeOption& Game::get_game_theme_option()
+Setting& Game::get_game_setting()
 {
-  return theme_option_;
+  return setting_;
 }
 
 
@@ -294,86 +259,106 @@ void Game::InitializeGameSceneMode()
   }
 }
 
-void Game::InitializeGameThemeOption()
+void Game::InitializeGameOption()
 {
   /* Initialize game setting constraints */
   {
-    Option option("Resolution");
+    Option &option = *setting_.NewOption("Resolution");
     option.set_description("Game resolution.");
     // TODO: get exact information from graphic card
     option.SetOption("640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200");
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("SoundDevice");
+    Option &option = *setting_.NewOption("SoundDevice");
     option.set_description("Set default sound device.");
     option.SetOption(""); // empty
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("SoundBufferSize");
+    Option &option = *setting_.NewOption("SoundBufferSize");
     option.set_description("Sound latency increases if sound buffer is big. If sound flickers, use large buffer size.");
     option.SetOption("1024,2048,3072,4096,8192,16384");
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("Volume");
+    Option &option = *setting_.NewOption("Volume");
     option.set_description("Set game volume.");
     option.SetOption("0,10,20,30,40,50,60,70,80,90,100");
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("GameMode");
+    Option &option = *setting_.NewOption("GameMode");
     option.set_description("Set game mode, whether to run as arcade or home.");
     option.SetOption("Home,Arcade,LR2");
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("Logging");
+    Option &option = *setting_.NewOption("Logging");
     option.set_description("For development.");
     option.SetOption("Off,On");
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("SelectScene");
+    Option &option = *setting_.NewOption("SelectScene");
     option.set_description("File path of select scene.");
     option.SetFileOption("../themes/*/select/*.lr2skin");
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("DecideScene");
+    Option &option = *setting_.NewOption("DecideScene");
     option.set_description("File path of decide scene.");
     option.SetFileOption("../themes/*/decide/*.lr2skin");
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("PlayScene");
+    Option &option = *setting_.NewOption("PlayScene");
     option.set_description("File path of play scene.");
     option.SetFileOption("../themes/*/play/*.lr2skin");
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("ResultScene");
+    Option &option = *setting_.NewOption("ResultScene");
     option.set_description("File path of result scene.");
     option.SetFileOption("../themes/*/result/*.lr2skin");
-    theme_option_.push_back(option);
   }
 
   {
-    Option option("CourseResultScene");
+    Option &option = *setting_.NewOption("CourseResultScene");
     option.set_description("File path of course result scene.");
     option.SetFileOption("../themes/*/courseresult/*.lr2skin");
-    theme_option_.push_back(option);
   }
+}
+
+void Game::ApplyGameOption()
+{
+  {
+    /* a little trick */
+    std::string res;
+    size_t res_sep = res.find('x');
+    if (res_sep == std::string::npos)
+    {
+      std::cerr << "Invalid resolution value: " << res << std::endl;
+      return;
+    }
+    setting_.LoadOptionValue("Resolution", res);
+    width_ = atoi(res.c_str());
+    height_ = atoi(res.c_str() + res_sep + 1);
+  }
+
+  setting_.LoadOptionValue("Logging", do_logging_);
+
+#define SET_SCENE_PARAM(scenename) \
+{ Option* o; if ((o = setting_.GetOption(scenename)))\
+SetAttribute(scenename, o->value()); }
+
+  SET_SCENE_PARAM("SelectScene");
+  SET_SCENE_PARAM("DecideScene");
+  SET_SCENE_PARAM("PlayScene");
+  SET_SCENE_PARAM("ResultScene");
+  SET_SCENE_PARAM("CourseResultScene");
+
+#undef SET_SCENE_PARAM
 }
 
 }

@@ -54,6 +54,7 @@ void LoadingScene::StartScene()
 
 void LoadingScene::CloseScene()
 {
+  Scene::CloseScene();
 }
 
 bool LoadingScene::ProcessEvent(const EventMessage& e)

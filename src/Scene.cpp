@@ -11,13 +11,22 @@
 namespace rhythmus
 {
 
+// ----------------------- ThemeParameter
+
+ThemeParameter::ThemeParameter()
+{
+  memset(transcolor, 0, sizeof(transcolor));
+  begin_input_time = 0;
+  fade_in_time = fade_out_time = 0;
+  next_scene_time = 0;
+}
+
 // -------------------------------- Scene
 
 Scene::Scene()
   : fade_time_(0), fade_duration_(0), input_available_time_(0),
     focused_object_(nullptr), next_scene_mode_(GameSceneMode::kGameSceneClose)
 {
-  memset(&theme_param_, 0, sizeof(theme_param_));
 }
 
 void Scene::LoadScene()
