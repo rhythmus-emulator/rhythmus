@@ -36,8 +36,7 @@ void SceneManager::Initialize()
   // load scenemanager(global scene) settings.
   if (!setting_.Open("../config/scene.xml"))
   {
-    std::cerr << "Cannot open Scene preference file." << std::endl;
-    return;
+    std::cerr << "Cannot open Scene preference file. use default value." << std::endl;
   }
 
   // load soundset.
