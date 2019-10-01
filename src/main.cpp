@@ -3,6 +3,7 @@
 #include "Game.h"
 #include "Sound.h"
 #include "Timer.h"
+#include "ResourceManager.h"
 #include "SceneManager.h"
 #include "LR2/LR2Flag.h"  // For updating LR2 flag
 #include "Event.h"
@@ -40,6 +41,10 @@ int APIENTRY _tWinMain(
 int main(int argc, char **argv)
 {
 #endif
+
+  // before starting initialization, system path should be cached first.
+  ResourceManager::CacheSystemDirectory();
+
   /**
    * Initialization
    */

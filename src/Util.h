@@ -45,6 +45,8 @@ void GetDirectoriesFromPath(const std::string& dir_path, std::vector<std::string
 
 void GetFilesFromPath(const std::string& file_or_filter_path, std::vector<std::string> &out);
 
+void GetFilesFromDirectory(const std::string& dir, std::vector<std::string> &out, int depth);
+
 /**
  * @brief Get random file (or specified index) from filtered path.
  *        Return false if any suitable file is found.
@@ -63,5 +65,7 @@ void MakeParamCountSafe(std::vector<std::string> &v, size_t expected_count);
 void MakeParamCountSafe(const std::string &in, std::vector<std::string> &v, size_t expected_count);
 
 std::string GetFirstParam(const std::string& in, char sep = ',');
+
+bool CheckMasking(const std::string& path, const std::string& mask);
 
 RHYTHMUS_NAMESPACE_END

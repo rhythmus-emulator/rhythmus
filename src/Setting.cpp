@@ -1,5 +1,6 @@
 #include "Setting.h"
 #include "Util.h"
+#include "ResourceManager.h"
 #include <iostream>
 #include <sstream>
 #include <algorithm>
@@ -144,7 +145,8 @@ void Option::SetFileOption(const std::string& file_filter)
 {
   type_ = "file";
   option_filter_ = file_filter;
-  GetFilesFromPath(file_filter, options_);
+  //GetFilesFromPath(file_filter, options_);
+  ResourceManager::getInstance().GetAllPaths(file_filter, options_);
 }
 
 void Option::SetNumberOption(int min, int max)

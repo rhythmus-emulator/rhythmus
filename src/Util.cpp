@@ -210,6 +210,26 @@ void GetFilesFromPath(const std::string& file_or_filter_path, std::vector<std::s
   }
 }
 
+void GetFilesFromDirectory(const std::string& dir, std::vector<std::string> &out, int depth)
+{
+  std::string dir_ = dir;
+  if (dir_.back() != '/')
+    dir_.push_back('/');
+
+  rutil::DirFileList files;
+  if (rutil::GetDirectoryFiles(dir_, files, depth, true))
+  {
+    for (auto &file : files)
+    {
+      /* path must be regularized (not only for filtering) */
+      for (size_t i = 0; i < file.first.size(); ++i)
+        if (file.first[i] == '\\') file.first[i] = '/';
+
+      out.push_back(dir_ + file.first);
+    }
+  }
+}
+
 bool GetFilepathSmart(const std::string& file_or_filter_path, std::string& out, int index)
 {
   std::vector<std::string> name_entries;
@@ -254,6 +274,11 @@ void MakeParamCountSafe(const std::string& in,
 std::string GetFirstParam(const std::string& in, char sep)
 {
   return in[0] != sep ? in.substr(0, in.find(',')) : std::string();
+}
+
+bool CheckMasking(const std::string& path, const std::string& mask)
+{
+  return rutil::wild_match(path, mask);
 }
 
 }

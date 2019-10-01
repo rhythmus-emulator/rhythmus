@@ -12,7 +12,7 @@ ImageAuto ResourceManager::LoadImage(const std::string& path)
 {
   /* Most image won't be shared from scene to scene, so just load it now */
   ImageAuto img = std::make_shared<Image>();
-  img->LoadFromPath(getInstance().GetFinalPath(path));
+  img->LoadFromPath(getInstance().GetPath(path));
   return img;
 }
 
@@ -29,7 +29,7 @@ FontAuto ResourceManager::LoadFont(const std::string& path, FontAttributes& attr
   }
 
   FontAuto f = std::make_shared<Font>();
-  f->LoadFont(path.c_str(), attrs);
+  f->LoadFont(getInstance().GetPath(path).c_str(), attrs);
   r.fonts_.push_back(f);
   return f;
 }
@@ -96,19 +96,84 @@ ResourceManager& ResourceManager::getInstance()
   return m;
 }
 
+void ResourceManager::CacheSystemDirectory()
+{
+  auto &r = getInstance();
+
+  /* cache system paths for resource. (not song path) */
+  r.CacheDirectory("../themes/");
+  r.CacheDirectory("../sound/");
+  r.CacheDirectory("../bgm/"); /* for LR2 compatiblity */
+}
+
+void ResourceManager::CacheDirectory(const std::string& dir)
+{
+  // XXX: currently only files are cached.
+  GetFilesFromDirectory(dir, path_cached_, 5 /* not so deep ...? */);
+}
+
+void ResourceManager::MakePathHigherPriority(const std::string& path)
+{
+  auto it = std::find(path_cached_.begin(), path_cached_.end(), path);
+  if (it == path_cached_.end()) return;
+  std::rotate(path_cached_.begin(), it, path_cached_.end());
+}
+
+std::string ResourceManager::GetPath(const std::string& masked_path, bool &is_found) const
+{
+  is_found = false;
+
+  // attempt to find path replacement first ...
+  auto it = path_replacement_.find(masked_path);
+  if (it != path_replacement_.end())
+  {
+    is_found = true;
+    return it->second;
+  }
+
+  // check masking first -- if not, return as it is.
+  if (masked_path.find('*') == std::string::npos)
+    return masked_path;
+
+  // do path mask matching for cached paths
+  for (const auto& path : path_cached_)
+  {
+    if (CheckMasking(path, masked_path))
+    {
+      is_found = true;
+      return path;
+    }
+  }
+
+  // not found; return as it is
+  return masked_path;
+}
+
+std::string ResourceManager::GetPath(const std::string& masked_path) const
+{
+  bool _;
+  return GetPath(masked_path, _);
+}
+
+void ResourceManager::GetAllPaths(const std::string& masked_path, std::vector<std::string> &out) const
+{
+  // check masking first -- if not, return as it is.
+  if (masked_path.find('*') == std::string::npos)
+    return;
+
+  // do path mask matching for cached paths
+  for (const auto& path : path_cached_)
+  {
+    if (CheckMasking(path, masked_path))
+    {
+      out.push_back(path);
+    }
+  }
+}
 
 void ResourceManager::AddPathReplacement(const std::string& path_from, const std::string& path_to)
 {
   path_replacement_[path_from] = path_to;
-}
-
-std::string ResourceManager::GetFinalPath(const std::string& path)
-{
-  auto i = path_replacement_.find(path);
-  if (i != path_replacement_.end())
-    return i->second;
-  else
-    return path;
 }
 
 ResourceManager::ResourceManager()
