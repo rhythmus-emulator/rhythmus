@@ -241,9 +241,13 @@ void Option::CopyConstraint(const Option& option)
 
 Option* CreateOptionFromXmlElement(tinyxml2::XMLElement* e)
 {
+  /* validation check */
   if (!e) return nullptr;
+  if (strcmp(e->Name(), kSettingOptionTagName) != 0) return nullptr;
+  const char *name_p = e->Attribute("name");
+  if (!name_p) return nullptr;
 
-  Option *opt = new Option(e->Name());
+  Option *opt = new Option(name_p);
 
   /* no type attr --> no constraint */
   const char *type_p = e->Attribute("type");
@@ -286,7 +290,8 @@ CreateXmlElementFromOption(const Option& opt, tinyxml2::XMLDocument& doc)
   tinyxml2::XMLElement *e = doc.NewElement(kSettingOptionTagName);
   if (!e) return nullptr;
 
-  e->SetName(opt.name().c_str());
+  e->SetName(kSettingOptionTagName);
+  e->SetAttribute("name", opt.name().c_str());
   e->SetAttribute("value", opt.value().c_str());
 
   /* no constraint : no description (only value) */
@@ -460,6 +465,8 @@ bool Setting::ReloadValues(const std::string& setting_path)
     if (i != key_value_map.end())
       opt->set_value(i->second);
   }
+
+  return true;
 }
 
 void Setting::SetNamespace(const std::string& ns)

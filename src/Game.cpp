@@ -272,13 +272,14 @@ void Game::InitializeGameOption()
   {
     Option &option = *setting_.NewOption("SoundDevice");
     option.set_description("Set default sound device.");
-    option.SetOption(""); // empty
+    option.SetOption("");   // empty
   }
 
   {
     Option &option = *setting_.NewOption("SoundBufferSize");
     option.set_description("Sound latency increases if sound buffer is big. If sound flickers, use large buffer size.");
     option.SetOption("1024,2048,3072,4096,8192,16384");
+    option.set_value(2048); // default value
   }
 
   {
@@ -335,13 +336,13 @@ void Game::ApplyGameOption()
   {
     /* a little trick */
     std::string res;
+    setting_.LoadOptionValue("Resolution", res);
     size_t res_sep = res.find('x');
     if (res_sep == std::string::npos)
     {
       std::cerr << "Invalid resolution value: " << res << std::endl;
       return;
     }
-    setting_.LoadOptionValue("Resolution", res);
     width_ = atoi(res.c_str());
     height_ = atoi(res.c_str() + res_sep + 1);
   }
