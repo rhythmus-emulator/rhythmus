@@ -39,8 +39,6 @@ const std::string& Option::value() const
 
 const std::string& Option::type() const
 {
-  if (save_with_constraint_)
-    return "text";
   return type_;
 }
 
