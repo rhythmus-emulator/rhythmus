@@ -383,6 +383,9 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
   load_count_ = 0;
   is_loaded_ = 0;
 
+  // preparation before calling loader thread
+  keysound_.LoadFromChart(*song_, *chart_);
+
   // create loader thread
   active_thread_count_ = load_thread_count_;
   for (int i = 0; i < load_thread_count_; ++i)
@@ -395,6 +398,9 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
 
 void SongPlayable::LoadResourceThreadBody()
 {
+  while (!keysound_.is_loading_finished())
+    keysound_.LoadRemainingSound();
+
   while (active_thread_count_ > 0)
   {
     LoadInfo li;
@@ -409,10 +415,6 @@ void SongPlayable::LoadResourceThreadBody()
     loadinfo_list_mutex_.unlock();
 
     rparser::Directory* dir = song_->GetDirectory();
-
-    /* read sound here
-     * TODO: need to convert to load with threads */
-    keysound_.LoadFromChart(*song_, *chart_);
 
     if (li.type == 0 /* sound */)
     {
