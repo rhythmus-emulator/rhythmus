@@ -318,6 +318,8 @@ SongPlayable::SongPlayable()
     load_thread_count_(4), active_thread_count_(0),
     load_total_count_(0), load_count_(0), song_start_time_(0)
 {
+  // XXX: 2048 is proper size?
+  keysound_.Initalize(2048);
 }
 
 void SongPlayable::Load(const std::string& path, const std::string& chartpath)
