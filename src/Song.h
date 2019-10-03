@@ -44,8 +44,11 @@ public:
   void Save();
   void Clear();
 
+  /* @brief invalidate single song entry. used for multi-threading. */
+  void InvalidateSingleSongEntry();
+
   double get_progress() const;
-  bool is_loading() const;
+  bool is_loaded() const;
   std::string get_loading_filename() const;
 
   size_t size();
@@ -63,9 +66,9 @@ private:
   // songs to invalidate
   std::list<std::string> invalidate_list_;
   std::string current_loading_file_;
-  std::atomic<int> active_thr_count_;
   int total_inval_size_;
   std::atomic<int> load_count_;
+  bool is_loaded_;
 
   std::string song_dir_;
 
@@ -73,8 +76,6 @@ private:
 
   static int sql_dummy_callback(void*, int argc, char **argv, char **colnames);
   static int sql_songlist_callback(void*, int argc, char **argv, char **colnames);
-
-  void song_loader_thr_body();
 };
 
 /* @brief A singleton class. Song data with playing context. */

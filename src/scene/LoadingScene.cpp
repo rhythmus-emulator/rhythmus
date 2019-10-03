@@ -65,7 +65,7 @@ bool LoadingScene::ProcessEvent(const EventMessage& e)
     Graphic::getInstance().ExitRendering();
     return false;
   }
-  else if (e.IsKeyUp() && !SongList::getInstance().is_loading())
+  else if (e.IsKeyUp() && SongList::getInstance().is_loaded())
   {
     // go to next scene (select) directly
     next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
@@ -76,7 +76,7 @@ bool LoadingScene::ProcessEvent(const EventMessage& e)
 
 void LoadingScene::doUpdate(float)
 {
-  if (SongList::getInstance().is_loading())
+  if (!SongList::getInstance().is_loaded())
   {
     std::string path = SongList::getInstance().get_loading_filename();
     int prog = static_cast<int>(SongList::getInstance().get_progress() * 100);

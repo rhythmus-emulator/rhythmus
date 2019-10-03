@@ -82,7 +82,7 @@ public:
 
   void SetPoolSize(size_t size);
   void ClearTaskPool();
-  void EnqueueTask(TaskAuto task);
+  void EnqueueTask(TaskAuto& task);
   TaskAuto DequeueTask();
 
   void AbortAllTask();
