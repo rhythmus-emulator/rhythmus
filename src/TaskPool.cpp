@@ -176,6 +176,11 @@ void TaskPool::WaitAllTask()
   {
     task_pool_.back()->wait();
   }
+  for (auto *wthr : worker_pool_)
+  {
+    if (wthr->current_task_)
+      wthr->current_task_->wait();
+  }
 }
 
 bool TaskPool::is_idle() const

@@ -79,6 +79,7 @@ int main(int argc, char **argv)
    */
   
   TaskPool::getInstance().AbortAllTask();
+  TaskPool::getInstance().WaitAllTask();
   SceneManager::getInstance().Cleanup();
   SongPlayable::getInstance().CancelLoad(); // if loading, than cancel
   SongPlayable::getInstance().Clear();
