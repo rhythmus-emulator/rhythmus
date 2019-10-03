@@ -7,8 +7,9 @@
 #include "SceneManager.h"
 #include "LR2/LR2Flag.h"  // For updating LR2 flag
 #include "Event.h"
-#include "rutil.h"        // convert wargv
-#include "./Song.h"
+#include "Util.h"
+#include "Song.h"
+#include "TaskPool.h"
 #include <iostream>
 
 // declare windows header latest due to constant conflicts
@@ -34,7 +35,7 @@ int APIENTRY _tWinMain(
   for (int i = 0; i < argc && i < 256; i++)
   {
     // convert wargv into utf8 string
-    rutil::EncodeFromWStr(wargv[i], argv_str[i], rutil::E_UTF8);
+    argv_str[i] = GetUtf8FromWString(wargv[i]);
     argv[i] = argv_str[i].c_str();
   }
 #else
@@ -58,6 +59,7 @@ int main(int argc, char **argv)
 
   Logger::getInstance().StartLogging();
   Logger::getInstance().HookStdOut();
+  TaskPool::getInstance().SetPoolSize(4);
   graphic.Initialize();
   SceneManager::getInstance().Initialize();
   Timer::Initialize();
@@ -76,6 +78,7 @@ int main(int argc, char **argv)
    * Cleanup
    */
   
+  TaskPool::getInstance().AbortAllTask();
   SceneManager::getInstance().Cleanup();
   SongPlayable::getInstance().CancelLoad(); // if loading, than cancel
   SongPlayable::getInstance().Clear();

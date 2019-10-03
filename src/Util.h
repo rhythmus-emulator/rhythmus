@@ -68,4 +68,8 @@ std::string GetFirstParam(const std::string& in, char sep = ',');
 
 bool CheckMasking(const std::string& path, const std::string& mask);
 
+#if WIN32
+std::string GetUtf8FromWString(const std::wstring& wstring);
+#endif
+
 RHYTHMUS_NAMESPACE_END

@@ -281,4 +281,13 @@ bool CheckMasking(const std::string& path, const std::string& mask)
   return rutil::wild_match(path, mask);
 }
 
+#if WIN32
+std::string GetUtf8FromWString(const std::wstring& wstring)
+{
+  std::string s;
+  rutil::EncodeFromWStr(wstring, s, rutil::E_UTF8);
+  return s;
+}
+#endif
+
 }

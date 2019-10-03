@@ -65,6 +65,8 @@ public:
   void abort();
   void set_task(TaskAuto& task);
 
+  friend class TaskPool;
+
 private:
   std::thread thread_;
   bool is_running_;
@@ -89,11 +91,9 @@ public:
 
   static TaskPool& getInstance();
 
-  friend class TaskThread;
-
 private:
   size_t pool_size_;
-  std::vector<TaskThread> worker_pool_;
+  std::vector<TaskThread*> worker_pool_;
   bool stop_;
 
   /* @brief task pool which needs to be retrieved later.

@@ -52,6 +52,7 @@ TaskThread::~TaskThread()
 {
   is_running_ = false;
   abort();
+  current_task_ = nullptr;
   if (thread_.joinable())
     thread_.join();
 }
@@ -60,7 +61,7 @@ void TaskThread::run()
 {
   thread_ = std::thread([this]
   {
-    for (; is_running_;)
+    for (; this->is_running_;)
     {
       current_task_ = this->pool_->DequeueTask();
       if (!current_task_)
@@ -114,8 +115,9 @@ void TaskPool::SetPoolSize(size_t size)
 
   for (size_t i = 0; i < size; ++i)
   {
-    worker_pool_.emplace_back(TaskThread(this));
-    worker_pool_.back().run();
+    TaskThread *tt = new TaskThread(this);
+    worker_pool_.push_back(tt);
+    tt->run();
   }
 
   pool_size_ = size;
@@ -146,9 +148,15 @@ TaskAuto TaskPool::DequeueTask()
 
 void TaskPool::ClearTaskPool()
 {
+  // prepare status to exit thread
   stop_ = true;
   AbortAllTask();
   WaitAllTask();
+  // notify all waiting thread to exit
+  task_pool_cond_.notify_all();
+  // all thread is done, clear threads.
+  for (auto *wthr : worker_pool_)
+    delete wthr;
   worker_pool_.clear();
   pool_size_ = 0;
   stop_ = false;
@@ -158,8 +166,8 @@ void TaskPool::ClearTaskPool()
 void TaskPool::AbortAllTask()
 {
   task_pool_.clear();
-  for (auto& wthr : worker_pool_)
-    wthr.abort();
+  for (auto *wthr : worker_pool_)
+    wthr->abort();
 }
 
 void TaskPool::WaitAllTask()
