@@ -68,7 +68,10 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
   if (e.IsKeyDown())
   {
     if (e.GetKeycode() == GLFW_KEY_ESCAPE)
-      FinishScene();
+    {
+      SongPlayable::getInstance().CancelLoad();
+      TriggerFadeOut();
+    }
   }
 
   return true;

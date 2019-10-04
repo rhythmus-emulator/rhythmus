@@ -129,11 +129,13 @@ private:
 class QueuedEventCache
 {
 public:
+  QueuedEventCache();
   void QueueEvent(int event_id, float timeout_msec);
   void QueueEvent(const std::string& queue_name, int event_id, float timeout_msec);
   float GetRemainingTime(const std::string& queue_name);
   bool IsQueued(const std::string& queue_name);
   void Update(float delta);
+  void SetQueueable(bool allow_queue);
 
   /* @brief process all queued events regardless of remaining time */
   void FlushAll();
@@ -147,6 +149,7 @@ private:
     int event_id;       // event to trigger
   };
   std::list<QueuedEvent> events_;
+  bool allow_queue_;
 };
 
 }

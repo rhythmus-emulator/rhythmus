@@ -39,6 +39,40 @@ struct ThemeParameter
   std::map<std::string, std::string> attributes;
 };
 
+class SceneTask
+{
+public:
+  SceneTask(const std::string& name, std::function<void()> func);
+  void wait_for(float wait_time);
+  void wait_cond(std::function<bool()> cond);
+  void run();
+
+  /* @brief update time for running task.
+   * @return true if task run (or ran). */
+  bool update_for_run(bool delta);
+private:
+  std::string name_;
+  std::function<void()> func_;
+  std::function<bool()> cond_;
+  float wait_time_;
+  bool is_ran_;
+};
+
+class SceneTaskQueue
+{
+public:
+  SceneTaskQueue();
+  void Enqueue(SceneTask *task);
+  void EnqueueFront(SceneTask *task);
+  void IsEnqueueable(bool allow_enqueue);
+  void FlushAll();
+  void DeleteAll();
+  void Update(float delta);
+private:
+  std::list<SceneTask*> tasks_;
+  bool allow_enqueue_;
+};
+
 /* @brief A screen which is renderable */
 class Scene : public BaseObject
 {
@@ -55,7 +89,8 @@ public:
   /* @brief triggered when scene is finished
    * @warn it does not mean changing scene instantly,
    * which triggers fadeout/transition. */
-  virtual void FinishScene();
+  void TriggerFadeOut();
+  void TriggerFadeIn();
 
   /* @brief close scene completely & do some misc (e.g. save setting) */
   virtual void CloseScene();
@@ -72,10 +107,6 @@ public:
 
   virtual void LoadProperty(const std::string& prop_name, const std::string& value);
 
-  void TriggerFadeIn(float duration);
-  void TriggerFadeOut(float duration);
-  void QueueSceneEvent(float delta, int event_id);
-
   const ThemeParameter& get_theme_parameter() const;
 
 protected:
@@ -91,7 +122,7 @@ protected:
   // font resource loaded by this scene
   std::vector<FontAuto> fonts_;
 
-  QueuedEventCache eventqueue_;
+  SceneTaskQueue scenetask_;
 
   // is event triggered at valid time, so it need to be processed?
   // (e.g. input event during scene loading or #IGNOREINPUT --> ignore)

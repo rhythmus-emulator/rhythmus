@@ -21,6 +21,96 @@ ThemeParameter::ThemeParameter()
   next_scene_time = 0;
 }
 
+// ---------------------------- SceneTask
+SceneTask::SceneTask(const std::string& name, std::function<void()> func)
+  : name_(name), func_(std::move(func)), wait_time_(0), is_ran_(false) {}
+
+void SceneTask::wait_for(float wait_time)
+{
+  wait_time_ = wait_time;
+}
+
+void SceneTask::wait_cond(std::function<bool()> cond)
+{
+  cond_ = std::move(cond);
+}
+
+void SceneTask::run()
+{
+  if (func_)
+    func_();
+}
+
+bool SceneTask::update_for_run(bool delta)
+{
+  wait_time_ -= delta;
+  if (wait_time_ <= 0)
+  {
+    bool cond_val = cond_ ? cond_() : true;
+    if (cond_val)
+    {
+      if (!is_ran_)
+        run();
+      is_ran_ = true;
+    }
+  }
+  return is_ran_;
+}
+
+// ------------------------ SceneTaskPool
+SceneTaskQueue::SceneTaskQueue() : allow_enqueue_(true)
+{}
+
+void SceneTaskQueue::Enqueue(SceneTask *task)
+{
+  if (!allow_enqueue_)
+    delete task;
+  else
+    tasks_.push_back(task);
+}
+
+void SceneTaskQueue::EnqueueFront(SceneTask *task)
+{
+  if (!allow_enqueue_)
+    delete task;
+  else
+    tasks_.push_front(task);
+}
+
+void SceneTaskQueue::IsEnqueueable(bool allow_enqueue)
+{
+  allow_enqueue_ = allow_enqueue;
+}
+
+void SceneTaskQueue::FlushAll()
+{
+  for (auto *t : tasks_)
+  {
+    t->run();
+    delete t;
+  }
+  tasks_.clear();
+}
+
+void SceneTaskQueue::DeleteAll()
+{
+  for (auto *t : tasks_)
+    delete t;
+  tasks_.clear();
+}
+
+void SceneTaskQueue::Update(float delta)
+{
+  if (tasks_.empty())
+    return;
+
+  if (tasks_.front()->update_for_run(delta))
+  {
+    delete tasks_.front();
+    tasks_.pop_front();
+  }
+}
+
 // -------------------------------- Scene
 
 Scene::Scene()
@@ -67,26 +157,49 @@ void Scene::StartScene()
   // Prepare to trigger scenetime if necessary
   if (theme_param_.next_scene_time > 0)
   {
-    QueueSceneEvent(theme_param_.next_scene_time, Events::kEventSceneTimeout);
+    EventManager::SendEvent(Events::kEventSceneChange);
+    SceneTask *task = new SceneTask("timeoutevent", [this] {
+      this->TriggerFadeOut();
+      EventManager::SendEvent(Events::kEventSceneTimeout);
+    });
+    task->wait_for(theme_param_.next_scene_time);
+    scenetask_.Enqueue(task);
   }
 
   // set input avail time
   input_available_time_ = Timer::GetGameTimeInMillisecond() + theme_param_.begin_input_time;
 }
 
-void Scene::FinishScene()
+void Scene::TriggerFadeOut()
 {
-  // Trigger FadeOut & ChangeScene event
-  if (theme_param_.fade_out_time > 0)
+  float duration = theme_param_.fade_out_time;
+  if (duration <= 0)
   {
-    TriggerFadeOut(theme_param_.fade_out_time);
-    QueueSceneEvent(theme_param_.fade_out_time, Events::kEventSceneChange);
+    // immediate close scene
+    CloseScene();
+    return;
   }
-  else
-  {
-    EventManager::SendEvent(Events::kEventSceneChange);
-    //CloseScene(); -- internally called by SceneManager due to kEventSceneChange
-  }
+
+  // fade effect
+  if (fade_duration_ != 0) return;
+  fade_duration_ = -duration;
+  fade_time_ = 0;
+
+  // disable input(TODO) & disable event enqueue
+  SceneTask *task = new SceneTask("fadeoutevent", [this] {
+    this->CloseScene();
+  });
+  task->wait_for(theme_param_.fade_out_time);
+  scenetask_.Enqueue(task);
+  scenetask_.IsEnqueueable(false);
+}
+
+void Scene::TriggerFadeIn()
+{
+  float duration = theme_param_.fade_in_time;
+  if (fade_duration_ != 0) return;
+  fade_duration_ = duration;
+  fade_time_ = 0;
 }
 
 void Scene::CloseScene()
@@ -169,7 +282,7 @@ void Scene::doUpdate(float delta)
     img->Update(delta);
 
   // scheduled events
-  eventqueue_.Update(delta);
+  scenetask_.Update(delta);
 
   // fade in/out processing
   if (fade_duration_ != 0)
@@ -213,25 +326,6 @@ void Scene::doRenderAfter()
     memcpy(Graphic::get_vertex_buffer(), vi, sizeof(VertexInfo) * 4);
     Graphic::RenderQuad();
   }
-}
-
-void Scene::TriggerFadeIn(float duration)
-{
-  if (fade_duration_ != 0) return;
-  fade_duration_ = duration;
-  fade_time_ = 0;
-}
-
-void Scene::TriggerFadeOut(float duration)
-{
-  if (fade_duration_ != 0) return;
-  fade_duration_ = -duration;
-  fade_time_ = 0;
-}
-
-void Scene::QueueSceneEvent(float delta, int event_id)
-{
-  eventqueue_.QueueEvent(event_id, delta);
 }
 
 const ThemeParameter& Scene::get_theme_parameter() const

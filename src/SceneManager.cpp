@@ -20,8 +20,6 @@ SceneManager::SceneManager()
   SubscribeTo(Events::kOnKeyDown);
   SubscribeTo(Events::kOnKeyPress);
   SubscribeTo(Events::kOnKeyUp);
-  SubscribeTo(Events::kEventSceneTimeout);
-  SubscribeTo(Events::kEventSceneChange);
   SubscribeTo(Events::kEventSongLoadFinished);
   SubscribeTo(Events::kEventSongStarted);
 }
@@ -82,15 +80,6 @@ void SceneManager::Render()
 
 bool SceneManager::OnEvent(const EventMessage& e)
 {
-  switch (e.GetEventID())
-  {
-  case Events::kEventSceneChange:
-    break;
-  case Events::kEventSceneTimeout:
-    current_scene_->CloseScene();
-    break;
-  }
-
   if (current_scene_)
     return current_scene_->ProcessEvent(e);
 

@@ -273,6 +273,7 @@ EventManager& EventManager::getInstance()
 
 // ------------------------------- QueuedEvents
 
+QueuedEventCache::QueuedEventCache() : allow_queue_(true) {}
 
 void QueuedEventCache::QueueEvent(int event_id, float timeout_msec)
 {
@@ -320,6 +321,11 @@ void QueuedEventCache::Update(float delta)
     }
     else ii++;
   }
+}
+
+void QueuedEventCache::SetQueueable(bool allow_queue)
+{
+  allow_queue_ = allow_queue;
 }
 
 void QueuedEventCache::FlushAll()
