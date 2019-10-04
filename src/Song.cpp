@@ -31,15 +31,12 @@ public:
 
   virtual void run()
   {
-    while (!SongList::getInstance().is_loaded() && is_running_)
-    {
-      SongList::getInstance().InvalidateSingleSongEntry();
-    }
+    SongList::getInstance().LoadInvalidationList();
   }
 
   virtual void abort()
   {
-    is_running_ = false;
+    SongList::getInstance().ClearInvalidationList();
   }
 
 private:
@@ -219,62 +216,68 @@ void SongList::Clear()
   invalidate_list_.clear();
 }
 
-void SongList::InvalidateSingleSongEntry()
+void SongList::LoadInvalidationList()
 {
   std::string filepath;
-  static std::mutex mutex;
 
+  while (true)
   {
-    // get song name safely.
-    // if empty, then exit loop.
-    std::lock_guard<std::mutex> lock(mutex);
-    if (invalidate_list_.empty())
     {
-      return;
+      // get song name safely.
+      // if empty, then exit loop.
+      std::lock_guard<std::mutex> lock(invalidate_list_mutex_);
+      if (invalidate_list_.empty())
+      {
+        break;
+      }
+      filepath = invalidate_list_.front();
+      invalidate_list_.pop_front();
+      current_loading_file_ = filepath;
     }
-    filepath = invalidate_list_.front();
-    invalidate_list_.pop_front();
-    current_loading_file_ = filepath;
-  }
 
-  // attempt song loading.
-  SongAuto song = std::make_shared<rparser::Song>();
-  if (!song->Open(filepath))
-  {
+    // attempt song loading.
+    SongAuto song = std::make_shared<rparser::Song>();
+    if (!song->Open(filepath))
+    {
+      load_count_++;
+      break;
+    }
+    SongListData dat;
+    dat.songpath = filepath;
+    for (int i = 0; i < song->GetChartCount(); ++i)
+    {
+      rparser::Chart* c = song->GetChart(i);
+      auto &meta = c->GetMetaData();
+      meta.SetMetaFromAttribute();
+      meta.SetUtf8Encoding();
+      dat.chartpath = c->GetFilename();
+      // TODO: automatically extract subtitle from title
+      dat.title = meta.title;
+      dat.subtitle = meta.subtitle;
+      dat.artist = meta.artist;
+      dat.subartist = meta.subartist;
+      dat.genre = meta.genre;
+      dat.level = meta.level;
+      dat.judgediff = meta.difficulty;
+
+      songs_.push_back(dat);
+    }
+
     load_count_++;
-    return;
   }
-  SongListData dat;
-  dat.songpath = filepath;
-  for (int i = 0; i < song->GetChartCount(); ++i)
-  {
-    rparser::Chart* c = song->GetChart(i);
-    auto &meta = c->GetMetaData();
-    meta.SetMetaFromAttribute();
-    meta.SetUtf8Encoding();
-    dat.chartpath = c->GetFilename();
-    // TODO: automatically extract subtitle from title
-    dat.title = meta.title;
-    dat.subtitle = meta.subtitle;
-    dat.artist = meta.artist;
-    dat.subartist = meta.subartist;
-    dat.genre = meta.genre;
-    dat.level = meta.level;
-    dat.judgediff = meta.difficulty;
-
-    songs_.push_back(dat);
-  }
-
-  load_count_++;
 
   // check if invalidate list is done.
   // if so, mark as all loaded
   if (invalidate_list_.empty())
   {
     is_loaded_ = true;
-    EventManager::SendEvent(Events::kEventSongListLoadFinished);
   }
-  //std::cout << "SongList: Loading thread finished." << std::endl;
+}
+
+void SongList::ClearInvalidationList()
+{
+  std::lock_guard<std::mutex> lock(invalidate_list_mutex_);
+  invalidate_list_.clear();
 }
 
 int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **colnames)

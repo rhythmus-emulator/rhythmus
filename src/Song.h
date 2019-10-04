@@ -44,8 +44,12 @@ public:
   void Save();
   void Clear();
 
-  /* @brief invalidate single song entry. used for multi-threading. */
-  void InvalidateSingleSongEntry();
+  /* @brief invalidate song entry. used for multi-threading. */
+  void LoadInvalidationList();
+
+  /* @brief clear song invalidation entry
+   * (for canceling songlist loading) */
+  void ClearInvalidationList();
 
   double get_progress() const;
   bool is_loaded() const;
@@ -65,6 +69,7 @@ private:
 
   // songs to invalidate
   std::list<std::string> invalidate_list_;
+  std::mutex invalidate_list_mutex_;
   std::string current_loading_file_;
   int total_inval_size_;
   std::atomic<int> load_count_;

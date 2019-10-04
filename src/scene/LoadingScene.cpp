@@ -76,6 +76,8 @@ bool LoadingScene::ProcessEvent(const EventMessage& e)
 
 void LoadingScene::doUpdate(float)
 {
+  static bool check_loaded = false;
+
   if (!SongList::getInstance().is_loaded())
   {
     std::string path = SongList::getInstance().get_loading_filename();
@@ -87,6 +89,14 @@ void LoadingScene::doUpdate(float)
   }
   else
   {
+    if (!check_loaded)
+    {
+      // run first time when loading is done
+      std::cout << "LoadingScene: Song list loading finished." << std::endl;
+      EventManager::SendEvent(Events::kEventSongListLoadFinished);
+      check_loaded = true;
+    }
+
     current_file_text_.Clear();
     message_text_.SetText("Ready ...!");
 #if 0

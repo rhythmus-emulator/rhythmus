@@ -63,21 +63,22 @@ void TaskThread::run()
   {
     for (; this->is_running_;)
     {
-      current_task_ = this->pool_->DequeueTask();
-      if (!current_task_)
+      this->current_task_ = this->pool_->DequeueTask();
+      if (!this->current_task_)
         break;
 
       // mark as running state
-      current_task_->status_ = 1;
-      current_task_->current_thread_ = this;
+      this->current_task_->status_ = 1;
+      this->current_task_->current_thread_ = this;
 
       // run
-      current_task_->run();
+      this->current_task_->run();
 
       // mark as finished state
-      current_task_->status_ = 2;
-      current_task_->current_thread_ = nullptr;
-      current_task_->task_done_cond_.notify_all();
+      this->current_task_->status_ = 2;
+      this->current_task_->current_thread_ = nullptr;
+      this->current_task_->task_done_cond_.notify_all();
+      this->current_task_ = nullptr;
     }
   });
 }
