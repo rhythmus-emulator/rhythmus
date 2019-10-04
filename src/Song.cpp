@@ -2,7 +2,6 @@
 #include "Timer.h"
 #include "Event.h"
 #include "Util.h"
-#include "TaskPool.h"
 #include "rparser.h"
 #include <map>
 
@@ -26,9 +25,6 @@ struct SongInvalidateData
 class SongListUpdateTask : public Task
 {
 public:
-  SongListUpdateTask() : is_running_(true)
-  {}
-
   virtual void run()
   {
     SongList::getInstance().LoadInvalidationList();
@@ -38,9 +34,6 @@ public:
   {
     SongList::getInstance().ClearInvalidationList();
   }
-
-private:
-  bool is_running_;
 };
 
 // ----------------------------- class SongList
@@ -337,13 +330,51 @@ const SongListData& SongList::get(int i) const { return songs_[i]; }
 SongListData SongList::get(int i) { return songs_[i]; }
 
 
+// ----------------- class SongPlayableLoadTask
+
+class SongPlayableChartLoadTask : public Task
+{
+public:
+  SongPlayableChartLoadTask
+  (const std::string& song_path, const std::string& chart_name)
+    : song_path_(song_path), chart_name_(chart_name)
+  {}
+
+  virtual void run()
+  {
+    SongPlayable::getInstance().Load(song_path_, chart_name_);
+  }
+
+  virtual void abort()
+  {
+  }
+
+private:
+  std::string song_path_;
+  std::string chart_name_;
+};
+
+class SongPlayableResourceLoadTask : public Task
+{
+public:
+  virtual void run()
+  {
+    SongPlayable::getInstance().LoadResources();
+  }
+
+  virtual void abort()
+  {
+    SongPlayable::getInstance().CancelLoad();
+  }
+};
+
 // ------------------------- class SongPlayable
 
 SongPlayable::SongPlayable()
   : song_(nullptr), chart_(nullptr),
     note_current_idx_(0), event_current_idx_(0),
-    load_thread_count_(4), active_thread_count_(0),
-    load_total_count_(0), load_count_(0), song_start_time_(0)
+    is_loaded_(0), load_thread_count_(4), load_total_count_(0), load_count_(0),
+    song_start_time_(0)
 {
   // XXX: 2048 is proper size?
   keysound_.Initalize(2048);
@@ -351,16 +382,24 @@ SongPlayable::SongPlayable()
 
 void SongPlayable::Load(const std::string& path, const std::string& chartpath)
 {
+  // XXX: change variable to RAII type?
+  is_loaded_ = 1;
+  tasks_.clear();
+
   song_ = new rparser::Song();
   if (!song_->Open(path))
   {
-    std::cerr << "SongPlayable: Failed to open song " << path << std::endl;
+    std::cerr << "SongPlayable: Failed to open song " <<
+      path << std::endl;
+    is_loaded_ = 0;
     return;
   }
   chart_ = song_->GetChart(chartpath);
   if (!chart_)
   {
-    std::cerr << "SongPlayable: Failed to open song " << path << " with chartpath " << chartpath << std::endl;
+    std::cerr << "SongPlayable: Failed to open song " <<
+      path << " with chartpath " << chartpath << std::endl;
+    is_loaded_ = 0;
     return;
   }
   chart_->Invalidate();
@@ -392,7 +431,7 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
     events_.push_back(n);
   }
   event_current_idx_ = 0;
-  
+
   auto &metadata = chart_->GetMetaData();
   for (auto& snd : metadata.GetSoundChannel()->fn)
   {
@@ -413,33 +452,41 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
   // preparation before calling loader thread
   keysound_.LoadFromChart(*song_, *chart_);
 
-  // create loader thread
-  active_thread_count_ = load_thread_count_;
+  // create loader task
   for (int i = 0; i < load_thread_count_; ++i)
   {
-    load_thread_.emplace_back(
-      std::thread(&SongPlayable::LoadResourceThreadBody, this)
-    );
+    TaskAuto t = std::make_shared<SongPlayableResourceLoadTask>();
+    tasks_.push_back(t);
+    TaskPool::getInstance().EnqueueTask(t);
   }
 }
 
-void SongPlayable::LoadResourceThreadBody()
+void SongPlayable::LoadAsync(const std::string& path, const std::string& chartpath)
+{
+  if (IsLoading())
+    return;
+
+  TaskAuto t = std::make_shared<SongPlayableChartLoadTask>(
+    path, chartpath
+    );
+  TaskPool::getInstance().EnqueueTask(t);
+}
+
+void SongPlayable::LoadResources()
 {
   while (!keysound_.is_loading_finished())
     keysound_.LoadRemainingSound();
 
-  while (active_thread_count_ > 0)
+  while (true)
   {
     LoadInfo li;
-    loadinfo_list_mutex_.lock();
-    if (loadinfo_list_.empty())
     {
-      loadinfo_list_mutex_.unlock();
-      break;
+      std::lock_guard<std::mutex> lock(loadinfo_list_mutex_);
+      if (loadinfo_list_.empty())
+        break;
+      li = loadinfo_list_.back();
+      loadinfo_list_.pop_back();
     }
-    li = loadinfo_list_.back();
-    loadinfo_list_.pop_back();
-    loadinfo_list_mutex_.unlock();
 
     rparser::Directory* dir = song_->GetDirectory();
 
@@ -459,26 +506,26 @@ void SongPlayable::LoadResourceThreadBody()
     }
   }
 
-  active_thread_count_--;
-  /* should be called only once! */
-  if (active_thread_count_ == 0)
-  {
-    is_loaded_ = 1;
-    EventManager::SendEvent(Events::kEventSongLoadFinished);
-  }
+  /* load done */
+  is_loaded_ = 2;
 }
 
 void SongPlayable::CancelLoad()
 {
-  // wait all working thread to be done
-  active_thread_count_ = 0;
-  for (auto& thr : load_thread_)
-    thr.join();
-  load_thread_.clear();
+  // clear all loading context
+  {
+    std::lock_guard<std::mutex> lock(loadinfo_list_mutex_);
+    loadinfo_list_.clear();
+  }
 
-  // reset all loading context
+  // wait all working thread to be done
+  for (auto &t : tasks_)
+    t->wait();
+
+  // last context reset
   load_total_count_ = 0;
   load_count_ = 0;
+  is_loaded_ = 0;
 }
 
 void SongPlayable::Play()
@@ -527,7 +574,7 @@ void SongPlayable::Update(float delta)
 void SongPlayable::Clear()
 {
   // should not be called while loading!
-  if (active_thread_count_ != 0)
+  if (IsLoading())
     return;
 
   keysound_.UnregisterAll();
@@ -548,12 +595,12 @@ void SongPlayable::Clear()
 
 bool SongPlayable::IsLoading() const
 {
-  return active_thread_count_ > 0;
+  return is_loaded_ == 1;
 }
 
 bool SongPlayable::IsLoaded() const
 {
-  return song_ && is_loaded_ > 0;
+  return is_loaded_ >= 2;
 }
 
 bool SongPlayable::IsPlaying() const

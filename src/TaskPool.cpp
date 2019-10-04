@@ -12,6 +12,7 @@ Task::Task()
 
 void Task::wait()
 {
+  if (is_finished()) return;
   std::unique_lock<std::mutex> l(mutex_);
   task_done_cond_.wait(l, [this] { return this->status_ >= 2; });
 }

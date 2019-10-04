@@ -2,6 +2,7 @@
 
 #include "Image.h"
 #include "Sound.h"
+#include "TaskPool.h"
 #include <string>
 #include <memory>
 #include <vector>
@@ -10,7 +11,6 @@
 #include <mutex>
 #include <list>
 #include <vector>
-#include <thread>
 
 // rmixer
 #include "SoundPool.h"
@@ -88,8 +88,12 @@ class SongPlayable
 {
 public:
   SongPlayable();
+
   void Load(const std::string& path, const std::string& chartpath);
+  void LoadAsync(const std::string& path, const std::string& chartpath);
+  void LoadResources();
   void CancelLoad();
+
   void Play();
   void Stop();
   void Update(float delta);
@@ -109,12 +113,20 @@ public:
   static SongPlayable& getInstance();
 
 private:
-  void LoadResourceThreadBody();
-
-private:
   rparser::Song* song_;
   rparser::Chart* chart_;
+
+  /**
+   * 0: not loaded yet
+   * 1: loading
+   * 2: load finished (or aborted)
+   */
   int is_loaded_;
+
+  /**
+   * Tasks (for cancel-waiting)
+   */
+  std::list<TaskAuto> tasks_;
 
   /* tappable notes */
   struct SongNote {
@@ -136,7 +148,6 @@ private:
   int event_current_idx_;
 
   int load_thread_count_;
-  std::atomic<int> active_thread_count_;
   int load_total_count_;
   std::atomic<int> load_count_;
   struct LoadInfo
@@ -146,7 +157,6 @@ private:
     std::string path;
   };
   std::list<LoadInfo> loadinfo_list_;
-  std::list<std::thread> load_thread_;
   std::mutex loadinfo_list_mutex_;
 
   uint32_t song_start_time_;

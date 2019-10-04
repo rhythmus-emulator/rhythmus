@@ -82,7 +82,7 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
       // Trick: preload selected song from here
       // we can play song almost without loading time ...!
       auto &d = wheel_.get_selected_data();
-      SongPlayable::getInstance().Load(d.songpath, d.chartname);
+      SongPlayable::getInstance().LoadAsync(d.songpath, d.chartname);
 
       // Song selection - immediately change scene mode
       CloseScene();

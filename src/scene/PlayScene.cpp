@@ -83,6 +83,9 @@ void PlayScene::doUpdate(float delta)
   case 0:
     if (SongPlayable::getInstance().IsLoaded())
     {
+      // trigger event
+      EventManager::SendEvent(Events::kEventSongLoadFinished);
+
       // TODO: need to upload bitmap here
 
       // TODO: ready? timer
