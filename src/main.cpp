@@ -78,8 +78,7 @@ int main(int argc, char **argv)
    * Cleanup
    */
   
-  TaskPool::getInstance().AbortAllTask();
-  TaskPool::getInstance().WaitAllTask();
+  TaskPool::getInstance().ClearTaskPool();
   SceneManager::getInstance().Cleanup();
   SongPlayable::getInstance().CancelLoad(); // if loading, than cancel
   SongPlayable::getInstance().Clear();
