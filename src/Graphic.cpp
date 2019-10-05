@@ -83,6 +83,9 @@ void Graphic::Initialize()
     exit(EXIT_FAILURE);
   }
 
+  // Center window
+  CenterWindow();
+
   // Callback function setting (related to graphic)
   glfwSetWindowSizeCallback(window_, on_resize);
 
@@ -440,6 +443,29 @@ void Graphic::GetResolutions(std::vector<std::string>& out)
         out.push_back(s);
     }
   }
+}
+
+void Graphic::CenterWindow()
+{
+  int totalMonitor;
+  GLFWmonitor** monitors = glfwGetMonitors(&totalMonitor);
+  GLFWmonitor* monitor;
+  if (!totalMonitor || !monitors) return;
+  monitor = monitors[0];
+
+  const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+  if (!mode)
+    return;
+
+  int monitorX, monitorY;
+  glfwGetMonitorPos(monitor, &monitorX, &monitorY);
+
+  int windowWidth, windowHeight;
+  glfwGetWindowSize(window_, &windowWidth, &windowHeight);
+
+  glfwSetWindowPos(window_,
+    monitorX + (mode->width - windowWidth) / 2,
+    monitorY + (mode->height - windowHeight) / 2);
 }
 
 /**

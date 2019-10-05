@@ -76,6 +76,7 @@ public:
   void SetModelIdentity();
   void SetModel(const ProjectionInfo& pi);
   static void GetResolutions(std::vector<std::string>& out);
+  void CenterWindow();
   GLFWwindow* window();
 
   static Graphic& getInstance();

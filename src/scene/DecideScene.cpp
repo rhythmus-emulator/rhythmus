@@ -1,4 +1,5 @@
 #include "DecideScene.h"
+#include "Song.h"
 
 namespace rhythmus
 {
@@ -20,25 +21,17 @@ void DecideScene::LoadScene()
   Scene::LoadScene();
 }
 
-void DecideScene::StartScene()
-{
-  Scene::StartScene();
-}
-
-void DecideScene::CloseScene()
-{
-  Scene::CloseScene();
-}
-
 bool DecideScene::ProcessEvent(const EventMessage& e)
 {
-  if (e.IsInput() && !IsEventValidTime(e))
-    return true;
-
   if (e.IsKeyUp() && e.GetKeycode() == GLFW_KEY_ESCAPE)
   {
-    CloseScene();
+    // in case of song preload
+    SongPlayable::getInstance().CancelLoad();
+    TriggerFadeOut();
   }
+
+  if (!is_input_available())
+    return true;
 
   return true;
 }

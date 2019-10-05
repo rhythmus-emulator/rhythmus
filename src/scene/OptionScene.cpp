@@ -132,7 +132,7 @@ void OptionScene::CloseScene()
 
 bool OptionScene::ProcessEvent(const EventMessage& e)
 {
-  if (e.IsInput() && !IsEventValidTime(e))
+  if (is_input_available())
     return true;
 
   if (e.IsKeyUp())

@@ -46,10 +46,12 @@ public:
   void wait_for(float wait_time);
   void wait_cond(std::function<bool()> cond);
   void run();
+  bool update(float delta);
 
   /* @brief update time for running task.
-   * @return true if task run (or ran). */
-  bool update_for_run(bool delta);
+   * @return true if task run (or ran).
+   * @depreciate task may modify TaskQueue, so use it with care. */
+  bool update_for_run(float delta);
 private:
   std::string name_;
   std::function<void()> func_;
@@ -95,6 +97,8 @@ public:
   /* @brief close scene completely & do some misc (e.g. save setting) */
   virtual void CloseScene();
 
+  void EnableInput(bool enable_input);
+
   /* @brief Event processing */
   virtual bool ProcessEvent(const EventMessage& e) = 0;
 
@@ -122,11 +126,12 @@ protected:
   // font resource loaded by this scene
   std::vector<FontAuto> fonts_;
 
+  // generally used scene queued tasks
   SceneTaskQueue scenetask_;
 
   // is event triggered at valid time, so it need to be processed?
   // (e.g. input event during scene loading or #IGNOREINPUT --> ignore)
-  bool IsEventValidTime(const EventMessage& e) const;
+  bool is_input_available() const;
   virtual void doUpdate(float delta);
   virtual void doRenderAfter();
 
@@ -143,8 +148,7 @@ private:
   // fade_duration with negative: fade-out
   float fade_time_, fade_duration_;
 
-  // input available gametime
-  uint32_t input_available_time_;
+  bool is_input_available_;
 
   // currently focused object (if exists)
   BaseObject* focused_object_;

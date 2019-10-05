@@ -41,7 +41,21 @@ void SceneTask::run()
     func_();
 }
 
-bool SceneTask::update_for_run(bool delta)
+bool SceneTask::update(float delta)
+{
+  wait_time_ -= delta;
+  if (wait_time_ <= 0)
+  {
+    bool cond_val = cond_ ? cond_() : true;
+    if (cond_val)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool SceneTask::update_for_run(float delta)
 {
   wait_time_ -= delta;
   if (wait_time_ <= 0)
@@ -104,17 +118,19 @@ void SceneTaskQueue::Update(float delta)
   if (tasks_.empty())
     return;
 
-  if (tasks_.front()->update_for_run(delta))
+  if (tasks_.front()->update(delta))
   {
-    delete tasks_.front();
+    SceneTask *task = tasks_.front();
     tasks_.pop_front();
+    task->run();
+    delete task;
   }
 }
 
 // -------------------------------- Scene
 
 Scene::Scene()
-  : fade_time_(0), fade_duration_(0), input_available_time_(0),
+  : fade_time_(0), fade_duration_(0), is_input_available_(true),
     focused_object_(nullptr), next_scene_mode_(GameSceneMode::kGameSceneClose)
 {
 }
@@ -154,7 +170,31 @@ void Scene::LoadScene()
 
 void Scene::StartScene()
 {
-  // Prepare to trigger scenetime if necessary
+  int event_time = 0;
+
+  // trigger fade_in if it exist
+  TriggerFadeIn();
+
+  // constraints for theme parameters
+  if (theme_param_.next_scene_time > 0)
+  {
+    if (theme_param_.begin_input_time > theme_param_.next_scene_time)
+      theme_param_.begin_input_time = theme_param_.next_scene_time;
+  }
+
+  // set input avail time
+  if (theme_param_.begin_input_time > 0)
+  {
+    EnableInput(false);
+    SceneTask *task = new SceneTask("inputenableevent", [this] {
+      EnableInput(true);
+    });
+    task->wait_for(theme_param_.begin_input_time);
+    scenetask_.Enqueue(task);
+    event_time += theme_param_.begin_input_time;
+  }
+
+  // set scenetime if necessary
   if (theme_param_.next_scene_time > 0)
   {
     EventManager::SendEvent(Events::kEventSceneChange);
@@ -162,12 +202,10 @@ void Scene::StartScene()
       this->TriggerFadeOut();
       EventManager::SendEvent(Events::kEventSceneTimeout);
     });
-    task->wait_for(theme_param_.next_scene_time);
+    task->wait_for(theme_param_.next_scene_time - event_time);
     scenetask_.Enqueue(task);
+    event_time += theme_param_.next_scene_time;
   }
-
-  // set input avail time
-  input_available_time_ = Timer::GetGameTimeInMillisecond() + theme_param_.begin_input_time;
 }
 
 void Scene::TriggerFadeOut()
@@ -185,11 +223,13 @@ void Scene::TriggerFadeOut()
   fade_duration_ = -duration;
   fade_time_ = 0;
 
-  // disable input(TODO) & disable event enqueue
+  // disable input & disable event enqueue
+  EnableInput(false);
   SceneTask *task = new SceneTask("fadeoutevent", [this] {
     this->CloseScene();
   });
   task->wait_for(theme_param_.fade_out_time);
+  scenetask_.DeleteAll();
   scenetask_.Enqueue(task);
   scenetask_.IsEnqueueable(false);
 }
@@ -206,6 +246,11 @@ void Scene::CloseScene()
 {
   SaveOptions();
   Game::getInstance().SetNextScene(next_scene_mode_);
+}
+
+void Scene::EnableInput(bool enable_input)
+{
+  is_input_available_ = enable_input;
 }
 
 void Scene::RegisterImage(ImageAuto img)
@@ -270,9 +315,9 @@ void Scene::SaveOptions()
   setting_.Save();
 }
 
-bool Scene::IsEventValidTime(const EventMessage& e) const
+bool Scene::is_input_available() const
 {
-  return input_available_time_ < e.GetTimeInMilisecond();
+  return is_input_available_;
 }
 
 void Scene::doUpdate(float delta)
@@ -321,7 +366,12 @@ void Scene::doRenderAfter()
     vi[2].y = h;
     vi[3].y = h;
     vi[0].a = vi[1].a = vi[2].a = vi[3].a = fade_alpha_;
+
+    // flush out previous rendering if exists
+    Graphic::RenderQuad();
+
     Graphic::SetTextureId(0);
+    Graphic::SetBlendMode(GL_ONE_MINUS_SRC_ALPHA);
     glColor3f(0, 0, 0);
     memcpy(Graphic::get_vertex_buffer(), vi, sizeof(VertexInfo) * 4);
     Graphic::RenderQuad();
@@ -460,6 +510,7 @@ void Scene::LoadFromCsv(const std::string& filepath)
       break;
     setting_.LoadProperty(v.first, v.second);
   }
+  setting_.ValidateAll();
 
   // open option file (if exists)
   // must do it before loading elements, as option affects to it.

@@ -54,7 +54,10 @@ void SelectScene::CloseScene()
 
 bool SelectScene::ProcessEvent(const EventMessage& e)
 {
-  if (e.IsInput() && !IsEventValidTime(e))
+  if (e.IsKeyUp() && e.GetKeycode() == GLFW_KEY_ESCAPE)
+      CloseScene();
+
+  if (!is_input_available())
     return true;
 
   if (e.IsKeyDown() || e.IsKeyPress())

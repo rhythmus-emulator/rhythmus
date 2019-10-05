@@ -109,7 +109,7 @@ void ResourceManager::CacheSystemDirectory()
 void ResourceManager::CacheDirectory(const std::string& dir)
 {
   // XXX: currently only files are cached.
-  GetFilesFromDirectory(dir, path_cached_, 5 /* not so deep ...? */);
+  GetFilesFromDirectory(dir, path_cached_, 500 /* not so deep ...? */);
 }
 
 void ResourceManager::MakePathHigherPriority(const std::string& path)
