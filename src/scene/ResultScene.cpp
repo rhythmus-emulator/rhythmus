@@ -36,6 +36,7 @@ bool ResultScene::ProcessEvent(const EventMessage& e)
   if (e.IsKeyDown())
   {
     TriggerFadeOut();
+    return false;
   }
 
   return true;

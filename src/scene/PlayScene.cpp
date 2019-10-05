@@ -62,13 +62,11 @@ void PlayScene::CloseScene()
 
 bool PlayScene::ProcessEvent(const EventMessage& e)
 {
-  if (e.IsKeyDown())
+  if (e.IsKeyDown() && e.GetKeycode() == GLFW_KEY_ESCAPE)
   {
-    if (e.GetKeycode() == GLFW_KEY_ESCAPE)
-    {
-      SongPlayable::getInstance().CancelLoad();
-      TriggerFadeOut();
-    }
+    SongPlayable::getInstance().CancelLoad();
+    TriggerFadeOut();
+    return false;
   }
 
   if (!is_input_available())

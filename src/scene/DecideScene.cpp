@@ -28,6 +28,7 @@ bool DecideScene::ProcessEvent(const EventMessage& e)
     // in case of song preload
     SongPlayable::getInstance().CancelLoad();
     TriggerFadeOut();
+    return false;
   }
 
   if (!is_input_available())
