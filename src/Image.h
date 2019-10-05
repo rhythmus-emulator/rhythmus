@@ -1,5 +1,6 @@
 #pragma once
 #include "Graphic.h"
+#include <memory>
 #include <string>
 
 namespace rhythmus
