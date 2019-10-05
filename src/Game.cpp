@@ -147,6 +147,7 @@ void Game::Update()
     if (next_game_scene_ == GameSceneMode::kGameSceneClose)
     {
       Graphic::getInstance().ExitRendering();
+      return;
     }
 
     game_scene_ = next_game_scene_;

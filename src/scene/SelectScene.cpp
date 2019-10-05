@@ -56,6 +56,7 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
 {
   if (e.IsKeyUp() && e.GetKeycode() == GLFW_KEY_ESCAPE)
   {
+    next_scene_mode_ = GameSceneMode::kGameSceneClose;
     CloseScene();
     return false;
   }

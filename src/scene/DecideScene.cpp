@@ -27,6 +27,7 @@ bool DecideScene::ProcessEvent(const EventMessage& e)
   {
     // in case of song preload
     SongPlayable::getInstance().CancelLoad();
+    next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
     TriggerFadeOut();
     return false;
   }
