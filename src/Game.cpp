@@ -99,7 +99,6 @@ bool Game::Load()
   if (!setting_.ReloadValues(setting_path_))
   {
     std::cerr << "Failed to game load settings, use default value." << std::endl;
-    return false;
   }
 
   // apply settings into system environment
