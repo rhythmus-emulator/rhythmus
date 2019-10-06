@@ -207,11 +207,17 @@ void SongList::Clear()
   load_count_ = 0;
   songs_.clear();
   invalidate_list_.clear();
+
+  song_selected_.level = 0;
+  song_selected_.judgediff = 0;
+  song_selected_.modified_date = 0;
+  song_selected_.title = "(no title)";
 }
 
 void SongList::LoadInvalidationList()
 {
   std::string filepath;
+  std::string chartname;
 
   while (true)
   {
@@ -223,9 +229,18 @@ void SongList::LoadInvalidationList()
       {
         break;
       }
-      filepath = invalidate_list_.front();
+      std::string path = invalidate_list_.front();
       invalidate_list_.pop_front();
-      current_loading_file_ = filepath;
+      current_loading_file_ = path;
+      // separate songpath and chartname, if necessary.
+      if (path.find('|') != std::string::npos)
+      {
+        Split(path, '|', filepath, chartname);
+      }
+      else
+      {
+        filepath = path;
+      }
     }
 
     // attempt song loading.
@@ -239,7 +254,17 @@ void SongList::LoadInvalidationList()
     dat.songpath = filepath;
     for (int i = 0; i < song->GetChartCount(); ++i)
     {
-      rparser::Chart* c = song->GetChart(i);
+      rparser::Chart* c = nullptr;
+      if (chartname.empty())
+      {
+        c = song->GetChart(i);
+      }
+      else
+      {
+        c = song->GetChart(chartname);
+        if (!c) break;
+        i = INT_MAX; // kind of trick to exit for loop instantly
+      }
       auto &meta = c->GetMetaData();
       meta.SetMetaFromAttribute();
       meta.SetUtf8Encoding();
@@ -271,6 +296,26 @@ void SongList::ClearInvalidationList()
 {
   std::lock_guard<std::mutex> lock(invalidate_list_mutex_);
   invalidate_list_.clear();
+}
+
+void SongList::LoadFileIntoSongList(const std::string& songpath, const std::string& chartname)
+{
+  // check a file is already exists
+  for (auto& song : songs_)
+  {
+    if (song.songpath == songpath)
+    {
+      if (chartname.empty() || song.chartpath == chartname)
+        return; /* chart already exists */
+    }
+  }
+
+  // make load task
+  std::string path = songpath;
+  if (!chartname.empty())
+    path += "|" + chartname;
+  invalidate_list_.push_back(path);
+  LoadInvalidationList();
 }
 
 int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **colnames)
@@ -328,6 +373,8 @@ std::vector<SongListData>::iterator SongList::begin() { return songs_.begin(); }
 std::vector<SongListData>::iterator SongList::end() { return songs_.end(); }
 const SongListData& SongList::get(int i) const { return songs_[i]; }
 SongListData SongList::get(int i) { return songs_[i]; }
+SongListData* SongList::get_current_song_info() { return &song_selected_; }
+void SongList::select(int i) { if (i >= 0 && i < songs_.size()) song_selected_ = songs_[i]; }
 
 
 // ----------------- class SongPlayableLoadTask

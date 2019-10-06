@@ -173,6 +173,11 @@ void Split(const std::string& str, char sep, std::vector<std::string>& vsOut)
   rutil::split(str, sep, vsOut);
 }
 
+void Split(const std::string& str, char sep, std::string &s1, std::string &s2)
+{
+  rutil::split(str, sep, s1, s2);
+}
+
 bool IsFile(const std::string& path)
 {
   return rutil::IsFile(path);

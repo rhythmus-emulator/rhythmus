@@ -20,6 +20,7 @@ public:
   std::string chartname;
   int type;
   int level;
+  int index;
 };
 
 /* @brief Pure music wheel item interface (no inheritance) */

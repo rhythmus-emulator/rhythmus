@@ -39,6 +39,8 @@ std::string Replace(const std::string& org, const std::string& target, const std
 
 void Split(const std::string& str, char sep, std::vector<std::string>& vsOut);
 
+void Split(const std::string& str, char sep, std::string &s1, std::string &s2);
+
 bool IsFile(const std::string& path);
 
 void GetDirectoriesFromPath(const std::string& dir_path, std::vector<std::string> &out);

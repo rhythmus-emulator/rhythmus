@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Timer.h"
+#include <stdint.h>
 
 namespace rhythmus
 {
@@ -9,10 +10,12 @@ namespace LR2Flag
 {
   int GetFlag(int flag_no);
   const char* GetText(int text_no);
-  bool IsTimerActive(int timer_no);
   void Update();
-  bool ShouldActiveTimer(int timer_no);
-
+  void ActiveTimer(size_t timer_no);
+  void DeactiveTimer(size_t timer_no);
+  bool IsTimerActive(size_t timer_no);
+  uint32_t GetTimerTime(size_t timer_no);
+    
   void SubscribeEvent();
 }
 

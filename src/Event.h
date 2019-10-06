@@ -35,8 +35,10 @@ enum Events
   kEventSongSelected,
   kEventSongLoadFinished,
   kEventSongStarted,
-  kEventPlayStarted,
-  kEventPlayAborted,
+  kEventPlayLoading,
+  kEventPlayReady,
+  kEventPlayStart,
+  kEventPlayAbort,
   kEventCleared,
 
   kEventLast    /* unused event; just for last index */

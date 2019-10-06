@@ -13,11 +13,6 @@ DecideScene::DecideScene()
 
 void DecideScene::LoadScene()
 {
-  // TODO: place this code to Game setting
-  Game::getInstance().SetAttribute(
-    "DecideScene", "../themes/WMIX_HD/decide/decide.lr2skin"
-  );
-
   Scene::LoadScene();
 }
 

@@ -17,11 +17,6 @@ SelectScene::SelectScene()
 
 void SelectScene::LoadScene()
 {
-  // TODO: place this code to Game setting
-  Game::getInstance().SetAttribute(
-    "SelectScene", "../themes/WMIX_HD/select/select.lr2skin"
-  );
-
   // Add wheel children first, as scene parameter may need it.
   // (e.g. LR2 command)
   AddChild(&wheel_);
@@ -69,11 +64,13 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
     if (e.GetKeycode() == GLFW_KEY_UP)
     {
       wheel_.NavigateUp();
+      SongList::getInstance().select(wheel_.get_selected_data().index);
       EventManager::SendEvent(Events::kEventSongSelectChanged);
     }
     else if (e.GetKeycode() == GLFW_KEY_DOWN)
     {
       wheel_.NavigateDown();
+      SongList::getInstance().select(wheel_.get_selected_data().index);
       EventManager::SendEvent(Events::kEventSongSelectChanged);
     }
   }
@@ -129,6 +126,7 @@ MusicWheel& SelectScene::get_wheel()
 
 void SelectScene::MakeSelectDataList()
 {
+  int i = 0;
   for (auto &song : SongList::getInstance())
   {
     auto &item = *wheel_.NewData<MusicWheelData>();
@@ -140,12 +138,14 @@ void SelectScene::MakeSelectDataList()
     item.chartname = song.chartpath;
     item.type = 0;
     item.level = song.level;
+    item.index = i++;
   }
 
   if (wheel_.size() == 0)
   {
     auto &item = *wheel_.NewData<MusicWheelData>();
     item.title = "(No Song)";
+    item.index = -1;
   }
 }
 

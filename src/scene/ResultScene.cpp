@@ -11,11 +11,6 @@ ResultScene::ResultScene()
 
 void ResultScene::LoadScene()
 {
-  // TODO: place this code to Game setting
-  Game::getInstance().SetAttribute(
-    "ResultScene", "../themes/WMIX_HD/result/WMIX_RESULT.lr2skin"
-  );
-
   Scene::LoadScene();
 }
 

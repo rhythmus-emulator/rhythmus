@@ -2,6 +2,7 @@
 #include "Timer.h"
 #include "Logger.h"
 #include "Util.h"
+#include "Song.h"
 #include "SceneManager.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -162,15 +163,26 @@ void Game::SetNextScene(GameSceneMode next_game_mode)
 
 void Game::LoadArgument(const std::string& argv)
 {
+  std::string cmd;
+  std::string v;
   if (argv[0] != '-') return;
-  if (argv == "-test")
+  Split(argv, '=', cmd, v);
+
+  if (cmd == "-test")
     game_boot_mode_ = GameBootMode::kBootTest;
-  else if (argv == "-reset")
+  else if (cmd == "-reset")
   {
   } // TODO
-  else if (argv == "-reloadsong")
+  else if (cmd == "-reloadsong")
   {
   } // TODO
+  else if (cmd == "-play")
+  {
+    // XXX: what if file load failed?
+    game_boot_mode_ = GameBootMode::kBootPlay;
+    SongList::getInstance().LoadFileIntoSongList(v);
+    SongList::getInstance().select(0);
+  }
 }
 
 template<>

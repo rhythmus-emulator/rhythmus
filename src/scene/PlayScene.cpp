@@ -1,5 +1,6 @@
 #include "PlayScene.h"
 #include "Song.h"
+#include "Util.h"
 #include "Player.h"
 
 namespace rhythmus
@@ -10,24 +11,96 @@ PlayScene::PlayScene()
 {
   set_name("PlayScene");
 
+  memset(&theme_play_param_, 0, sizeof(theme_play_param_));
+
   // next scene: result
   next_scene_mode_ = GameSceneMode::kGameSceneModeResult;
 }
 
 void PlayScene::LoadScene()
 {
-  // TODO: place this code to Game setting
-  Game::getInstance().SetAttribute(
-    "PlayScene", "../themes/WMIX_HD/play/HDPLAY_W.lr2skin"
-  );
 
   Scene::LoadScene();
 }
 
 void PlayScene::StartScene()
 {
+  // In case of Play-only boot mode:
+  // trigger event force to trigger some related events.
+  if (Game::getInstance().get_boot_mode() == GameBootMode::kBootPlay)
+  {
+    EventManager::SendEvent(Events::kEventSongSelectChanged);
+  }
+
+  // attempt to call song load (if not loaded)
+  if (!SongPlayable::getInstance().IsLoading() &&
+      !SongPlayable::getInstance().IsLoaded())
+  {
+    std::string path, song_path, chart_name;
+    song_path = SongList::getInstance().get_current_song_info()->songpath;
+    chart_name = SongList::getInstance().get_current_song_info()->chartpath;
+    SongPlayable::getInstance().LoadAsync(song_path, chart_name);
+  }
+
+  // send loading event
+  EventManager::SendEvent(Events::kEventPlayLoading);
+
+  // enqueue event: song loading
+  {
+    SceneTask *task = new SceneTask("songreadytask", [this] {
+      // TODO: need to upload bitmap here
+
+      // TODO: ready? timer
+
+      // TODO: Tick game timer manually here,
+      // as uploading bitmap may cost much time ...
+
+      // trigger song ready event
+      EventManager::SendEvent(Events::kEventPlayReady);
+    });
+    task->wait_for(theme_param_.begin_input_time);
+    task->wait_cond([this] {
+      return SongPlayable::getInstance().IsLoaded();
+    });
+    playscenetask_.Enqueue(task);
+  }
+
+  // enqueue event: song ready ~ start
+  {
+    SceneTask *task = new SceneTask("songplaytask", [this] {
+      // trigger song play event
+      EventManager::SendEvent(Events::kEventPlayStart);
+
+      // Play song & trigger players to start
+      {
+        int i;
+        Player *p;
+        FOR_EACH_PLAYER(p, i)
+        {
+          p->StartPlay();
+        }
+      }
+      SongPlayable::getInstance().Play();
+      this->play_status_ = 1;
+    });
+    task->wait_for(theme_play_param_.ready_time);
+    playscenetask_.Enqueue(task);
+  }
+
+  // enqueue event: song finished
+  {
+    SceneTask *task = new SceneTask("songfinishedtask", [this] {
+      this->CloseScene();
+      this->play_status_ = 3;
+    });
+    task->wait_cond([this] {
+      return SongPlayable::getInstance().IsPlayFinished();
+    });
+    playscenetask_.Enqueue(task);
+  }
+
+  // do default StartScene() function
   Scene::StartScene();
-  //Game::getInstance().ChangeGameMode();
 
   // Prepare each player to start recording
   {
@@ -35,15 +108,6 @@ void PlayScene::StartScene()
     int i;
     FOR_EACH_PLAYER(p, i)
       p->StartPlay();
-  }
-
-  // Song loading is might be already started from SelectScene.
-  // But, if it's not loaded (by some reason),
-  // or if it loaded different song, then we need to reload it.
-  if (!SongPlayable::getInstance().IsLoading() &&
-      !SongPlayable::getInstance().IsLoaded())
-  {
-    // TODO: reload song
   }
 }
 
@@ -78,46 +142,7 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
 void PlayScene::doUpdate(float delta)
 {
   Scene::doUpdate(delta);
-
-  switch (play_status_)
-  {
-  case 0:
-    if (SongPlayable::getInstance().IsLoaded())
-    {
-      // trigger event
-      EventManager::SendEvent(Events::kEventSongLoadFinished);
-
-      // TODO: need to upload bitmap here
-
-      // TODO: ready? timer
-
-      // TODO: Tick game timer manually here,
-      // as uploading bitmap may cost much time ...
-
-      // Play song & trigger players to start
-      {
-        int i;
-        Player *p;
-        FOR_EACH_PLAYER(p, i)
-          p->StartPlay();
-      }
-      SongPlayable::getInstance().Play();
-      play_status_ = 1;
-    }
-    break;
-  case 1:
-    SongPlayable::getInstance().Update(delta);
-    if (SongPlayable::getInstance().IsPlayFinished())
-    {
-      CloseScene();
-      play_status_ = 3;
-    }
-    break;
-  case 2:
-  case 3:
-    // don't do anything
-    break;
-  }
+  playscenetask_.Update(delta);
 
   // Update all players
   {
@@ -126,6 +151,28 @@ void PlayScene::doUpdate(float delta)
     FOR_EACH_PLAYER(p, i)
       p->Update(delta);
   }
+}
+
+void PlayScene::LoadProperty(const std::string& prop_name, const std::string& value)
+{
+  if (prop_name == "#SCRATCHSIDE")
+  {
+    theme_play_param_.playside = atoi(value.c_str());
+  }
+  else if (prop_name == "#LOADSTART")
+  {
+    // ignore this parameter
+    //theme_play_param_.loadend_wait_time += atoi(value.c_str());
+  }
+  else if (prop_name == "#LOADEND")
+  {
+    theme_play_param_.load_wait_time = atoi(value.c_str());
+  }
+  else if (prop_name == "#PLAYSTART")
+  {
+    theme_play_param_.ready_time = atoi(value.c_str());
+  }
+  else Scene::LoadProperty(prop_name, value);
 }
 
 }

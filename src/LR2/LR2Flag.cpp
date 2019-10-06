@@ -1,8 +1,8 @@
 #include "LR2Flag.h"
 #include "Event.h"
 #include "Game.h"
+#include "Song.h"
 #include "SceneManager.h"
-#include "scene/SelectScene.h"
 #include "rutil.h"  /* string modification */
 #include "Error.h"
 
@@ -14,11 +14,8 @@ namespace rhythmus
     // DST OP Flags used by LR2.
     static int LR2Flag[1000];
 
-    // previously stored timer status.
-    bool LR2Timer_prev_activated[1000];
-
-    // current timer status.
-    bool LR2Timer_curr_activated[1000];
+    // Timer started time. (Zero : not started)
+    uint32_t LR2Timer[1000];
 
     std::string LR2Text_str[1000];
 
@@ -40,9 +37,25 @@ namespace rhythmus
       return LR2Text[text_no];
     }
 
-    bool IsTimerActive(int timer_no)
+    bool IsTimerActive(size_t timer_no)
     {
-      return LR2Timer_curr_activated[timer_no];
+      return LR2Timer[timer_no] > 0;
+    }
+
+    void ActiveTimer(size_t timer_no)
+    {
+      LR2Timer[timer_no] = Timer::GetGameTimeInMillisecond();
+    }
+
+    void DeactiveTimer(size_t timer_no)
+    {
+      LR2Timer[timer_no] = 0;
+    }
+
+    uint32_t GetTimerTime(size_t timer_no)
+    {
+      return LR2Timer[timer_no] == 0 ?
+        0 : Timer::GetGameTimeInMillisecond() - LR2Timer[timer_no];
     }
 
     void Update()
@@ -52,19 +65,6 @@ namespace rhythmus
       LR2Flag[0] = 1;
       LR2Flag[50] = 1;  // OFFLINE
       LR2Flag[52] = 1;  // EXTRA MODE OFF
-
-      memcpy(LR2Timer_prev_activated, LR2Timer_curr_activated, sizeof(LR2Timer_prev_activated));
-
-      // TODO: update LR2Timer (using EventReceiver?)
-      memset(LR2Timer_curr_activated, 0, sizeof(LR2Timer_curr_activated));
-      LR2Timer_curr_activated[0] = true;
-    }
-
-    bool ShouldActiveTimer(int timer_no)
-    {
-      // TODO: more detailed checking necessary
-      // e.g. checking timer start time
-      return LR2Timer_curr_activated[timer_no];
     }
 
 
@@ -75,36 +75,42 @@ namespace rhythmus
       {
         switch (e.GetEventID())
         {
-        case Events::kEventSceneConfigLoaded:
-        {
-          // update LR2flag status
-          for (int i = 900; i < 1000; ++i)
-            LR2Flag[i] = 0;
-          const auto& theme_param = SceneManager::get_current_scene()->get_theme_parameter();
-          for (auto ii : theme_param.attributes)
+          case Events::kEventSceneConfigLoaded:
           {
-            int flag_no = atoi(ii.first.c_str());
-            if (flag_no >= 900 && flag_no < 1000)
-              LR2Flag[flag_no] = 1;
+            // update LR2flag status
+            for (int i = 900; i < 1000; ++i)
+              LR2Flag[i] = 0;
+            const auto& theme_param = SceneManager::get_current_scene()->get_theme_parameter();
+            for (auto ii : theme_param.attributes)
+            {
+              int flag_no = atoi(ii.first.c_str());
+              if (flag_no >= 900 && flag_no < 1000)
+                LR2Flag[flag_no] = 1;
+            }
+            break;
           }
-          break;
-        }
-        case Events::kEventSongSelectChanged:
-        {
-          // XXX: Better to check current scene is really SelectScene
-          // before do casting.
-          SelectScene* scene =
-            static_cast<SelectScene*>(SceneManager::getInstance().get_current_scene());
-          auto& sel_data = scene->get_wheel().get_selected_data();
-          LR2Text[10] = sel_data.title.c_str();
-          LR2Text[11] = sel_data.subtitle.c_str();
-          LR2Text_str[12] = sel_data.title + " " + sel_data.subtitle;
-          LR2Text[12] = LR2Text_str[12].c_str();
-          LR2Text[13] = sel_data.genre.c_str();
-          LR2Text[14] = sel_data.artist.c_str();
-          LR2Text[15] = sel_data.subartist.c_str();
-          break;
-        }
+          case Events::kEventSongSelectChanged:
+          {
+            auto &sel_data = *SongList::getInstance().get_current_song_info();
+            LR2Text[10] = sel_data.title.c_str();
+            LR2Text[11] = sel_data.subtitle.c_str();
+            LR2Text_str[12] = sel_data.title + " " + sel_data.subtitle;
+            LR2Text[12] = LR2Text_str[12].c_str();
+            LR2Text[13] = sel_data.genre.c_str();
+            LR2Text[14] = sel_data.artist.c_str();
+            LR2Text[15] = sel_data.subartist.c_str();
+            break;
+          }
+          case Events::kEventPlayLoading:
+            DeactiveTimer(40);  // READY
+            DeactiveTimer(41);  // START
+            break;
+          case Events::kEventPlayReady:
+            ActiveTimer(40);
+            break;
+          case Events::kEventPlayStart:
+            ActiveTimer(41);
+            break;
         }
         return true;
       }
@@ -115,6 +121,9 @@ namespace rhythmus
       static LR2EventReceiver r;
       r.SubscribeTo(Events::kEventSceneConfigLoaded);
       r.SubscribeTo(Events::kEventSongSelectChanged);
+      r.SubscribeTo(Events::kEventPlayLoading);
+      r.SubscribeTo(Events::kEventPlayReady);
+      r.SubscribeTo(Events::kEventPlayStart);
     }
   }
 

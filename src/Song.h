@@ -51,6 +51,15 @@ public:
    * (for canceling songlist loading) */
   void ClearInvalidationList();
 
+  /**
+   * @brief
+   * Load a song file into song list if file not exist in songlist.\
+   */
+  void LoadFileIntoSongList(
+    const std::string& songpath,
+    const std::string& chartname = std::string()
+  );
+
   double get_progress() const;
   bool is_loaded() const;
   std::string get_loading_filename() const;
@@ -61,11 +70,20 @@ public:
   const SongListData& get(int i) const;
   SongListData get(int i);
 
+  /* @brief get currently selected SongInfo */
+  SongListData* get_current_song_info();
+
+  /* @brief trigger songlist selection */
+  void select(int i);
+
   static SongList& getInstance();
 
 private:
   // loaded songs
   std::vector<SongListData> songs_;
+
+  // currently selected SongListData
+  SongListData song_selected_;
 
   // songs to invalidate
   std::list<std::string> invalidate_list_;
