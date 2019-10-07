@@ -17,10 +17,8 @@ namespace rhythmus
     // Timer started time. (Zero : not started)
     uint32_t LR2Timer[1000];
 
-    std::string LR2Text_str[1000];
-
     // strings for TEXT
-    const char* LR2Text[1000];
+    std::string LR2Text[1000];
 
     int GetFlag(int flag_no)
     {
@@ -34,7 +32,7 @@ namespace rhythmus
     const char* GetText(int text_no)
     {
       ASSERT(text_no < 1000);
-      return LR2Text[text_no];
+      return LR2Text[text_no].c_str();
     }
 
     bool IsTimerActive(size_t timer_no)
@@ -92,13 +90,12 @@ namespace rhythmus
           case Events::kEventSongSelectChanged:
           {
             auto &sel_data = *SongList::getInstance().get_current_song_info();
-            LR2Text[10] = sel_data.title.c_str();
-            LR2Text[11] = sel_data.subtitle.c_str();
-            LR2Text_str[12] = sel_data.title + " " + sel_data.subtitle;
-            LR2Text[12] = LR2Text_str[12].c_str();
-            LR2Text[13] = sel_data.genre.c_str();
-            LR2Text[14] = sel_data.artist.c_str();
-            LR2Text[15] = sel_data.subartist.c_str();
+            LR2Text[10] = sel_data.title;
+            LR2Text[11] = sel_data.subtitle;
+            LR2Text[12] = sel_data.title + " " + sel_data.subtitle;
+            LR2Text[13] = sel_data.genre;
+            LR2Text[14] = sel_data.artist;
+            LR2Text[15] = sel_data.subartist;
             break;
           }
           case Events::kEventPlayLoading:
