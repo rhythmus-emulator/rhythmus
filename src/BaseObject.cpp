@@ -544,6 +544,8 @@ bool BaseObject::IsTweening() const
 // milisecond
 void BaseObject::Update(float delta)
 {
+  if (!IsUpdatable())
+    return;
   UpdateTween(delta);
   doUpdate(delta);
   for (auto* p : children_)
@@ -577,6 +579,7 @@ void BaseObject::doUpdate(float delta) {}
 void BaseObject::doRender() {}
 void BaseObject::doUpdateAfter(float delta) {}
 void BaseObject::doRenderAfter() {}
+bool BaseObject::IsUpdatable() { return true; }
 
 
 #define TWEEN_ATTRS \

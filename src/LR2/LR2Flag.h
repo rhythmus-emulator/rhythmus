@@ -27,6 +27,7 @@ public:
   bool IsLR2Visible() const;
   void set_op(int op1, int op2 = 0, int op3 = 0);
   void set_timer_id(int timer_id);
+  int get_timer_id() const;
 private:
   int op_[3];
   int timer_id_;

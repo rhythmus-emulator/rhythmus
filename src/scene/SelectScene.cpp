@@ -17,6 +17,10 @@ SelectScene::SelectScene()
 
 void SelectScene::LoadScene()
 {
+  // Before starting, unload song.
+  SongPlayable::getInstance().CancelLoad();
+  SongPlayable::getInstance().Clear();
+
   // Add wheel children first, as scene parameter may need it.
   // (e.g. LR2 command)
   AddChild(&wheel_);
@@ -29,7 +33,6 @@ void SelectScene::LoadScene()
 
   // Send some initial events to invalidate specific object
   // (e.g. song title text object)
-  // - should be called AFTER wheel / LR2objects(LoadScene) are loaded.
   EventManager::SendEvent(Events::kEventSongSelectChanged);
 }
 

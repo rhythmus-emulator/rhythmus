@@ -20,6 +20,8 @@ private:
 
   // to make specific attribute is only loaded for once
   bool attr_loaded_;
+
+  virtual bool IsUpdatable();
 };
 
 }

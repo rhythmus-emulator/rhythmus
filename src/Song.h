@@ -101,7 +101,7 @@ private:
   static int sql_songlist_callback(void*, int argc, char **argv, char **colnames);
 };
 
-/* @brief A singleton class. Song data with playing context. */
+/* @brief A singleton class. Song resources with playing context. */
 class SongPlayable
 {
 public:
@@ -110,12 +110,15 @@ public:
   void Load(const std::string& path, const std::string& chartpath);
   void LoadAsync(const std::string& path, const std::string& chartpath);
   void LoadResources();
+  void UploadBgaImages();
   void CancelLoad();
 
   void Play();
   void Stop();
   void Update(float delta);
   void Clear();
+
+  void SetBgaLoading(bool v);
 
   bool IsLoading() const;
   bool IsLoaded() const;
@@ -124,6 +127,7 @@ public:
   double GetProgress() const;
   double GetSongStartTime() const;
   int GetSongEclipsedTime() const;
+  Image& GetBgaImage(int bga_index);
 
   /* @brief make judgement, sound, and score change with input */
   void Input(int keycode, uint32_t gametime);
@@ -158,7 +162,8 @@ private:
 
   /* events like bg / trigger / bgm ... */
   struct EventNote {
-    int type; // 0: bgm, 1: bga
+    int type;     // 0: bgm, 1: bga
+    int subtype;  // subtype for bga (up to 4)
     int channel;
     int time;
   };
@@ -181,7 +186,9 @@ private:
   uint32_t song_current_time_;
   
   rmixer::KeySoundPoolWithTime keysound_;
-  Image bg_[1000];
+  bool is_bga_loading_;
+  Image bg_[2000];
+  int bg_current_channel_[4];
 
   // TODO: input settings.
 };

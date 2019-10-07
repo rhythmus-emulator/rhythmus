@@ -421,7 +421,8 @@ SongPlayable::SongPlayable()
   : song_(nullptr), chart_(nullptr),
     note_current_idx_(0), event_current_idx_(0),
     is_loaded_(0), load_thread_count_(4), load_total_count_(0), load_count_(0),
-    song_start_time_(0)
+    song_start_time_(0), song_current_time_(0),
+    is_bga_loading_(true)
 {
   // XXX: 2048 is proper size?
   keysound_.Initalize(2048);
@@ -431,6 +432,7 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
 {
   // XXX: change variable to RAII type?
   is_loaded_ = 1;
+  memset(bg_current_channel_, 0, sizeof(bg_current_channel_));
   tasks_.clear();
 
   song_ = new rparser::Song();
@@ -472,10 +474,17 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
   for (auto &evnt : eventdata)
   {
     EventNote n;
-    n.type = 1;
-    n.time = evnt.time_msec;
-    n.channel = 0; //evnt.type; // TODO: make get_value method.
-    events_.push_back(n);
+    if (evnt.subtype() == rparser::NoteEventTypes::kBGA)
+    {
+      int bga_type;
+      rparser::Channel channel;
+      n.time = evnt.time_msec;
+      evnt.GetBga(bga_type, channel);
+      n.type = 1;
+      n.subtype = (int)bga_type;
+      n.channel = (int)channel;
+      events_.push_back(n);
+    }
   }
   event_current_idx_ = 0;
 
@@ -499,7 +508,7 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
   // preparation before calling loader thread
   keysound_.LoadFromChart(*song_, *chart_);
 
-  // create loader task
+  // create resource loader task
   for (int i = 0; i < load_thread_count_; ++i)
   {
     TaskAuto t = std::make_shared<SongPlayableResourceLoadTask>();
@@ -542,6 +551,10 @@ void SongPlayable::LoadResources()
     }
     else if (li.type == 1 /* bga */)
     {
+      // if not going to load Bga ...
+      if (!is_bga_loading_)
+        continue;
+
       const char* file;
       size_t len;
       if (!dir->GetFile(li.path, &file, len))
@@ -555,6 +568,16 @@ void SongPlayable::LoadResources()
 
   /* load done */
   is_loaded_ = 2;
+}
+
+void SongPlayable::UploadBgaImages()
+{
+  // XXX: limit BGA to 1000?
+  for (size_t i = 0; i < 2000; ++i)
+  {
+    if (bg_[i].is_loaded())
+      bg_[i].CommitImage();
+  }
 }
 
 void SongPlayable::CancelLoad()
@@ -609,7 +632,7 @@ void SongPlayable::Update(float delta)
       case 0: // bgm
         break;
       case 1: // bga
-        // TODO: set current_bga ImageAuto.
+        bg_current_channel_[events_[i].subtype] = events_[i].channel;
         break;
       }
     }
@@ -626,7 +649,7 @@ void SongPlayable::Clear()
 
   keysound_.UnregisterAll();
 
-  for (int i = 0; i < 1000; ++i)
+  for (int i = 0; i < 2000; ++i)
     bg_[i].UnloadAll();
 
   if (song_)
@@ -638,6 +661,11 @@ void SongPlayable::Clear()
   chart_ = nullptr;
   song_ = nullptr;
   is_loaded_ = 0;
+}
+
+void SongPlayable::SetBgaLoading(bool v)
+{
+  is_bga_loading_ = v;
 }
 
 bool SongPlayable::IsLoading() const
@@ -677,6 +705,11 @@ int SongPlayable::GetSongEclipsedTime() const
 {
   if (song_start_time_ == 0) return 0;
   return static_cast<int>(song_current_time_ - song_start_time_);
+}
+
+Image& SongPlayable::GetBgaImage(int bga_index)
+{
+  return bg_[bg_current_channel_[bga_index]];
 }
 
 void SongPlayable::Input(int keycode, uint32_t gametime)

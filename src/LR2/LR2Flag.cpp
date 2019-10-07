@@ -50,6 +50,16 @@ namespace rhythmus
       LR2Timer[timer_no] = 0;
     }
 
+    void SetFlag(int flag_no)
+    {
+      LR2Flag[flag_no] = 1;
+    }
+    
+    void ResetFlag(int flag_no)
+    {
+      LR2Flag[flag_no] = 0;
+    }
+
     uint32_t GetTimerTime(size_t timer_no)
     {
       return (timer_no > 0 && LR2Timer[timer_no] == 0) ?
@@ -99,10 +109,14 @@ namespace rhythmus
             break;
           }
           case Events::kEventPlayLoading:
+            SetFlag(80);        // Loading
+            ResetFlag(81);      // Loaded
             DeactiveTimer(40);  // READY
             DeactiveTimer(41);  // START
             break;
           case Events::kEventPlayReady:
+            ResetFlag(80);
+            SetFlag(81);
             ActiveTimer(40);
             break;
           case Events::kEventPlayStart:
@@ -145,5 +159,10 @@ namespace rhythmus
   void LR2BaseObject::set_timer_id(int timer_id)
   {
     timer_id_ = timer_id;
+  }
+
+  int LR2BaseObject::get_timer_id() const
+  {
+    return timer_id_;
   }
 }

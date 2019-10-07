@@ -41,4 +41,9 @@ bool LR2Sprite::IsVisible() const
   return IsLR2Visible() && Sprite::IsVisible();
 }
 
+bool LR2Sprite::IsUpdatable()
+{
+  return LR2Flag::IsTimerActive(get_timer_id());
+}
+
 }

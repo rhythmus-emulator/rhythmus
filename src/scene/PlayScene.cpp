@@ -48,9 +48,8 @@ void PlayScene::StartScene()
   // enqueue event: song loading
   {
     SceneTask *task = new SceneTask("songreadytask", [this] {
-      // TODO: need to upload bitmap here
-
-      // TODO: ready? timer
+      // need to upload bitmap here
+      SongPlayable::getInstance().UploadBgaImages();
 
       // TODO: Tick game timer manually here,
       // as uploading bitmap may cost much time ...
@@ -58,7 +57,7 @@ void PlayScene::StartScene()
       // trigger song ready event
       EventManager::SendEvent(Events::kEventPlayReady);
     });
-    task->wait_for(theme_param_.begin_input_time);
+    task->wait_for(theme_play_param_.load_wait_time);
     task->wait_cond([this] {
       return SongPlayable::getInstance().IsLoaded();
     });
@@ -143,6 +142,11 @@ void PlayScene::doUpdate(float delta)
 {
   Scene::doUpdate(delta);
   playscenetask_.Update(delta);
+
+  if (play_status_ == 1)
+  {
+    SongPlayable::getInstance().Update(delta);
+  }
 
   // Update all players
   {
