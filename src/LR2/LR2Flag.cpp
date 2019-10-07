@@ -23,6 +23,7 @@ namespace rhythmus
     int GetFlag(int flag_no)
     {
       ASSERT(flag_no < 1000);
+      if (flag_no == 0) return 1;
       if (flag_no >= 0)
         return LR2Flag[flag_no];
       else
@@ -68,9 +69,6 @@ namespace rhythmus
 
     void Update()
     {
-      // TODO: update LR2Flag.
-      memset(LR2Flag, 0, sizeof(LR2Flag));
-      LR2Flag[0] = 1;
       LR2Flag[50] = 1;  // OFFLINE
       LR2Flag[52] = 1;  // EXTRA MODE OFF
     }
