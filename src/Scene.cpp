@@ -367,9 +367,6 @@ void Scene::doRenderAfter()
     vi[3].y = h;
     vi[0].a = vi[1].a = vi[2].a = vi[3].a = fade_alpha_;
 
-    // flush out previous rendering if exists
-    Graphic::RenderQuad();
-
     Graphic::SetTextureId(0);
     Graphic::SetBlendMode(GL_ONE_MINUS_SRC_ALPHA);
     glColor3f(0, 0, 0);

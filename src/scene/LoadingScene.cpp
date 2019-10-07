@@ -93,6 +93,7 @@ void LoadingScene::doUpdate(float)
     {
       // run first time when loading is done
       std::cout << "LoadingScene: Song list loading finished." << std::endl;
+      SongList::getInstance().select(0);  // select first item
       EventManager::SendEvent(Events::kEventSongListLoadFinished);
       check_loaded = true;
     }

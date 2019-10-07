@@ -39,7 +39,7 @@ namespace rhythmus
 
     bool IsTimerActive(size_t timer_no)
     {
-      return LR2Timer[timer_no] > 0;
+      return timer_no == 0 || LR2Timer[timer_no] > 0;
     }
 
     void ActiveTimer(size_t timer_no)
@@ -54,7 +54,7 @@ namespace rhythmus
 
     uint32_t GetTimerTime(size_t timer_no)
     {
-      return LR2Timer[timer_no] == 0 ?
+      return (timer_no > 0 && LR2Timer[timer_no] == 0) ?
         0 : Timer::GetGameTimeInMillisecond() - LR2Timer[timer_no];
     }
 
