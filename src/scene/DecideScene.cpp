@@ -21,7 +21,7 @@ bool DecideScene::ProcessEvent(const EventMessage& e)
   if (e.IsKeyUp() && e.GetKeycode() == GLFW_KEY_ESCAPE)
   {
     // in case of song preload
-    SongPlayable::getInstance().CancelLoad();
+    SongResource::getInstance().CancelLoad();
     next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
     TriggerFadeOut();
     return false;

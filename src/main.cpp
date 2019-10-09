@@ -80,8 +80,7 @@ int main(int argc, char **argv)
   
   TaskPool::getInstance().ClearTaskPool();
   SceneManager::getInstance().Cleanup();
-  SongPlayable::getInstance().CancelLoad(); // if loading, than cancel
-  SongPlayable::getInstance().Clear();
+  SongResource::getInstance().Clear();
   graphic.Cleanup();
   SoundDriver::getInstance().Destroy();
   if (!game.Save())

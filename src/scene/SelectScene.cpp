@@ -1,6 +1,7 @@
 #include "SelectScene.h"
 #include "Event.h"
 #include "SceneManager.h"
+#include "Player.h"
 #include "Song.h"
 
 namespace rhythmus
@@ -18,8 +19,15 @@ SelectScene::SelectScene()
 void SelectScene::LoadScene()
 {
   // Before starting, unload song.
-  SongPlayable::getInstance().CancelLoad();
-  SongPlayable::getInstance().Clear();
+  {
+    Player *p;
+    int i;
+    FOR_EACH_PLAYER(p, i)
+    {
+      p->get_chart_player().Clear();
+    }
+  }
+  SongResource::getInstance().Clear();
 
   // Add wheel children first, as scene parameter may need it.
   // (e.g. LR2 command)
@@ -89,7 +97,8 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
       // Trick: preload selected song from here
       // we can play song almost without loading time ...!
       auto &d = wheel_.get_selected_data();
-      SongPlayable::getInstance().LoadAsync(d.songpath, d.chartname);
+      SongResource::getInstance().LoadAsync(d.songpath);
+      Player::getMainPlayer().set_chartname(d.chartname);
 
       // Song selection - immediately change scene mode
       CloseScene();

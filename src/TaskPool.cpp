@@ -125,6 +125,11 @@ void TaskPool::SetPoolSize(size_t size)
   pool_size_ = size;
 }
 
+size_t TaskPool::GetPoolSize() const
+{
+  return pool_size_;
+}
+
 void TaskPool::EnqueueTask(TaskAuto& task)
 {
   std::lock_guard<std::mutex> lock(task_pool_mutex_);

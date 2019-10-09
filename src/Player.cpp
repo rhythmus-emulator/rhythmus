@@ -79,6 +79,7 @@ void Player::LoadPlay(bool load_replay)
   is_save_allowed_ = false;
   is_save_record_ = false;
   is_save_replay_ = false;
+  chartplayer_.Load(chartname_);
 }
 
 void Player::SavePlay()
@@ -147,6 +148,13 @@ void Player::StartPlay()
   bool check = (assist_ == 0);
   is_save_record_ = check;
   is_save_replay_ = check;
+
+  chartplayer_.Play();
+}
+
+void Player::StopPlay()
+{
+  chartplayer_.Stop();
 }
 
 void Player::StartNextSong()
@@ -227,10 +235,21 @@ bool Player::is_alive() const
   return is_alive_;
 }
 
+void Player::set_chartname(const std::string& chartname)
+{
+  chartname_ = chartname;
+}
+
+ChartPlayer& Player::get_chart_player()
+{
+  return chartplayer_;
+}
+
 void Player::Update(float delta)
 {
   // fetch some playing context from song ... ?
   //passed_note_++; // TODO
+  chartplayer_.Update(delta);
 }
 
 

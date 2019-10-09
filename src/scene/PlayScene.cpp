@@ -33,13 +33,13 @@ void PlayScene::StartScene()
   }
 
   // attempt to call song load (if not loaded)
-  if (!SongPlayable::getInstance().IsLoading() &&
-      !SongPlayable::getInstance().IsLoaded())
+  if (SongResource::getInstance().is_loaded() == 0)
   {
     std::string path, song_path, chart_name;
     song_path = SongList::getInstance().get_current_song_info()->songpath;
     chart_name = SongList::getInstance().get_current_song_info()->chartpath;
-    SongPlayable::getInstance().LoadAsync(song_path, chart_name);
+    Player::getMainPlayer().set_chartname(chart_name);
+    SongResource::getInstance().LoadAsync(song_path);
   }
 
   // send loading event
@@ -49,7 +49,17 @@ void PlayScene::StartScene()
   {
     SceneTask *task = new SceneTask("songreadytask", [this] {
       // need to upload bitmap here
-      SongPlayable::getInstance().UploadBgaImages();
+      SongResource::getInstance().UploadBitmaps();
+
+      // fetch chart for each player
+      {
+        Player *p;
+        int i;
+        FOR_EACH_PLAYER(p, i)
+        {
+          p->LoadPlay(false); // XXX: not replaymode currently
+        }
+      }
 
       // TODO: Tick game timer manually here,
       // as uploading bitmap may cost much time ...
@@ -59,7 +69,7 @@ void PlayScene::StartScene()
     });
     task->wait_for(theme_play_param_.load_wait_time);
     task->wait_cond([this] {
-      return SongPlayable::getInstance().IsLoaded();
+      return SongResource::getInstance().is_loaded() >= 2;
     });
     playscenetask_.Enqueue(task);
   }
@@ -79,7 +89,6 @@ void PlayScene::StartScene()
           p->StartPlay();
         }
       }
-      SongPlayable::getInstance().Play();
       this->play_status_ = 1;
     });
     task->wait_for(theme_play_param_.ready_time);
@@ -93,7 +102,7 @@ void PlayScene::StartScene()
       this->play_status_ = 3;
     });
     task->wait_cond([this] {
-      return SongPlayable::getInstance().IsPlayFinished();
+      return Player::getMainPlayer().get_chart_player().IsPlayFinished();
     });
     playscenetask_.Enqueue(task);
   }
@@ -127,7 +136,15 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
 {
   if (e.IsKeyDown() && e.GetKeycode() == GLFW_KEY_ESCAPE)
   {
-    SongPlayable::getInstance().CancelLoad();
+    {
+      int i;
+      Player *p;
+      FOR_EACH_PLAYER(p, i)
+      {
+        p->StopPlay();
+      }
+    }
+    SongResource::getInstance().CancelLoad();
     TriggerFadeOut();
     return false;
   }
@@ -145,7 +162,7 @@ void PlayScene::doUpdate(float delta)
 
   if (play_status_ == 1)
   {
-    SongPlayable::getInstance().Update(delta);
+    SongResource::getInstance().Update(delta);
   }
 
   // Update all players

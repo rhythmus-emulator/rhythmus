@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Song.h"
 #include "Setting.h"
 #include <string>
 
@@ -59,6 +60,7 @@ public:
   void SetPlayId(const std::string& play_id);
   void LoadPlay(bool load_replay = false);
   void SavePlay();
+  void StopPlay();
   void ClearPlay();
 
   /* Should be called after song is loaded */
@@ -77,6 +79,8 @@ public:
   double get_score() const;
   double get_health() const;
   bool is_alive() const;
+  void set_chartname(const std::string& chartname);
+  ChartPlayer& get_chart_player();
 
   void Update(float delta);
 
@@ -123,6 +127,8 @@ private: \
   /* unsaved playing context (for single stage) */
 
   std::string play_id_;
+  ChartPlayer chartplayer_;
+  std::string chartname_;
 
   double health_;
   int is_alive_;

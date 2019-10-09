@@ -42,7 +42,6 @@ SongList::SongList()
   : is_loaded_(false)
 {
   song_dir_ = "../songs";
-  thread_count_ = 4;
   Clear();
 }
 
@@ -130,8 +129,8 @@ void SongList::Load()
   total_inval_size_ = invalidate_list_.size();
   EventManager::SendEvent(Events::kEventSongListLoaded);
 
-  ASSERT(thread_count_ > 0);
-  for (int i = 0; i < thread_count_; ++i)
+  size_t thread_count_ = TaskPool::getInstance().GetPoolSize();
+  for (size_t i = 0; i < thread_count_; ++i)
   {
     TaskAuto t = std::make_unique<SongListUpdateTask>();
     TaskPool::getInstance().EnqueueTask(t);
@@ -377,19 +376,19 @@ SongListData* SongList::get_current_song_info() { return &song_selected_; }
 void SongList::select(int i) { if (i >= 0 && i < songs_.size()) song_selected_ = songs_[i]; }
 
 
-// ----------------- class SongPlayableLoadTask
+// ----------------- class SongResourceLoadTask
 
-class SongPlayableChartLoadTask : public Task
+class SongResourceLoadTask : public Task
 {
 public:
-  SongPlayableChartLoadTask
-  (const std::string& song_path, const std::string& chart_name)
-    : song_path_(song_path), chart_name_(chart_name)
+  SongResourceLoadTask
+  (SongResource *res, const std::string& song_path)
+    : res_(res), song_path_(song_path)
   {}
 
   virtual void run()
   {
-    SongPlayable::getInstance().Load(song_path_, chart_name_);
+    res_->Load(song_path_);
   }
 
   virtual void abort()
@@ -397,66 +396,274 @@ public:
   }
 
 private:
+  SongResource *res_;
   std::string song_path_;
-  std::string chart_name_;
 };
 
-class SongPlayableResourceLoadTask : public Task
+class SongResourceLoadResourceTask : public Task
 {
 public:
+  SongResourceLoadResourceTask(SongResource *res)
+    : res_(res) {}
+
   virtual void run()
   {
-    SongPlayable::getInstance().LoadResources();
+    res_->LoadResources();
   }
 
   virtual void abort()
   {
-    SongPlayable::getInstance().CancelLoad();
+    res_->CancelLoad();
   }
+
+private:
+  SongResource *res_;
 };
 
-// ------------------------- class SongPlayable
+// ------------------------- class SongResource
 
-SongPlayable::SongPlayable()
-  : song_(nullptr), chart_(nullptr),
-    note_current_idx_(0), event_current_idx_(0),
-    is_loaded_(0), load_thread_count_(4), load_total_count_(0), load_count_(0),
-    song_start_time_(0), song_current_time_(0),
-    is_bga_loading_(true)
+SongResource::SongResource()
+  : song_(nullptr), is_loaded_(0), load_bga_(true)
 {
-  // XXX: 2048 is proper size?
-  keysound_.Initalize(2048);
 }
 
-void SongPlayable::Load(const std::string& path, const std::string& chartpath)
+void SongResource::Load(const std::string& path)
 {
-  // XXX: change variable to RAII type?
+  // already loaded?
+  if (is_loaded_ > 0) return;
+
+  bool load_result = true;
   is_loaded_ = 1;
-  memset(bg_current_channel_, 0, sizeof(bg_current_channel_));
-  tasks_.clear();
 
   song_ = new rparser::Song();
-  if (!song_->Open(path))
-  {
-    std::cerr << "SongPlayable: Failed to open song " <<
-      path << std::endl;
-    is_loaded_ = 0;
-    return;
-  }
-  chart_ = song_->GetChart(chartpath);
-  if (!chart_)
-  {
-    std::cerr << "SongPlayable: Failed to open song " <<
-      path << " with chartpath " << chartpath << std::endl;
-    is_loaded_ = 0;
-    return;
-  }
-  chart_->Invalidate();
+  load_result = song_->Open(path);
 
-  // make note data first ...
-  auto &notedata = chart_->GetNoteData();
+  if (!load_result)
+  {
+    delete song_;
+    is_loaded_ = 0;
+    return;
+  }
+
+  // create resource list to load
+  FileToLoad load;
+  for (auto *file : *song_->GetDirectory())
+  {
+    load.filename = file->filename;
+    std::string ext = GetExtension(file->filename);
+    if (ext == "wav" || ext == "ogg" || ext == "flac" || ext == "mp3")
+    {
+      load.type = 1;
+    }
+    else if (ext == "bmp" || ext == "gif" || ext == "jpg" || ext == "jpeg" ||
+      ext == "tiff" || ext == "tga" || ext == "png" || ext == "avi" || ext == "mpg" ||
+      ext == "mpeg" || ext == "mp4")
+    {
+      if (!load_bga_) continue;
+      load.type = 0;
+    }
+    else continue;
+    files_to_load_.push_back(load);
+  }
+
+  // create resource loader task
+  loadfile_count_total_ = files_to_load_.size();
+  loaded_file_count_ = 0;
+  size_t load_thread_count = TaskPool::getInstance().GetPoolSize();
+  for (int i = 0; i < load_thread_count; ++i)
+  {
+    TaskAuto t = std::make_shared<SongResourceLoadResourceTask>(this);
+    tasks_.push_back(t);
+    TaskPool::getInstance().EnqueueTask(t);
+  }
+}
+
+void SongResource::LoadAsync(const std::string& path)
+{
+  TaskAuto t = std::make_shared<SongResourceLoadTask>(this, path);
+  tasks_.push_back(t);
+  TaskPool::getInstance().EnqueueTask(t);
+}
+
+
+/* internally called from Load() and LoadAsync() */
+void SongResource::LoadResources()
+{
+  while (1)
+  {
+    FileToLoad file_to_load;
+    std::string fn;
+    {
+      std::lock_guard<std::mutex> lock(loading_mutex_);
+      if (files_to_load_.empty())
+        break;
+      file_to_load = files_to_load_.front();
+      files_to_load_.pop_front();
+      loaded_file_count_++;
+    }
+    fn = file_to_load.filename;
+
+    const char* file;
+    size_t len;
+    if (song_->GetDirectory()->GetFile(fn, &file, len))
+    {
+      if (file_to_load.type == 0)
+      {
+        // image
+        Image *img = new Image();
+        img->LoadFromData((uint8_t*)file, len);
+        bgs_.push_back({ fn, img });
+      }
+      else if (file_to_load.type == 1)
+      {
+        // sound
+        Sound *snd = new Sound();
+        snd->Resample(SoundDriver::getInstance().getMixer().GetSoundInfo());
+        snd->Load(file, len);
+        sounds_.push_back({ fn, snd });
+      }
+    }
+  }
+
+  is_loaded_ = 2;
+}
+
+/* This function should be called after all song resources are loaded */
+void SongResource::UploadBitmaps()
+{
+  for (auto &bg : bgs_) if (bg.second->is_loaded())
+    bg.second->CommitImage();
+}
+
+/* For updating image */
+void SongResource::Update(float delta)
+{
+  for (auto &bg : bgs_) if (bg.second->is_loaded())
+    bg.second->Update(delta);
+}
+
+void SongResource::CancelLoad()
+{
+  {
+    std::lock_guard<std::mutex> lock(loading_mutex_);
+    files_to_load_.clear();
+  }
+  for (auto& t : tasks_)
+    t->wait();
+  tasks_.clear();
+}
+
+void SongResource::Clear()
+{
+  CancelLoad();
+  for (auto &bg : bgs_)
+    delete bg.second;
+  for (auto &sound : sounds_)
+    delete sound.second;
+  bgs_.clear();
+  sounds_.clear();
+  song_->CloseChart();
+  song_->Close();
+  delete song_;
+  song_ = nullptr;
+  is_loaded_ = 0;
+}
+
+rparser::Song* SongResource::get_song()
+{
+  return song_;
+}
+
+void SongResource::set_load_bga(bool use_bga)
+{
+  load_bga_ = use_bga;
+}
+
+int SongResource::is_loaded() const
+{
+  return is_loaded_;
+}
+
+double SongResource::get_progress() const
+{
+  if (loadfile_count_total_ == 0) return .0;
+  return (double)loaded_file_count_ / loadfile_count_total_;
+}
+
+Sound* SongResource::GetSound(const std::string& filename)
+{
+  for (auto &snd : sounds_)
+    if (snd.first == filename) return snd.second;
+  return nullptr;
+}
+
+Image* SongResource::GetImage(const std::string& filename)
+{
+  for (auto &bg : bgs_)
+    if (bg.first == filename) return bg.second;
+  return nullptr;
+}
+
+SongResource& SongResource::getInstance()
+{
+  static SongResource r;
+  return r;
+}
+
+
+// -------------------------- class ChartPlayer
+
+ChartPlayer::ChartPlayer()
+  : note_current_idx_(0), event_current_idx_(0),
+    song_start_time_(0), song_current_time_(0), is_play_bgm_(true)
+{
+  memset(bgs_, 0, sizeof(bgs_));
+  memset(sounds_, 0, sizeof(sounds_));
+  memset(bg_current_channel_, 0, sizeof(bg_current_channel_));
+}
+
+void ChartPlayer::Load(const std::string& chartname)
+{
+  rparser::Song *song = SongResource::getInstance().get_song();
+  ASSERT(song);
+  rparser::Chart *chart = song->GetChart(chartname);
+  if (!chart)
+  {
+    std::cerr << "ChartPlayer: Failed to open song " <<
+      song->GetPath() << " with chart " << chartname << std::endl;
+    return;
+  }
+  chart->Invalidate();
+
+
+  // create channels
+  auto &metadata = chart->GetMetaData();
+  for (auto &snd : metadata.GetSoundChannel()->fn)
+  {
+    // TODO: add shallow copy
+    /*
+    Sound *s = new Sound();
+    
+    */
+    Sound *s = SongResource::getInstance().GetSound(snd.second);
+    if (!s) continue;
+    s->RegisterToMixer(&SoundDriver::getInstance().getMixer());
+    sounds_[snd.first] = s;
+  }
+
+  for (auto &bga : metadata.GetBGAChannel()->bga)
+  {
+    Image *img = SongResource::getInstance().GetImage(bga.second.fn);
+    if (!img) continue;
+    bgs_[bga.first] = img;
+  }
+
+
+  // make play notes from chart note data
+  auto &notedata = chart->GetNoteData();
   for (auto &note : notedata)
   {
+    // TODO: add LN & judge status
     SongNote n;
     n.beat = note.beat;
     n.time = note.time_msec;
@@ -470,9 +677,10 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
   }
   note_current_idx_ = 0;
 
-  auto &eventdata = chart_->GetEventNoteData();
+  auto &eventdata = chart->GetEventNoteData();
   for (auto &evnt : eventdata)
   {
+    // TODO: add midi event
     EventNote n;
     if (evnt.subtype() == rparser::NoteEventTypes::kBGA)
     {
@@ -488,130 +696,43 @@ void SongPlayable::Load(const std::string& path, const std::string& chartpath)
   }
   event_current_idx_ = 0;
 
-  auto &metadata = chart_->GetMetaData();
-  for (auto& snd : metadata.GetSoundChannel()->fn)
-  {
-    LoadInfo li;
-    li = { 0, (int)snd.first, snd.second };
-    loadinfo_list_.push_back(li);
-  }
-  for (auto& bga : metadata.GetBGAChannel()->bga)
-  {
-    LoadInfo li;
-    li = { 1, (int)bga.first, bga.second.fn };
-    loadinfo_list_.push_back(li);
-  }
-  load_total_count_ = loadinfo_list_.size();
-  load_count_ = 0;
-  is_loaded_ = 0;
 
-  // preparation before calling loader thread
-  keysound_.LoadFromChart(*song_, *chart_);
+  // finish loading chart.
+  song->CloseChart();
+}
 
-  // create resource loader task
-  for (int i = 0; i < load_thread_count_; ++i)
+void ChartPlayer::Clear()
+{
+  Stop();
+
+  // don't release resource here ... SongResource will do it.
+  // TODO: release sound if shallow copy implemented
+  for (int i = 0; i < 2000; ++i)
   {
-    TaskAuto t = std::make_shared<SongPlayableResourceLoadTask>();
-    tasks_.push_back(t);
-    TaskPool::getInstance().EnqueueTask(t);
+    /* delete sounds_[i]; */
+    sounds_[i] = nullptr;
+  }
+  for (int i = 0; i < 2000; ++i)
+  {
+    bgs_[i] = nullptr;
   }
 }
 
-void SongPlayable::LoadAsync(const std::string& path, const std::string& chartpath)
+void ChartPlayer::Play()
 {
-  if (IsLoading())
-    return;
-
-  TaskAuto t = std::make_shared<SongPlayableChartLoadTask>(
-    path, chartpath
-    );
-  TaskPool::getInstance().EnqueueTask(t);
-}
-
-void SongPlayable::LoadResources()
-{
-  while (!keysound_.is_loading_finished())
-    keysound_.LoadRemainingSound();
-
-  while (true)
-  {
-    LoadInfo li;
-    {
-      std::lock_guard<std::mutex> lock(loadinfo_list_mutex_);
-      if (loadinfo_list_.empty())
-        break;
-      li = loadinfo_list_.back();
-      loadinfo_list_.pop_back();
-    }
-
-    rparser::Directory* dir = song_->GetDirectory();
-
-    if (li.type == 0 /* sound */)
-    {
-    }
-    else if (li.type == 1 /* bga */)
-    {
-      // if not going to load Bga ...
-      if (!is_bga_loading_)
-        continue;
-
-      const char* file;
-      size_t len;
-      if (!dir->GetFile(li.path, &file, len))
-      {
-        std::cerr << "SongPlayable: cannot read BGA :" << li.path << std::endl;
-        continue;
-      }
-      bg_[li.channel].LoadFromData((uint8_t*)file, len);
-    }
-  }
-
-  /* load done */
-  is_loaded_ = 2;
-}
-
-void SongPlayable::UploadBgaImages()
-{
-  // XXX: limit BGA to 1000?
-  for (size_t i = 0; i < 2000; ++i)
-  {
-    if (bg_[i].is_loaded())
-      bg_[i].CommitImage();
-  }
-}
-
-void SongPlayable::CancelLoad()
-{
-  // clear all loading context
-  {
-    std::lock_guard<std::mutex> lock(loadinfo_list_mutex_);
-    loadinfo_list_.clear();
-  }
-
-  // wait all working thread to be done
-  for (auto &t : tasks_)
-    t->wait();
-
-  // last context reset
-  load_total_count_ = 0;
-  load_count_ = 0;
-  is_loaded_ = 0;
-}
-
-void SongPlayable::Play()
-{
-  keysound_.RegisterToMixer(SoundDriver::getMixer());
   song_start_time_ = Timer::GetGameTimeInMillisecond();
 }
 
-void SongPlayable::Stop()
+void ChartPlayer::Stop()
 {
   song_start_time_ = 0;
-  //for (int i = 0; i < 1000; ++i)
-  //  keysounds_[i].Stop();
+
+  // don't stop sound here; it'll stopped when SongResource is released
+  //for (int i = 0; i < 2000; ++i)
+  //  sounds_[i]->Stop();
 }
 
-void SongPlayable::Update(float delta)
+void ChartPlayer::Update(float delta)
 {
   // TODO: play bgm which is behind current timestamp
   if (!IsPlaying())
@@ -619,8 +740,6 @@ void SongPlayable::Update(float delta)
 
   song_current_time_ = Timer::GetGameTimeInMillisecond();
   int songtime = GetSongEclipsedTime();
-
-  keysound_.Update(delta);
 
   int i = event_current_idx_;
   for (; i < events_.size(); ++i)
@@ -641,86 +760,41 @@ void SongPlayable::Update(float delta)
   event_current_idx_ = i;
 }
 
-void SongPlayable::Clear()
+void ChartPlayer::SetPlayBgm(bool is_play_bgm)
 {
-  // should not be called while loading!
-  if (IsLoading())
-    return;
-
-  keysound_.UnregisterAll();
-
-  for (int i = 0; i < 2000; ++i)
-    bg_[i].UnloadAll();
-
-  if (song_)
-  {
-    song_->CloseChart();
-    song_->Close();
-  }
-
-  chart_ = nullptr;
-  song_ = nullptr;
-  is_loaded_ = 0;
+  is_play_bgm_ = is_play_bgm;
 }
 
-void SongPlayable::SetBgaLoading(bool v)
-{
-  is_bga_loading_ = v;
-}
-
-bool SongPlayable::IsLoading() const
-{
-  return is_loaded_ == 1;
-}
-
-bool SongPlayable::IsLoaded() const
-{
-  return is_loaded_ >= 2;
-}
-
-bool SongPlayable::IsPlaying() const
+bool ChartPlayer::IsPlaying() const
 {
   return song_start_time_ > 0;
 }
 
-bool SongPlayable::IsPlayFinished() const
+bool ChartPlayer::IsPlayFinished() const
 {
   // current check with : last object time > song eclipsed time
   return (IsPlaying() && GetSongEclipsedTime() > notes_.back().time);
 }
 
-double SongPlayable::GetProgress() const
-{
-  if (load_total_count_ == 0)
-    return 0;
-  else return (float)load_count_ / load_total_count_;
-}
-
-double SongPlayable::GetSongStartTime() const
+double ChartPlayer::GetSongStartTime() const
 {
   return song_start_time_;
 }
 
-int SongPlayable::GetSongEclipsedTime() const
+int ChartPlayer::GetSongEclipsedTime() const
 {
   if (song_start_time_ == 0) return 0;
   return static_cast<int>(song_current_time_ - song_start_time_);
 }
 
-Image& SongPlayable::GetBgaImage(int bga_index)
+Image* ChartPlayer::GetBgaImage(int bga_index)
 {
-  return bg_[bg_current_channel_[bga_index]];
+  return bgs_[bg_current_channel_[bga_index]];
 }
 
-void SongPlayable::Input(int keycode, uint32_t gametime)
+void ChartPlayer::Input(int keycode, uint32_t gametime)
 {
   // TODO
-}
-
-SongPlayable& SongPlayable::getInstance()
-{
-  static SongPlayable s;
-  return s;
 }
 
 }

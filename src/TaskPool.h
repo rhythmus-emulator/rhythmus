@@ -81,6 +81,7 @@ public:
   ~TaskPool();
 
   void SetPoolSize(size_t size);
+  size_t GetPoolSize() const;
   void ClearTaskPool();
   void EnqueueTask(TaskAuto& task);
   TaskAuto DequeueTask();

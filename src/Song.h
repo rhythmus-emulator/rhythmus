@@ -12,9 +12,6 @@
 #include <list>
 #include <vector>
 
-// rmixer
-#include "SoundPool.h"
-
 namespace rparser { class Song; class Chart; }
 
 namespace rhythmus
@@ -95,60 +92,93 @@ private:
 
   std::string song_dir_;
 
-  int thread_count_;
-
   static int sql_dummy_callback(void*, int argc, char **argv, char **colnames);
   static int sql_songlist_callback(void*, int argc, char **argv, char **colnames);
 };
 
-/* @brief A singleton class. Song resources with playing context. */
-class SongPlayable
+/* @brief A singleton class. Contains song and resources. */
+class SongResource
 {
 public:
-  SongPlayable();
-
-  void Load(const std::string& path, const std::string& chartpath);
-  void LoadAsync(const std::string& path, const std::string& chartpath);
+  SongResource();
+  void Load(const std::string& path);
+  void LoadAsync(const std::string& path);
   void LoadResources();
-  void UploadBgaImages();
-  void CancelLoad();
-
-  void Play();
-  void Stop();
+  void UploadBitmaps();
   void Update(float delta);
+  void CancelLoad();
   void Clear();
 
-  void SetBgaLoading(bool v);
+  rparser::Song* get_song();
+  void set_load_bga(bool use_bga);
+  int is_loaded() const;
+  double get_progress() const;
 
-  bool IsLoading() const;
-  bool IsLoaded() const;
-  bool IsPlaying() const;
-  bool IsPlayFinished() const;
-  double GetProgress() const;
-  double GetSongStartTime() const;
-  int GetSongEclipsedTime() const;
-  Image& GetBgaImage(int bga_index);
+  Sound* GetSound(const std::string& filename);
+  Image* GetImage(const std::string& filename);
 
-  /* @brief make judgement, sound, and score change with input */
-  void Input(int keycode, uint32_t gametime);
-
-  static SongPlayable& getInstance();
+  static SongResource& getInstance();
 
 private:
   rparser::Song* song_;
-  rparser::Chart* chart_;
-
-  /**
-   * 0: not loaded yet
-   * 1: loading
-   * 2: load finished (or aborted)
-   */
-  int is_loaded_;
+  std::vector<std::pair<std::string, Image*> > bgs_;
+  std::vector<std::pair<std::string, Sound*> > sounds_;
 
   /**
    * Tasks (for cancel-waiting)
    */
   std::list<TaskAuto> tasks_;
+
+  /*
+   * @brief files to load
+   */
+  struct FileToLoad
+  {
+    int type; // 0: image, 1: sound
+    std::string filename;
+  };
+  std::list<FileToLoad> files_to_load_;
+  size_t loadfile_count_total_;
+  size_t loaded_file_count_;
+  std::mutex loading_mutex_;
+
+  /*
+   * 0: not loaded
+   * 1: loading
+   * 2: load complete
+   */
+  int is_loaded_;
+
+  bool load_bga_;
+};
+
+/* @brief Chart player with  */
+class ChartPlayer
+{
+public:
+  ChartPlayer();
+
+  void Load(const std::string& chartname);
+  void Clear();
+  void Play();
+  void Stop();
+  void Update(float delta);
+
+  void SetPlayBgm(bool is_play_bgm);
+
+  bool IsPlaying() const;
+  bool IsPlayFinished() const;
+  double GetSongStartTime() const;
+  int GetSongEclipsedTime() const;
+  Image* GetBgaImage(int bga_index);
+
+  /* @brief make judgement, sound, and score change with input */
+  void Input(int keycode, uint32_t gametime);
+
+private:
+  /* resources on channel XXX: 2000? */
+  Image *bgs_[2000];
+  Sound *sounds_[2000];
 
   /* tappable notes */
   struct SongNote {
@@ -170,27 +200,11 @@ private:
   std::vector<EventNote> events_;
   int event_current_idx_;
 
-  int load_thread_count_;
-  int load_total_count_;
-  std::atomic<int> load_count_;
-  struct LoadInfo
-  {
-    int type; // 0: sound, 1: image
-    int channel;
-    std::string path;
-  };
-  std::list<LoadInfo> loadinfo_list_;
-  std::mutex loadinfo_list_mutex_;
-
   uint32_t song_start_time_;
   uint32_t song_current_time_;
   
-  rmixer::KeySoundPoolWithTime keysound_;
-  bool is_bga_loading_;
-  Image bg_[2000];
   int bg_current_channel_[4];
-
-  // TODO: input settings.
+  bool is_play_bgm_;
 };
 
 }
