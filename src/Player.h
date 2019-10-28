@@ -58,6 +58,20 @@ enum GameSpeedTypes
   kSpeedConstant,
 };
 
+/* @brief judge context */
+class JudgementContext
+{
+public:
+  JudgementContext();
+  JudgementContext(int pg, int gr, int gd, int bd, int pr);
+  void setJudgementRatio(double r);
+  int judge(int delta_time);
+  static JudgementContext& getDefaultJudgementContext();
+
+private:
+  int judge_time_[6];
+};
+
 /* @brief Note object with judge context
  * TODO: what about chain note?
  * TODO: what about guitarfreaks type note? (insert invisible mine note?) */
@@ -89,6 +103,7 @@ private:
 
   rparser::NoteDesc *get_curr_notedesc();
   int judge_only_timing(uint32_t songtime);
+  JudgementContext* judge_ctx_;
 };
 
 /* @brief Contains current keysound, note with judgement of a track */

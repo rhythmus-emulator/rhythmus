@@ -6,12 +6,54 @@
 namespace rhythmus
 {
 
+// --------------------- class JudgementContext
+
+JudgementContext::JudgementContext()
+{
+  memset(judge_time_, 0, sizeof(judge_time_));
+}
+
+JudgementContext::JudgementContext(int pg, int gr, int gd, int bd, int pr)
+{
+  judge_time_[0] = 0; /* not in use */
+  judge_time_[1] = pr;
+  judge_time_[2] = bd;
+  judge_time_[3] = gd;
+  judge_time_[4] = gr;
+  judge_time_[5] = pg;
+}
+
+int JudgementContext::judge(int delta_time)
+{
+  int dt = abs(delta_time);
+  for (int i = 5; i > 0; --i)
+    if (dt < judge_time_[i])
+      return i;
+  return JudgeTypes::kJudgeNone;
+}
+
+void JudgementContext::setJudgementRatio(double r)
+{
+  for (size_t i = 0; i <= 5; ++i) judge_time_[i] *= r;
+}
+
+JudgementContext& JudgementContext::getDefaultJudgementContext()
+{
+  // DDR: 16.7
+  // IIDX: 20 (17 ~ 18?)
+  // Drummania: 27
+  // Guitarfreaks: 33
+  // jubeat: 42
+  static JudgementContext jctx(18, 36, 100, 150, 250);
+  return jctx;
+}
+
 // ---------------------- class NoteWithJudging
 
 NoteWithJudging::NoteWithJudging(rparser::Note *note)
   : rparser::Note(*note), chain_index_(0),
-    judge_status_(0), judgement_(JudgeTypes::kJudgeNone), invisible_(false)
-{}
+    judge_status_(0), judgement_(JudgeTypes::kJudgeNone), invisible_(false),
+    judge_ctx_(nullptr) {}
 
 int NoteWithJudging::judge(uint32_t songtime, int event_type)
 {
@@ -82,7 +124,10 @@ int NoteWithJudging::judge_check_miss(uint32_t songtime)
 
 int NoteWithJudging::judge_only_timing(uint32_t songtime)
 {
-  // TODO
+  if (!judge_ctx_)
+    return JudgementContext::getDefaultJudgementContext().judge(songtime);
+  else
+    judge_ctx_->judge(songtime);
 }
 
 bool NoteWithJudging::is_judge_finished() const
@@ -92,7 +137,6 @@ bool NoteWithJudging::is_judge_finished() const
 
 rparser::NoteDesc *NoteWithJudging::get_curr_notedesc()
 {
-  // TODO: implement chain in rparser::Note
   return this->chain(chain_index_);
 }
 
