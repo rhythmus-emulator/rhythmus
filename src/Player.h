@@ -2,6 +2,7 @@
 
 #include "Song.h"
 #include "Setting.h"
+#include "rparser.h"
 #include <string>
 
 namespace rhythmus
@@ -32,6 +33,13 @@ enum ReplayEventTypes
   kReplaySong, /* Need in course mode: song change trigger */
 };
 
+enum JudgeEventTypes
+{
+  kJudgeEventTapDown,
+  kJudgeEventTapUp,
+  kJudgeEventTapMove
+};
+
 enum JudgeTypes
 {
   kJudgeNone,
@@ -48,6 +56,54 @@ enum GameSpeedTypes
 {
   kSpeedNormal,
   kSpeedConstant,
+};
+
+/* @brief Note object with judge context
+ * TODO: what about chain note?
+ * TODO: what about guitarfreaks type note? (insert invisible mine note?) */
+class NoteWithJudging : public rparser::Note
+{
+public:
+  NoteWithJudging(rparser::Note *note);
+  int judge(uint32_t songtime, int event_type);
+  int judge_with_pos(uint32_t songtime, int event_type, int x, int y, int z);
+  int judge_check_miss(uint32_t songtime);
+  bool is_judge_finished() const;
+
+private:
+  /* current chain index of judgement */
+  size_t chain_index_;
+
+  /**
+   * 0: not judged
+   * 1: judging
+   * 2: judge finished
+   */
+  int judge_status_;
+  
+  /* value of JudgeTypes */
+  int judgement_;
+
+  /* for invisible note object */
+  bool invisible_;
+
+  rparser::NoteDesc *get_curr_notedesc();
+  int judge_only_timing(uint32_t songtime);
+};
+
+/* @brief Contains current keysound, note with judgement of a track */
+class TrackContext
+{
+public:
+  void Initialize(rparser::Track &track);
+  void SetInvisibleMineNote(double beat, uint32_t time); /* used for guitarfreaks */
+  void Clear();
+  void Update(uint32_t songtime);
+
+private:
+  std::vector<NoteWithJudging> objects_;
+  size_t curr_keysound_idx_;
+  size_t curr_judge_idx_;
 };
 
 class Player
@@ -125,6 +181,9 @@ private: \
 #undef USER_PROP
 
   /* unsaved playing context (for single stage) */
+
+  TrackContext track_context_[128];
+  void UpdateJudgeByRow(); /* for row-wise judgement update */
 
   std::string play_id_;
   ChartPlayer chartplayer_;

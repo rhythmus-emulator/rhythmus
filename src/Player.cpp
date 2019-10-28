@@ -6,6 +6,96 @@
 namespace rhythmus
 {
 
+// ---------------------- class NoteWithJudging
+
+NoteWithJudging::NoteWithJudging(rparser::Note *note)
+  : rparser::Note(*note), chain_index_(0),
+    judge_status_(0), judgement_(JudgeTypes::kJudgeNone), invisible_(false)
+{}
+
+int NoteWithJudging::judge(uint32_t songtime, int event_type)
+{
+  auto *notedesc = get_curr_notedesc();
+  int judgement;
+
+  if (is_judge_finished())
+    return judgement_;
+
+  if ((judgement = judge_only_timing(songtime)) != JudgeTypes::kJudgeNone)
+  {
+    if (event_type == JudgeEventTypes::kJudgeEventTapDown)
+    {
+      judgement_ = judgement;
+      // if miss, finish judge
+      if (judgement_ <= JudgeTypes::kJudgeBD)
+      {
+        judge_status_ = 2;
+        return judgement_;
+      }
+    }
+
+    // judge success, go to next chain if available.
+    // if no chain remains, finish judging.
+    if (chain_index_ >= chainsize())
+    {
+      judge_status_ = 2;
+    }
+    else chain_index_++;
+  }
+
+  // XXX: is this necessary?
+  if (judge_status_ == 0)
+    judge_status_ = 1;
+
+  return judgement_;
+}
+
+int NoteWithJudging::judge_with_pos(uint32_t songtime, int event_type, int x, int y, int z)
+{
+  if (is_judge_finished())
+    return judgement_;
+
+  auto *notedesc = get_curr_notedesc();
+  int ax, ay, az;
+  int judgement;
+  notedesc->get_pos(ax, ay, az);
+
+  /* TODO: need range of position check? */
+  if (ax != x || ay != y || az != z)
+  {
+    return JudgeTypes::kJudgeNone;
+  }
+
+  return judge(songtime, event_type);
+}
+
+int NoteWithJudging::judge_check_miss(uint32_t songtime)
+{
+  /* TODO: in case of mine note... -- pass miss timing judgement */
+  if (this->time_msec + 100 /* TODO: get miss time table */ < songtime)
+  {
+    judgement_ = JudgeTypes::kJudgeMiss;
+    judge_status_ = 2;
+  }
+  return judgement_;
+}
+
+int NoteWithJudging::judge_only_timing(uint32_t songtime)
+{
+  // TODO
+}
+
+bool NoteWithJudging::is_judge_finished() const
+{
+  return judge_status_ >= 2;
+}
+
+rparser::NoteDesc *NoteWithJudging::get_curr_notedesc()
+{
+  // TODO: implement chain in rparser::Note
+  return this->chain(chain_index_);
+}
+
 static Player *players_[kMaxPlayerSlot];
 static Player guest_player(PlayerTypes::kPlayerGuest, "GUEST");
 static int player_count;
@@ -23,6 +113,48 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
   if (player_type_ == PlayerTypes::kPlayerGuest)
     is_guest_ = true;
 }
+
+
+// ------------------------- class TrackContext
+
+void TrackContext::Initialize(rparser::Track &track)
+{
+  // TODO: check duplicated object, and replace it if so.
+  for (auto *n : track)
+  {
+    objects_.emplace_back(NoteWithJudging(static_cast<rparser::Note*>(n)));
+  }
+}
+
+void TrackContext::SetInvisibleMineNote(double beat, uint32_t time)
+{
+  // TODO: check duplicated object, and replace it if so.
+  rparser::Note n;
+  n.SetBeatPos(beat);
+  n.SetTime(time);
+  objects_.emplace_back(NoteWithJudging(&n));
+}
+
+void TrackContext::Clear()
+{
+  objects_.clear();
+}
+
+void TrackContext::Update(uint32_t songtime)
+{
+  // check miss timing if general note
+  while (curr_judge_idx_ < objects_.size())
+  {
+    auto &currobj = objects_[curr_judge_idx_];
+    currobj.judge_check_miss(songtime);
+    if (currobj.is_judge_finished())
+      curr_judge_idx_++;
+    else break;
+  }
+}
+
+
+// ------------------------------- class Player
 
 Player::~Player()
 {
