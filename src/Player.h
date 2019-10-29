@@ -4,6 +4,7 @@
 #include "Setting.h"
 #include "Event.h"
 #include <string>
+#include <list>
 
 #include "rparser.h"
 
@@ -152,7 +153,9 @@ public:
   void Load();
   void Save();
   void SetPlayId(const std::string& play_id);
-  void LoadPlay(bool load_replay = false);
+  void LoadChart(rparser::Chart& chart);
+  void LoadNextChart();
+  void LoadPlay();
   void SavePlay();
   void StopPlay();
   void ClearPlay();
@@ -173,8 +176,6 @@ public:
   double get_score() const;
   double get_health() const;
   bool is_alive() const;
-  void set_chartname(const std::string& chartname);
-  ChartPlayer& get_chart_player();
 
   void ProcessInputEvent(const EventMessage& e);
 
@@ -235,8 +236,8 @@ private: \
   void UpdateJudgeByRow(); /* for row-wise judgement update */
 
   std::string play_id_;
-  ChartPlayer chartplayer_;
   std::string chartname_;
+  int chartindex_;
 
   double songtime_;
   double health_;
@@ -252,6 +253,7 @@ private: \
 
   /* unsaved playing context (for course) */
 
+  std::list<rparser::Chart*> queued_charts_;
   Judge course_judge_;
 
   /* replay context */

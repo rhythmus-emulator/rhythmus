@@ -71,7 +71,7 @@ int NoteWithJudging::judge(uint32_t songtime, int event_type)
 
   if ((judgement = judge_only_timing(songtime)) != JudgeTypes::kJudgeNone)
   {
-    if (event_type == JudgeEventTypes::kJudgeEventTapDown)
+    if (event_type == JudgeEventTypes::kJudgeEventDown)
     {
       judgement_ = judgement;
       // if miss, finish judge
@@ -277,7 +277,7 @@ NoteWithJudging& TrackIterator::operator*()
 // ------------------------------- class Player
 
 Player::Player(PlayerTypes player_type, const std::string& player_name)
-  : player_type_(player_type), player_name_(player_name),
+  : player_type_(player_type), player_name_(player_name), chartindex_(0),
   use_lane_cover_(false), use_hidden_(false),
   game_speed_type_(GameSpeedTypes::kSpeedConstant),
   game_speed_(1.0), game_constant_speed_(1.0),
@@ -354,13 +354,32 @@ void Player::SetPlayId(const std::string& play_id)
   play_id_ = play_id;
 }
 
-void Player::LoadPlay(bool load_replay)
+void Player::LoadChart(rparser::Chart& chart)
+{
+  queued_charts_.push_back(&chart);
+}
+
+void Player::LoadNextChart()
 {
   ClearPlay();
   is_save_allowed_ = false;
   is_save_record_ = false;
   is_save_replay_ = false;
-  chartplayer_.Load(chartname_);
+
+  rparser::Chart *c = queued_charts_.front();
+  queued_charts_.pop_front();
+  auto &nd = c->GetNoteData();
+  size_t i = 0;
+  for (; i < nd.get_track_count(); ++i)
+    track_context_[i].Initialize(nd.get_track(i));
+  for (; i < kMaxTrackSize; ++i)
+    track_context_[i].Clear();
+}
+
+void Player::LoadPlay()
+{
+  // TODO: load play record
+  // XXX: integrate with LoadChart?
 }
 
 void Player::SavePlay()
@@ -420,6 +439,7 @@ void Player::StartPlay()
   is_alive_ = 1;
   health_ = 1.0;
   combo_ = 0;
+  songtime_ = 0;
   last_judge_type_ = JudgeTypes::kJudgeNone;
 
   // other is general song context clear
@@ -429,19 +449,21 @@ void Player::StartPlay()
   bool check = (assist_ == 0);
   is_save_record_ = check;
   is_save_replay_ = check;
-
-  chartplayer_.Play();
 }
 
 void Player::StopPlay()
 {
-  chartplayer_.Stop();
+  // set as dead player
+  is_alive_ = 0;
 }
 
 void Player::StartNextSong()
 {
+  // initialize judgement and record
   memset(&judge_, 0, sizeof(Judge));
   RecordPlay(ReplayEventTypes::kReplaySong, 0, 0);
+
+  // prepare track data
 }
 
 void Player::RecordPlay(ReplayEventTypes event_type, int time, int value1, int value2)
@@ -516,16 +538,6 @@ bool Player::is_alive() const
   return is_alive_;
 }
 
-void Player::set_chartname(const std::string& chartname)
-{
-  chartname_ = chartname;
-}
-
-ChartPlayer& Player::get_chart_player()
-{
-  return chartplayer_;
-}
-
 void Player::ProcessInputEvent(const EventMessage& e)
 {
   if (!e.IsInput())
@@ -567,7 +579,6 @@ void Player::Update(float delta)
   // fetch some playing context from song ... ?
   //passed_note_++; // TODO
   songtime_ += delta;
-  chartplayer_.Update(delta);
   UpdateJudgeByRow();
 }
 

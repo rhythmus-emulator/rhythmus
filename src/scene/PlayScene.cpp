@@ -38,14 +38,16 @@ void PlayScene::StartScene()
     std::string path, song_path, chart_name;
     song_path = SongList::getInstance().get_current_song_info()->songpath;
     chart_name = SongList::getInstance().get_current_song_info()->chartpath;
-    Player::getMainPlayer().set_chartname(chart_name);
     SongResource::getInstance().LoadAsync(song_path);
   }
 
   // send loading event
   EventManager::SendEvent(Events::kEventPlayLoading);
 
-  // enqueue event: song loading
+  // TODO: enqueue event: song loading
+  // If course, enqueue charts to player.
+
+  // enqueue event: song resource loading
   {
     SceneTask *task = new SceneTask("songreadytask", [this] {
       // need to upload bitmap here
@@ -57,7 +59,11 @@ void PlayScene::StartScene()
         int i;
         FOR_EACH_PLAYER(p, i)
         {
-          p->LoadPlay(false); // XXX: not replaymode currently
+          // XXX: need to get proper chart index.
+          p->LoadChart(*SongResource::getInstance().get_song()->GetChart(0));
+          p->LoadNextChart();
+          // XXX:
+          // Need to call LoadReplay() / LoadPlay() to get previous play record later.
         }
       }
 
@@ -102,7 +108,7 @@ void PlayScene::StartScene()
       this->play_status_ = 3;
     });
     task->wait_cond([this] {
-      return Player::getMainPlayer().get_chart_player().IsPlayFinished();
+      return Player::IsAllPlayerFinished();
     });
     playscenetask_.Enqueue(task);
   }
