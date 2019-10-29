@@ -2,13 +2,16 @@
 
 #include "Song.h"
 #include "Setting.h"
-#include "rparser.h"
+#include "Event.h"
 #include <string>
+
+#include "rparser.h"
 
 namespace rhythmus
 {
 
 constexpr size_t kMaxPlayerSlot = 16;
+constexpr size_t kMaxTrackSize = 128;
 
 enum PlayerTypes
 {
@@ -35,9 +38,9 @@ enum ReplayEventTypes
 
 enum JudgeEventTypes
 {
-  kJudgeEventTapDown,
-  kJudgeEventTapUp,
-  kJudgeEventTapMove
+  kJudgeEventDown,
+  kJudgeEventUp,
+  kJudgeEventMove
 };
 
 enum JudgeTypes
@@ -49,7 +52,7 @@ enum JudgeTypes
   kJudgeGD,
   kJudgeGR,
   kJudgePG,
-  kJudgeMine,
+  kJudgeOK, /* mine, LN */
 };
 
 enum GameSpeedTypes
@@ -64,6 +67,7 @@ class JudgementContext
 public:
   JudgementContext();
   JudgementContext(int pg, int gr, int gd, int bd, int pr);
+  int get_pr_time() const;
   void setJudgementRatio(double r);
   int judge(int delta_time);
   static JudgementContext& getDefaultJudgementContext();
@@ -83,6 +87,7 @@ public:
   int judge_with_pos(uint32_t songtime, int event_type, int x, int y, int z);
   int judge_check_miss(uint32_t songtime);
   bool is_judge_finished() const;
+  bool is_judgable() const;
 
 private:
   /* current chain index of judgement */
@@ -102,9 +107,12 @@ private:
   bool invisible_;
 
   rparser::NoteDesc *get_curr_notedesc();
+  JudgementContext *get_judge_ctx();
   int judge_only_timing(uint32_t songtime);
-  JudgementContext* judge_ctx_;
+  JudgementContext *judge_ctx_;
 };
+
+class TrackIterator;
 
 /* @brief Contains current keysound, note with judgement of a track */
 class TrackContext
@@ -114,11 +122,26 @@ public:
   void SetInvisibleMineNote(double beat, uint32_t time); /* used for guitarfreaks */
   void Clear();
   void Update(uint32_t songtime);
+  NoteWithJudging *get_curr_judged_note();
+  NoteWithJudging *get_curr_sound_note();
+  friend class TrackIterator;
 
 private:
   std::vector<NoteWithJudging> objects_;
   size_t curr_keysound_idx_;
   size_t curr_judge_idx_;
+};
+
+class TrackIterator
+{
+public:
+  TrackIterator(TrackContext& track);
+  bool is_end() const;
+  void next();
+  NoteWithJudging& operator*();
+private:
+  std::vector<NoteWithJudging*> notes_;
+  size_t curr_idx_;
 };
 
 class Player
@@ -153,7 +176,11 @@ public:
   void set_chartname(const std::string& chartname);
   ChartPlayer& get_chart_player();
 
+  void ProcessInputEvent(const EventMessage& e);
+
   void Update(float delta);
+
+  TrackIterator GetTrackIterator(size_t track_idx);
 
   static Player& getMainPlayer();
   static void CreatePlayer(PlayerTypes playertype, const std::string& player_name);
@@ -195,15 +222,23 @@ private: \
 
 #undef USER_PROP
 
+  struct KeySetting
+  {
+    int keycode_per_track_[kMaxTrackSize][4];
+  } default_keysetting_;
+  std::map<std::string, KeySetting> keysetting_per_gamemode_;
+  KeySetting *curr_keysetting_;
+
   /* unsaved playing context (for single stage) */
 
-  TrackContext track_context_[128];
+  TrackContext track_context_[kMaxTrackSize];
   void UpdateJudgeByRow(); /* for row-wise judgement update */
 
   std::string play_id_;
   ChartPlayer chartplayer_;
   std::string chartname_;
 
+  double songtime_;
   double health_;
   int is_alive_;
   int combo_;

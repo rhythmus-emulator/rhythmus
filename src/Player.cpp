@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "Timer.h"
 #include "Util.h"
 #include "Error.h"
 #include <iostream>
@@ -21,6 +22,11 @@ JudgementContext::JudgementContext(int pg, int gr, int gd, int bd, int pr)
   judge_time_[3] = gd;
   judge_time_[4] = gr;
   judge_time_[5] = pg;
+}
+
+int JudgementContext::get_pr_time() const
+{
+  return judge_time_[1];
 }
 
 int JudgementContext::judge(int delta_time)
@@ -113,21 +119,49 @@ int NoteWithJudging::judge_with_pos(uint32_t songtime, int event_type, int x, in
 
 int NoteWithJudging::judge_check_miss(uint32_t songtime)
 {
-  /* TODO: in case of mine note... -- pass miss timing judgement */
-  if (this->time_msec + 100 /* TODO: get miss time table */ < songtime)
+  if (is_judge_finished())
+    return judgement_;
+
+  if (get_track() == rparser::NoteTypes::kMineNote)
   {
-    judgement_ = JudgeTypes::kJudgeMiss;
-    judge_status_ = 2;
+    /* in case of mine note */
+    if (time_msec > songtime)
+    {
+      judgement_ = JudgeTypes::kJudgeOK;
+      judge_status_ = 2;
+    }
+  }
+  else {
+    /* in case of normal note */
+    if (chain_index_ == 0 && this->time_msec + get_judge_ctx()->get_pr_time() < songtime)
+    {
+      judgement_ = JudgeTypes::kJudgeMiss;
+      judge_status_ = 2;
+    }
+    /* in case of LN note (bms type) */
+    else if (chain_index_ > 0 && get_curr_notedesc()->time_msec < songtime)
+    {
+      if (chain_index_ >= chainsize())
+      {
+        judge_status_ = 2;
+      }
+      else chain_index_++;
+    }
   }
   return judgement_;
 }
 
-int NoteWithJudging::judge_only_timing(uint32_t songtime)
+JudgementContext *NoteWithJudging::get_judge_ctx()
 {
   if (!judge_ctx_)
-    return JudgementContext::getDefaultJudgementContext().judge(songtime);
+    return &JudgementContext::getDefaultJudgementContext();
   else
-    judge_ctx_->judge(songtime);
+    return judge_ctx_;
+}
+
+int NoteWithJudging::judge_only_timing(uint32_t songtime)
+{
+  get_judge_ctx()->judge(songtime);
 }
 
 bool NoteWithJudging::is_judge_finished() const
@@ -143,20 +177,6 @@ rparser::NoteDesc *NoteWithJudging::get_curr_notedesc()
 static Player *players_[kMaxPlayerSlot];
 static Player guest_player(PlayerTypes::kPlayerGuest, "GUEST");
 static int player_count;
-
-Player::Player(PlayerTypes player_type, const std::string& player_name)
-  : player_type_(player_type), player_name_(player_name),
-    use_lane_cover_(false), use_hidden_(false),
-    game_speed_type_(GameSpeedTypes::kSpeedConstant),
-    game_speed_(1.0), game_constant_speed_(1.0),
-    lane_cover_(0.0), hidden_(0.0),
-    bms_sp_class_(0), bms_dp_class_(0),
-    is_save_allowed_(true),is_save_record_(true), is_save_replay_(true),
-    is_guest_(false)
-{
-  if (player_type_ == PlayerTypes::kPlayerGuest)
-    is_guest_ = true;
-}
 
 
 // ------------------------- class TrackContext
@@ -190,15 +210,98 @@ void TrackContext::Update(uint32_t songtime)
   while (curr_judge_idx_ < objects_.size())
   {
     auto &currobj = objects_[curr_judge_idx_];
+    // if it is not judgable (transparent object), go to next object
+    if (!currobj.is_judgable())
+      curr_judge_idx_++;
     currobj.judge_check_miss(songtime);
     if (currobj.is_judge_finished())
       curr_judge_idx_++;
     else break;
   }
+
+  // update keysound index
+  while (curr_keysound_idx_ < objects_.size())
+  {
+    auto &currobj = objects_[curr_keysound_idx_];
+    // if it is not judgable (transparent object), wait until time is done
+    if (!currobj.is_judgable())
+    {
+      if (currobj.time_msec < songtime)
+        curr_keysound_idx_++;
+      continue;
+    }
+    if (currobj.is_judge_finished())
+      curr_keysound_idx_++;
+  }
+}
+
+NoteWithJudging *TrackContext::get_curr_judged_note()
+{ return &objects_[curr_judge_idx_]; }
+
+NoteWithJudging *TrackContext::get_curr_sound_note()
+{ return &objects_[curr_keysound_idx_]; }
+
+bool NoteWithJudging::is_judgable() const
+{
+  // TODO
+  return true;
+}
+
+constexpr size_t kMaxNotesToDisplay = 200;
+
+TrackIterator::TrackIterator(TrackContext& track)
+  : curr_idx_(0)
+{
+  // go back few notes to display previously judged notes (if necessary)
+  size_t idx = std::max(track.curr_judge_idx_, 5u) - 5;
+  for (; idx < track.objects_.size() && notes_.size() < kMaxNotesToDisplay; ++idx)
+    notes_.push_back[track.objects_[idx]];
+}
+
+bool TrackIterator::is_end() const
+{
+  return notes_.size() <= curr_idx_;
+}
+
+void TrackIterator::next()
+{
+  ++curr_idx_;
+}
+
+NoteWithJudging& TrackIterator::operator*()
+{
+  return *notes_[curr_idx_];
 }
 
 
 // ------------------------------- class Player
+
+Player::Player(PlayerTypes player_type, const std::string& player_name)
+  : player_type_(player_type), player_name_(player_name),
+  use_lane_cover_(false), use_hidden_(false),
+  game_speed_type_(GameSpeedTypes::kSpeedConstant),
+  game_speed_(1.0), game_constant_speed_(1.0),
+  lane_cover_(0.0), hidden_(0.0),
+  bms_sp_class_(0), bms_dp_class_(0),
+  is_save_allowed_(true), is_save_record_(true), is_save_replay_(true),
+  is_guest_(false)
+{
+  if (player_type_ == PlayerTypes::kPlayerGuest)
+    is_guest_ = true;
+
+  // XXX: default keysetting should be here?
+  memset(default_keysetting_.keycode_per_track_, 0, sizeof(KeySetting));
+  default_keysetting_.keycode_per_track_[0][0] = GLFW_KEY_A;
+  default_keysetting_.keycode_per_track_[1][0] = GLFW_KEY_S;
+  default_keysetting_.keycode_per_track_[2][0] = GLFW_KEY_D;
+  default_keysetting_.keycode_per_track_[3][0] = GLFW_KEY_SPACE;
+  default_keysetting_.keycode_per_track_[4][0] = GLFW_KEY_J;
+  default_keysetting_.keycode_per_track_[5][0] = GLFW_KEY_K;
+  default_keysetting_.keycode_per_track_[6][0] = GLFW_KEY_L;
+  default_keysetting_.keycode_per_track_[7][0] = GLFW_KEY_LEFT_SHIFT;
+  default_keysetting_.keycode_per_track_[7][1] = GLFW_KEY_SEMICOLON;
+  curr_keysetting_ = &default_keysetting_;
+}
 
 Player::~Player()
 {
@@ -233,6 +336,8 @@ void Player::Load()
   setting_.Load<int>("bms_sp_class", bms_sp_class_);
   setting_.Load<int>("bms_dp_class", bms_dp_class_);
 #endif
+
+  // TODO: load keysetting
 }
 
 void Player::Save()
@@ -421,11 +526,67 @@ ChartPlayer& Player::get_chart_player()
   return chartplayer_;
 }
 
+void Player::ProcessInputEvent(const EventMessage& e)
+{
+  if (!e.IsInput())
+    return;
+
+  // get track from keycode setting
+  int track_no = -1;
+  for (size_t i = 0; i < kMaxTrackSize; ++i)
+  {
+    for (size_t j = 0; j < 4; ++j)
+    {
+      if (curr_keysetting_->keycode_per_track_[i][j] == 0)
+        break;
+      if (curr_keysetting_->keycode_per_track_[i][j] == e.GetKeycode())
+      {
+        track_no = i;
+        break;
+      }
+    }
+  }
+
+  if (track_no == -1)
+    return;
+
+  // make judgement
+  // - re-calculate judgetime to fetch exact judging time
+  auto *obj = track_context_[track_no].get_curr_judged_note();
+  if (obj)
+  {
+    double judgetime = e.GetTime() - Timer::GetGameTime() + songtime_;
+    int event_type = JudgeEventTypes::kJudgeEventDown;
+    if (e.IsKeyUp()) event_type = JudgeEventTypes::kJudgeEventUp;
+    obj->judge(judgetime, event_type);
+  }
+}
+
 void Player::Update(float delta)
 {
   // fetch some playing context from song ... ?
   //passed_note_++; // TODO
+  songtime_ += delta;
   chartplayer_.Update(delta);
+  UpdateJudgeByRow();
+}
+
+void Player::UpdateJudgeByRow()
+{
+  // 1. update each track for missed / mine note
+  for (size_t i = 0; i < 128; ++i)
+  {
+    track_context_[i].Update(songtime_);
+  }
+
+  // 2. for row-wise game mode (e.g. guitarfreaks),
+  //    check notes of whole row to decide judgement.
+  // TODO
+}
+
+TrackIterator Player::GetTrackIterator(size_t track_idx)
+{
+  return TrackIterator(track_context_[track_idx]);
 }
 
 
