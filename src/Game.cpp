@@ -178,8 +178,11 @@ void Game::LoadArgument(const std::string& argv)
   } // TODO
   else if (cmd == "-play")
   {
-    // XXX: what if file load failed?
     game_boot_mode_ = GameBootMode::kBootPlay;
+
+    // XXX: check whether a file is course or not?
+    // XXX: what if file load failed?
+    push_song(v);
     SongList::getInstance().LoadFileIntoSongList(v);
     SongList::getInstance().select(0);
   }
@@ -247,6 +250,19 @@ GameSceneMode Game::get_game_scene_mode() const
 Setting& Game::get_game_setting()
 {
   return setting_;
+}
+
+void Game::push_song(const std::string& songpath)
+{
+  song_queue_.push_back(songpath);
+}
+
+bool Game::pop_song(std::string& songpath)
+{
+  if (song_queue_.empty())
+    return false;
+  songpath = song_queue_.front();
+  song_queue_.pop_front();
 }
 
 

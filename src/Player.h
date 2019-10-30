@@ -113,6 +113,7 @@ private:
   JudgementContext *judge_ctx_;
 };
 
+class Player;
 class TrackIterator;
 
 /* @brief Contains current keysound, note with judgement of a track */
@@ -125,6 +126,7 @@ public:
   void Update(uint32_t songtime);
   NoteWithJudging *get_curr_judged_note();
   NoteWithJudging *get_curr_sound_note();
+  bool is_all_judged() const;
   friend class TrackIterator;
 
 private:
@@ -145,29 +147,16 @@ private:
   size_t curr_idx_;
 };
 
-class Player
+/* @brief context used for game playing */
+class PlayContext
 {
 public:
-  Player(PlayerTypes player_type, const std::string& player_name);
-  virtual ~Player();
-  void Load();
-  void Save();
-  void SetPlayId(const std::string& play_id);
-  void LoadChart(rparser::Chart& chart);
-  void LoadNextChart();
-  void LoadPlay();
-  void SavePlay();
-  void StopPlay();
-  void ClearPlay();
+  PlayContext(Player &player, rparser::Chart &chart);
 
-  /* Should be called after song is loaded */
   void StartPlay();
-
-  /**
-   * Difference from StartPlay:
-   * Only changes song; Don't clear course context.
-   */
-  void StartNextSong();
+  void StopPlay();
+  void SavePlay();
+  void LoadPlay();
 
   void RecordPlay(ReplayEventTypes event_type, int time, int value1, int value2 = 0);
 
@@ -176,6 +165,7 @@ public:
   double get_score() const;
   double get_health() const;
   bool is_alive() const;
+  bool is_finished() const;
 
   void ProcessInputEvent(const EventMessage& e);
 
@@ -183,52 +173,8 @@ public:
 
   TrackIterator GetTrackIterator(size_t track_idx);
 
-  static Player& getMainPlayer();
-  static void CreatePlayer(PlayerTypes playertype, const std::string& player_name);
-  static void CreatePlayer(PlayerTypes playertype, const std::string& player_name, int player_slot);
-  static Player* getPlayer(int player_slot);
-  static void UnloadPlayer(int player_slot);
-  static bool IsPlayerLoaded(int player_slot);
-  static int GetLoadedPlayerCount();
-
 private:
-  std::string player_name_;
-  PlayerTypes player_type_;
-  Setting setting_;
-
-  /* saved playing context */
-
-#define USER_PROP(type, varname) \
-public: \
-  type get_##varname() const { return varname##_; } \
-  void set_##varname(type v) { varname##_ = v; } \
-private: \
-  type varname##_; \
-
-  USER_PROP(bool, use_lane_cover);
-  USER_PROP(bool, use_hidden);
-  USER_PROP(int, game_speed_type);
-  USER_PROP(double, game_speed);
-  USER_PROP(double, game_constant_speed);
-  USER_PROP(double, lane_cover);
-  USER_PROP(double, hidden);
-  USER_PROP(int, option_chart);
-  USER_PROP(int, option_chart_dp); /* only for BMS DP */
-  USER_PROP(int, health_type);
-  USER_PROP(int, assist);
-  USER_PROP(int, pacemaker);
-  USER_PROP(std::string, pacemaker_target);
-  USER_PROP(int, bms_sp_class);
-  USER_PROP(int, bms_dp_class);
-
-#undef USER_PROP
-
-  struct KeySetting
-  {
-    int keycode_per_track_[kMaxTrackSize][4];
-  } default_keysetting_;
-  std::map<std::string, KeySetting> keysetting_per_gamemode_;
-  KeySetting *curr_keysetting_;
+  Player &player_;
 
   /* unsaved playing context (for single stage) */
 
@@ -253,7 +199,6 @@ private: \
 
   /* unsaved playing context (for course) */
 
-  std::list<rparser::Chart*> queued_charts_;
   Judge course_judge_;
 
   /* replay context */
@@ -287,12 +232,78 @@ private: \
   bool is_save_allowed_;
   bool is_save_record_;
   bool is_save_replay_;
-  bool is_guest_;
 
   void LoadRecord();
   void SaveRecord();
   void LoadReplay();
   void SaveReplay();
+};
+
+class Player
+{
+public:
+  Player(PlayerTypes player_type, const std::string& player_name);
+  virtual ~Player();
+  void Load();
+  void Save();
+
+  void SetPlayContext(const std::string& chartname);
+  void ClearPlayContext();
+  PlayContext *GetPlayContext();
+  void AddChartnameToPlay(const std::string& chartname);
+  void LoadNextChart();
+
+  static Player& getMainPlayer();
+  static void CreatePlayer(PlayerTypes playertype, const std::string& player_name);
+  static void CreatePlayer(PlayerTypes playertype, const std::string& player_name, int player_slot);
+  static Player* getPlayer(int player_slot);
+  static void UnloadPlayer(int player_slot);
+  static bool IsPlayerLoaded(int player_slot);
+  static int GetLoadedPlayerCount();
+  static bool IsAllPlayerFinished();
+
+private:
+  std::string player_name_;
+  PlayerTypes player_type_;
+  Setting setting_;
+  bool is_guest_;
+
+#define USER_PROP(type, varname) \
+public: \
+  type get_##varname() const { return varname##_; } \
+  void set_##varname(type v) { varname##_ = v; } \
+private: \
+  type varname##_; \
+
+  USER_PROP(bool, use_lane_cover);
+  USER_PROP(bool, use_hidden);
+  USER_PROP(int, game_speed_type);
+  USER_PROP(double, game_speed);
+  USER_PROP(double, game_constant_speed);
+  USER_PROP(double, lane_cover);
+  USER_PROP(double, hidden);
+  USER_PROP(int, option_chart);
+  USER_PROP(int, option_chart_dp); /* only for BMS DP */
+  USER_PROP(int, health_type);
+  USER_PROP(int, assist);
+  USER_PROP(int, pacemaker);
+  USER_PROP(std::string, pacemaker_target);
+  USER_PROP(int, bms_sp_class);
+  USER_PROP(int, bms_dp_class);
+
+#undef USER_PROP
+
+  struct KeySetting
+  {
+    int keycode_per_track_[kMaxTrackSize][4];
+  } default_keysetting_;
+  std::map<std::string, KeySetting> keysetting_per_gamemode_;
+  KeySetting *curr_keysetting_;
+
+  PlayContext *play_context_;
+  std::list<std::string> play_chartname_;
+
+  friend class PlayContext;
 };
 
 #define FOR_EACH_PLAYER(p, i) \

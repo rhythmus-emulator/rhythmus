@@ -32,20 +32,24 @@ void PlayScene::StartScene()
     EventManager::SendEvent(Events::kEventSongSelectChanged);
   }
 
+  // TODO: enqueue event: song loading
+  // If course, enqueue charts to player.
+
   // attempt to call song load (if not loaded)
+  // exit scene if no chart remain to play
   if (SongResource::getInstance().is_loaded() == 0)
   {
-    std::string path, song_path, chart_name;
-    song_path = SongList::getInstance().get_current_song_info()->songpath;
-    chart_name = SongList::getInstance().get_current_song_info()->chartpath;
+    std::string song_path;
+    if (!Game::getInstance().pop_song(song_path))
+    {
+      CloseScene();
+      return;
+    }
     SongResource::getInstance().LoadAsync(song_path);
   }
 
   // send loading event
   EventManager::SendEvent(Events::kEventPlayLoading);
-
-  // TODO: enqueue event: song loading
-  // If course, enqueue charts to player.
 
   // enqueue event: song resource loading
   {
@@ -59,10 +63,7 @@ void PlayScene::StartScene()
         int i;
         FOR_EACH_PLAYER(p, i)
         {
-          // XXX: need to get proper chart index.
-          p->LoadChart(*SongResource::getInstance().get_song()->GetChart(0));
           p->LoadNextChart();
-          // XXX:
           // Need to call LoadReplay() / LoadPlay() to get previous play record later.
         }
       }
@@ -92,7 +93,7 @@ void PlayScene::StartScene()
         Player *p;
         FOR_EACH_PLAYER(p, i)
         {
-          p->StartPlay();
+          p->GetPlayContext()->StartPlay();
         }
       }
       this->play_status_ = 1;
@@ -115,14 +116,6 @@ void PlayScene::StartScene()
 
   // do default StartScene() function
   Scene::StartScene();
-
-  // Prepare each player to start recording
-  {
-    Player *p;
-    int i;
-    FOR_EACH_PLAYER(p, i)
-      p->StartPlay();
-  }
 }
 
 void PlayScene::CloseScene()
@@ -132,7 +125,7 @@ void PlayScene::CloseScene()
     Player *p;
     int i;
     FOR_EACH_PLAYER(p, i)
-      p->SavePlay();
+      p->GetPlayContext()->SavePlay();
   }
 
   Scene::CloseScene();
@@ -147,7 +140,7 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
       Player *p;
       FOR_EACH_PLAYER(p, i)
       {
-        p->StopPlay();
+        p->GetPlayContext()->StopPlay();
       }
     }
     SongResource::getInstance().CancelLoad();
@@ -176,7 +169,7 @@ void PlayScene::doUpdate(float delta)
     int i;
     Player *p;
     FOR_EACH_PLAYER(p, i)
-      p->Update(delta);
+      p->GetPlayContext()->Update(delta);
   }
 }
 

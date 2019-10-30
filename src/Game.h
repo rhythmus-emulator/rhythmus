@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <list>
 #include <map>
 
 namespace rhythmus
@@ -77,6 +78,8 @@ public:
   GameBootMode get_boot_mode() const;
   GameSceneMode get_game_scene_mode() const;
   Setting& get_game_setting();
+  void push_song(const std::string& songpath);
+  bool pop_song(std::string& songpath);
 
   void set_do_logging(bool v);
 
@@ -103,6 +106,9 @@ private:
 
   // current game scene.
   GameSceneMode game_scene_;
+
+  // song path list to play
+  std::list<std::string> song_queue_;
 
   // reserved next game scene.
   GameSceneMode next_game_scene_;

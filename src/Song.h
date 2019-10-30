@@ -110,6 +110,7 @@ public:
   void Clear();
 
   rparser::Song* get_song();
+  rparser::Chart* get_chart(const std::string& chartname);
   void set_load_bga(bool use_bga);
   int is_loaded() const;
   double get_progress() const;

@@ -171,7 +171,7 @@ bool NoteWithJudging::is_judge_finished() const
 
 rparser::NoteDesc *NoteWithJudging::get_curr_notedesc()
 {
-  return this->chain(chain_index_);
+  return this->get_chain(chain_index_);
 }
 
 static Player *players_[kMaxPlayerSlot];
@@ -241,6 +241,11 @@ NoteWithJudging *TrackContext::get_curr_judged_note()
 NoteWithJudging *TrackContext::get_curr_sound_note()
 { return &objects_[curr_keysound_idx_]; }
 
+bool TrackContext::is_all_judged() const
+{
+  return curr_judge_idx_ >= objects_.size();
+}
+
 bool NoteWithJudging::is_judgable() const
 {
   // TODO
@@ -274,17 +279,253 @@ NoteWithJudging& TrackIterator::operator*()
 }
 
 
+// -------------------------- class PlayContext
+
+PlayContext::PlayContext(Player &player, rparser::Chart &c)
+  : player_(player),
+    is_save_allowed_(true), is_save_record_(true), is_save_replay_(true)
+{
+  auto &nd = c.GetNoteData();
+  size_t i = 0;
+  for (; i < nd.get_track_count(); ++i)
+    track_context_[i].Initialize(nd.get_track(i));
+  for (; i < kMaxTrackSize; ++i)
+    track_context_[i].Clear();
+}
+
+void PlayContext::LoadPlay()
+{
+  // TODO: load play record
+  // XXX: integrate with LoadChart?
+}
+
+void PlayContext::SavePlay()
+{
+  if (!is_save_allowed_)
+    return;
+
+  // update final result
+
+  if (is_save_record_)
+    SaveRecord();
+  if (is_save_replay_)
+    SaveReplay();
+}
+
+void PlayContext::LoadRecord()
+{
+  // TODO: use sqlite
+}
+
+void PlayContext::SaveRecord()
+{
+  // TODO: use sqlite
+}
+
+void PlayContext::LoadReplay()
+{
+  // TODO: use sqlite
+}
+
+void PlayContext::SaveReplay()
+{
+  // TODO: use sqlite
+}
+
+void PlayContext::StartPlay()
+{
+  // Set record context
+  replay_.events.clear();
+  replay_.timestamp = 0;  // TODO: get system timestamp from Util
+  replay_.seed = 0;   // TODO
+  replay_.speed = player_.game_speed_;
+  replay_.speed_type = player_.game_speed_type_;
+  replay_.health_type = player_.health_type_;
+  replay_.rate = 0;
+  replay_.score = 0;
+  replay_.total_note = 0; // TODO: use song class?
+  replay_.option = player_.option_chart_;
+  replay_.option_dp = player_.option_chart_dp_;
+  replay_.assist = player_.assist_;
+  memset(&course_judge_, 0, sizeof(Judge));
+
+  is_alive_ = 1;
+  health_ = 1.0;
+  combo_ = 0;
+  songtime_ = 0;
+  last_judge_type_ = JudgeTypes::kJudgeNone;
+
+  // initialize judgement and record
+  memset(&judge_, 0, sizeof(Judge));
+  RecordPlay(ReplayEventTypes::kReplaySong, 0, 0);
+
+  /* Check play record saving allowed, e.g. assist option */
+  bool check = (replay_.assist == 0);
+  is_save_record_ = check;
+  is_save_replay_ = check;
+}
+
+void PlayContext::StopPlay()
+{
+  // set as dead player
+  is_alive_ = 0;
+}
+
+void PlayContext::RecordPlay(ReplayEventTypes event_type, int time, int value1, int value2)
+{
+  replay_.events.emplace_back(ReplayEvent{
+    (int)event_type, time, value1, value2
+    });
+
+  switch (event_type)
+  {
+  case ReplayEventTypes::kReplayMiss:
+    judge_.miss++;
+    course_judge_.miss++;
+    combo_ = 0;
+    break;
+  case ReplayEventTypes::kReplayPR:
+    judge_.pr++;
+    course_judge_.pr++;
+    combo_ = 0;
+    break;
+  case ReplayEventTypes::kReplayBD:
+    judge_.bd++;
+    course_judge_.bd++;
+    combo_ = 0;
+    break;
+  case ReplayEventTypes::kReplayGD:
+    judge_.gd++;
+    course_judge_.gd++;
+    combo_++;
+    break;
+  case ReplayEventTypes::kReplayGR:
+    judge_.gr++;
+    course_judge_.gr++;
+    combo_++;
+    break;
+  case ReplayEventTypes::kReplayPG:
+    judge_.pg++;
+    course_judge_.pg++;
+    combo_++;
+    break;
+  default:
+    break;
+  }
+
+  if (event_type >= ReplayEventTypes::kReplayMiss &&
+    event_type <= ReplayEventTypes::kReplayPG)
+    last_judge_type_ = (int)event_type;
+}
+
+double PlayContext::get_rate() const
+{
+  return (double)(judge_.pg * 2 + judge_.gr) / total_note_;
+}
+
+double PlayContext::get_current_rate() const
+{
+  return (double)(judge_.pg * 2 + judge_.gr) / passed_note_;
+}
+
+double PlayContext::get_score() const
+{
+  return get_rate() * 200000.0;
+}
+
+double PlayContext::get_health() const
+{
+  return health_;
+}
+
+bool PlayContext::is_alive() const
+{
+  return is_alive_;
+}
+
+bool PlayContext::is_finished() const
+{
+  // died, or no remain note to play.
+  if (!is_alive()) return true;
+  for (size_t i = 0; i < kMaxTrackSize; ++i) /* TODO: change to track size */
+    if (!track_context_[i].is_all_judged())
+      return false;
+  return true;
+}
+
+void PlayContext::ProcessInputEvent(const EventMessage& e)
+{
+  if (!e.IsInput())
+    return;
+
+  // get track from keycode setting
+  int track_no = -1;
+  for (size_t i = 0; i < kMaxTrackSize; ++i)
+  {
+    for (size_t j = 0; j < 4; ++j)
+    {
+      if (player_.curr_keysetting_->keycode_per_track_[i][j] == 0)
+        break;
+      if (player_.curr_keysetting_->keycode_per_track_[i][j] == e.GetKeycode())
+      {
+        track_no = i;
+        break;
+      }
+    }
+  }
+
+  if (track_no == -1)
+    return;
+
+  // make judgement
+  // - re-calculate judgetime to fetch exact judging time
+  auto *obj = track_context_[track_no].get_curr_judged_note();
+  if (obj)
+  {
+    double judgetime = e.GetTime() - Timer::GetGameTime() + songtime_;
+    int event_type = JudgeEventTypes::kJudgeEventDown;
+    if (e.IsKeyUp()) event_type = JudgeEventTypes::kJudgeEventUp;
+    obj->judge(judgetime, event_type);
+  }
+}
+
+void PlayContext::Update(float delta)
+{
+  // fetch some playing context from song ... ?
+  //passed_note_++; // TODO
+  songtime_ += delta;
+  UpdateJudgeByRow();
+}
+
+void PlayContext::UpdateJudgeByRow()
+{
+  // 1. update each track for missed / mine note
+  for (size_t i = 0; i < 128; ++i)
+  {
+    track_context_[i].Update(songtime_);
+  }
+
+  // 2. for row-wise game mode (e.g. guitarfreaks),
+  //    check notes of whole row to decide judgement.
+  // TODO
+}
+
+TrackIterator PlayContext::GetTrackIterator(size_t track_idx)
+{
+  return TrackIterator(track_context_[track_idx]);
+}
+
+
 // ------------------------------- class Player
 
 Player::Player(PlayerTypes player_type, const std::string& player_name)
-  : player_type_(player_type), player_name_(player_name), chartindex_(0),
+  : player_type_(player_type), player_name_(player_name), is_guest_(false),
   use_lane_cover_(false), use_hidden_(false),
   game_speed_type_(GameSpeedTypes::kSpeedConstant),
   game_speed_(1.0), game_constant_speed_(1.0),
   lane_cover_(0.0), hidden_(0.0),
   bms_sp_class_(0), bms_dp_class_(0),
-  is_save_allowed_(true), is_save_record_(true), is_save_replay_(true),
-  is_guest_(false)
+  play_context_(nullptr)
 {
   if (player_type_ == PlayerTypes::kPlayerGuest)
     is_guest_ = true;
@@ -342,262 +583,48 @@ void Player::Load()
 
 void Player::Save()
 {
-  if (!is_save_allowed_)
+  if (is_guest_)
     return;
 
   setting_.Save();
 }
 
-void Player::SetPlayId(const std::string& play_id)
+/* @warn: must load proper song to SongResource instance before this function. */
+void Player::SetPlayContext(const std::string& chartname)
 {
-  ClearPlay();
-  play_id_ = play_id;
+  ASSERT(play_context_ == nullptr);
+  auto *chart = SongResource::getInstance().get_chart(chartname);
+  if (!chart)
+    return;
+
+  play_context_ = new PlayContext(*this, *chart);
 }
 
-void Player::LoadChart(rparser::Chart& chart)
+void Player::ClearPlayContext()
 {
-  queued_charts_.push_back(&chart);
+  // TODO: bring setting & save records before removing play context
+  delete play_context_;
+  play_context_ = nullptr;
+}
+
+PlayContext *Player::GetPlayContext()
+{
+  return play_context_;
+}
+
+void Player::AddChartnameToPlay(const std::string& chartname)
+{
+  play_chartname_.push_back(chartname);
 }
 
 void Player::LoadNextChart()
 {
-  ClearPlay();
-  is_save_allowed_ = false;
-  is_save_record_ = false;
-  is_save_replay_ = false;
-
-  rparser::Chart *c = queued_charts_.front();
-  queued_charts_.pop_front();
-  auto &nd = c->GetNoteData();
-  size_t i = 0;
-  for (; i < nd.get_track_count(); ++i)
-    track_context_[i].Initialize(nd.get_track(i));
-  for (; i < kMaxTrackSize; ++i)
-    track_context_[i].Clear();
-}
-
-void Player::LoadPlay()
-{
-  // TODO: load play record
-  // XXX: integrate with LoadChart?
-}
-
-void Player::SavePlay()
-{
-  if (!is_save_allowed_ || is_guest_)
+  ClearPlayContext();
+  if (play_chartname_.empty())
     return;
-
-  // update final result
-
-  if (is_save_record_)
-    SaveRecord();
-  if (is_save_replay_)
-    SaveReplay();
-}
-
-void Player::LoadRecord()
-{
-  // TODO: use sqlite
-}
-
-void Player::SaveRecord()
-{
-  // TODO: use sqlite
-}
-
-void Player::LoadReplay()
-{
-  // TODO: use sqlite
-}
-
-void Player::SaveReplay()
-{
-  // TODO: use sqlite
-}
-
-void Player::ClearPlay()
-{
-}
-
-void Player::StartPlay()
-{
-  // Set record context
-  replay_.events.clear();
-  replay_.timestamp = 0;  // TODO: get system timestamp from Util
-  replay_.seed = 0;   // TODO
-  replay_.speed = game_speed_;
-  replay_.speed_type = game_speed_type_;
-  replay_.health_type = health_type_;
-  replay_.rate = 0;
-  replay_.score = 0;
-  replay_.total_note = 0; // TODO: use song class?
-  replay_.option = option_chart_;
-  replay_.option_dp = option_chart_dp_;
-  replay_.assist = assist_;
-  memset(&course_judge_, 0, sizeof(Judge));
-
-  is_alive_ = 1;
-  health_ = 1.0;
-  combo_ = 0;
-  songtime_ = 0;
-  last_judge_type_ = JudgeTypes::kJudgeNone;
-
-  // other is general song context clear
-  StartNextSong();
-
-  /* Check play record saving allowed, e.g. assist option */
-  bool check = (assist_ == 0);
-  is_save_record_ = check;
-  is_save_replay_ = check;
-}
-
-void Player::StopPlay()
-{
-  // set as dead player
-  is_alive_ = 0;
-}
-
-void Player::StartNextSong()
-{
-  // initialize judgement and record
-  memset(&judge_, 0, sizeof(Judge));
-  RecordPlay(ReplayEventTypes::kReplaySong, 0, 0);
-
-  // prepare track data
-}
-
-void Player::RecordPlay(ReplayEventTypes event_type, int time, int value1, int value2)
-{
-  replay_.events.emplace_back(ReplayEvent{
-    (int)event_type, time, value1, value2
-    });
-
-  switch (event_type)
-  {
-  case ReplayEventTypes::kReplayMiss:
-    judge_.miss++;
-    course_judge_.miss++;
-    combo_ = 0;
-    break;
-  case ReplayEventTypes::kReplayPR:
-    judge_.pr++;
-    course_judge_.pr++;
-    combo_ = 0;
-    break;
-  case ReplayEventTypes::kReplayBD:
-    judge_.bd++;
-    course_judge_.bd++;
-    combo_ = 0;
-    break;
-  case ReplayEventTypes::kReplayGD:
-    judge_.gd++;
-    course_judge_.gd++;
-    combo_++;
-    break;
-  case ReplayEventTypes::kReplayGR:
-    judge_.gr++;
-    course_judge_.gr++;
-    combo_++;
-    break;
-  case ReplayEventTypes::kReplayPG:
-    judge_.pg++;
-    course_judge_.pg++;
-    combo_++;
-    break;
-  default:
-    break;
-  }
-
-  if (event_type >= ReplayEventTypes::kReplayMiss &&
-      event_type <= ReplayEventTypes::kReplayPG)
-    last_judge_type_ = (int)event_type;
-}
-
-double Player::get_rate() const
-{
-  return (double)(judge_.pg * 2 + judge_.gr) / total_note_;
-}
-
-double Player::get_current_rate() const
-{
-  return (double)(judge_.pg * 2 + judge_.gr) / passed_note_;
-}
-
-double Player::get_score() const
-{
-  return get_rate() * 200000.0;
-}
-
-double Player::get_health() const
-{
-  return health_;
-}
-
-bool Player::is_alive() const
-{
-  return is_alive_;
-}
-
-void Player::ProcessInputEvent(const EventMessage& e)
-{
-  if (!e.IsInput())
-    return;
-
-  // get track from keycode setting
-  int track_no = -1;
-  for (size_t i = 0; i < kMaxTrackSize; ++i)
-  {
-    for (size_t j = 0; j < 4; ++j)
-    {
-      if (curr_keysetting_->keycode_per_track_[i][j] == 0)
-        break;
-      if (curr_keysetting_->keycode_per_track_[i][j] == e.GetKeycode())
-      {
-        track_no = i;
-        break;
-      }
-    }
-  }
-
-  if (track_no == -1)
-    return;
-
-  // make judgement
-  // - re-calculate judgetime to fetch exact judging time
-  auto *obj = track_context_[track_no].get_curr_judged_note();
-  if (obj)
-  {
-    double judgetime = e.GetTime() - Timer::GetGameTime() + songtime_;
-    int event_type = JudgeEventTypes::kJudgeEventDown;
-    if (e.IsKeyUp()) event_type = JudgeEventTypes::kJudgeEventUp;
-    obj->judge(judgetime, event_type);
-  }
-}
-
-void Player::Update(float delta)
-{
-  // fetch some playing context from song ... ?
-  //passed_note_++; // TODO
-  songtime_ += delta;
-  UpdateJudgeByRow();
-}
-
-void Player::UpdateJudgeByRow()
-{
-  // 1. update each track for missed / mine note
-  for (size_t i = 0; i < 128; ++i)
-  {
-    track_context_[i].Update(songtime_);
-  }
-
-  // 2. for row-wise game mode (e.g. guitarfreaks),
-  //    check notes of whole row to decide judgement.
-  // TODO
-}
-
-TrackIterator Player::GetTrackIterator(size_t track_idx)
-{
-  return TrackIterator(track_context_[track_idx]);
+  std::string chartname = play_chartname_.front();
+  play_chartname_.pop_front();
+  AddChartnameToPlay(chartname);
 }
 
 
@@ -678,6 +705,18 @@ bool Player::IsPlayerLoaded(int player_slot)
 int Player::GetLoadedPlayerCount()
 {
   return player_count;
+}
+
+bool Player::IsAllPlayerFinished()
+{
+  for (int i = 0; i < kMaxPlayerSlot; ++i) if (players_[i])
+  {
+    auto *pctx = players_[i]->play_context_;
+    if (!pctx) continue;
+    if (!pctx->is_finished())
+      return false;
+  }
+  return true;
 }
 
 }

@@ -573,6 +573,13 @@ rparser::Song* SongResource::get_song()
   return song_;
 }
 
+rparser::Chart* SongResource::get_chart(const std::string& chartname)
+{
+  if (!song_)
+    return nullptr;
+  return song_->GetChart(chartname);
+}
+
 void SongResource::set_load_bga(bool use_bga)
 {
   load_bga_ = use_bga;

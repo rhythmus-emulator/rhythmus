@@ -24,7 +24,7 @@ void SelectScene::LoadScene()
     int i;
     FOR_EACH_PLAYER(p, i)
     {
-      p->get_chart_player().Clear();
+      p->ClearPlayContext();
     }
   }
   SongResource::getInstance().Clear();
@@ -94,11 +94,14 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
     }
     else if (e.GetKeycode() == GLFW_KEY_ENTER)
     {
-      // Trick: preload selected song from here
-      // we can play song almost without loading time ...!
+      // Register select song / course into Game state.
+      // XXX: can we preload selected song from here before PlayScene...?
       auto &d = wheel_.get_selected_data();
+      Game::getInstance().push_song(d.songpath);
       SongResource::getInstance().LoadAsync(d.songpath);
-      Player::getMainPlayer().set_chartname(d.chartname);
+
+      // TODO: make selection to deal with for_each_player
+      Player::getMainPlayer().AddChartnameToPlay(d.chartname);
 
       // Song selection - immediately change scene mode
       CloseScene();
