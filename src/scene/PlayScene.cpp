@@ -33,7 +33,7 @@ void PlayScene::StartScene()
   }
 
   // TODO: enqueue event: song loading
-  // If course, enqueue charts to player.
+  // TODO: If course, enqueue charts to player.
 
   // attempt to call song load (if not loaded)
   // exit scene if no chart remain to play
@@ -159,6 +159,7 @@ void PlayScene::doUpdate(float delta)
   Scene::doUpdate(delta);
   playscenetask_.Update(delta);
 
+  // Play BGM while playing.
   if (play_status_ == 1)
   {
     SongResource::getInstance().Update(delta);

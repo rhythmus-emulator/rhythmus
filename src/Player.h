@@ -173,6 +173,8 @@ public:
 
   TrackIterator GetTrackIterator(size_t track_idx);
 
+  Image* GetImage(size_t layer_idx) const;
+
 private:
   Player &player_;
 
@@ -197,7 +199,11 @@ private:
   };
   Judge judge_;
 
+  Sound* keysounds_[2000]; // XXX: 2000?
+  Image* bgs_[2000];
+
   /* unsaved playing context (for course) */
+  /* TODO: should moved to player object ...? */
 
   Judge course_judge_;
 

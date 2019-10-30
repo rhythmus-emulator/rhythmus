@@ -283,14 +283,50 @@ NoteWithJudging& TrackIterator::operator*()
 
 PlayContext::PlayContext(Player &player, rparser::Chart &c)
   : player_(player),
-    is_save_allowed_(true), is_save_record_(true), is_save_replay_(true)
+    is_save_allowed_(true), is_save_record_(true), is_save_replay_(true),
+    is_alive_(0), health_(0.), combo_(0), songtime_(0),
+    last_judge_type_(JudgeTypes::kJudgeNone)
 {
+  // set note / track data from notedata
   auto &nd = c.GetNoteData();
   size_t i = 0;
   for (; i < nd.get_track_count(); ++i)
     track_context_[i].Initialize(nd.get_track(i));
   for (; i < kMaxTrackSize; ++i)
     track_context_[i].Clear();
+
+  // Fetch sound/bg data from SongResource.
+  // These resources are managed by SongResource instance,
+  // so do not release them here.
+  // TODO: need to pass channel information to GetSound() param.
+  for (auto &f : c.GetMetaData().GetSoundChannel()->fn)
+    keysounds_[f.first] = SongResource::getInstance().GetSound(f.second);
+  for (auto &f : c.GetMetaData().GetBGAChannel()->bga)
+    bgs_[f.first] = SongResource::getInstance().GetImage(f.second.fn);
+
+  // Set record context
+  replay_.events.clear();
+  replay_.timestamp = 0;  // TODO: get system timestamp from Util
+  replay_.seed = 0;   // TODO
+  replay_.speed = player_.game_speed_;
+  replay_.speed_type = player_.game_speed_type_;
+  replay_.health_type = player_.health_type_;
+  replay_.rate = 0;
+  replay_.score = 0;
+  replay_.total_note = 0; // TODO: use song class?
+  replay_.option = player_.option_chart_;
+  replay_.option_dp = player_.option_chart_dp_;
+  replay_.assist = player_.assist_;
+  memset(&course_judge_, 0, sizeof(Judge));
+
+  // initialize judgement and record
+  memset(&judge_, 0, sizeof(Judge));
+  RecordPlay(ReplayEventTypes::kReplaySong, 0, 0);
+
+  /* Check play record saving allowed, e.g. assist option */
+  bool check = (replay_.assist == 0);
+  is_save_record_ = check;
+  is_save_replay_ = check;
 }
 
 void PlayContext::LoadPlay()
@@ -334,35 +370,11 @@ void PlayContext::SaveReplay()
 
 void PlayContext::StartPlay()
 {
-  // Set record context
-  replay_.events.clear();
-  replay_.timestamp = 0;  // TODO: get system timestamp from Util
-  replay_.seed = 0;   // TODO
-  replay_.speed = player_.game_speed_;
-  replay_.speed_type = player_.game_speed_type_;
-  replay_.health_type = player_.health_type_;
-  replay_.rate = 0;
-  replay_.score = 0;
-  replay_.total_note = 0; // TODO: use song class?
-  replay_.option = player_.option_chart_;
-  replay_.option_dp = player_.option_chart_dp_;
-  replay_.assist = player_.assist_;
-  memset(&course_judge_, 0, sizeof(Judge));
-
   is_alive_ = 1;
   health_ = 1.0;
   combo_ = 0;
   songtime_ = 0;
   last_judge_type_ = JudgeTypes::kJudgeNone;
-
-  // initialize judgement and record
-  memset(&judge_, 0, sizeof(Judge));
-  RecordPlay(ReplayEventTypes::kReplaySong, 0, 0);
-
-  /* Check play record saving allowed, e.g. assist option */
-  bool check = (replay_.assist == 0);
-  is_save_record_ = check;
-  is_save_replay_ = check;
 }
 
 void PlayContext::StopPlay()
@@ -485,6 +497,14 @@ void PlayContext::ProcessInputEvent(const EventMessage& e)
     double judgetime = e.GetTime() - Timer::GetGameTime() + songtime_;
     int event_type = JudgeEventTypes::kJudgeEventDown;
     if (e.IsKeyUp()) event_type = JudgeEventTypes::kJudgeEventUp;
+
+    // sound first before judgement
+    // TODO: get sounding object before judgement
+    auto *ksound = keysounds_[obj->channel()];
+    if (ksound) ksound->Play();
+
+    // make judgement & afterwork
+    // TODO: update sounding index after judgement
     obj->judge(judgetime, event_type);
   }
 }
