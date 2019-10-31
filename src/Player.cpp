@@ -161,7 +161,7 @@ JudgementContext *NoteWithJudging::get_judge_ctx()
 
 int NoteWithJudging::judge_only_timing(uint32_t songtime)
 {
-  get_judge_ctx()->judge(songtime);
+  return get_judge_ctx()->judge(songtime);
 }
 
 bool NoteWithJudging::is_judge_finished() const
@@ -260,7 +260,7 @@ TrackIterator::TrackIterator(TrackContext& track)
   // go back few notes to display previously judged notes (if necessary)
   size_t idx = std::max(track.curr_judge_idx_, 5u) - 5;
   for (; idx < track.objects_.size() && notes_.size() < kMaxNotesToDisplay; ++idx)
-    notes_.push_back[track.objects_[idx]];
+    notes_.push_back(&track.objects_[idx]);
 }
 
 bool TrackIterator::is_end() const
