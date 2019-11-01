@@ -279,13 +279,80 @@ NoteWithJudging& TrackIterator::operator*()
 }
 
 
+// ---------------- class BackgroundDataContext
+
+BackgroundDataContext::BackgroundDataContext()
+  : curr_idx_(0), curr_process_idx_(0) {}
+
+void BackgroundDataContext::Initialize(rparser::TrackData &data)
+{
+  auto iter = data.GetAllTrackIterator();
+  while (!iter.is_end())
+  {
+    objects_.push_back(&*iter);
+  }
+  curr_idx_ = 0;
+  curr_process_idx_ = 0;
+}
+
+void BackgroundDataContext::Clear()
+{
+  objects_.clear();
+  curr_process_idx_ = 0;
+  curr_idx_ = 0;
+}
+
+void BackgroundDataContext::Update(uint32_t songtime)
+{
+  while (curr_idx_ < objects_.size())
+  {
+    curr_idx_++;
+  }
+}
+
+rparser::NotePos* BackgroundDataContext::get_current()
+{
+  if (curr_idx_ == 0)
+    return nullptr;
+  return objects_[curr_idx_ - 1];
+}
+
+const rparser::NotePos* BackgroundDataContext::get_current() const
+{
+  return const_cast<BackgroundDataContext*>(this)->get_current();
+}
+
+rparser::NotePos* BackgroundDataContext::get_stack()
+{
+  if (curr_process_idx_ >= curr_idx_)
+    return nullptr;
+  return objects_[curr_process_idx_];
+}
+
+const rparser::NotePos* BackgroundDataContext::get_stack() const
+{
+  return const_cast<BackgroundDataContext*>(this)->get_stack();
+}
+
+void BackgroundDataContext::pop_stack()
+{
+  if (curr_process_idx_ < curr_idx_)
+    curr_process_idx_++;
+}
+
+void BackgroundDataContext::clear_stack()
+{
+  curr_process_idx_ = curr_idx_;
+}
+
+
 // -------------------------- class PlayContext
 
 PlayContext::PlayContext(Player &player, rparser::Chart &c)
   : player_(player),
-    is_save_allowed_(true), is_save_record_(true), is_save_replay_(true),
     is_alive_(0), health_(0.), combo_(0), songtime_(0),
-    last_judge_type_(JudgeTypes::kJudgeNone)
+    last_judge_type_(JudgeTypes::kJudgeNone),
+  is_save_allowed_(true), is_save_record_(true), is_save_replay_(true), is_play_bgm_(true)
 {
   // set note / track data from notedata
   auto &nd = c.GetNoteData();
@@ -300,9 +367,9 @@ PlayContext::PlayContext(Player &player, rparser::Chart &c)
   // so do not release them here.
   // TODO: need to pass channel information to GetSound() param.
   for (auto &f : c.GetMetaData().GetSoundChannel()->fn)
-    keysounds_[f.first] = SongResource::getInstance().GetSound(f.second);
+    keysounds_[f.first] = SongResource::getInstance().GetSound(f.second, f.first);
   for (auto &f : c.GetMetaData().GetBGAChannel()->bga)
-    bgs_[f.first] = SongResource::getInstance().GetImage(f.second.fn);
+    bg_animations_[f.first] = SongResource::getInstance().GetImage(f.second.fn);
 
   // Set record context
   replay_.events.clear();
@@ -511,28 +578,52 @@ void PlayContext::ProcessInputEvent(const EventMessage& e)
 
 void PlayContext::Update(float delta)
 {
-  // fetch some playing context from song ... ?
-  //passed_note_++; // TODO
   songtime_ += delta;
-  UpdateJudgeByRow();
-}
 
-void PlayContext::UpdateJudgeByRow()
-{
   // 1. update each track for missed / mine note
-  for (size_t i = 0; i < 128; ++i)
+  for (size_t i = 0; i < 128 /* XXX: get & set lane count? */; ++i)
   {
     track_context_[i].Update(songtime_);
   }
 
   // 2. for row-wise game mode (e.g. guitarfreaks),
   //    check notes of whole row to decide judgement.
+  UpdateJudgeByRow();
+
+  // 3. BGA / BGM process
+  if (is_play_bgm_)
+  {
+    bgm_context_.Update(songtime_);
+    while (bgm_context_.get_stack())
+    {
+      auto *obj = static_cast<rparser::BgmObject*>(bgm_context_.get_stack());
+      bgm_context_.pop_stack();
+      if (!obj) continue;
+      auto *s = keysounds_[obj->channel()];
+      if (s) s->Play();
+    }
+  }
+  for (size_t i = 0; i < 4; ++i)
+    bga_context_[i].Update(songtime_);
+}
+
+void PlayContext::UpdateJudgeByRow()
+{
   // TODO
 }
 
 TrackIterator PlayContext::GetTrackIterator(size_t track_idx)
 {
   return TrackIterator(track_context_[track_idx]);
+}
+
+Image* PlayContext::GetImage(size_t layer_idx) const
+{
+  const auto *obj = static_cast<const rparser::BgaObject*>(
+    bga_context_[std::min(layer_idx, 3u)].get_current()
+    );
+  if (!obj) return nullptr;
+  return bg_animations_[obj->channel()];
 }
 
 

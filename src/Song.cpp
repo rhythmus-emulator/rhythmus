@@ -512,15 +512,17 @@ void SongResource::LoadResources()
         // image
         Image *img = new Image();
         img->LoadFromData((uint8_t*)file, len);
-        bgs_.push_back({ fn, img });
+        bg_animations_.push_back({ { fn }, img });
       }
       else if (file_to_load.type == 1)
       {
         // sound
         Sound *snd = new Sound();
-        snd->Resample(SoundDriver::getInstance().getMixer().GetSoundInfo());
+        snd->get_buffer()->Resample(
+          SoundDriver::getInstance().getMixer().GetSoundInfo()
+        );
         snd->Load(file, len);
-        sounds_.push_back({ fn, snd });
+        sounds_.push_back({ { fn, -1 }, snd });
       }
     }
   }
@@ -531,14 +533,14 @@ void SongResource::LoadResources()
 /* This function should be called after all song resources are loaded */
 void SongResource::UploadBitmaps()
 {
-  for (auto &bg : bgs_) if (bg.second->is_loaded())
+  for (auto &bg : bg_animations_) if (bg.second->is_loaded())
     bg.second->CommitImage();
 }
 
 /* For updating image */
 void SongResource::Update(float delta)
 {
-  for (auto &bg : bgs_) if (bg.second->is_loaded())
+  for (auto &bg : bg_animations_) if (bg.second->is_loaded())
     bg.second->Update(delta);
 }
 
@@ -556,11 +558,11 @@ void SongResource::CancelLoad()
 void SongResource::Clear()
 {
   CancelLoad();
-  for (auto &bg : bgs_)
+  for (auto &bg : bg_animations_)
     delete bg.second;
   for (auto &sound : sounds_)
     delete sound.second;
-  bgs_.clear();
+  bg_animations_.clear();
   sounds_.clear();
   song_->Close();
   delete song_;
@@ -596,17 +598,47 @@ double SongResource::get_progress() const
   return (double)loaded_file_count_ / loadfile_count_total_;
 }
 
-Sound* SongResource::GetSound(const std::string& filename)
+Sound* SongResource::GetSound(const std::string& filename, int channel)
 {
+  Sound *sound_found = nullptr;
+  Sound *new_sound = nullptr;
+
   for (auto &snd : sounds_)
-    if (snd.first == filename) return snd.second;
-  return nullptr;
+  {
+    if (snd.first.name == filename)
+    {
+      sound_found = snd.second;
+
+      // -1 channel value: nobody assigned, so take it.
+      if (snd.first.channel == -1)
+      {
+        snd.first.channel = channel;
+        snd.second->RegisterToMixer(&SoundDriver::getInstance().getMixer());
+      }
+
+      // if sound found with same channel, return it directly.
+      if (snd.first.channel == channel)
+      {
+        return snd.second;
+      }
+    }
+  }
+
+  // not found; return nullptr
+  if (!sound_found) return nullptr;
+
+  // sound found, but different channel.
+  // therefore, create new sound by shallow_clone.
+  new_sound = sound_found->shallow_clone();
+  new_sound->RegisterToMixer(&SoundDriver::getInstance().getMixer());
+  sounds_.push_back({ { filename, channel }, new_sound });
+  return new_sound;
 }
 
 Image* SongResource::GetImage(const std::string& filename)
 {
-  for (auto &bg : bgs_)
-    if (bg.first == filename) return bg.second;
+  for (auto &bg : bg_animations_)
+    if (bg.first.name == filename) return bg.second;
   return nullptr;
 }
 

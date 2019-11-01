@@ -115,15 +115,26 @@ public:
   int is_loaded() const;
   double get_progress() const;
 
-  Sound* GetSound(const std::string& filename);
+  Sound* GetSound(const std::string& filename, int channel = -1);
   Image* GetImage(const std::string& filename);
 
   static SongResource& getInstance();
 
 private:
   rparser::Song* song_;
-  std::vector<std::pair<std::string, Image*> > bgs_;
-  std::vector<std::pair<std::string, Sound*> > sounds_;
+
+  struct SoundInfo
+  {
+    std::string name;
+    int channel;
+  };
+  struct ImageInfo
+  {
+    std::string name;
+  };
+
+  std::vector<std::pair<ImageInfo, Image*> > bg_animations_;
+  std::vector<std::pair<SoundInfo, Sound*> > sounds_;
 
   /**
    * Tasks (for cancel-waiting)

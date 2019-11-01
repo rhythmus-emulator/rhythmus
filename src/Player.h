@@ -147,6 +147,27 @@ private:
   size_t curr_idx_;
 };
 
+/* @brief Track for background objects (automatic, without judgement) */
+class BackgroundDataContext
+{
+public:
+  BackgroundDataContext();
+  void Initialize(rparser::TrackData &data);
+  void Clear();
+  void Update(uint32_t songtime);
+  rparser::NotePos* get_current();
+  const rparser::NotePos* get_current() const;
+  rparser::NotePos* get_stack();
+  const rparser::NotePos* get_stack() const;
+  void pop_stack();
+  void clear_stack();
+
+private:
+  std::vector<rparser::NotePos*> objects_;
+  size_t curr_idx_;
+  size_t curr_process_idx_;
+};
+
 /* @brief context used for game playing */
 class PlayContext
 {
@@ -180,6 +201,8 @@ private:
 
   /* unsaved playing context (for single stage) */
 
+  BackgroundDataContext bga_context_[4]; /* up to 4 layers */
+  BackgroundDataContext bgm_context_;
   TrackContext track_context_[kMaxTrackSize];
   void UpdateJudgeByRow(); /* for row-wise judgement update */
 
@@ -200,7 +223,7 @@ private:
   Judge judge_;
 
   Sound* keysounds_[2000]; // XXX: 2000?
-  Image* bgs_[2000];
+  Image* bg_animations_[2000];
 
   /* unsaved playing context (for course) */
   /* TODO: should moved to player object ...? */
@@ -238,6 +261,7 @@ private:
   bool is_save_allowed_;
   bool is_save_record_;
   bool is_save_replay_;
+  bool is_play_bgm_;
 
   void LoadRecord();
   void SaveRecord();
