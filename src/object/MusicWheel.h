@@ -43,7 +43,7 @@ class MusicWheel : public Menu
 public:
   MusicWheel();
   MusicWheelData& get_data(int dataindex);
-  MusicWheelData& get_selected_data();
+  MusicWheelData& get_selected_data(int player_num);
 
   void LoadProperty(const std::string& prop_name, const std::string& value);
 

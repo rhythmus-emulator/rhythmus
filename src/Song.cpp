@@ -388,7 +388,7 @@ public:
 
   virtual void run()
   {
-    res_->Load(song_path_);
+    res_->LoadSong(song_path_);
   }
 
   virtual void abort()
@@ -427,13 +427,11 @@ SongResource::SongResource()
 {
 }
 
-void SongResource::Load(const std::string& path)
+bool SongResource::LoadSong(const std::string& path)
 {
   // already loaded?
-  if (is_loaded_ > 0) return;
-
+  if (is_loaded_ > 0) return false;
   bool load_result = true;
-  is_loaded_ = 1;
 
   song_ = new rparser::Song();
   load_result = song_->Open(path);
@@ -442,12 +440,30 @@ void SongResource::Load(const std::string& path)
   {
     delete song_;
     is_loaded_ = 0;
-    return;
   }
 
-  // create resource list to load
+  return load_result;
+}
+
+#if 0
+void SongResource::LoadSongAsync(const std::string& path)
+{
+  TaskAuto t = std::make_shared<SongResourceLoadTask>(this, path);
+  tasks_.push_back(t);
+  TaskPool::getInstance().EnqueueTask(t);
+}
+#endif
+
+void SongResource::PrepareResourceListFromSong()
+{
+  auto *dir = song_->GetDirectory();
+  if (!dir)
+  {
+    /* some types of song has no resource directory. */
+    return;
+  }
   FileToLoad load;
-  for (auto *file : *song_->GetDirectory())
+  for (auto *file : *dir)
   {
     load.filename = file->filename;
     std::string ext = GetExtension(file->filename);
@@ -465,31 +481,27 @@ void SongResource::Load(const std::string& path)
     else continue;
     files_to_load_.push_back(load);
   }
-
-  // create resource loader task
-  loadfile_count_total_ = files_to_load_.size();
-  loaded_file_count_ = 0;
-  size_t load_thread_count = TaskPool::getInstance().GetPoolSize();
-  for (int i = 0; i < load_thread_count; ++i)
-  {
-    TaskAuto t = std::make_shared<SongResourceLoadResourceTask>(this);
-    tasks_.push_back(t);
-    TaskPool::getInstance().EnqueueTask(t);
-  }
 }
-
-void SongResource::LoadAsync(const std::string& path)
-{
-  TaskAuto t = std::make_shared<SongResourceLoadTask>(this, path);
-  tasks_.push_back(t);
-  TaskPool::getInstance().EnqueueTask(t);
-}
-
 
 /* internally called from Load() and LoadAsync() */
 void SongResource::LoadResources()
 {
-  while (1)
+  if (!song_) return;
+
+  /* If no resources are designated to be loaded,
+   * Automatically create load list */
+  if (is_loaded_ == 0)
+  {
+    std::lock_guard<std::mutex> lock(loading_mutex_);
+    if (files_to_load_.empty())
+    {
+      PrepareResourceListFromSong();
+    }
+    is_loaded_ = 1;
+  }
+
+  /* Main resource loading loop */
+  while (is_loaded_ == 1)
   {
     FileToLoad file_to_load;
     std::string fn;
@@ -528,6 +540,19 @@ void SongResource::LoadResources()
   }
 
   is_loaded_ = 2;
+}
+
+void SongResource::LoadResourcesAsync()
+{
+  loadfile_count_total_ = files_to_load_.size();
+  loaded_file_count_ = 0;
+  size_t load_thread_count = TaskPool::getInstance().GetPoolSize();
+  for (int i = 0; i < load_thread_count; ++i)
+  {
+    TaskAuto t = std::make_shared<SongResourceLoadResourceTask>(this);
+    tasks_.push_back(t);
+    TaskPool::getInstance().EnqueueTask(t);
+  }
 }
 
 /* This function should be called after all song resources are loaded */

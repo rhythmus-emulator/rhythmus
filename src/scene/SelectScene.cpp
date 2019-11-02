@@ -19,14 +19,11 @@ SelectScene::SelectScene()
 void SelectScene::LoadScene()
 {
   // Before starting, unload song.
+  FOR_EACH_PLAYER(p, i)
   {
-    Player *p;
-    int i;
-    FOR_EACH_PLAYER(p, i)
-    {
-      p->ClearPlayContext();
-    }
+    p->ClearPlayContext();
   }
+  END_EACH_PLAYER()
   SongResource::getInstance().Clear();
 
   // Add wheel children first, as scene parameter may need it.
@@ -72,16 +69,17 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
 
   if (e.IsKeyDown() || e.IsKeyPress())
   {
+    // TODO: scroll key from Player setting.
     if (e.GetKeycode() == GLFW_KEY_UP)
     {
       wheel_.NavigateUp();
-      SongList::getInstance().select(wheel_.get_selected_data().index);
+      SongList::getInstance().select(wheel_.get_selected_data(0).index);
       EventManager::SendEvent(Events::kEventSongSelectChanged);
     }
     else if (e.GetKeycode() == GLFW_KEY_DOWN)
     {
       wheel_.NavigateDown();
-      SongList::getInstance().select(wheel_.get_selected_data().index);
+      SongList::getInstance().select(wheel_.get_selected_data(0).index);
       EventManager::SendEvent(Events::kEventSongSelectChanged);
     }
   }
@@ -94,14 +92,17 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
     }
     else if (e.GetKeycode() == GLFW_KEY_ENTER)
     {
-      // Register select song / course into Game state.
+      // Register select song / course into Game / Player state.
       // XXX: can we preload selected song from here before PlayScene...?
-      auto &d = wheel_.get_selected_data();
-      Game::getInstance().push_song(d.songpath);
-      SongResource::getInstance().LoadAsync(d.songpath);
-
-      // TODO: make selection to deal with for_each_player
-      Player::getMainPlayer().AddChartnameToPlay(d.chartname);
+      // XXX: what about course selection? select in gamemode?
+      FOR_EACH_PLAYER(p, i)
+      {
+        auto &d = wheel_.get_selected_data(i);
+        if (i == 0)
+          Game::getInstance().push_song(d.songpath);
+        p->AddChartnameToPlay(d.chartname);
+      }
+      END_EACH_PLAYER()
 
       // Song selection - immediately change scene mode
       CloseScene();

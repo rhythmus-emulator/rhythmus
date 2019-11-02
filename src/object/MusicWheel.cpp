@@ -57,7 +57,7 @@ MusicWheelData& MusicWheel::get_data(int dataindex)
   return static_cast<MusicWheelData&>(Menu::GetMenuDataByIndex(dataindex));
 }
 
-MusicWheelData& MusicWheel::get_selected_data()
+MusicWheelData& MusicWheel::get_selected_data(int player_num)
 {
   return static_cast<MusicWheelData&>(Menu::GetSelectedMenuData());
 }

@@ -45,7 +45,8 @@ void PlayScene::StartScene()
       CloseScene();
       return;
     }
-    SongResource::getInstance().LoadAsync(song_path);
+    SongResource::getInstance().LoadSong(song_path);
+    SongResource::getInstance().LoadResourcesAsync();
   }
 
   // send loading event
@@ -58,15 +59,12 @@ void PlayScene::StartScene()
       SongResource::getInstance().UploadBitmaps();
 
       // fetch chart for each player
+      FOR_EACH_PLAYER(p, i)
       {
-        Player *p;
-        int i;
-        FOR_EACH_PLAYER(p, i)
-        {
-          p->LoadNextChart();
-          // Need to call LoadReplay() / LoadPlay() to get previous play record later.
-        }
+        p->LoadNextChart();
+        // Need to call LoadReplay() / LoadPlay() to get previous play record later.
       }
+      END_EACH_PLAYER()
 
       // TODO: Tick game timer manually here,
       // as uploading bitmap may cost much time ...
@@ -88,14 +86,11 @@ void PlayScene::StartScene()
       EventManager::SendEvent(Events::kEventPlayStart);
 
       // Play song & trigger players to start
+      FOR_EACH_PLAYER(p, i)
       {
-        int i;
-        Player *p;
-        FOR_EACH_PLAYER(p, i)
-        {
-          p->GetPlayContext()->StartPlay();
-        }
+        p->GetPlayContext()->StartPlay();
       }
+      END_EACH_PLAYER()
       this->play_status_ = 1;
     });
     task->wait_for(theme_play_param_.ready_time);
@@ -121,12 +116,9 @@ void PlayScene::StartScene()
 void PlayScene::CloseScene()
 {
   // Save record & replay for all players
-  {
-    Player *p;
-    int i;
-    FOR_EACH_PLAYER(p, i)
-      p->GetPlayContext()->SavePlay();
-  }
+  FOR_EACH_PLAYER(p, i)
+    p->GetPlayContext()->SavePlay();
+  END_EACH_PLAYER()
 
   Scene::CloseScene();
 }
@@ -135,14 +127,11 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
 {
   if (e.IsKeyDown() && e.GetKeycode() == GLFW_KEY_ESCAPE)
   {
+    FOR_EACH_PLAYER(p, i)
     {
-      int i;
-      Player *p;
-      FOR_EACH_PLAYER(p, i)
-      {
-        p->GetPlayContext()->StopPlay();
-      }
+      p->GetPlayContext()->StopPlay();
     }
+    END_EACH_PLAYER()
     SongResource::getInstance().CancelLoad();
     TriggerFadeOut();
     return false;
@@ -166,12 +155,9 @@ void PlayScene::doUpdate(float delta)
   }
 
   // Update all players
-  {
-    int i;
-    Player *p;
-    FOR_EACH_PLAYER(p, i)
-      p->GetPlayContext()->Update(delta);
-  }
+  FOR_EACH_PLAYER(p, i)
+    p->GetPlayContext()->Update(delta);
+  END_EACH_PLAYER()
 }
 
 void PlayScene::LoadProperty(const std::string& prop_name, const std::string& value)

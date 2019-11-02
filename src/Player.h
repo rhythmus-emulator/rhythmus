@@ -337,6 +337,10 @@ private: \
 };
 
 #define FOR_EACH_PLAYER(p, i) \
+{ Player *p; int i; \
 for (p = nullptr, i = 0; i < kMaxPlayerSlot; p = Player::getPlayer(i), ++i) if (!p) continue; else
+
+#define END_EACH_PLAYER() \
+}
 
 }

@@ -101,9 +101,9 @@ class SongResource
 {
 public:
   SongResource();
-  void Load(const std::string& path);
-  void LoadAsync(const std::string& path);
+  bool LoadSong(const std::string& path);
   void LoadResources();
+  void LoadResourcesAsync();
   void UploadBitmaps();
   void Update(float delta);
   void CancelLoad();
@@ -162,6 +162,8 @@ private:
   int is_loaded_;
 
   bool load_bga_;
+
+  void PrepareResourceListFromSong();
 };
 
 }
