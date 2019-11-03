@@ -84,7 +84,7 @@ private:
 
   // songs to invalidate
   std::list<std::string> invalidate_list_;
-  std::mutex invalidate_list_mutex_;
+  std::mutex invalidate_list_mutex_, songlist_mutex_;
   std::string current_loading_file_;
   int total_inval_size_;
   std::atomic<int> load_count_;
@@ -152,7 +152,7 @@ private:
   std::list<FileToLoad> files_to_load_;
   size_t loadfile_count_total_;
   size_t loaded_file_count_;
-  std::mutex loading_mutex_;
+  std::mutex loading_mutex_, res_mutex_;
 
   /*
    * 0: not loaded

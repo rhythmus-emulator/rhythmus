@@ -19,18 +19,7 @@ PlayScene::PlayScene()
 
 void PlayScene::LoadScene()
 {
-
   Scene::LoadScene();
-}
-
-void PlayScene::StartScene()
-{
-  // In case of Play-only boot mode:
-  // trigger event force to trigger some related events.
-  if (Game::getInstance().get_boot_mode() == GameBootMode::kBootPlay)
-  {
-    EventManager::SendEvent(Events::kEventSongSelectChanged);
-  }
 
   // TODO: enqueue event: song loading
   // TODO: If course, enqueue charts to player.
@@ -46,28 +35,35 @@ void PlayScene::StartScene()
       return;
     }
     SongResource::getInstance().LoadSong(song_path);
+
     SongResource::getInstance().LoadResourcesAsync();
+  }
+}
+
+void PlayScene::StartScene()
+{
+  // In case of Play-only boot mode:
+  // trigger event force to trigger some related events.
+  if (Game::getInstance().get_boot_mode() == GameBootMode::kBootPlay)
+  {
+    EventManager::SendEvent(Events::kEventSongSelectChanged);
   }
 
   // send loading event
   EventManager::SendEvent(Events::kEventPlayLoading);
 
-  // enqueue event: song resource loading
+  // enqueue event: after song resource loading
   {
     SceneTask *task = new SceneTask("songreadytask", [this] {
       // need to upload bitmap here
       SongResource::getInstance().UploadBitmaps();
 
-      // fetch chart for each player
+      // fetch chart / resource for each player
       FOR_EACH_PLAYER(p, i)
       {
         p->LoadNextChart();
-        // Need to call LoadReplay() / LoadPlay() to get previous play record later.
       }
       END_EACH_PLAYER()
-
-      // TODO: Tick game timer manually here,
-      // as uploading bitmap may cost much time ...
 
       // trigger song ready event
       EventManager::SendEvent(Events::kEventPlayReady);
@@ -156,7 +152,10 @@ void PlayScene::doUpdate(float delta)
 
   // Update all players
   FOR_EACH_PLAYER(p, i)
-    p->GetPlayContext()->Update(delta);
+  {
+    if (p->GetPlayContext())
+      p->GetPlayContext()->Update(delta);
+  }
   END_EACH_PLAYER()
 }
 

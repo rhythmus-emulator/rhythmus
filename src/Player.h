@@ -84,6 +84,7 @@ class NoteWithJudging : public rparser::Note
 {
 public:
   NoteWithJudging(rparser::Note *note);
+  virtual ~NoteWithJudging() = default;
   int judge(uint32_t songtime, int event_type);
   int judge_with_pos(uint32_t songtime, int event_type, int x, int y, int z);
   int judge_check_miss(uint32_t songtime);

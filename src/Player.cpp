@@ -735,7 +735,7 @@ void Player::LoadNextChart()
     return;
   std::string chartname = play_chartname_.front();
   play_chartname_.pop_front();
-  AddChartnameToPlay(chartname);
+  SetPlayContext(chartname);
 }
 
 

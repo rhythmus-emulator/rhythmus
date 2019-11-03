@@ -277,7 +277,10 @@ void SongList::LoadInvalidationList()
       dat.level = meta.level;
       dat.judgediff = meta.difficulty;
 
-      songs_.push_back(dat);
+      {
+        std::lock_guard<std::mutex> lock(songlist_mutex_);
+        songs_.push_back(dat);
+      }
     }
 
     load_count_++;
@@ -524,7 +527,10 @@ void SongResource::LoadResources()
         // image
         Image *img = new Image();
         img->LoadFromData((uint8_t*)file, len);
-        bg_animations_.push_back({ { fn }, img });
+        {
+          std::lock_guard<std::mutex> lock(res_mutex_);
+          bg_animations_.push_back({ { fn }, img });
+        }
       }
       else if (file_to_load.type == 1)
       {
@@ -534,7 +540,10 @@ void SongResource::LoadResources()
           SoundDriver::getInstance().getMixer().GetSoundInfo()
         );
         snd->Load(file, len);
-        sounds_.push_back({ { fn, -1 }, snd });
+        {
+          std::lock_guard<std::mutex> lock(res_mutex_);
+          sounds_.push_back({ { fn, -1 }, snd });
+        }
       }
     }
   }
@@ -589,9 +598,12 @@ void SongResource::Clear()
     delete sound.second;
   bg_animations_.clear();
   sounds_.clear();
-  song_->Close();
-  delete song_;
-  song_ = nullptr;
+  if (song_)
+  {
+    song_->Close();
+    delete song_;
+    song_ = nullptr;
+  }
   is_loaded_ = 0;
 }
 

@@ -69,7 +69,6 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
 
   if (e.IsKeyDown() || e.IsKeyPress())
   {
-    // TODO: scroll key from Player setting.
     if (e.GetKeycode() == GLFW_KEY_UP)
     {
       wheel_.NavigateUp();
@@ -98,7 +97,7 @@ bool SelectScene::ProcessEvent(const EventMessage& e)
       FOR_EACH_PLAYER(p, i)
       {
         auto &d = wheel_.get_selected_data(i);
-        if (i == 0)
+        if (i == 1) /* main player */
           Game::getInstance().push_song(d.songpath);
         p->AddChartnameToPlay(d.chartname);
       }

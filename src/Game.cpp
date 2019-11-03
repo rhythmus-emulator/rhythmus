@@ -263,6 +263,7 @@ bool Game::pop_song(std::string& songpath)
     return false;
   songpath = song_queue_.front();
   song_queue_.pop_front();
+  return true;
 }
 
 
