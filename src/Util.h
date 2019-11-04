@@ -70,6 +70,8 @@ std::string GetFirstParam(const std::string& in, char sep = ',');
 
 bool CheckMasking(const std::string& path, const std::string& mask);
 
+bool CompareFilename(const std::string &path1, const std::string &path2);
+
 #if WIN32
 std::string GetUtf8FromWString(const std::wstring& wstring);
 #endif

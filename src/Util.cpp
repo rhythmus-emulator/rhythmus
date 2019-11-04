@@ -286,6 +286,11 @@ bool CheckMasking(const std::string& path, const std::string& mask)
   return rutil::wild_match(path, mask);
 }
 
+bool CompareFilename(const std::string &path1, const std::string &path2)
+{
+  return rutil::GetAlternativeFilename(path1) == rutil::GetAlternativeFilename(path2);
+}
+
 #if WIN32
 std::string GetUtf8FromWString(const std::wstring& wstring)
 {

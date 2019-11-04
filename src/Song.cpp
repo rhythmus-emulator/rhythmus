@@ -642,7 +642,7 @@ Sound* SongResource::GetSound(const std::string& filename, int channel)
 
   for (auto &snd : sounds_)
   {
-    if (snd.first.name == filename)
+    if (CompareFilename(snd.first.name, filename))
     {
       sound_found = snd.second;
 

@@ -3,6 +3,7 @@
 #include "Game.h"
 #include "Sound.h"
 #include "Timer.h"
+#include "Player.h"
 #include "ResourceManager.h"
 #include "SceneManager.h"
 #include "LR2/LR2Flag.h"  // For updating LR2 flag
@@ -54,9 +55,10 @@ int main(int argc, char **argv)
   for (int i = 0; i < argc; i++)
     game.LoadArgument(argv[i]);
 
-  // Load/Set settings first before initialize other objects
+  // Load/Set game settings first before initializing other objects
   game.LoadOrDefault();
 
+  Player::Initialize();
   Logger::getInstance().StartLogging();
   Logger::getInstance().HookStdOut();
   TaskPool::getInstance().SetPoolSize(4);
@@ -78,6 +80,7 @@ int main(int argc, char **argv)
    * Cleanup
    */
   
+  Player::Cleanup();
   TaskPool::getInstance().ClearTaskPool();
   SceneManager::getInstance().Cleanup();
   SongResource::getInstance().Clear();

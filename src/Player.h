@@ -154,6 +154,7 @@ class BackgroundDataContext
 public:
   BackgroundDataContext();
   void Initialize(rparser::TrackData &data);
+  void Initialize(rparser::Track &track);
   void Clear();
   void Update(uint32_t songtime);
   rparser::NotePos* get_current();
@@ -292,6 +293,9 @@ public:
   static bool IsPlayerLoaded(int player_slot);
   static int GetLoadedPlayerCount();
   static bool IsAllPlayerFinished();
+
+  static void Initialize();
+  static void Cleanup();
 
 private:
   std::string player_name_;

@@ -175,7 +175,6 @@ rparser::NoteDesc *NoteWithJudging::get_curr_notedesc()
 }
 
 static Player *players_[kMaxPlayerSlot];
-static Player guest_player(PlayerTypes::kPlayerGuest, "GUEST");
 static int player_count;
 
 
@@ -293,9 +292,16 @@ void BackgroundDataContext::Initialize(rparser::TrackData &data)
   while (!iter.is_end())
   {
     objects_.push_back(&*iter);
+    ++iter;
   }
   curr_idx_ = 0;
   curr_process_idx_ = 0;
+}
+
+void BackgroundDataContext::Initialize(rparser::Track &track)
+{
+  for (auto *n : track)
+    objects_.push_back(n);
 }
 
 void BackgroundDataContext::Clear()
@@ -309,6 +315,8 @@ void BackgroundDataContext::Update(uint32_t songtime)
 {
   while (curr_idx_ < objects_.size())
   {
+    if (objects_[curr_idx_]->time_msec > songtime)
+      break;
     curr_idx_++;
   }
 }
@@ -364,6 +372,9 @@ PlayContext::PlayContext(Player &player, rparser::Chart &c)
     track_context_[i].Initialize(nd.get_track(i));
   for (; i < kMaxTrackSize; ++i)
     track_context_[i].Clear();
+  bgm_context_.Initialize(c.GetBgmData());
+  for (size_t i = 0; i < 4; ++i)
+    bga_context_[i].Initialize(c.GetBgaData().get_track(i));
 
   // Fetch sound/bg data from SongResource.
   // These resources are managed by SongResource instance,
@@ -753,7 +764,7 @@ Player& Player::getMainPlayer()
 
   /* This shouldn't happened */
   ASSERT(false);
-  return guest_player;
+  return *players_[0];
 }
 
 void Player::CreatePlayer(PlayerTypes playertype, const std::string& player_name)
@@ -787,14 +798,6 @@ void Player::CreatePlayer(PlayerTypes playertype, const std::string& player_name
 Player* Player::getPlayer(int player_slot)
 {
   ASSERT(player_slot < kMaxPlayerSlot);
-
-  // if no player created & first player accessed,
-  // then just return guest player
-  // (always existing, ensured.)
-  if (player_count == 0)
-  {
-    return &guest_player;
-  }
 
   return players_[player_slot];
 }
@@ -832,6 +835,22 @@ bool Player::IsAllPlayerFinished()
       return false;
   }
   return true;
+}
+
+void Player::Initialize()
+{
+  /* Set Guest player in first slot by default */
+  players_[0] = new Player(PlayerTypes::kPlayerGuest, "GUEST");
+}
+
+void Player::Cleanup()
+{
+  /* Clear all player */
+  for (int i = 0; i < kMaxPlayerSlot; ++i) if (players_[i])
+  {
+    delete players_[i];
+    players_[i] = nullptr;
+  }
 }
 
 }
