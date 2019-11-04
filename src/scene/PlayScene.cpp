@@ -100,7 +100,7 @@ void PlayScene::StartScene()
       this->play_status_ = 3;
     });
     task->wait_cond([this] {
-      return Player::IsAllPlayerFinished();
+      return this->play_status_ == 1 && Player::IsAllPlayerFinished();
     });
     playscenetask_.Enqueue(task);
   }

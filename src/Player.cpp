@@ -122,7 +122,7 @@ int NoteWithJudging::judge_check_miss(uint32_t songtime)
   if (is_judge_finished())
     return judgement_;
 
-  if (get_track() == rparser::NoteTypes::kMineNote)
+  if (get_tap_type() == rparser::NoteTypes::kMineNote)
   {
     /* in case of mine note */
     if (time_msec > songtime)
@@ -183,6 +183,8 @@ static int player_count;
 
 void TrackContext::Initialize(rparser::Track &track)
 {
+  curr_keysound_idx_ = 0;
+  curr_judge_idx_ = 0;
   // TODO: check duplicated object, and replace it if so.
   for (auto *n : track)
   {
@@ -232,6 +234,7 @@ void TrackContext::Update(uint32_t songtime)
     }
     if (currobj.is_judge_finished())
       curr_keysound_idx_++;
+    else break;
   }
 }
 
@@ -243,7 +246,7 @@ NoteWithJudging *TrackContext::get_curr_sound_note()
 
 bool TrackContext::is_all_judged() const
 {
-  return curr_judge_idx_ >= objects_.size();
+  return curr_keysound_idx_ >= objects_.size();
 }
 
 bool NoteWithJudging::is_judgable() const
@@ -708,6 +711,7 @@ void Player::SetPlayContext(const std::string& chartname)
   if (!chart)
     return;
 
+  chart->Invalidate();
   play_context_ = new PlayContext(*this, *chart);
 }
 
