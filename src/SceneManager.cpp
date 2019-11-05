@@ -13,6 +13,8 @@
 namespace rhythmus
 {
 
+// ------------------------- class SceneManager
+
 SceneManager::SceneManager()
   : current_scene_(nullptr)
 {
@@ -58,6 +60,7 @@ void SceneManager::Cleanup()
       std::cerr << "Cannot save Scene preference file." << std::endl;
     }
   }
+  metrics_list_.clear();
 }
 
 void SceneManager::Update()
@@ -256,6 +259,19 @@ SceneManager& SceneManager::getInstance()
 Setting& SceneManager::getSetting()
 {
   return getInstance().setting_;
+}
+
+ThemeMetrics *SceneManager::getMetrics(const std::string &name)
+{
+  auto &metrics = getInstance().metrics_list_;
+  auto it = metrics.find(name);
+  if (it == metrics.end()) return nullptr;
+  return &it->second;
+}
+
+void SceneManager::createMetrics(const std::string &name)
+{
+  getInstance().metrics_list_[name];
 }
 
 void SceneManager::LoadSoundset()

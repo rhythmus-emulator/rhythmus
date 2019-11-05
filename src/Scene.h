@@ -141,7 +141,6 @@ protected:
 private:
   void LoadOptions();
   void SaveOptions();
-  void LoadFromCsv(const std::string& filepath);
 
   // fade in/out specified time
   // fade_duration with positive: fade-in
@@ -149,6 +148,12 @@ private:
   float fade_time_, fade_duration_;
 
   bool is_input_available_;
+
+  // @brief enable sorting objects in LoadScene()
+  bool do_sort_objects_;
+
+  // @brief enable scene resource caching for fast reload for this scene.
+  bool enable_caching_;
 
   // currently focused object (if exists)
   BaseObject* focused_object_;

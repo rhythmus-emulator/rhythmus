@@ -1,6 +1,5 @@
 #include "Scene.h"
 #include "SceneManager.h"       /* preference */
-#include "LR2/LR2SceneLoader.h" /* for lr2skin file load */
 #include "LR2/LR2Sprite.h"
 #include "LR2/LR2Font.h"
 #include "LR2/LR2Text.h"
@@ -131,6 +130,7 @@ void SceneTaskQueue::Update(float delta)
 
 Scene::Scene()
   : fade_time_(0), fade_duration_(0), is_input_available_(true),
+    do_sort_objects_(false), enable_caching_(false),
     focused_object_(nullptr), next_scene_mode_(GameSceneMode::kGameSceneClose)
 {
 }
@@ -147,22 +147,20 @@ void Scene::LoadScene()
 
     if (!scene_path.empty())
     {
-      if (rutil::endsWith(scene_path, ".lr2skin", false))
-      {
-        // @warn LoadFromCsv() also includes option loading.
-        LoadFromCsv(scene_path);
-      }
-      else
-      {
-        std::cerr << "[Error] Scene " << scene_name <<
-          " does not support file: " << scene_path << std::endl;
-      }
+      LoadMetrics(scene_path, *this);
     }
   }
   else
   {
     std::cerr << "[Warning] Scene has no name." << std::endl;
   }
+
+  // Load scene property from loaded metrics.
+  Load();
+
+  // sort object if necessary.
+  if (do_sort_objects_)
+    std::sort(children_.begin(), children_.end());
 
   for (auto *obj : children_)
     obj->Load();
@@ -492,32 +490,6 @@ void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
   else if (prop_name == "#HELPFILE")
   {
   }*/
-}
-
-void Scene::LoadFromCsv(const std::string& filepath)
-{
-  LR2SceneLoader loader;
-  loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
-  loader.Load(filepath);
-
-  // first: do option loading
-  for (auto &v : loader)
-  {
-    if (v.first == "#ENDOFHEADER")
-      break;
-    setting_.LoadProperty(v.first, v.second);
-  }
-  setting_.ValidateAll();
-
-  // open option file (if exists)
-  // must do it before loading elements, as option affects to it.
-  LoadOptions();
-
-  // now load elements
-  for (auto &v : loader)
-  {
-    LoadProperty(v.first, v.second);
-  }
 }
 
 }

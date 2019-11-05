@@ -2,6 +2,7 @@
 #include "Scene.h"
 #include "Game.h"
 #include "Event.h"
+#include "SceneMetrics.h"
 
 namespace rhythmus
 {
@@ -22,6 +23,10 @@ public:
   static uint32_t GetSceneTickTime();
   static SceneManager& getInstance();
   static Setting& getSetting();
+
+  static ThemeMetrics *getMetrics(const std::string &name);
+  static void createMetrics(const std::string &name);
+  static ThemeMetricsList &getMetricList();
 
   /**
    * @brief
@@ -87,6 +92,9 @@ private:
 
   // Soundset
   Soundset soundset_;
+
+  // Theme metrics
+  ThemeMetricsList metrics_list_;
 };
 
 /* singleton object. */
