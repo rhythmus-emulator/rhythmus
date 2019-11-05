@@ -189,6 +189,23 @@ void PlayScene::LoadProperty(const std::string& prop_name, const std::string& va
   {
     theme_play_param_.ready_time = atoi(value.c_str());
   }
+  else if (prop_name == "#SRC_NOTE")
+  {
+    std::vector<std::string> params;
+    MakeParamCountSafe(value, params, 13);
+    size_t i = atoi(params[0].c_str());
+    notefield_[i].set_player_id(0);
+    notefield_[i].set_track_idx(i);
+    notefield_[i].LoadProperty(prop_name, value);
+    AddChild(&notefield_[i]);
+  }
+  else if (prop_name == "#DST_NOTE")
+  {
+    std::vector<std::string> params;
+    MakeParamCountSafe(value, params, 3);
+    size_t i = atoi(params[0].c_str());
+    notefield_[i].LoadProperty(prop_name, value);
+  }
   else Scene::LoadProperty(prop_name, value);
 }
 

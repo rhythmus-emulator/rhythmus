@@ -39,6 +39,7 @@ set (RHYTHMUS_SOURCES
 	object/MusicWheel.cpp
     object/OptionMenu.cpp
     object/Text.cpp
+    object/NoteField.cpp
 
     LR2/exdxa.cpp
     LR2/LR2Font.cpp
@@ -81,6 +82,7 @@ set (RHYTHMUS_HEADERS
 	object/MusicWheel.h
     object/OptionMenu.h
     object/Text.h
+    object/NoteField.h
 
     LR2/exdxa.h
     LR2/LR2Font.h

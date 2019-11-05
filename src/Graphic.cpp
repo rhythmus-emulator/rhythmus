@@ -14,6 +14,12 @@ constexpr int kVertexMaxSize = 1024 * 4;
 namespace rhythmus
 {
 
+void VertexInfo::Clear()
+{
+  x = y = z = sx = sy = 0.0f;
+  r = g = b = a = 1.0f;
+}
+
 // An global variable indicating window width / height
 int sWidth, sHeight;
 

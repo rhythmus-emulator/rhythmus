@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Scene.h"
+#include "object/NoteField.h"
 
 namespace rhythmus
 {
@@ -35,6 +36,9 @@ private:
     int load_wait_time;
     int ready_time;
   } theme_play_param_;
+
+  /* @brief Note per lane TODO: note for each player? */
+  NoteField notefield_[20];
 };
 
 }

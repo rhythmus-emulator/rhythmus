@@ -359,11 +359,13 @@ void BackgroundDataContext::clear_stack()
 // -------------------------- class PlayContext
 
 PlayContext::PlayContext(Player &player, rparser::Chart &c)
-  : player_(player),
-    is_alive_(0), health_(0.), combo_(0), songtime_(0),
+  : player_(player), songtime_(0), measure_(0), beat_(0), timing_seg_data_(nullptr),
+    is_alive_(0), health_(0.), combo_(0),
     last_judge_type_(JudgeTypes::kJudgeNone),
   is_save_allowed_(true), is_save_record_(true), is_save_replay_(true), is_play_bgm_(true)
 {
+  timing_seg_data_ = &c.GetTimingSegmentData();
+
   // set note / track data from notedata
   auto &nd = c.GetNoteData();
   size_t i = 0;
@@ -511,6 +513,10 @@ void PlayContext::RecordPlay(ReplayEventTypes event_type, int time, int value1, 
     last_judge_type_ = (int)event_type;
 }
 
+double PlayContext::get_beat() const { return beat_; }
+double PlayContext::get_measure() const { return measure_; }
+double PlayContext::get_time() const { return songtime_; }
+
 double PlayContext::get_rate() const
 {
   return (double)(judge_.pg * 2 + judge_.gr) / total_note_;
@@ -593,6 +599,8 @@ void PlayContext::ProcessInputEvent(const EventMessage& e)
 void PlayContext::Update(float delta)
 {
   songtime_ += delta;
+  measure_ = timing_seg_data_->GetMeasureFromTime(songtime_);
+  beat_ = timing_seg_data_->GetBeatFromMeasure(measure_);
 
   // 1. update each track for missed / mine note
   for (size_t i = 0; i < 128 /* XXX: get & set lane count? */; ++i)

@@ -20,6 +20,8 @@ struct VertexInfo {
 
   // color blending
   float r, g, b, a;
+
+  void Clear();
 };
 
 /* @brief Projection info for each object. */

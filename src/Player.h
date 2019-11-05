@@ -183,6 +183,10 @@ public:
 
   void RecordPlay(ReplayEventTypes event_type, int time, int value1, int value2 = 0);
 
+  double get_beat() const;
+  double get_measure() const;
+  double get_time() const;
+
   double get_rate() const;
   double get_current_rate() const;
   double get_score() const;
@@ -200,6 +204,7 @@ public:
 
 private:
   Player &player_;
+  rparser::TimingSegmentData *timing_seg_data_;
 
   /* unsaved playing context (for single stage) */
 
@@ -209,10 +214,11 @@ private:
   void UpdateJudgeByRow(); /* for row-wise judgement update */
 
   std::string play_id_;
-  std::string chartname_;
-  int chartindex_;
 
   double songtime_;
+  double measure_;
+  double beat_;
+
   double health_;
   int is_alive_;
   int combo_;
