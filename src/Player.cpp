@@ -63,11 +63,11 @@ NoteWithJudging::NoteWithJudging(rparser::Note *note)
 
 int NoteWithJudging::judge(uint32_t songtime, int event_type)
 {
-  auto *notedesc = get_curr_notedesc();
-  int judgement;
-
   if (is_judge_finished())
     return judgement_;
+
+  auto *notedesc = get_curr_notedesc();
+  int judgement;
 
   if ((judgement = judge_only_timing(songtime)) != JudgeTypes::kJudgeNone)
   {
@@ -122,7 +122,7 @@ int NoteWithJudging::judge_check_miss(uint32_t songtime)
   if (is_judge_finished())
     return judgement_;
 
-  if (get_tap_type() == rparser::NoteTypes::kMineNote)
+  if (subtype() == rparser::NoteTypes::kMineNote)
   {
     /* in case of mine note */
     if (time_msec > songtime)
@@ -250,8 +250,7 @@ bool TrackContext::is_all_judged() const
 
 bool NoteWithJudging::is_judgable() const
 {
-  // TODO
-  return true;
+  return (subtype() != rparser::NoteTypes::kInvisibleNote);
 }
 
 constexpr size_t kMaxNotesToDisplay = 200;
@@ -379,7 +378,8 @@ PlayContext::PlayContext(Player &player, rparser::Chart &c)
   // Fetch sound/bg data from SongResource.
   // These resources are managed by SongResource instance,
   // so do not release them here.
-  // TODO: need to pass channel information to GetSound() param.
+  memset(keysounds_, 0, sizeof(keysounds_));
+  memset(bg_animations_, 0, sizeof(bg_animations_));
   for (auto &f : c.GetMetaData().GetSoundChannel()->fn)
     keysounds_[f.first] = SongResource::getInstance().GetSound(f.second, f.first);
   for (auto &f : c.GetMetaData().GetBGAChannel()->bga)
@@ -575,7 +575,7 @@ void PlayContext::ProcessInputEvent(const EventMessage& e)
   auto *obj = track_context_[track_no].get_curr_judged_note();
   if (obj)
   {
-    double judgetime = e.GetTime() - Timer::GetGameTime() + songtime_;
+    double judgetime = (e.GetTime() - Timer::GetGameTime()) * 1000 + songtime_;
     int event_type = JudgeEventTypes::kJudgeEventDown;
     if (e.IsKeyUp()) event_type = JudgeEventTypes::kJudgeEventUp;
 

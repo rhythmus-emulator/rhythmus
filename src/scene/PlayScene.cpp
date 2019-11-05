@@ -113,7 +113,10 @@ void PlayScene::CloseScene()
 {
   // Save record & replay for all players
   FOR_EACH_PLAYER(p, i)
-    p->GetPlayContext()->SavePlay();
+  {
+    if (p->GetPlayContext())
+      p->GetPlayContext()->SavePlay();
+  }
   END_EACH_PLAYER()
 
   Scene::CloseScene();
@@ -125,7 +128,8 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
   {
     FOR_EACH_PLAYER(p, i)
     {
-      p->GetPlayContext()->StopPlay();
+      if (p->GetPlayContext())
+        p->GetPlayContext()->StopPlay();
     }
     END_EACH_PLAYER()
     SongResource::getInstance().CancelLoad();
@@ -135,6 +139,13 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
 
   if (!is_input_available())
     return true;
+
+  FOR_EACH_PLAYER(p, i)
+  {
+    if (p->GetPlayContext())
+      p->GetPlayContext()->ProcessInputEvent(e);
+  }
+  END_EACH_PLAYER()
 
   return true;
 }
