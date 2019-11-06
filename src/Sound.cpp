@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include "Error.h"
+#include "SceneManager.h" /* GameSound::Load() */
 
 /* OpenAL */
 #include <AL/al.h>
@@ -97,6 +98,36 @@ void SoundDriver::sound_thread_body()
   }
   free(pData);
 }
+
+// ---------------------------- class GameSound
+
+void GameSound::set_name(const std::string &name)
+{
+  name_ = name;
+}
+
+void GameSound::Load()
+{
+  std::string path;
+  auto *m = SceneManager::getMetrics(name_);
+  if (!m) return;
+  if (!m->get("path", path)) return;
+  if (rmixer::Sound::Load(path))
+    RegisterToMixer(&SoundDriver::getMixer());
+}
+
+void GameSound::Load(const std::string &path)
+{
+  // XXX: returning value?
+  rmixer::Sound::Load(path);
+}
+
+void GameSound::LoadWithName(const std::string &name)
+{
+  set_name(name);
+  Load();
+}
+
 
 // -------------------------------- class Mixer
 

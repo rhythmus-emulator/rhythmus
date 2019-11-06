@@ -12,6 +12,21 @@ namespace rhythmus
 
 using Sound = rmixer::Sound;
 
+/* @brief Sound used with scene resource */
+class GameSound : public rmixer::Sound
+{
+public:
+  void set_name(const std::string &name);
+  void Load();
+  void LoadWithName(const std::string &name);
+
+  /* overriden function */
+  void Load(const std::string &path);
+
+private:
+  std::string name_;
+};
+
 /* @brief Do total sound management */
 class SoundDriver
 {

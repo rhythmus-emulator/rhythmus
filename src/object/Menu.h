@@ -161,7 +161,7 @@ protected:
 
   Sprite focus_effect_;
 
-  Sound wheel_sound_;
+  GameSound wheel_sound_;
 
   void UpdateItemPos();
   void UpdateItemPosByExpr();

@@ -50,6 +50,7 @@ MusicWheel::MusicWheel()
   set_focus_max_index(12);
   set_focus_min_index(12);
   set_focus_index(12);
+  wheel_sound_.set_name("");
 }
 
 MusicWheelData& MusicWheel::get_data(int dataindex)

@@ -427,9 +427,7 @@ MenuItem* Menu::CreateMenuItem()
 
 void Menu::Load()
 {
-  // XXX: need to load using wheel param
-  wheel_sound_.Load(SceneManager::getSoundset().scroll);
-  wheel_sound_.RegisterToMixer(&SoundDriver::getMixer());
+  wheel_sound_.Load();
 
   // Build item and set basic position
   RebuildItems();

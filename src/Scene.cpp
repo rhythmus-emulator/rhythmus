@@ -147,7 +147,7 @@ void Scene::LoadScene()
 
     if (!scene_path.empty())
     {
-      LoadMetrics(scene_path, *this);
+      LoadMetrics(scene_path);
     }
   }
   else
