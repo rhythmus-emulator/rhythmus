@@ -83,7 +83,7 @@ ThemeMetrics::const_iterator ThemeMetrics::cbegin() { attr_.cbegin(); }
 ThemeMetrics::iterator ThemeMetrics::end() { attr_.end(); }
 ThemeMetrics::const_iterator ThemeMetrics::cend() { attr_.cend(); }
 
-std::string GetCommandStringFromLR2SRC(const std::string &v)
+void SetMetricFromLR2SRC(ThemeMetrics &metric, const std::string &v)
 {
   // TODO
   std::vector<std::string> params;
@@ -105,10 +105,9 @@ std::string GetCommandStringFromLR2SRC(const std::string &v)
   int op3 = atoi_op(params[12].c_str());
 #endif
 #endif
-  return "";
 }
 
-std::string GetCommandStringFromLR2DST(const std::string &v)
+void SetMetricFromLR2DST(ThemeMetrics &metric, const std::string &v)
 {
   // TODO
   std::vector<std::string> params;
@@ -137,52 +136,52 @@ std::string GetCommandStringFromLR2DST(const std::string &v)
   int op3 = atoi_op(params[19].c_str());
 #endif
 #endif
-  return "";
 }
 
 void LoadMetricsLR2CSV(const std::string &filepath, Scene &scene)
 {
   LR2SceneLoader loader;
-  std::vector<ThemeMetrics> metric_list;
+  std::vector<ThemeMetrics*> metric_list;
   std::map<std::string, ThemeMetrics*> metric_processing;
+  size_t optioncount = 0, imagecount = 0, fontcount = 0;
 
   //NAME("INFORMATION", "Information"), \ // -- information is ignored here
 #define NAMES \
-  NAME("CUSTOMOPTION", "CustomOption", "1234"), \
-  NAME("CUSTOMFILE", "CustomFileOption", "1234"), \
-  NAME("IMAGE", "CurrentSceneMetrics", "1234"), \
-  NAME("FONT", "CurrentSceneMetrics", ""), \
-  NAME("LR2FONT", "CurrentSceneMetrics", ""), \
+  NAME("CUSTOMOPTION", "CurrentScene", "CustomOption"), \
+  NAME("CUSTOMFILE", "CurrentScene", "CustomFileOption"), \
+  NAME("IMAGE", "CurrentScene", "Image"), \
+  NAME("FONT", "CurrentScene", "Font"), \
+  NAME("LR2FONT", "CurrentScene", ""), \
   NAME("SRC_IMAGE", "Sprite", "Onload"), \
-  NAME("DST_IMAGE", "Sprite", "1234"), \
-  NAME("SRC_TEXT", "Text"), \
-  NAME("DST_TEXT", "Text"), \
-  NAME("SRC_BARGRAPH", "Graph"), \
-  NAME("DST_BARGRAPH", "Graph"), \
-  NAME("SRC_SLIDER", "Slider"), \
-  NAME("DST_SLIDER", "Slider"), \
-  NAME("SRC_NUMBER", "NumberSprite"), \
-  NAME("DST_NUMBER", "NumberSprite"), \
-  NAME("SRC_JUDGELINE", "JudgeLine"), \
-  NAME("DST_JUDGELINE", "JudgeLine"), \
-  NAME("SRC_LINE", "Line"), \
-  NAME("DST_LINE", "Line"), \
-  NAME("SRC_NOTE", "NoteField"), \
-  NAME("SRC_AUTO_NOTE", "NoteField"), \
-  NAME("SRC_LN_END", "NoteField"), \
-  NAME("SRC_AUTO_LN_END", "NoteField"), \
-  NAME("SRC_LN_START", "NoteField"), \
-  NAME("SRC_AUTO_LN_START", "NoteField"), \
-  NAME("SRC_LN_BODY", "NoteField"), \
-  NAME("SRC_AUTO_LN_BODY", "NoteField"), \
-  NAME("SRC_MINE", "NoteField"), \
-  NAME("DST_NOTE", "NoteField"), \
-  NAME("SRC_BUTTON", "Button"), \
-  NAME("DST_BUTTON", "Button"), \
-  NAME("SRC_GROOVEGAUGE", "LifeGauge"), \
-  NAME("DST_GROOVEGAUGE", "LifeGauge"), \
-  NAME("SRC_NOWJUDGE_1P", "Button"), \
-  NAME("DST_NOWJUDGE_1P", "Button")
+  NAME("DST_IMAGE", "Sprite", "Onload"), \
+  NAME("SRC_TEXT", "Text", ""), \
+  NAME("DST_TEXT", "Text", ""), \
+  NAME("SRC_BARGRAPH", "Graph", ""), \
+  NAME("DST_BARGRAPH", "Graph", ""), \
+  NAME("SRC_SLIDER", "Slider", ""), \
+  NAME("DST_SLIDER", "Slider", ""), \
+  NAME("SRC_NUMBER", "NumberSprite", ""), \
+  NAME("DST_NUMBER", "NumberSprite", ""), \
+  NAME("SRC_JUDGELINE", "JudgeLine", ""), \
+  NAME("DST_JUDGELINE", "JudgeLine", ""), \
+  NAME("SRC_LINE", "Line", ""), \
+  NAME("DST_LINE", "Line", ""), \
+  NAME("SRC_NOTE", "NoteField", ""), \
+  NAME("SRC_AUTO_NOTE", "NoteField", ""), \
+  NAME("SRC_LN_END", "NoteField", ""), \
+  NAME("SRC_AUTO_LN_END", "NoteField", ""), \
+  NAME("SRC_LN_START", "NoteField", ""), \
+  NAME("SRC_AUTO_LN_START", "NoteField", ""), \
+  NAME("SRC_LN_BODY", "NoteField", ""), \
+  NAME("SRC_AUTO_LN_BODY", "NoteField", ""), \
+  NAME("SRC_MINE", "NoteField", ""), \
+  NAME("DST_NOTE", "NoteField", ""), \
+  NAME("SRC_BUTTON", "Button", ""), \
+  NAME("DST_BUTTON", "Button", ""), \
+  NAME("SRC_GROOVEGAUGE", "LifeGauge", ""), \
+  NAME("DST_GROOVEGAUGE", "LifeGauge", ""), \
+  NAME("SRC_NOWJUDGE_1P", "Judge1P", ""), \
+  NAME("DST_NOWJUDGE_1P", "Judge1P", "")
 
 #define NAME(lr2name, metricname, attr) lr2name
   static const char *_lr2names[] = {
@@ -192,6 +191,11 @@ void LoadMetricsLR2CSV(const std::string &filepath, Scene &scene)
 
 #define NAME(lr2name, metricname, attr) metricname
   static const char *_metricnames[] = {
+    NAMES, 0
+  };
+
+#define NAME(lr2name, metricname, attr) metricname
+  static const char *_attrnames[] = {
     NAMES, 0
   };
 #undef NAME
@@ -204,10 +208,16 @@ void LoadMetricsLR2CSV(const std::string &filepath, Scene &scene)
   {
     if (v.first[0] != '#')
       continue;
+
+    /* Get metric name from LR2 command */
     std::string lr2name = Upper(v.first.substr(1));
     std::string obj_type, obj_drawtype;
+    std::string value_idx_str, value;
     size_t nameidx = 0;
     Split(lr2name, '_', obj_drawtype, obj_type);
+    if (obj_type.empty())
+      obj_drawtype.swap(obj_type);
+    Split(v.second, ',', value_idx_str, value);
     while (_lr2names[nameidx])
     {
       if (_lr2names[nameidx] == lr2name)
@@ -216,27 +226,86 @@ void LoadMetricsLR2CSV(const std::string &filepath, Scene &scene)
     }
     if (_metricnames[nameidx] == nullptr)
       continue;
-    std::string name = _metricnames[nameidx];
-    std::string key = name + std::to_string(v.second[0]);
-    std::vector<std::string> params;
-    ThemeMetrics *curr_metrics = metric_processing[key];
-    if (curr_metrics == nullptr || obj_drawtype == "SRC")
+    std::string name(_metricnames[nameidx]);
+    std::string attrname(_attrnames[nameidx]);
+    if (name == "CurrentSceneMetrics")
+      name = scene.get_name();
+    if (lr2name == "SRC_NOTE" ||
+      lr2name == "SRC_NOTE" ||
+      lr2name == "SRC_LN_END" ||
+      lr2name == "SRC_AUTO_LN_END" ||
+      lr2name == "SRC_LN_START" ||
+      lr2name == "SRC_AUTO_LN_START" ||
+      lr2name == "SRC_LN_BODY" ||
+      lr2name == "SRC_AUTO_LN_BODY")
     {
-      metric_list.emplace_back(ThemeMetrics(name));
-      curr_metrics = metric_processing[key] = &metric_list.back();
+      // add number to object name
+      name += value_idx_str;
     }
 
+    /* Create new metric (or retrive previous one) */
+    ThemeMetrics *curr_metrics = metric_processing[name];
+    if (curr_metrics == nullptr || obj_drawtype == "SRC")
+    {
+      metric_list.push_back(new ThemeMetrics(name));
+      curr_metrics = metric_processing[name] = metric_list.back();
+    }
+
+    /* Set metric attribute */
     if (obj_drawtype == "SRC")
     {
+      SetMetricFromLR2SRC(*curr_metrics, value);
     }
     else if (obj_drawtype == "DST")
     {
+      SetMetricFromLR2DST(*curr_metrics, value);
+    }
+    else if (lr2name == "CUSTOMOPTION")
+    {
+      curr_metrics->set("Option", (int)optioncount);
+      curr_metrics->set("Option" + std::to_string(optioncount), value);
+      optioncount++;
+    }
+    else if (lr2name == "CUSTOMFILE")
+    {
+      curr_metrics->set("Option", (int)optioncount);
+      curr_metrics->set("Option" + std::to_string(optioncount), value);
+      optioncount++;
+    }
+    else if (lr2name == "IMAGE")
+    {
+      curr_metrics->set("Image", (int)imagecount);
+      curr_metrics->set("Image" + std::to_string(imagecount), value);
+      imagecount++;
+    }
+    else if (lr2name == "FONT")
+    {
+      curr_metrics->set("Font", (int)fontcount);
+      curr_metrics->set("Font" + std::to_string(fontcount), value);
+      fontcount++;
     }
   }
 
-  // TODO: load scene option from metric (default)
+  // set zindex for all metrics
+  {
+    size_t idx = 0;
+    for (auto &metric : metric_list)
+    {
+      metric->set("zindex", (int)idx);
+      idx++;
+    }
+  }
 
-  // TODO: load scene option (saved one, if exist)
+  // Set global metrics, or create object from metrics.
+  for (auto &metric : metric_list)
+  {
+    auto *obj = CreateObjectFromMetrics(metric);
+    if (!obj)
+      SceneManager::addMetrics(metric);
+    else
+      scene.RegisterChild(obj);
+  }
+
 
   // TODO: now all metrics setting is done :
   // set thememetrics, create object, load resource using metrics.
@@ -353,27 +422,19 @@ void LoadMetrics(const std::string &filepath)
   }
 }
 
-// XXX: only for LR2 type?
-BaseObject* CreateObjectFromMetrics(ThemeMetrics &metrics)
+BaseObject* CreateObjectFromMetrics(ThemeMetrics *metrics)
 {
-  if (metrics.name() != "CreateLR2Object")
-    return nullptr;
-
   BaseObject *obj = nullptr;
-  std::string _typename;
-  metrics.get("type", _typename);
+  std::string _typename = metrics->name();
+  metrics->get("type", _typename);
 
-  if (_typename == "IMAGE")
+  if (_typename == "Sprite")
     obj = new Sprite();
-  else if (_typename == "TEXT")
+  else if (_typename == "Text")
     obj = new Text();
 
   if (!obj) return nullptr;
-
-  for (auto &it : metrics)
-  {
-    obj->LoadProperty(it.first, it.second);
-  }
+  obj->SetMetric(metrics);
 
   return obj;
 }

@@ -1,4 +1,5 @@
 #include "BaseObject.h"
+#include "SceneMetrics.h"
 #include "LR2/LR2SceneLoader.h"   // XXX: atoi_op
 #include "Util.h"
 
@@ -6,7 +7,7 @@ namespace rhythmus
 {
 
 BaseObject::BaseObject()
-  : parent_(nullptr), draw_order_(0)
+  : parent_(nullptr), draw_order_(0), metric_(nullptr)
 {
   memset(&current_prop_, 0, sizeof(DrawProperty));
   current_prop_.sw = current_prop_.sh = 1.0f;
@@ -17,9 +18,11 @@ BaseObject::BaseObject()
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
+  : name_(obj.name_), parent_(obj.parent_), draw_order_(obj.draw_order_),
+    metric_(nullptr)
 {
-  name_ = obj.name_;
-  parent_ = obj.parent_;
+  if (obj.metric_)
+    metric_ = new ThemeMetrics(*obj.metric_);
   // XXX: childrens won't copy by now
   tween_ = obj.tween_;
   current_prop_ = obj.current_prop_;
@@ -29,6 +32,7 @@ BaseObject::~BaseObject()
 {
   for (auto* p : owned_children_)
     delete p;
+  delete metric_;
 }
 
 void BaseObject::set_name(const std::string& name)
@@ -92,6 +96,15 @@ BaseObject* BaseObject::GetLastChild()
   if (children_.size() > 0)
     return children_.back();
   else return nullptr;
+}
+
+void BaseObject::SetMetric(ThemeMetrics *metric)
+{
+  if (metric_ == metric)
+    return;
+  if (metric_)
+    delete metric_;
+  metric_ = metric;
 }
 
 bool BaseObject::IsAttribute(const std::string& key) const

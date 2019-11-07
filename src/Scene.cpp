@@ -155,15 +155,21 @@ void Scene::LoadScene()
     std::cerr << "[Warning] Scene has no name." << std::endl;
   }
 
+  // Read scene-specific option if necessary.
+  LoadOptions();
+
   // Load scene property from loaded metrics.
   Load();
+
+  // TODO: LoadResource.
+
+  // Load and set objects.
+  for (auto *obj : children_)
+    obj->Load();
 
   // sort object if necessary.
   if (do_sort_objects_)
     std::sort(children_.begin(), children_.end());
-
-  for (auto *obj : children_)
-    obj->Load();
 }
 
 void Scene::StartScene()

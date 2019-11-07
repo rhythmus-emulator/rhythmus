@@ -29,6 +29,8 @@
 namespace rhythmus
 {
 
+class ThemeMetrics;
+
 /** @brief Drawing properties of Object */
 struct DrawProperty
 {
@@ -110,6 +112,7 @@ public:
   BaseObject* FindRegisteredChildByName(const std::string& name);
   BaseObject* GetLastChild();
 
+  void SetMetric(ThemeMetrics *metric);
   bool IsAttribute(const std::string& key) const;
   void SetAttribute(const std::string& key, const std::string& value);
   void DeleteAttribute(const std::string& key);
@@ -198,6 +201,9 @@ protected:
 
   // misc attributes
   std::map<std::string, std::string> attributes_;
+
+  // object-owned metric
+  ThemeMetrics *metric_;
 
   // Tween
   void UpdateTween(float delta);

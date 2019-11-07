@@ -47,6 +47,6 @@ typedef std::vector<ThemeMetrics> ThemeMetricsAppendList;
 
 void LoadMetrics(const std::string &filename);
 
-BaseObject* CreateObjectFromMetrics(ThemeMetrics &metrics);
+BaseObject* CreateObjectFromMetrics(ThemeMetrics *metrics);
 
 }
