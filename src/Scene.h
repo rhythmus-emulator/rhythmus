@@ -13,6 +13,7 @@ namespace rhythmus
 
 // Parameters with scene theme (read-only).
 // All time parameters are in miliseconds.
+// @depreciated removed later.
 struct ThemeParameter
 {
   ThemeParameter();
@@ -109,9 +110,13 @@ public:
 
   FontAuto GetFontByName(const std::string& name);
 
-  virtual void LoadProperty(const std::string& prop_name, const std::string& value);
+  /* @brief load metrics for children. */
+  void LoadObjectMetrics(const ThemeMetrics &metrics);
 
   const ThemeParameter& get_theme_parameter() const;
+
+  /* @brief load metrics to existing object,
+   * or create object by given metrics.*/
 
 protected:
   // Theme parameter list (read-only)
@@ -142,6 +147,13 @@ private:
   void LoadOptions();
   void SaveOptions();
 
+  /* @brief load scene specific resource. */
+  void LoadResource();
+
+  /* @brief load scene specific script 
+   * to create and initialize object, event, etc. */
+  void LoadScript();
+
   // fade in/out specified time
   // fade_duration with positive: fade-in
   // fade_duration with negative: fade-out
@@ -157,6 +169,8 @@ private:
 
   // currently focused object (if exists)
   BaseObject* focused_object_;
+
+  std::string prev_scene, next_scene;
 };
 
 }

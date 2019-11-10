@@ -33,9 +33,9 @@ public:
   typedef std::map<std::string, std::string>::iterator iterator;
   typedef std::map<std::string, std::string>::const_iterator const_iterator;
   iterator begin();
-  const_iterator cbegin();
+  const_iterator cbegin() const;
   iterator end();
-  const_iterator cend();
+  const_iterator cend() const;
 
 private:
   std::string name_;
@@ -45,8 +45,13 @@ private:
 typedef std::map<std::string, ThemeMetrics> ThemeMetricsList;
 typedef std::vector<ThemeMetrics> ThemeMetricsAppendList;
 
+/* @brief Load metrics from file.
+ * @warn should be called before scene resource loading. */
 void LoadMetrics(const std::string &filename);
 
-BaseObject* CreateObjectFromMetrics(ThemeMetrics *metrics);
+/* @brief load script or object to current scene from given file. */
+void LoadScript(const std::string &filename);
+
+BaseObject* CreateObjectFromMetrics(const ThemeMetrics &metrics);
 
 }

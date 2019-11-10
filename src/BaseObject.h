@@ -20,6 +20,8 @@
 #pragma once
 
 #include "Graphic.h"
+#include "Event.h"
+
 #include <string>
 #include <vector>
 #include <list>
@@ -81,7 +83,7 @@ using Tween = std::list<TweenState>;
  * Common interface to all renderable objects.
  * - which indicates containing its own frame coordinate value.
  */
-class BaseObject
+class BaseObject : public EventReceiver
 {
 public:
   BaseObject();
@@ -112,21 +114,18 @@ public:
   BaseObject* FindRegisteredChildByName(const std::string& name);
   BaseObject* GetLastChild();
 
-  void SetMetric(ThemeMetrics *metric);
-  bool IsAttribute(const std::string& key) const;
-  void SetAttribute(const std::string& key, const std::string& value);
-  void DeleteAttribute(const std::string& key);
-  template <typename T>
-  T GetAttribute(const std::string& key) const;
+  virtual void RunCommand(const std::string &command, const std::string& value);
+  void LoadCommandByName(const std::string &name);
+  void LoadCommand(const std::string &command);
+  void AddCommand(const std::string &name, const std::string &command);
+  void DeleteAllCommand();
 
-  /* @brief Load command(property) manually. */
-  virtual void LoadProperty(const std::map<std::string, std::string>& properties);
-  virtual void LoadProperty(const std::string& prop_name, const std::string& value);
+  /* @brief Load property(resource). */
+  virtual void Load(const ThemeMetrics& metric);
 
-  void LoadDrawProperty(const BaseObject& other);
-  void LoadDrawProperty(const DrawProperty& draw_prop);
-  void LoadTween(const BaseObject& other);
-  void LoadTween(const Tween& tween);
+  /* @brief Initialize object from metric information. */
+  virtual void Initialize();
+
   void AddTweenState(const DrawProperty &draw_prop, uint32_t time_duration,
     int ease_type = EaseTypes::kEaseOut, bool loop = false);
   void SetTweenTime(int time_msec);
@@ -170,10 +169,6 @@ public:
   void Update(float delta);
   void Render();
 
-  /* @brief Load property(resource) by itself.
-   * generally called when LoadScene() is called. */
-  virtual void Load();
-
   bool operator==(const BaseObject& o) {
     return o.get_name() == get_name();
   }
@@ -199,11 +194,8 @@ protected:
   // rotation center property
   int rot_center_;
 
-  // misc attributes
-  std::map<std::string, std::string> attributes_;
-
-  // object-owned metric
-  ThemeMetrics *metric_;
+  // commands to be called
+  std::map<std::string, std::string> commands_;
 
   // Tween
   void UpdateTween(float delta);

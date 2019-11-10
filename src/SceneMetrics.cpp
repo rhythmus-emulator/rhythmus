@@ -79,9 +79,9 @@ bool ThemeMetrics::get(const std::string &key, std::vector<int> &v) const
 }
 
 ThemeMetrics::iterator ThemeMetrics::begin() { attr_.begin(); }
-ThemeMetrics::const_iterator ThemeMetrics::cbegin() { attr_.cbegin(); }
+ThemeMetrics::const_iterator ThemeMetrics::cbegin() const { attr_.cbegin(); }
 ThemeMetrics::iterator ThemeMetrics::end() { attr_.end(); }
-ThemeMetrics::const_iterator ThemeMetrics::cend() { attr_.cend(); }
+ThemeMetrics::const_iterator ThemeMetrics::cend() const { attr_.cend(); }
 
 void SetMetricFromLR2SRC(ThemeMetrics &metric, const std::string &v)
 {
@@ -141,65 +141,9 @@ void SetMetricFromLR2DST(ThemeMetrics &metric, const std::string &v)
 void LoadMetricsLR2CSV(const std::string &filepath, Scene &scene)
 {
   LR2SceneLoader loader;
-  std::vector<ThemeMetrics*> metric_list;
-  std::map<std::string, ThemeMetrics*> metric_processing;
+  std::vector<std::string> params;
   size_t optioncount = 0, imagecount = 0, fontcount = 0;
-
-  //NAME("INFORMATION", "Information"), \ // -- information is ignored here
-#define NAMES \
-  NAME("CUSTOMOPTION", "CurrentScene", "CustomOption"), \
-  NAME("CUSTOMFILE", "CurrentScene", "CustomFileOption"), \
-  NAME("IMAGE", "CurrentScene", "Image"), \
-  NAME("FONT", "CurrentScene", "Font"), \
-  NAME("LR2FONT", "CurrentScene", ""), \
-  NAME("SRC_IMAGE", "Sprite", "Onload"), \
-  NAME("DST_IMAGE", "Sprite", "Onload"), \
-  NAME("SRC_TEXT", "Text", ""), \
-  NAME("DST_TEXT", "Text", ""), \
-  NAME("SRC_BARGRAPH", "Graph", ""), \
-  NAME("DST_BARGRAPH", "Graph", ""), \
-  NAME("SRC_SLIDER", "Slider", ""), \
-  NAME("DST_SLIDER", "Slider", ""), \
-  NAME("SRC_NUMBER", "NumberSprite", ""), \
-  NAME("DST_NUMBER", "NumberSprite", ""), \
-  NAME("SRC_JUDGELINE", "JudgeLine", ""), \
-  NAME("DST_JUDGELINE", "JudgeLine", ""), \
-  NAME("SRC_LINE", "Line", ""), \
-  NAME("DST_LINE", "Line", ""), \
-  NAME("SRC_NOTE", "NoteField", ""), \
-  NAME("SRC_AUTO_NOTE", "NoteField", ""), \
-  NAME("SRC_LN_END", "NoteField", ""), \
-  NAME("SRC_AUTO_LN_END", "NoteField", ""), \
-  NAME("SRC_LN_START", "NoteField", ""), \
-  NAME("SRC_AUTO_LN_START", "NoteField", ""), \
-  NAME("SRC_LN_BODY", "NoteField", ""), \
-  NAME("SRC_AUTO_LN_BODY", "NoteField", ""), \
-  NAME("SRC_MINE", "NoteField", ""), \
-  NAME("DST_NOTE", "NoteField", ""), \
-  NAME("SRC_BUTTON", "Button", ""), \
-  NAME("DST_BUTTON", "Button", ""), \
-  NAME("SRC_GROOVEGAUGE", "LifeGauge", ""), \
-  NAME("DST_GROOVEGAUGE", "LifeGauge", ""), \
-  NAME("SRC_NOWJUDGE_1P", "Judge1P", ""), \
-  NAME("DST_NOWJUDGE_1P", "Judge1P", "")
-
-#define NAME(lr2name, metricname, attr) lr2name
-  static const char *_lr2names[] = {
-    NAMES, 0
-  };
-#undef NAME
-
-#define NAME(lr2name, metricname, attr) metricname
-  static const char *_metricnames[] = {
-    NAMES, 0
-  };
-
-#define NAME(lr2name, metricname, attr) metricname
-  static const char *_attrnames[] = {
-    NAMES, 0
-  };
-#undef NAME
-
+  ThemeMetrics *curr_metrics = SceneManager::createMetrics(scene.get_name());
   loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
   loader.Load(filepath);
 
@@ -209,56 +153,23 @@ void LoadMetricsLR2CSV(const std::string &filepath, Scene &scene)
     if (v.first[0] != '#')
       continue;
 
+    /* We're going to load resource information into metrics,
+     * So ignore #ENDOFHEADER sign to read them all. */
+    //if (v.first == "#ENDOFHEADER")
+    //  break;
+    
     /* Get metric name from LR2 command */
     std::string lr2name = Upper(v.first.substr(1));
-    std::string obj_type, obj_drawtype;
-    std::string value_idx_str, value;
-    size_t nameidx = 0;
-    Split(lr2name, '_', obj_drawtype, obj_type);
-    if (obj_type.empty())
-      obj_drawtype.swap(obj_type);
-    Split(v.second, ',', value_idx_str, value);
-    while (_lr2names[nameidx])
-    {
-      if (_lr2names[nameidx] == lr2name)
-        break;
-      ++nameidx;
-    }
-    if (_metricnames[nameidx] == nullptr)
-      continue;
-    std::string name(_metricnames[nameidx]);
-    std::string attrname(_attrnames[nameidx]);
-    if (name == "CurrentSceneMetrics")
-      name = scene.get_name();
-    if (lr2name == "SRC_NOTE" ||
-      lr2name == "SRC_NOTE" ||
-      lr2name == "SRC_LN_END" ||
-      lr2name == "SRC_AUTO_LN_END" ||
-      lr2name == "SRC_LN_START" ||
-      lr2name == "SRC_AUTO_LN_START" ||
-      lr2name == "SRC_LN_BODY" ||
-      lr2name == "SRC_AUTO_LN_BODY")
-    {
-      // add number to object name
-      name += value_idx_str;
-    }
-
-    /* Create new metric (or retrive previous one) */
-    ThemeMetrics *curr_metrics = metric_processing[name];
-    if (curr_metrics == nullptr || obj_drawtype == "SRC")
-    {
-      metric_list.push_back(new ThemeMetrics(name));
-      curr_metrics = metric_processing[name] = metric_list.back();
-    }
+    std::string value(v.second);
 
     /* Set metric attribute */
-    if (obj_drawtype == "SRC")
+    if (lr2name == "INFORMATION")
     {
-      SetMetricFromLR2SRC(*curr_metrics, value);
-    }
-    else if (obj_drawtype == "DST")
-    {
-      SetMetricFromLR2DST(*curr_metrics, value);
+      MakeParamCountSafe(value, params, 4);
+      curr_metrics->set("Gamemode", params[0]);
+      curr_metrics->set("Title", params[1]);
+      curr_metrics->set("Artist", params[2]);
+      curr_metrics->set("PreviewImage", params[3]);
     }
     else if (lr2name == "CUSTOMOPTION")
     {
@@ -278,57 +189,45 @@ void LoadMetricsLR2CSV(const std::string &filepath, Scene &scene)
       curr_metrics->set("Image" + std::to_string(imagecount), value);
       imagecount++;
     }
-    else if (lr2name == "FONT")
+    else if (lr2name == "LR2FONT")
     {
       curr_metrics->set("Font", (int)fontcount);
       curr_metrics->set("Font" + std::to_string(fontcount), value);
       fontcount++;
     }
-  }
-
-  // set zindex for all metrics
-  {
-    size_t idx = 0;
-    for (auto &metric : metric_list)
+    else if (lr2name == "FONT")
     {
-      metric->set("zindex", (int)idx);
-      idx++;
+      // TODO: fallback FONT ?
+    }
+    else if (lr2name == "BAR_CENTER" || lr2name == "BAR_AVAILABLE")
+    {
+      curr_metrics->set("MenuCenter", GetFirstParam(value));
+    }
+    else if (lr2name == "TRANSCLOLR")
+    {
+      curr_metrics->set("TransparentColor", value);
+    }
+    else if (lr2name == "STARTINPUT" || lr2name == "IGNOREINPUT")
+    {
+      curr_metrics->set("InputStart", GetFirstParam(value));
+    }
+    else if (lr2name == "FADEOUT")
+    {
+      curr_metrics->set("FadeOut", GetFirstParam(value));
+    }
+    else if (lr2name == "FADEIN")
+    {
+      curr_metrics->set("FadeIn", GetFirstParam(value));
+    }
+    else if (lr2name == "SCENETIME")
+    {
+      curr_metrics->set("Timeout", GetFirstParam(value));
+    }
+    else if (lr2name == "HELPFILE")
+    {
+      // TODO
     }
   }
-
-  // Set global metrics, or create object from metrics.
-  for (auto &metric : metric_list)
-  {
-    auto *obj = CreateObjectFromMetrics(metric);
-    if (!obj)
-      SceneManager::addMetrics(metric);
-    else
-      scene.RegisterChild(obj);
-  }
-
-
-  // TODO: now all metrics setting is done :
-  // set thememetrics, create object, load resource using metrics.
-
-#if 0
-  for (auto &v : loader)
-  {
-    if (v.first == "#ENDOFHEADER")
-      break;
-    setting_.LoadProperty(v.first, v.second);
-  }
-  setting_.ValidateAll();
-
-  // open option file (if exists)
-  // must do it before loading elements, as option affects to it.
-  LoadOptions();
-
-  // now load elements
-  for (auto &v : loader)
-  {
-    LoadProperty(v.first, v.second);
-  }
-#endif
 }
 
 void LoadMetricsLR2SS(const std::string &filepath, Scene &scene)
@@ -422,11 +321,181 @@ void LoadMetrics(const std::string &filepath)
   }
 }
 
-BaseObject* CreateObjectFromMetrics(ThemeMetrics *metrics)
+void LoadScriptLR2CSV(const std::string &filepath, Scene &scene)
+{
+#define NAMES \
+  NAME("SRC_NOTE", "NoteField", "NoteSprite", true), \
+  NAME("SRC_AUTO_NOTE", "NoteField", "AutoNoteSprite", true), \
+  NAME("SRC_LN_END", "NoteField", "LNEndSprite", true), \
+  NAME("SRC_AUTO_LN_END", "NoteField", "AutoLNEndSprite", true), \
+  NAME("SRC_LN_START", "NoteField", "LNBeginSprite", true), \
+  NAME("SRC_AUTO_LN_START", "NoteField", "AutoLNBeginSprite", true), \
+  NAME("SRC_LN_BODY", "NoteField", "LNBodySprite", true), \
+  NAME("SRC_AUTO_LN_BODY", "NoteField", "AutoLNBodySprite", true), \
+  NAME("SRC_MINE", "NoteField", "MineSprite", true), \
+  NAME("DST_NOTE", "NoteField", "OnLoad", true), \
+  NAME("SRC_GROOVEGAUGE", "LifeGauge", "Sprite", true), \
+  NAME("DST_GROOVEGAUGE", "LifeGauge", "OnLoad", true), \
+  NAME("SRC_NOWJUDGE_1P", "Judge1P", "Sprite", true), \
+  NAME("DST_NOWJUDGE_1P", "Judge1P", "OnLoad", true), \
+  NAME("SRC_NOWJUDGE_2P", "Judge2P", "Sprite", true), \
+  NAME("DST_NOWJUDGE_2P", "Judge2P", "OnLoad", true), \
+  NAME("SRC_IMAGE", "Sprite", "Sprite", false), \
+  NAME("DST_IMAGE", "Sprite", "Onload", false), \
+  NAME("SRC_TEXT", "Text", "Font", false), \
+  NAME("DST_TEXT", "Text", "Onload", false), \
+  NAME("SRC_BARGRAPH", "Graph", "Sprite", false), \
+  NAME("DST_BARGRAPH", "Graph", "OnLoad", false), \
+  NAME("SRC_SLIDER", "Slider", "Sprite", false), \
+  NAME("DST_SLIDER", "Slider", "OnLoad", false), \
+  NAME("SRC_NUMBER", "NumberSprite", "Sprite", false), \
+  NAME("DST_NUMBER", "NumberSprite", "OnLoad", false), \
+  NAME("SRC_JUDGELINE", "JudgeLine", "Sprite", false), \
+  NAME("DST_JUDGELINE", "JudgeLine", "OnLoad", false), \
+  NAME("SRC_LINE", "Line", "Sprite", false), \
+  NAME("DST_LINE", "Line", "OnLoad, false", false), \
+  NAME("SRC_BUTTON", "Button", "Sprite", false), \
+  NAME("DST_BUTTON", "Button", "OnLoad", false)
+
+#define NAME(lr2name, metricname, attr, is_metric) lr2name
+  static const char *_lr2names[] = {
+    NAMES, 0
+  };
+#undef NAME
+
+#define NAME(lr2name, metricname, attr, is_metric) metricname
+  static const char *_metricnames[] = {
+    NAMES, 0
+  };
+
+#define NAME(lr2name, metricname, attr, is_metric) metricname
+  static const char *_attrnames[] = {
+    NAMES, 0
+  };
+#undef NAME
+
+#if 0
+#define NAME(lr2name, metricname, attr, is_metric) is_metric
+  static const bool _is_metric[] = {
+    NAMES, 0
+  };
+#undef NAME
+#endif
+
+  LR2SceneLoader loader;
+  std::vector<ThemeMetrics> object_metrics;
+  std::map<std::string, ThemeMetrics*> object_processing;
+
+  loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
+  loader.Load(filepath);
+
+  // convert csv commands into metrics
+  for (auto &v : loader)
+  {
+    if (v.first[0] != '#')
+      continue;
+
+    /* Get metric name from LR2 command */
+    std::string lr2name = Upper(v.first.substr(1));
+    std::string obj_type, obj_drawtype;
+    std::string value_idx_str, value;
+    size_t nameidx = 0;
+    Split(lr2name, '_', obj_drawtype, obj_type);
+    if (obj_type.empty())
+      obj_drawtype.swap(obj_type);
+    Split(v.second, ',', value_idx_str, value);
+    while (_lr2names[nameidx])
+    {
+      if (_lr2names[nameidx] == lr2name)
+        break;
+      ++nameidx;
+    }
+    if (_metricnames[nameidx] == nullptr)
+      continue;
+
+    std::string name(_metricnames[nameidx]);
+    std::string attrname(_attrnames[nameidx]);
+
+    if (lr2name == "DST_NOTE" ||
+      lr2name == "SRC_NOTE" ||
+      lr2name == "SRC_NOTE" ||
+      lr2name == "SRC_LN_END" ||
+      lr2name == "SRC_AUTO_LN_END" ||
+      lr2name == "SRC_LN_START" ||
+      lr2name == "SRC_AUTO_LN_START" ||
+      lr2name == "SRC_LN_BODY" ||
+      lr2name == "SRC_AUTO_LN_BODY")
+    {
+      // add number to object name
+      // e.g. OnLoad --> Note1OnLoad
+      name = "Note" + value_idx_str + name;
+    }
+
+    /* Create new metric (or retrive previous one)
+     * If not special metric, then add new metric to metric_append_list. */
+    ThemeMetrics *curr_metrics = nullptr;
+    if (object_processing[name] == nullptr || obj_type == "SRC")
+    {
+      object_metrics.emplace_back(ThemeMetrics(name));
+      curr_metrics = &object_metrics.back();
+    }
+    else curr_metrics = object_processing[name];
+
+    /* Set metric attribute */
+    if (obj_drawtype == "SRC")
+    {
+      SetMetricFromLR2SRC(*curr_metrics, value);
+    }
+    else if (obj_drawtype == "DST")
+    {
+      SetMetricFromLR2DST(*curr_metrics, value);
+    }
+  }
+
+  /* set zindex for all object metrics & process metric to scene */
+  {
+    size_t idx = 0;
+    for (auto &metric : object_metrics)
+    {
+      metric.set("zindex", (int)idx);
+      scene.LoadObjectMetrics(metric);
+      idx++;
+    }
+  }
+}
+
+void LoadScript(const std::string &filepath)
+{
+  std::string ext = Upper(GetExtension(filepath));
+  Scene *scene = SceneManager::get_current_scene();
+
+  if (ext == "XML")
+  {
+    // TODO: ?
+    std::cerr << "Warning: Xml type skin is not supported yet" << std::endl;
+  }
+  else if (ext == "LUA")
+  {
+    // TODO
+    std::cerr << "Warning: Lua script is not supported yet" << std::endl;
+  }
+  else if (ext == "LR2SKIN")
+  {
+    LoadScriptLR2CSV(filepath, *scene);
+  }
+  else
+  {
+    std::cerr << "Error: not supported scene script file: "
+      << filepath << std::endl;
+  }
+}
+
+/* Internally called by Scene::LoadMetric() */
+BaseObject* CreateObjectFromMetrics(const ThemeMetrics &metrics)
 {
   BaseObject *obj = nullptr;
-  std::string _typename = metrics->name();
-  metrics->get("type", _typename);
+  std::string _typename = metrics.name();
+  metrics.get("type", _typename);
 
   if (_typename == "Sprite")
     obj = new Sprite();
@@ -434,7 +503,7 @@ BaseObject* CreateObjectFromMetrics(ThemeMetrics *metrics)
     obj = new Text();
 
   if (!obj) return nullptr;
-  obj->SetMetric(metrics);
+  obj->Load(metrics);
 
   return obj;
 }

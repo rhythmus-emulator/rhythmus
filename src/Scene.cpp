@@ -137,8 +137,7 @@ Scene::Scene()
 
 void Scene::LoadScene()
 {
-  // Check is preference file exist for current scene
-  // If so, load that file to actor.
+  // Load scene metric (if exist)
   std::string scene_name = get_name();
   if (!scene_name.empty())
   {
@@ -158,18 +157,80 @@ void Scene::LoadScene()
   // Read scene-specific option if necessary.
   LoadOptions();
 
-  // Load scene property from loaded metrics.
-  Load();
+  // Load scene-specific resources.
+  LoadResource();
 
-  // TODO: LoadResource.
+  // Load additional script if necessary.
+  LoadScript();
 
-  // Load and set objects.
+  // Initialize objects.
   for (auto *obj : children_)
-    obj->Load();
+    obj->Initialize();
 
   // sort object if necessary.
   if (do_sort_objects_)
     std::sort(children_.begin(), children_.end());
+}
+
+void Scene::LoadResource()
+{
+  std::string loadlist_concat;
+  std::vector<std::string> loadlist;
+  auto *metric = SceneManager::getMetrics(get_name());
+  if (!metric) return;
+
+  if (metric->get("Images", loadlist_concat))
+  {
+    Split(loadlist_concat, ',', loadlist);
+    for (const auto &imgname : loadlist)
+    {
+      ImageAuto img;
+      std::string imgpath;
+      if (!metric->get("Image" + imgname, imgpath))
+        continue;
+#if 0
+      std::string imgpath = Substitute(imgname, kLR2SubstitutePath, kSubstitutePath);
+      char name[10];
+      itoa(images_.size(), name, 10);
+#endif
+      img = ResourceManager::getInstance().LoadImage(imgpath);
+      img->set_name(imgname);
+      // TODO: set colorkey
+      img->CommitImage();
+      images_.push_back(img);
+    }
+  }
+
+  if (metric->get("Fonts", loadlist_concat))
+  {
+    Split(loadlist_concat, ',', loadlist);
+    for (const auto &fontname : loadlist)
+    {
+      std::string fontpath;
+      if (!metric->get("Font" + fontname, fontpath))
+        continue;
+#if 0
+      std::string fontpath = Substitute(fntname, kLR2SubstitutePath, kSubstitutePath);
+      // convert filename path to .dxa
+      auto ri = fntpath.rfind('/');
+      if (ri != std::string::npos && stricmp(fntpath.substr(ri).c_str(), "/font.lr2font") == 0)
+        fntpath = fntpath.substr(0, ri) + ".dxa";
+      char name[10];
+      itoa(fonts_.size(), name, 10);
+#endif
+      fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fontpath));
+      fonts_.back()->set_name(fontname);
+    }
+  }
+}
+
+void Scene::LoadScript()
+{
+  std::string script_path;
+  auto *metric = SceneManager::getMetrics(get_name());
+  if (!metric) return;
+  if (!metric->get("script", script_path)) return;
+  rhythmus::LoadScript(script_path);
 }
 
 void Scene::StartScene()
@@ -387,115 +448,25 @@ const ThemeParameter& Scene::get_theme_parameter() const
 constexpr char* kLR2SubstitutePath = "LR2files/Theme";
 constexpr char* kSubstitutePath = "../themes";
 
-void Scene::LoadProperty(const std::string& prop_name, const std::string& value)
+void Scene::LoadObjectMetrics(const ThemeMetrics &metrics)
 {
-  static std::string _prev_prop_name = prop_name;
-  std::vector<std::string> params;
+  /* First, check is given object metrics is generic & able to be created to object.
+   * if not, search for currently existing object. */
 
-  // LR2 type properties
-  if (strncmp(prop_name.c_str(), "#SRC_", 5) == 0)
+  BaseObject *target_object = CreateObjectFromMetrics(metrics);
+
+  if (target_object)
   {
-    // If #SRC came in serial, we need to reuse last object...
-    // kinda trick: check previous command
-    BaseObject* obj = nullptr;
-    if (_prev_prop_name == prop_name)
-      obj = GetLastChild();
+    RegisterChild(target_object);
+  }
+  else
+  {
+    if (target_object = FindChildByName(metrics.name()))
+      target_object->Load(metrics);
     else
-    {
-      std::string type_name = prop_name.substr(5);
-      if (type_name == "IMAGE")
-        obj = new LR2Sprite();
-      else if (type_name == "TEXT")
-        obj = new LR2Text();
-      else
-      {
-        obj = new BaseObject();
-        obj->set_name(type_name);
-      }
-      RegisterChild(obj);
-      AddChild(obj);
-    }
-
-    if (obj)
-      obj->LoadProperty(prop_name, value);
+      std::cerr << "Warning: object metric " << metrics.name() <<
+      " is invalid and cannot appliable." << std::endl;
   }
-  else if (strncmp(prop_name.c_str(), "#DST_", 5) == 0)
-  {
-    BaseObject* obj = GetLastChild();
-    if (!obj)
-    {
-      std::cout << "LR2Skin Load warning : DST command found without SRC, ignored." << std::endl;
-      return;
-    }
-    obj->LoadProperty(prop_name, value);
-  }
-  // XXX: register such objects first?
-  else if (prop_name == "#IMAGE")
-  {
-    ImageAuto img;
-    std::string imgname = GetFirstParam(value);
-    std::string imgpath = Substitute(imgname, kLR2SubstitutePath, kSubstitutePath);
-    img = ResourceManager::getInstance().LoadImage(imgpath);
-    // TODO: set colorkey
-    img->CommitImage();
-    char name[10];
-    itoa(images_.size(), name, 10);
-    img->set_name(name);
-    images_.push_back(img);
-  }
-  else if (prop_name == "#LR2FONT")
-  {
-    std::string fntname = GetFirstParam(value);
-    std::string fntpath = Substitute(fntname, kLR2SubstitutePath, kSubstitutePath);
-    // convert filename path to .dxa
-    auto ri = fntpath.rfind('/');
-    if (ri != std::string::npos && stricmp(fntpath.substr(ri).c_str(), "/font.lr2font") == 0)
-      fntpath = fntpath.substr(0, ri) + ".dxa";
-    char name[10];
-    itoa(fonts_.size(), name, 10);
-    fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fntpath));
-    fonts_.back()->set_name(name);
-  }
-  else if (prop_name == "#BAR_CENTER" || prop_name == "#BAR_AVAILABLE")
-  {
-    // TODO: set attribute to theme_param_
-  }
-  else if (prop_name == "#INFORMATION")
-  {
-    MakeParamCountSafe(value, params, 4);
-    theme_param_.gamemode = params[0];
-    theme_param_.title = params[1];
-    theme_param_.maker = params[2];
-    theme_param_.preview = params[3];
-  }
-  else if (prop_name == "#TRANSCLOLR")
-  {
-    MakeParamCountSafe(value, params, 3);
-    theme_param_.transcolor[0] = atoi(params[0].c_str());
-    theme_param_.transcolor[1] = atoi(params[1].c_str());
-    theme_param_.transcolor[2] = atoi(params[2].c_str());
-  }
-  else if (prop_name == "#STARTINPUT" || prop_name == "#IGNOREINPUT")
-  {
-    std::string v = GetFirstParam(value);
-    theme_param_.begin_input_time = atoi(v.c_str());
-  }
-  else if (prop_name == "#FADEOUT")
-  {
-    theme_param_.fade_out_time = atoi(GetFirstParam(value).c_str());
-  }
-  else if (prop_name == "#FADEIN")
-  {
-    theme_param_.fade_in_time = atoi(GetFirstParam(value).c_str());
-  }
-  else if (prop_name == "#SCENETIME")
-  {
-    theme_param_.next_scene_time = atoi(GetFirstParam(value).c_str());
-  }
-  /*
-  else if (prop_name == "#HELPFILE")
-  {
-  }*/
 }
 
 }

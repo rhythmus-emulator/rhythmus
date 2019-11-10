@@ -1,5 +1,6 @@
 #include "BaseObject.h"
 #include "SceneMetrics.h"
+#include "SceneManager.h"
 #include "LR2/LR2SceneLoader.h"   // XXX: atoi_op
 #include "Util.h"
 
@@ -7,7 +8,7 @@ namespace rhythmus
 {
 
 BaseObject::BaseObject()
-  : parent_(nullptr), draw_order_(0), metric_(nullptr)
+  : parent_(nullptr), draw_order_(0)
 {
   memset(&current_prop_, 0, sizeof(DrawProperty));
   current_prop_.sw = current_prop_.sh = 1.0f;
@@ -18,11 +19,8 @@ BaseObject::BaseObject()
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
-  : name_(obj.name_), parent_(obj.parent_), draw_order_(obj.draw_order_),
-    metric_(nullptr)
+  : name_(obj.name_), parent_(obj.parent_), draw_order_(obj.draw_order_)
 {
-  if (obj.metric_)
-    metric_ = new ThemeMetrics(*obj.metric_);
   // XXX: childrens won't copy by now
   tween_ = obj.tween_;
   current_prop_ = obj.current_prop_;
@@ -32,7 +30,6 @@ BaseObject::~BaseObject()
 {
   for (auto* p : owned_children_)
     delete p;
-  delete metric_;
 }
 
 void BaseObject::set_name(const std::string& name)
@@ -65,6 +62,7 @@ void BaseObject::RemoveAllChild()
 void BaseObject::RegisterChild(BaseObject* obj)
 {
   owned_children_.push_back(obj);
+  AddChild(obj);
 }
 
 void BaseObject::set_parent(BaseObject* obj)
@@ -98,73 +96,9 @@ BaseObject* BaseObject::GetLastChild()
   else return nullptr;
 }
 
-void BaseObject::SetMetric(ThemeMetrics *metric)
+void BaseObject::RunCommand(const std::string &command, const std::string& value)
 {
-  if (metric_ == metric)
-    return;
-  if (metric_)
-    delete metric_;
-  metric_ = metric;
-}
-
-bool BaseObject::IsAttribute(const std::string& key) const
-{
-  auto ii = attributes_.find(key);
-  return (ii != attributes_.end());
-}
-
-void BaseObject::SetAttribute(const std::string& key, const std::string& value)
-{
-  attributes_[key] = value;
-}
-
-void BaseObject::DeleteAttribute(const std::string& key)
-{
-  auto ii = attributes_.find(key);
-  if (ii != attributes_.end())
-    attributes_.erase(ii);
-}
-
-template <>
-std::string BaseObject::GetAttribute(const std::string& key) const
-{
-  const auto ii = attributes_.find(key);
-  if (ii != attributes_.end())
-    return ii->second;
-  else
-    return std::string();
-}
-
-template <>
-int BaseObject::GetAttribute(const std::string& key) const
-{
-  return atoi_op( GetAttribute<std::string>(key).c_str() );
-}
-
-void BaseObject::LoadProperty(const std::map<std::string, std::string>& properties)
-{
-  for (const auto& ii : properties)
-  {
-    LoadProperty(ii.first, ii.second);
-  }
-}
-
-// return true if property is set
-void BaseObject::LoadProperty(const std::string& prop_name, const std::string& value)
-{
-  if (prop_name == "pos")
-  {
-    const auto it = std::find(value.begin(), value.end(), ',');
-    if (it != value.end())
-    {
-      // TODO: change into 'setting'
-      std::string v1 = value.substr(0, it - value.begin());
-      const char *v2 = &(*it);
-      SetPos(atoi(v1.c_str()), atoi(v2));
-    }
-  }
-  /* Below is LR2 type commands */
-  else if (strnicmp(prop_name.c_str(), "#DST_", 5) == 0)
+  if (command == "lr2dst")
   {
     std::vector<std::string> params;
     MakeParamCountSafe(value, params, 20);
@@ -215,7 +149,7 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
 
     // make current tween
     SetDeltaTweenTime(0);
-    
+
     // Now specify current tween.
     GetDestDrawProperty().display = true;
     SetPos(x, y);
@@ -239,6 +173,7 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
       break;
     }
 
+#if 0
     // these attribute will be processed later e.g. LR2Objects
     if (!IsAttribute("blend")) SetAttribute("blend", params[11]);
     if (!IsAttribute("loop")) SetAttribute("loop", params[15]);
@@ -246,27 +181,81 @@ void BaseObject::LoadProperty(const std::string& prop_name, const std::string& v
     if (!IsAttribute("op1")) SetAttribute("op1", params[17]);
     if (!IsAttribute("op2")) SetAttribute("op2", params[18]);
     if (!IsAttribute("op3")) SetAttribute("op3", params[19]);
+#endif
+  }
+  else if (command == "pos")
+  {
+    const auto it = std::find(value.begin(), value.end(), ',');
+    if (it != value.end())
+    {
+      // TODO: change into 'setting'
+      std::string v1 = value.substr(0, it - value.begin());
+      const char *v2 = &(*it);
+      SetPos(atoi(v1.c_str()), atoi(v2));
+    }
   }
 }
 
-void BaseObject::LoadDrawProperty(const BaseObject& other)
+void BaseObject::LoadCommandByName(const std::string &event_name)
 {
-  LoadDrawProperty(other.current_prop_);
+  auto it = commands_.find(event_name);
+  if (it != commands_.end())
+    LoadCommand(it->second);
 }
 
-void BaseObject::LoadDrawProperty(const DrawProperty& draw_prop)
+void BaseObject::LoadCommand(const std::string& command)
 {
-  current_prop_ = draw_prop;
+  size_t ia = 0, ib = 0;
+  std::string cmd_type, value;
+  while (ib < command.size())
+  {
+    if (command[ib] == ';')
+    {
+      Split(command.substr(ia, ib - ia), ':', cmd_type, value);
+      RunCommand(cmd_type, value);
+      ia = ib = ib + 1;
+    }
+    else ++ib;
+  }
 }
 
-void BaseObject::LoadTween(const BaseObject& other)
+void BaseObject::AddCommand(const std::string &name, const std::string &command)
 {
-  LoadTween(other.tween_);
+  commands_[name] = command;
+  // TODO: add event handler
+  //SubscribeTo(name);
 }
 
-void BaseObject::LoadTween(const Tween& tween)
+void BaseObject::DeleteAllCommand()
 {
-  tween_ = tween;
+  commands_.clear();
+  UnsubscribeAll();
+}
+
+void BaseObject::Load(const ThemeMetrics& metric)
+{
+  int value;
+
+  // process event handler registering
+  // XXX: is this code is good enough?
+  for (auto it = metric.cbegin(); it != metric.cend(); ++it)
+  {
+    if (it->first.size() >= 5 && strnicmp(it->first.c_str(), "On", 2) == 0)
+    {
+      commands_[it->first.substr(2)] = it->second;
+    }
+  }
+
+  if (metric.get("zindex", value))
+    draw_order_ = value;
+}
+
+void BaseObject::Initialize()
+{
+  if (get_name().empty()) return;
+  auto *m = SceneManager::getMetrics(get_name());
+  if (m)
+    Load(*m);
 }
 
 void BaseObject::AddTweenState(const DrawProperty &draw_prop, uint32_t time_duration, int ease_type, bool loop)
@@ -587,7 +576,6 @@ void BaseObject::Render()
   Graphic::PopMatrix();
 }
 
-void BaseObject::Load() {}
 void BaseObject::doUpdate(float delta) {}
 void BaseObject::doRender() {}
 void BaseObject::doUpdateAfter(float delta) {}
