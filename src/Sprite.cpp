@@ -28,6 +28,10 @@ void Sprite::SetImageByName(const std::string& name)
 {
   auto img = SceneManager::getInstance().get_current_scene()->GetImageByName(name);
   SetImage(img);
+
+  /* default image src set */
+  sx_ = sy_ = 0.f;
+  sw_ = sh_ = 1.f;
 }
 
 void Sprite::SetBlend(int blend_mode)
@@ -35,74 +39,80 @@ void Sprite::SetBlend(int blend_mode)
   blending_ = blend_mode;
 }
 
-void Sprite::LoadSprite(const Sprite& spr)
+void Sprite::RunCommand(const std::string &command, const std::string& value)
 {
-  SetImage(spr.img_);
-  divx_ = spr.divx_;
-  divy_ = spr.divy_;
-  cnt_ = spr.cnt_;
-  interval_ = spr.interval_;
-  idx_ = spr.idx_;
-  eclipsed_time_ = spr.eclipsed_time_;
-  sx_ = spr.sx_;
-  sy_ = spr.sy_;
-  sw_ = spr.sw_;
-  sh_ = spr.sh_;
-  tex_attribute_ = spr.tex_attribute_;
-}
-
-void Sprite::LoadProperty(const std::string& prop_name, const std::string& value)
-{
-  /* below is for LR2 type commands */
-  if (strnicmp(prop_name.c_str(), "#SRC_", 5) == 0)
+  if (command == "sprite")
   {
+    /* imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
     std::vector<std::string> params;
-    MakeParamCountSafe(value, params, 13);
-    int attr = atoi(params[0].c_str());
-    int imgidx = atoi(params[1].c_str());
-    int sx = atoi(params[2].c_str());
-    int sy = atoi(params[3].c_str());
-    int sw = atoi(params[4].c_str());
-    int sh = atoi(params[5].c_str());
-    int divx = atoi(params[6].c_str());
-    int divy = atoi(params[7].c_str());
-    int cycle = atoi(params[8].c_str());    /* total loop time */
-    int timer = atoi(params[9].c_str());    /* timer id in LR2 form */
-#if 0
-    int op1 = atoi_op(params[10].c_str());
-    int op2 = atoi_op(params[11].c_str());
-    int op3 = atoi_op(params[12].c_str());
-#endif
+    MakeParamCountSafe(value, params, 12);
 
-    SetImageByName(params[1]);
+    SetImageByName(params[0]);
+    if (!img_)
+      return;
 
-    if (img_)
+    if (params.size() > 4)
     {
+      int sx = atoi(params[1].c_str());
+      int sy = atoi(params[2].c_str());
+      int sw = atoi(params[3].c_str());
+      int sh = atoi(params[4].c_str());
+
       sx_ = sx / (float)img_->get_width();
       sy_ = sy / (float)img_->get_height();
       if (sw < 0) sw_ = 1.0f;
       else sw_ = sw / (float)img_->get_width();
       if (sh < 0) sh_ = 1.0f;
       else sh_ = sh / (float)img_->get_height();
+    }
+
+    if (params.size() > 7)
+    {
+      int divx = atoi(params[5].c_str());
+      int divy = atoi(params[6].c_str());
+      int cycle = atoi(params[7].c_str());    /* total loop time */
+      int timer = 0;
+      if (params.size() > 8)
+        timer = atoi(params[8].c_str());    /* timer id in LR2 form */
+
       divx_ = divx > 0 ? divx : 1;
       divy_ = divy > 0 ? divy : 1;
       cnt_ = divx_ * divy_;
       interval_ = cycle;
     }
 
-    // this attribute will be processed in LR2Objects
-    SetAttribute("src_timer", params[9]);
+    if (params.size() > 9)
+    {
+      // Register event : Sprite restarting
+      AddCommand(params[9], "spritereset");
+    }
 
     return;
   }
+  else if (command == "blend")
+  {
+    blending_ = atoi(value.c_str());
+    return;
+  }
+  else if (command == "spritereset")
+  {
+    eclipsed_time_ = 0;
+    return;
+  }
 
-  BaseObject::LoadProperty(prop_name, value);
+  BaseObject::RunCommand(command, value);
 }
 
-void Sprite::Load()
+void Sprite::Load(const ThemeMetrics& metric)
 {
-  if (IsAttribute("blend"))
-    blending_ = GetAttribute<int>("blend");
+  BaseObject::Load(metric);
+
+  std::string value;
+  int v;
+  if (metric.get("sprite", value))
+    RunCommand("sprite", value);
+  if (metric.get("blend", v))
+    blending_ = v;
 }
 
 void Sprite::doRender()

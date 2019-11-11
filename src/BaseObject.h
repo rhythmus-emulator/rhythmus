@@ -114,17 +114,21 @@ public:
   BaseObject* FindRegisteredChildByName(const std::string& name);
   BaseObject* GetLastChild();
 
-  virtual void RunCommand(const std::string &command, const std::string& value);
   void LoadCommandByName(const std::string &name);
   void LoadCommand(const std::string &command);
   void AddCommand(const std::string &name, const std::string &command);
   void DeleteAllCommand();
+
+  virtual void RunCommand(const std::string &command, const std::string& value);
 
   /* @brief Load property(resource). */
   virtual void Load(const ThemeMetrics& metric);
 
   /* @brief Initialize object from metric information. */
   virtual void Initialize();
+
+  /* @brief Inherited from EventReceiver */
+  virtual bool OnEvent(const EventMessage& msg);
 
   void AddTweenState(const DrawProperty &draw_prop, uint32_t time_duration,
     int ease_type = EaseTypes::kEaseOut, bool loop = false);

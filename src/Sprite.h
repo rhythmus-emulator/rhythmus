@@ -28,18 +28,10 @@ public:
    */
   void SetBlend(int blend_mode);
 
-  /**
-   * Not only image but also copy all sprite information from other sprite.
-   * (But it does not copy Tween information)
-   *
-   * @depreciated
-   * We should not try to use this function. Use copy constructor instead.
-   */
-  void LoadSprite(const Sprite& spr);
+  virtual void RunCommand(const std::string &command, const std::string& value);
 
-  virtual void LoadProperty(const std::string& prop_name, const std::string& value);
-
-  virtual void Load();
+  /* @brief Load property(resource). */
+  virtual void Load(const ThemeMetrics& metric);
 
 protected:
   ImageAuto img_;

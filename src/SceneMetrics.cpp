@@ -83,61 +83,6 @@ ThemeMetrics::const_iterator ThemeMetrics::cbegin() const { attr_.cbegin(); }
 ThemeMetrics::iterator ThemeMetrics::end() { attr_.end(); }
 ThemeMetrics::const_iterator ThemeMetrics::cend() const { attr_.cend(); }
 
-void SetMetricFromLR2SRC(ThemeMetrics &metric, const std::string &v)
-{
-  // TODO
-  std::vector<std::string> params;
-  MakeParamCountSafe(v, params, 13);
-#if 0
-  int attr = atoi(params[0].c_str());
-  int imgidx = atoi(params[1].c_str());
-  int sx = atoi(params[2].c_str());
-  int sy = atoi(params[3].c_str());
-  int sw = atoi(params[4].c_str());
-  int sh = atoi(params[5].c_str());
-  int divx = atoi(params[6].c_str());
-  int divy = atoi(params[7].c_str());
-  int cycle = atoi(params[8].c_str());    /* total loop time */
-  int timer = atoi(params[9].c_str());    /* timer id in LR2 form */
-#if 0
-  int op1 = atoi_op(params[10].c_str());
-  int op2 = atoi_op(params[11].c_str());
-  int op3 = atoi_op(params[12].c_str());
-#endif
-#endif
-}
-
-void SetMetricFromLR2DST(ThemeMetrics &metric, const std::string &v)
-{
-  // TODO
-  std::vector<std::string> params;
-  MakeParamCountSafe(v, params, 20);
-#if 0
-  int attr = atoi(params[0].c_str());
-  int time = atoi(params[1].c_str());
-  int x = atoi(params[2].c_str());
-  int y = atoi(params[3].c_str());
-  int w = atoi(params[4].c_str());
-  int h = atoi(params[5].c_str());
-  int acc_type = atoi(params[6].c_str());
-  int a = atoi(params[7].c_str());
-  int r = atoi(params[8].c_str());
-  int g = atoi(params[9].c_str());
-  int b = atoi(params[10].c_str());
-  int blend = atoi(params[11].c_str());
-  int filter = atoi(params[12].c_str());
-  int angle = atoi(params[13].c_str());
-  int center = atoi(params[14].c_str());
-#if 0
-  int loop = atoi(params[15].c_str());
-  int timer = atoi(params[16].c_str());
-  int op1 = atoi_op(params[17].c_str());
-  int op2 = atoi_op(params[18].c_str());
-  int op3 = atoi_op(params[19].c_str());
-#endif
-#endif
-}
-
 void LoadMetricsLR2CSV(const std::string &filepath, Scene &scene)
 {
   LR2SceneLoader loader;
@@ -368,7 +313,7 @@ void LoadScriptLR2CSV(const std::string &filepath, Scene &scene)
     NAMES, 0
   };
 
-#define NAME(lr2name, metricname, attr, is_metric) metricname
+#define NAME(lr2name, metricname, attr, is_metric) attr
   static const char *_attrnames[] = {
     NAMES, 0
   };
@@ -441,15 +386,23 @@ void LoadScriptLR2CSV(const std::string &filepath, Scene &scene)
     }
     else curr_metrics = object_processing[name];
 
-    /* Set metric attribute */
-    if (obj_drawtype == "SRC")
+    if (obj_drawtype == "DST")
     {
-      SetMetricFromLR2SRC(*curr_metrics, value);
+      /* In case of DST attribute: add Timer id to attribute name.
+       * e.g. OnLoad with timer 203 --> OnLoad203 */
+      attrname += value_idx_str;
+
+      /* Use lr2 specific command */
+      value = "lr2dst:" + value;
     }
-    else if (obj_drawtype == "DST")
+    else if (obj_drawtype == "SRC")
     {
-      SetMetricFromLR2DST(*curr_metrics, value);
+      /* Convert to Sprite format. */
+      /* (nothing to do currently) */
     }
+
+    /* Set attribute */
+    curr_metrics->set(attrname, value);
   }
 
   /* set zindex for all object metrics & process metric to scene */

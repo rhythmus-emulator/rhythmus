@@ -221,9 +221,16 @@ void BaseObject::LoadCommand(const std::string& command)
 
 void BaseObject::AddCommand(const std::string &name, const std::string &command)
 {
-  commands_[name] = command;
-  // TODO: add event handler
-  //SubscribeTo(name);
+  // Append command if already exist.
+  auto it = commands_.find(name);
+  if (it == commands_.end())
+  {
+    commands_[name] = command;
+
+    // add event handler if not registered
+    SubscribeTo(name);
+  }
+  else it->second += ";" + command;
 }
 
 void BaseObject::DeleteAllCommand()
@@ -256,6 +263,11 @@ void BaseObject::Initialize()
   auto *m = SceneManager::getMetrics(get_name());
   if (m)
     Load(*m);
+}
+
+bool BaseObject::OnEvent(const EventMessage& msg)
+{
+  LoadCommandByName(msg.GetEventName());
 }
 
 void BaseObject::AddTweenState(const DrawProperty &draw_prop, uint32_t time_duration, int ease_type, bool loop)
