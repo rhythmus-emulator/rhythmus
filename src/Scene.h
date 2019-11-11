@@ -101,7 +101,7 @@ public:
   void EnableInput(bool enable_input);
 
   /* @brief Event processing */
-  virtual bool ProcessEvent(const EventMessage& e) = 0;
+  virtual void ProcessInputEvent(const InputEvent& e) = 0;
 
   /* @brief Add images to be updated constantly. e.g. Movie */
   void RegisterImage(ImageAuto img);

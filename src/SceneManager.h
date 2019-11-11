@@ -7,14 +7,13 @@
 namespace rhythmus
 {
 
-class SceneManager : public EventReceiver
+class SceneManager : public InputEventReceiver
 {
 public:
   void Initialize();
   void Cleanup();
   void Update();
   void Render();
-  virtual bool OnEvent(const EventMessage& msg);
   void ChangeScene(bool force=false);
 
   static Scene* get_current_scene();
@@ -25,6 +24,9 @@ public:
 
   static ThemeMetrics *getMetrics(const std::string &name);
   static ThemeMetrics *createMetrics(const std::string &name);
+
+  /* from InputEventReceiver */
+  virtual void OnInputEvent(const InputEvent& e);
 
 private:
   SceneManager();

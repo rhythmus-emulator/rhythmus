@@ -145,6 +145,7 @@ void Graphic::LoopRendering()
      * COMMENT: Event must be processed before Update() method
      * (e.g. Wheel flickering when items Rebuild after Event flush)
      */
+    InputEventManager::Flush();
     EventManager::Flush();
 
     /* Update whole game context */

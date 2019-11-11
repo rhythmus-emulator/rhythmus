@@ -16,15 +16,7 @@ namespace rhythmus
 // ------------------------- class SceneManager
 
 SceneManager::SceneManager()
-  : current_scene_(nullptr)
-{
-  // self subscription start
-  SubscribeTo(Events::kOnKeyDown);
-  SubscribeTo(Events::kOnKeyPress);
-  SubscribeTo(Events::kOnKeyUp);
-  SubscribeTo(Events::kEventSongLoadFinished);
-  SubscribeTo(Events::kEventSongStarted);
-}
+  : current_scene_(nullptr) {}
 
 SceneManager::~SceneManager()
 {
@@ -84,12 +76,10 @@ void SceneManager::Render()
     current_scene_->Render();
 }
 
-bool SceneManager::OnEvent(const EventMessage& e)
+void SceneManager::OnInputEvent(const InputEvent& e)
 {
   if (current_scene_)
-    return current_scene_->ProcessEvent(e);
-
-  return true;
+    current_scene_->ProcessInputEvent(e);
 }
 
 void SceneManager::ChangeScene(bool force)

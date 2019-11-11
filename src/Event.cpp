@@ -2,113 +2,131 @@
 #include "SceneManager.h"
 #include "Graphic.h" /* Need to get GLFW handle */
 #include <mutex>
+#include <algorithm>
 #include <GLFW/glfw3.h>
 
 namespace rhythmus
 {
 
+// ------------------------ Input event related
+
 /* Size of pre-reserved for event cache (to improve performance) */
 constexpr int kPreCacheEventCount = 64;
 
 // lock used when using cached_events_
-std::mutex mtx_swap_lock;
+std::mutex input_evt_lock;
 
 // cached events.
 // stored from input thread, flushed in rendering thread.
-std::vector<EventMessage> evt_messages_;
+std::vector<InputEvent> input_evt_messages_;
+std::vector<InputEventReceiver*> input_evt_receivers_;
 
-// ------------------------- Internal Functions
+std::mutex game_evt_lock;
+std::vector<EventMessage> game_evt_messages_;
+
+InputEventReceiver::InputEventReceiver()
+{
+  std::lock_guard<std::mutex> lock(input_evt_lock);
+  input_evt_receivers_.push_back(this);
+}
+
+InputEventReceiver::~InputEventReceiver()
+{
+  std::lock_guard<std::mutex> lock(input_evt_lock);
+  auto it = std::find(input_evt_receivers_.begin(), input_evt_receivers_.end(), this);
+  if (it != input_evt_receivers_.end())
+    input_evt_receivers_.erase(it);
+}
+
+InputEvent::InputEvent(int type) : type_(type)
+{
+  memset(argv_, 0, sizeof(argv_));
+  time_ = Timer::GetUncachedGameTime();
+}
+
+int InputEvent::type() const { return type_; }
+double InputEvent::time() const { return time_; }
+
+void InputEvent::SetKeyCode(int v) { argv_[0] = v; }
+void InputEvent::SetPosition(int x, int y) { argv_[0] = x; argv_[1] = y; }
+void InputEvent::SetCodepoint(uint32_t codepoint) { *(uint32_t*)argv_ = codepoint; }
+
+int InputEvent::KeyCode() const { return argv_[0]; }
+int InputEvent::GetX() const { return argv_[0]; }
+int InputEvent::GetY() const { return argv_[1]; }
+uint32_t InputEvent::Codepoint() const { return *(uint32_t*)argv_; }
 
 void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
 {
   int eventid = 0;
   if (action == GLFW_PRESS)
-    eventid = Events::kOnKeyDown;
+    eventid = InputEvents::kOnKeyDown;
   else if (action == GLFW_RELEASE)
-    eventid = Events::kOnKeyUp;
+    eventid = InputEvents::kOnKeyUp;
   else if (action == GLFW_REPEAT)
-    eventid = Events::kOnKeyPress;
+    eventid = InputEvents::kOnKeyPress;
 
-  EventMessage msg(eventid, false);
-  msg.SetParam(&key, 2);    // key & scancode
-  EventManager::SendEvent(msg);
+  InputEvent msg(eventid);
+  msg.SetKeyCode(scancode);
+
+  {
+    std::lock_guard<std::mutex> lock(input_evt_lock);
+    input_evt_messages_.push_back(msg);
+  }
 }
 
 void on_text(GLFWwindow *w, uint32_t codepoint)
 {
-  EventManager::SendEvent(Events::kOnText);
+  InputEvent msg(InputEvents::kOnText);
+  msg.SetCodepoint(codepoint);
+
+  {
+    std::lock_guard<std::mutex> lock(input_evt_lock);
+    input_evt_messages_.push_back(msg);
+  }
 }
 
 void on_cursormove(GLFWwindow *w, double xpos, double ypos)
 {
-  EventManager::SendEvent(Events::kOnCursorMove);
+  InputEvent msg(InputEvents::kOnCursorMove);
+  msg.SetPosition(xpos, ypos);
+
+  {
+    std::lock_guard<std::mutex> lock(input_evt_lock);
+    input_evt_messages_.push_back(msg);
+  }
 }
 
 void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
 {
-  EventManager::SendEvent(Events::kOnCursorClick);
+  InputEvent msg(InputEvents::kOnCursorClick);
+  //msg.SetCodepoint(codepoint);
+
+  {
+    std::lock_guard<std::mutex> lock(input_evt_lock);
+    input_evt_messages_.push_back(msg);
+  }
 }
 
 void on_joystick_conn(int jid, int event)
 {
 }
 
+void InputEventManager::Flush()
+{
+
+}
+
 
 // ------------------------- class EventMessage
 
-EventMessage::EventMessage(int id, bool time_synced)
-  : id_(id)
+EventMessage::EventMessage(const std::string &name)
+  : name_(name)
 {
-  memset(params_, 0, sizeof(params_));
-  if (time_synced) SetNewTime();
-  else SetNewTimeUncached();
 }
 
-void EventMessage::SetDesc(const std::string& desc) { desc_ = desc; }
-const std::string& EventMessage::GetDesc() const { return desc_; }
-void EventMessage::SetEventID(int id) { id_ = id; }
-int EventMessage::GetEventID() const { return id_; }
-
-void EventMessage::SetNewTime()
-{
-  time_ = Timer::GetGameTime();
-}
-
-void EventMessage::SetNewTimeUncached()
-{
-  time_ = Timer::GetUncachedGameTime();
-}
-
-uint32_t EventMessage::GetTimeInMilisecond() const
-{
-  return static_cast<uint32_t>(time_ * 1000);
-}
-
-double EventMessage::GetTime() const
-{
-  return time_;
-}
-
-void EventMessage::SetParam(int *params, int param_len)
-{
-  while (param_len-- > 0)
-    params_[param_len] = params[param_len];
-}
-
-bool EventMessage::IsKeyDown() const { return id_ == Events::kOnKeyDown; }
-bool EventMessage::IsKeyPress() const { return id_ == Events::kOnKeyPress; /* indicates constant key press */ }
-bool EventMessage::IsKeyUp() const { return id_ == Events::kOnKeyUp; }
-bool EventMessage::IsInput() const
-{
-  return id_ == Events::kOnKeyDown ||
-    id_ == Events::kOnKeyPress ||
-    id_ == Events::kOnKeyUp ||
-    id_ == kOnCursorMove ||
-    id_ == kOnCursorClick ||
-    id_ == kOnJoystick;
-}
-int EventMessage::GetKeycode() const { return params_[0]; }
-
+void EventMessage::SetEventName(const std::string &name) { name_ = name; }
+const std::string &EventMessage::GetEventName() const { return name_; }
 
 
 // ------------------------- class EventReceiver
@@ -118,11 +136,11 @@ EventReceiver::~EventReceiver()
   UnsubscribeAll();
 }
 
-void EventReceiver::SubscribeTo(int id)
+void EventReceiver::SubscribeTo(const std::string &name)
 {
   EventManager& em = EventManager::getInstance();
-  subscription_.push_back((Events)id);
-  em.event_subscribers_[id].insert(this);
+  subscription_.push_back(name);
+  em.event_subscribers_[name].insert(this);
 }
 
 void EventReceiver::UnsubscribeAll()
@@ -145,6 +163,7 @@ bool EventReceiver::OnEvent(const EventMessage& msg)
 
 // ------------------------- class EventManager
 
+#if 0
 /* system-defined event names in string */
 const char* kEventNames[Events::kEventLast] = {
   "None",
@@ -166,21 +185,15 @@ const char* kEventNames[Events::kEventLast] = {
 
   0,
 };
+#endif
 
 EventManager::EventManager()
 {
-  // initialize events with name
-  for (current_evtidx_ = 0; current_evtidx_ < Events::kEventLast; ++current_evtidx_)
-  {
-    if (!kEventNames[current_evtidx_])
-      continue;
-    evtname_to_evtid_[kEventNames[current_evtidx_]] = current_evtidx_;
-  }
 }
 
-void EventManager::Subscribe(EventReceiver& e, int event_id)
+void EventManager::Subscribe(EventReceiver& e, const std::string &name)
 {
-  e.SubscribeTo(event_id);
+  e.SubscribeTo(name);
 }
 
 void EventManager::Unsubscribe(EventReceiver& e)
@@ -188,43 +201,27 @@ void EventManager::Unsubscribe(EventReceiver& e)
   e.UnsubscribeAll();
 }
 
-bool EventManager::IsSubscribed(EventReceiver& e, int event_id)
+bool EventManager::IsSubscribed(EventReceiver& e, const std::string &name)
 {
-  auto& evtlist = event_subscribers_[event_id];
+  auto& evtlist = event_subscribers_[name];
   return evtlist.find(&e) != evtlist.end();
-}
-
-void EventManager::SendEvent(int event_id)
-{
-  EventMessage msg(event_id);
-  SendEvent(msg);
 }
 
 void EventManager::SendEvent(const std::string& event_name)
 {
-  auto &e = getInstance();
-  auto ii = e.evtname_to_evtid_.find(event_name);
-  if (ii != e.evtname_to_evtid_.end())
-    SendEvent(ii->second);
-  else
-  {
-    e.evtname_to_evtid_[event_name] = ++e.current_evtidx_;
-    SendEvent(e.current_evtidx_);
-  }
+  SendEvent(EventMessage(event_name));
 }
 
 void EventManager::SendEvent(const EventMessage &msg)
 {
-  mtx_swap_lock.lock();
-  evt_messages_.push_back(msg);
-  mtx_swap_lock.unlock();
+  std::lock_guard<std::mutex> lock(game_evt_lock);
+  game_evt_messages_.push_back(msg);
 }
 
 void EventManager::SendEvent(EventMessage &&msg)
 {
-  mtx_swap_lock.lock();
-  evt_messages_.emplace_back(msg);
-  mtx_swap_lock.unlock();
+  std::lock_guard<std::mutex> lock(game_evt_lock);
+  game_evt_messages_.emplace_back(msg);
 }
 
 /* @brief Subscribe to input events */
@@ -247,13 +244,14 @@ void EventManager::Flush()
   // swap cache to prevent event lagging while ProcessEvent.
   // Pre-reserve enough space for new event cache to improve performance.
   std::vector<EventMessage> evnt(kPreCacheEventCount);
-  mtx_swap_lock.lock();
-  evt_messages_.swap(evnt);
-  mtx_swap_lock.unlock();
+  {
+    std::lock_guard<std::mutex> lock(game_evt_lock);
+    game_evt_messages_.swap(evnt);
+  }
 
   for (const auto& e : evnt)
   {
-    auto &evtlist = getInstance().event_subscribers_[e.GetEventID()];
+    auto &evtlist = getInstance().event_subscribers_[e.GetEventName()];
     for (auto* recv : evtlist)
     {
       if (!recv->OnEvent(e))
@@ -275,14 +273,9 @@ EventManager& EventManager::getInstance()
 
 QueuedEventCache::QueuedEventCache() : allow_queue_(true) {}
 
-void QueuedEventCache::QueueEvent(int event_id, float timeout_msec)
+void QueuedEventCache::QueueEvent(const std::string &name, float timeout_msec)
 {
-  events_.emplace_back(QueuedEvent{ std::string(), timeout_msec, event_id });
-}
-
-void QueuedEventCache::QueueEvent(const std::string& queue_name, int event_id, float timeout_msec)
-{
-  events_.emplace_back(QueuedEvent{ queue_name, timeout_msec, event_id });
+  events_.emplace_back(QueuedEvent{ name, timeout_msec });
 }
 
 float QueuedEventCache::GetRemainingTime(const std::string& queue_name)
@@ -290,7 +283,7 @@ float QueuedEventCache::GetRemainingTime(const std::string& queue_name)
   if (queue_name.empty()) return 0;
   for (auto &e : events_)
   {
-    if (e.queue_name == queue_name)
+    if (e.name == queue_name)
       return e.time_delta;
   }
   return 0;
@@ -301,7 +294,7 @@ bool QueuedEventCache::IsQueued(const std::string& queue_name)
   if (queue_name.empty()) return false;
   for (auto &e : events_)
   {
-    if (e.queue_name == queue_name)
+    if (e.name == queue_name)
       return true;
   }
   return false;
@@ -314,7 +307,7 @@ void QueuedEventCache::Update(float delta)
     ii->time_delta -= delta;
     if (ii->time_delta < 0)
     {
-      EventManager::SendEvent(ii->event_id);
+      EventManager::SendEvent(ii->name);
       auto ii_e = ii;
       ii++;
       events_.erase(ii_e);
@@ -332,7 +325,7 @@ void QueuedEventCache::FlushAll()
 {
   for (auto &e : events_)
   {
-    EventManager::SendEvent(e.event_id);
+    EventManager::SendEvent(e.name);
   }
   events_.clear();
 }

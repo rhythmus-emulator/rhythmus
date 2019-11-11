@@ -13,10 +13,8 @@ namespace rhythmus
  * @brief
  * General game event types (including input event)
  */
-enum Events
+enum InputEvents
 {
-  kEventNone,
-
   kOnKeyDown,
   kOnKeyPress,  /* key event repeating due to pressing */
   kOnKeyUp,
@@ -25,57 +23,65 @@ enum Events
   kOnCursorClick,
   kOnJoystick,
 
-  kEventSongListLoaded,
-  kEventSongListLoadFinished,
-
-  kEventSceneTimeout,
-  kEventSceneChange,
-  kEventSceneConfigLoaded,
-  kEventSongSelectChanged,
-  kEventSongSelected,
-  kEventSongLoadFinished,
-  kEventSongStarted,
-  kEventPlayLoading,
-  kEventPlayReady,
-  kEventPlayStart,
-  kEventPlayAbort,
-  kEventCleared,
-
-  kEventLast    /* unused event; just for last index */
+  kInputEventLast    /* unused event; just for last index */
 };
 
+class InputEventManager
+{
+public:
+  static void Flush();
+};
+
+class InputEventReceiver
+{
+public:
+  InputEventReceiver();
+  ~InputEventReceiver();
+  virtual void OnInputEvent(const InputEvent &e) = 0;
+};
+
+/* @brief Only for Input related event */
+class InputEvent
+{
+public:
+  InputEvent(int type);
+
+  /* type index of enum InputEvents */
+  int type() const;
+
+  /* time in second. unsynced from gametime (means exact time) */
+  double time() const;
+
+  void SetKeyCode(int v);
+  void SetPosition(int x, int y);
+  void SetCodepoint(uint32_t codepoint);
+
+  int KeyCode() const;
+  int GetX() const;
+  int GetY() const;
+  uint32_t Codepoint() const;
+
+private:
+  double time_;
+  int type_;
+  int argv_[4];
+};
+
+/**
+ * @brief
+ * Events related to game 
+ * (Not for input event;
+ *  input event is processed in InputEvent / InputManager class)
+ */
 class EventMessage
 {
 public:
-  EventMessage(int id = 0, bool time_synced = true);
-
-  void SetDesc(const std::string& desc);
-  const std::string& GetDesc() const;
-  void SetEventID(int id);
-  int GetEventID() const;
-  void SetNewTime();
-  void SetParam(int *params, int param_len);
-  uint32_t GetTimeInMilisecond() const;
-  double GetTime() const;
-
-  /**
-   * This methods only called
-   * when unsynchronized time with rendering is necessary
-   * e.g. Input event
-   */
-  void SetNewTimeUncached();
-
-  bool IsKeyDown() const;
-  bool IsKeyPress() const;
-  bool IsKeyUp() const;
-  bool IsInput() const;
-  int GetKeycode() const;
+  EventMessage(const std::string &name);
+  void SetEventName(const std::string &name);
+  const std::string &GetEventName() const;
 
 private:
-  int id_;
-  int params_[4];
-  std::string desc_;
-  double time_;
+  std::string name_;
 };
 
 class EventReceiver
@@ -83,25 +89,25 @@ class EventReceiver
 public:
   virtual ~EventReceiver();
 
-  void SubscribeTo(int id);
+  void SubscribeTo(const std::string &name);
   void UnsubscribeAll();
 
   virtual bool OnEvent(const EventMessage& msg);
 
 private:
   /* to what events it subscribed. */
-  std::vector<Events> subscription_;
+  std::vector<std::string> subscription_;
 };
 
 class EventManager
 {
 public:
-  void Subscribe(EventReceiver& e, int event_id);
+  void Subscribe(EventReceiver& e, const std::string &name);
   void Unsubscribe(EventReceiver& e);
-  bool IsSubscribed(EventReceiver& e, int event_id);
+  bool IsSubscribed(EventReceiver& e, const std::string &name);
 
   /* broadcast event to whole subscriber of it. */
-  static void SendEvent(int event_id);
+  //static void SendEvent(int event_id);
   static void SendEvent(const std::string& event_name);
   static void SendEvent(const EventMessage &msg);
   static void SendEvent(EventMessage &&msg);
@@ -118,10 +124,7 @@ private:
   EventManager();
 
   /* subscribers are stored in it */
-  std::map<int, std::set<EventReceiver*> > event_subscribers_;
-
-  /* for conversion: event name to id (not implemented yet) */
-  std::map<std::string, int> evtname_to_evtid_;
+  std::map<std::string, std::set<EventReceiver*> > event_subscribers_;
 
   int current_evtidx_;
 
@@ -133,8 +136,7 @@ class QueuedEventCache
 {
 public:
   QueuedEventCache();
-  void QueueEvent(int event_id, float timeout_msec);
-  void QueueEvent(const std::string& queue_name, int event_id, float timeout_msec);
+  void QueueEvent(const std::string &name, float timeout_msec);
   float GetRemainingTime(const std::string& queue_name);
   bool IsQueued(const std::string& queue_name);
   void Update(float delta);
@@ -147,9 +149,8 @@ public:
 private:
   struct QueuedEvent
   {
-    std::string queue_name;
+    std::string name;   // event to trigger
     float time_delta;   // remain time of this event
-    int event_id;       // event to trigger
   };
   std::list<QueuedEvent> events_;
   bool allow_queue_;
