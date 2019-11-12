@@ -73,7 +73,7 @@ struct TweenState
   uint32_t time_eclipsed;   // current tween's eclipsed time
   bool loop;                // should this tween reused?
   int ease_type;            // tween ease type
-  std::string event_name;   // event to be triggered when this tween starts
+  std::string commands;     // commands to be triggered when this tween starts
 };
 
 using Tween = std::list<TweenState>;
@@ -118,7 +118,9 @@ public:
   void LoadCommand(const std::string &command);
   void AddCommand(const std::string &name, const std::string &command);
   void DeleteAllCommand();
+  void QueueCommand(const std::string &command);
 
+  /* @brief Run command which mainly describes tween of the object. */
   virtual void RunCommand(const std::string &command, const std::string& value);
 
   /* @brief Load property(resource). */
@@ -190,13 +192,17 @@ protected:
 
   int draw_order_;
 
+  // description of drawing motion
   Tween tween_;
 
-  // current drawing state
+  // current cached drawing state
   DrawProperty current_prop_;
 
   // rotation center property
   int rot_center_;
+
+  // group for visibility
+  int visible_group_[3];
 
   // commands to be called
   std::map<std::string, std::string> commands_;

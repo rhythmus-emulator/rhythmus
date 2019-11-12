@@ -84,7 +84,7 @@ void Sprite::RunCommand(const std::string &command, const std::string& value)
     if (params.size() > 9)
     {
       // Register event : Sprite restarting
-      AddCommand(params[9], "spritereset");
+      AddCommand("LR"+params[9], "spritereset");
     }
 
     return;

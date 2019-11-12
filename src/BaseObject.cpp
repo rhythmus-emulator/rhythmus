@@ -3,6 +3,7 @@
 #include "SceneManager.h"
 #include "LR2/LR2SceneLoader.h"   // XXX: atoi_op
 #include "Util.h"
+#include <iostream>
 
 namespace rhythmus
 {
@@ -16,6 +17,7 @@ BaseObject::BaseObject()
   SetRGB(1.0f, 1.0f, 1.0f);
   SetAlpha(1.0f);
   SetScale(1.0f, 1.0f);
+  memset(visible_group_, 0, sizeof(visible_group_));
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
@@ -24,6 +26,7 @@ BaseObject::BaseObject(const BaseObject& obj)
   // XXX: childrens won't copy by now
   tween_ = obj.tween_;
   current_prop_ = obj.current_prop_;
+  memcpy(visible_group_, obj.visible_group_, sizeof(visible_group_));
 }
 
 BaseObject::~BaseObject()
@@ -98,90 +101,91 @@ BaseObject* BaseObject::GetLastChild()
 
 void BaseObject::RunCommand(const std::string &command, const std::string& value)
 {
-  if (command == "lr2dst")
+  if (command == "lr2cmd")
   {
-    std::vector<std::string> params;
-    MakeParamCountSafe(value, params, 20);
-    int attr = atoi(params[0].c_str());
-    int time = atoi(params[1].c_str());
-    int x = atoi(params[2].c_str());
-    int y = atoi(params[3].c_str());
-    int w = atoi(params[4].c_str());
-    int h = atoi(params[5].c_str());
-    int acc_type = atoi(params[6].c_str());
-    int a = atoi(params[7].c_str());
-    int r = atoi(params[8].c_str());
-    int g = atoi(params[9].c_str());
-    int b = atoi(params[10].c_str());
-    int blend = atoi(params[11].c_str());
-    int filter = atoi(params[12].c_str());
-    int angle = atoi(params[13].c_str());
-    int center = atoi(params[14].c_str());
+    /* for LR2 compatibility */
+    std::vector<std::string> tweencmds, params;
+    Split(value, '|', tweencmds);
+    for (auto &tweencmd : tweencmds)
+    {
+      std::vector<std::string> params;
+      MakeParamCountSafe(tweencmd, params, 14);
+      int time = atoi(params[0].c_str());
+      int x = atoi(params[1].c_str());
+      int y = atoi(params[2].c_str());
+      int w = atoi(params[3].c_str());
+      int h = atoi(params[4].c_str());
+      int acc_type = atoi(params[5].c_str());
+      int a = atoi(params[6].c_str());
+      int r = atoi(params[7].c_str());
+      int g = atoi(params[8].c_str());
+      int b = atoi(params[9].c_str());
+      int blend = atoi(params[10].c_str());
+      int filter = atoi(params[11].c_str());
+      int angle = atoi(params[12].c_str());
+      int center = atoi(params[13].c_str());
+      int loop = atoi(params[14].c_str());
+
+      /* 15 ~ 18 is used in loading attribute, ignored here. */
 #if 0
-    int loop = atoi(params[15].c_str());
-    int timer = atoi(params[16].c_str());
-    int op1 = atoi_op(params[17].c_str());
-    int op2 = atoi_op(params[18].c_str());
-    int op3 = atoi_op(params[19].c_str());
+      int timer = atoi(params[15].c_str());
+      int op1 = atoi_op(params[16].c_str());
+      int op2 = atoi_op(params[17].c_str());
+      int op3 = atoi_op(params[18].c_str());
 #endif
 
-    // DST specifies time information as the time of motion
-    // So we need to calculate 'duration' of that motion.
+      // DST specifies time information as the time of motion
+      // So we need to calculate 'duration' of that motion.
 
-    // calculate previous tween's duration
-    if (!tween_.empty())
-    {
-      auto cur_motion_length = GetTweenLength();
-      // to prevent overflow bug
-      if (time < cur_motion_length)
-        time = cur_motion_length;
-      tween_.back().time_duration = time - cur_motion_length;
+      // calculate previous tween's duration
+      if (!tween_.empty())
+      {
+        auto cur_motion_length = GetTweenLength();
+        // to prevent overflow bug
+        if (time < cur_motion_length)
+          time = cur_motion_length;
+        tween_.back().time_duration = time - cur_motion_length;
+      }
+
+      // If first tween and starting time is not zero,
+      // then add dummy tween (invisible).
+      if (tween_.empty() && time > 0)
+      {
+        // dummy tween should invisible
+        Hide();
+        SetDeltaTweenTime(time);
+      }
+
+      // make current tween
+      SetDeltaTweenTime(0);
+
+      // Now specify current tween.
+      GetDestDrawProperty().display = true;
+      SetPos(x, y);
+      SetSize(w, h);
+      SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
+      SetAlpha((unsigned)a);
+      SetRotationAsRadian(0, 0, -angle);
+      SetRotationCenter(center);
+      switch (acc_type)
+      {
+      case 0:
+        SetAcceleration(EaseTypes::kEaseLinear);
+        break;
+      case 1:
+        SetAcceleration(EaseTypes::kEaseIn);
+        break;
+      case 2:
+        SetAcceleration(EaseTypes::kEaseOut);
+        break;
+      case 3:
+        SetAcceleration(EaseTypes::kEaseInOut);
+        break;
+      }
+
+      // blend parameter should be set in Sprite.
+      QueueCommand("blend:" + params[11]);
     }
-
-    // If first tween and starting time is not zero,
-    // then add dummy tween (invisible).
-    if (tween_.empty() && time > 0)
-    {
-      // dummy tween should invisible
-      Hide();
-      SetDeltaTweenTime(time);
-    }
-
-    // make current tween
-    SetDeltaTweenTime(0);
-
-    // Now specify current tween.
-    GetDestDrawProperty().display = true;
-    SetPos(x, y);
-    SetSize(w, h);
-    SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
-    SetAlpha((unsigned)a);
-    SetRotationAsRadian(0, 0, angle);
-    switch (acc_type)
-    {
-    case 0:
-      SetAcceleration(EaseTypes::kEaseLinear);
-      break;
-    case 1:
-      SetAcceleration(EaseTypes::kEaseIn);
-      break;
-    case 2:
-      SetAcceleration(EaseTypes::kEaseOut);
-      break;
-    case 3:
-      SetAcceleration(EaseTypes::kEaseInOut);
-      break;
-    }
-
-#if 0
-    // these attribute will be processed later e.g. LR2Objects
-    if (!IsAttribute("blend")) SetAttribute("blend", params[11]);
-    if (!IsAttribute("loop")) SetAttribute("loop", params[15]);
-    if (!IsAttribute("timer")) SetAttribute("timer", params[16]);
-    if (!IsAttribute("op1")) SetAttribute("op1", params[17]);
-    if (!IsAttribute("op2")) SetAttribute("op2", params[18]);
-    if (!IsAttribute("op3")) SetAttribute("op3", params[19]);
-#endif
   }
   else if (command == "pos")
   {
@@ -239,9 +243,18 @@ void BaseObject::DeleteAllCommand()
   UnsubscribeAll();
 }
 
+void BaseObject::QueueCommand(const std::string &command)
+{
+  if (tween_.empty())
+    std::cerr << "Warning: tried to queue command without tween.";
+  else
+    tween_.back().commands = command;
+}
+
 void BaseObject::Load(const ThemeMetrics& metric)
 {
   int value;
+  std::string s;
 
   // process event handler registering
   // XXX: is this code is good enough?
@@ -249,12 +262,26 @@ void BaseObject::Load(const ThemeMetrics& metric)
   {
     if (it->first.size() >= 5 && strnicmp(it->first.c_str(), "On", 2) == 0)
     {
-      commands_[it->first.substr(2)] = it->second;
+      AddCommand(it->first.substr(2), it->second);
     }
   }
 
   if (metric.get("zindex", value))
     draw_order_ = value;
+  
+  if (metric.get("LR2cmdinit", s))
+  {
+    /* command for LR2 compatibility (initialization) */
+    std::string timer;
+    std::vector<std::string> params;
+    Split(s, ',', params);
+    MakeParamCountSafe(params, 20);
+    timer = params[15];
+    visible_group_[0] = atoi_op(params[16].c_str());
+    visible_group_[1] = atoi_op(params[17].c_str());
+    visible_group_[2] = atoi_op(params[18].c_str());
+    AddCommand("LR" + timer, "lr2cmd:" + s);
+  }
 }
 
 void BaseObject::Initialize()
@@ -467,8 +494,10 @@ void BaseObject::UpdateTween(float delta_ms)
       delta_ms -= t.time_duration - t.time_eclipsed;
 
       // trigger event if exist
-      if (!t.event_name.empty())
-        EventManager::SendEvent(t.event_name);
+      if (!t.commands.empty())
+      {
+        LoadCommand(t.commands);
+      }
 
       // loop tween by push it again.
       // -> use more efficient method splice
