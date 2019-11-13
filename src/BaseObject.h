@@ -27,11 +27,13 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <functional>
 
 namespace rhythmus
 {
 
 class ThemeMetrics;
+class BaseObject;
 
 /** @brief Drawing properties of Object */
 struct DrawProperty
@@ -43,6 +45,23 @@ struct DrawProperty
   ProjectionInfo pi;
   bool display;             // display: show or hide
 };
+
+/** @brief Argument for object command. */
+class CommandArgs
+{
+public:
+  CommandArgs(const std::string &argv);
+  template <typename T>
+  T Get(size_t arg_index) const;
+private:
+  std::vector<std::string> args_;
+};
+
+/** @brief Command function type for object. */
+typedef std::function<void(void*, CommandArgs&)> CommandFn;
+
+/** @brief Command mapping for object. */
+typedef std::map<std::string, CommandFn> CommandFnMap;
 
 /** @brief Tweens' ease type */
 enum EaseTypes
@@ -120,7 +139,13 @@ public:
   void DeleteAllCommand();
   void QueueCommand(const std::string &command);
 
-  /* @brief Run command which mainly describes tween of the object. */
+  /**
+   * @brief
+   * Run command which mainly changes mutable attribute(e.g. tween)
+   * of the object.
+   * Types of executable command and function are mapped
+   * in GetCommandFnMap() function, which is refered by this procedure.
+   */
   virtual void RunCommand(const std::string &command, const std::string& value);
 
   /* @brief Load property(resource). */
@@ -164,6 +189,10 @@ public:
    * refer: enum EaseTypes
    */
   void SetAcceleration(int acc);
+  void SetLR2DST(int time, int x, int y, int w, int h, int acc_type,
+    int a, int r, int g, int b, int blend, int filter, int angle,
+    int center, int loop);
+  void SetVisibleGroup(int group0 = 0, int group1 = 0, int group2 = 0);
   void Hide();
   void Show();
   void SetDrawOrder(int order);
@@ -216,6 +245,8 @@ protected:
   virtual void doUpdateAfter(float delta);
   virtual void doRenderAfter();
   virtual bool IsUpdatable();
+
+  virtual CommandFnMap& GetCommandFnMap() const;
 };
 
 void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,

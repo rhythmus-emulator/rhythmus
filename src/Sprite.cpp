@@ -39,9 +39,22 @@ void Sprite::SetBlend(int blend_mode)
   blending_ = blend_mode;
 }
 
-void Sprite::RunCommand(const std::string &command, const std::string& value)
+void Sprite::ReplaySprite()
 {
-  if (command == "sprite")
+  eclipsed_time_ = 0;
+}
+
+void Sprite::Load(const ThemeMetrics& metric)
+{
+  BaseObject::Load(metric);
+
+  std::string value;
+  int v;
+  if (metric.get("sprite", value))
+    RunCommand("sprite", value);
+  if (metric.get("blend", v))
+    blending_ = v;
+  if (metric.get("sprite", value))
   {
     /* imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
     std::vector<std::string> params;
@@ -84,35 +97,9 @@ void Sprite::RunCommand(const std::string &command, const std::string& value)
     if (params.size() > 9)
     {
       // Register event : Sprite restarting
-      AddCommand("LR"+params[9], "spritereset");
+      AddCommand("LR" + params[9] + "On", "replay");
     }
-
-    return;
   }
-  else if (command == "blend")
-  {
-    blending_ = atoi(value.c_str());
-    return;
-  }
-  else if (command == "spritereset")
-  {
-    eclipsed_time_ = 0;
-    return;
-  }
-
-  BaseObject::RunCommand(command, value);
-}
-
-void Sprite::Load(const ThemeMetrics& metric)
-{
-  BaseObject::Load(metric);
-
-  std::string value;
-  int v;
-  if (metric.get("sprite", value))
-    RunCommand("sprite", value);
-  if (metric.get("blend", v))
-    blending_ = v;
 }
 
 void Sprite::doRender()
@@ -215,6 +202,22 @@ void Sprite::doUpdate(float delta)
     idx_ = eclipsed_time_ * divx_ * divy_ / interval_ % cnt_;
     eclipsed_time_ = fmod(eclipsed_time_, interval_);
   }
+}
+
+CommandFnMap& Sprite::GetCommandFnMap() const
+{
+  static CommandFnMap cmdfnmap;
+  if (cmdfnmap.empty())
+  {
+    cmdfnmap = BaseObject::GetCommandFnMap();
+    cmdfnmap["blend"] = [](void *o, CommandArgs& args) {
+      static_cast<Sprite*>(o)->SetBlend(args.Get<int>(0));
+    };
+    cmdfnmap["replay"] = [](void *o, CommandArgs& args) {
+      static_cast<Sprite*>(o)->ReplaySprite();
+    };
+  }
+  return cmdfnmap;
 }
 
 }

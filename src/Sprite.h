@@ -28,7 +28,7 @@ public:
    */
   void SetBlend(int blend_mode);
 
-  virtual void RunCommand(const std::string &command, const std::string& value);
+  void ReplaySprite();
 
   /* @brief Load property(resource). */
   virtual void Load(const ThemeMetrics& metric);
@@ -60,6 +60,8 @@ protected:
 
   virtual void doUpdate(float delta);
   virtual void doRender();
+
+  virtual CommandFnMap& GetCommandFnMap() const;
 };
 
 /* Sprite may not need to be shared. */

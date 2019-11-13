@@ -101,101 +101,19 @@ BaseObject* BaseObject::GetLastChild()
 
 void BaseObject::RunCommand(const std::string &command, const std::string& value)
 {
-  if (command == "lr2cmd")
+  auto &fnmap = GetCommandFnMap();
+  auto it = fnmap.find(command);
+  if (it == fnmap.end())
+    return;
+  else
   {
-    /* for LR2 compatibility */
-    std::vector<std::string> tweencmds, params;
-    Split(value, '|', tweencmds);
-    for (auto &tweencmd : tweencmds)
+    try
     {
-      std::vector<std::string> params;
-      MakeParamCountSafe(tweencmd, params, 14);
-      int time = atoi(params[0].c_str());
-      int x = atoi(params[1].c_str());
-      int y = atoi(params[2].c_str());
-      int w = atoi(params[3].c_str());
-      int h = atoi(params[4].c_str());
-      int acc_type = atoi(params[5].c_str());
-      int a = atoi(params[6].c_str());
-      int r = atoi(params[7].c_str());
-      int g = atoi(params[8].c_str());
-      int b = atoi(params[9].c_str());
-      int blend = atoi(params[10].c_str());
-      int filter = atoi(params[11].c_str());
-      int angle = atoi(params[12].c_str());
-      int center = atoi(params[13].c_str());
-      int loop = atoi(params[14].c_str());
-
-      /* 15 ~ 18 is used in loading attribute, ignored here. */
-#if 0
-      int timer = atoi(params[15].c_str());
-      int op1 = atoi_op(params[16].c_str());
-      int op2 = atoi_op(params[17].c_str());
-      int op3 = atoi_op(params[18].c_str());
-#endif
-
-      // DST specifies time information as the time of motion
-      // So we need to calculate 'duration' of that motion.
-
-      // calculate previous tween's duration
-      if (!tween_.empty())
-      {
-        auto cur_motion_length = GetTweenLength();
-        // to prevent overflow bug
-        if (time < cur_motion_length)
-          time = cur_motion_length;
-        tween_.back().time_duration = time - cur_motion_length;
-      }
-
-      // If first tween and starting time is not zero,
-      // then add dummy tween (invisible).
-      if (tween_.empty() && time > 0)
-      {
-        // dummy tween should invisible
-        Hide();
-        SetDeltaTweenTime(time);
-      }
-
-      // make current tween
-      SetDeltaTweenTime(0);
-
-      // Now specify current tween.
-      GetDestDrawProperty().display = true;
-      SetPos(x, y);
-      SetSize(w, h);
-      SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
-      SetAlpha((unsigned)a);
-      SetRotationAsRadian(0, 0, -angle);
-      SetRotationCenter(center);
-      switch (acc_type)
-      {
-      case 0:
-        SetAcceleration(EaseTypes::kEaseLinear);
-        break;
-      case 1:
-        SetAcceleration(EaseTypes::kEaseIn);
-        break;
-      case 2:
-        SetAcceleration(EaseTypes::kEaseOut);
-        break;
-      case 3:
-        SetAcceleration(EaseTypes::kEaseInOut);
-        break;
-      }
-
-      // blend parameter should be set in Sprite.
-      QueueCommand("blend:" + params[11]);
+      it->second(this, CommandArgs(value));
     }
-  }
-  else if (command == "pos")
-  {
-    const auto it = std::find(value.begin(), value.end(), ',');
-    if (it != value.end())
+    catch (std::out_of_range& e)
     {
-      // TODO: change into 'setting'
-      std::string v1 = value.substr(0, it - value.begin());
-      const char *v2 = &(*it);
-      SetPos(atoi(v1.c_str()), atoi(v2));
+      std::cerr << "Error: Command parameter is not enough to execute " << command << std::endl;
     }
   }
 }
@@ -213,7 +131,7 @@ void BaseObject::LoadCommand(const std::string& command)
   std::string cmd_type, value;
   while (ib < command.size())
   {
-    if (command[ib] == ';')
+    if (command[ib] == ';' || command[ib] == 0)
     {
       Split(command.substr(ia, ib - ia), ':', cmd_type, value);
       RunCommand(cmd_type, value);
@@ -269,18 +187,26 @@ void BaseObject::Load(const ThemeMetrics& metric)
   if (metric.get("zindex", value))
     draw_order_ = value;
   
-  if (metric.get("LR2cmdinit", s))
+  if (metric.get("lr2cmd", s))
   {
-    /* command for LR2 compatibility (initialization) */
-    std::string timer;
-    std::vector<std::string> params;
-    Split(s, ',', params);
-    MakeParamCountSafe(params, 20);
-    timer = params[15];
-    visible_group_[0] = atoi_op(params[16].c_str());
-    visible_group_[1] = atoi_op(params[17].c_str());
-    visible_group_[2] = atoi_op(params[18].c_str());
-    AddCommand("LR" + timer, "lr2cmd:" + s);
+    std::vector<std::string> v;
+    std::string timer_and_op, cmd;
+    Split(s, ';', timer_and_op, cmd);
+    Split(timer_and_op, ',', v);
+    std::string timer(v[0]);
+
+    if (v.size() < 5)
+    {
+      std::cerr << "Error : LR2CMD attribute requires more than 5 arguments." << std::endl;
+      return;
+    }
+
+    /* create message handler & set op code */
+    AddCommand("LR" + timer + "On", cmd + ";loop:" + v[4]);
+    AddCommand("LR" + timer + "Off", "hide");
+    SetVisibleGroup(
+      atoi(v[1].c_str()), atoi(v[2].c_str()), atoi(v[3].c_str())
+    );
   }
 }
 
@@ -433,6 +359,71 @@ void BaseObject::SetAcceleration(int acc)
     return;
   auto& t = tween_.back();
   t.ease_type = acc;
+}
+
+void BaseObject::SetLR2DST(
+  int time, int x, int y, int w, int h, int acc_type,
+  int a, int r, int g, int b, int blend, int filter, int angle,
+  int center, int loop)
+{
+  // DST specifies time information as the time of motion
+  // So we need to calculate 'duration' of that motion.
+
+  // calculate previous tween's duration
+  if (!tween_.empty())
+  {
+    auto cur_motion_length = GetTweenLength();
+    // to prevent overflow bug
+    if (time < cur_motion_length)
+      time = cur_motion_length;
+    tween_.back().time_duration = time - cur_motion_length;
+  }
+
+  // If first tween and starting time is not zero,
+  // then add dummy tween (invisible).
+  if (tween_.empty() && time > 0)
+  {
+    // dummy tween should invisible
+    Hide();
+    SetDeltaTweenTime(time);
+  }
+
+  // make current tween
+  SetDeltaTweenTime(0);
+
+  // Now specify current tween.
+  GetDestDrawProperty().display = true;
+  SetPos(x, y);
+  SetSize(w, h);
+  SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
+  SetAlpha((unsigned)a);
+  SetRotationAsRadian(0, 0, -angle);
+  SetRotationCenter(center);
+  switch (acc_type)
+  {
+  case 0:
+    SetAcceleration(EaseTypes::kEaseLinear);
+    break;
+  case 1:
+    SetAcceleration(EaseTypes::kEaseIn);
+    break;
+  case 2:
+    SetAcceleration(EaseTypes::kEaseOut);
+    break;
+  case 3:
+    SetAcceleration(EaseTypes::kEaseInOut);
+    break;
+  }
+
+  // blend parameter should set by Sprite command.
+  QueueCommand("blend:" + std::to_string(blend));
+}
+
+void BaseObject::SetVisibleGroup(int group0, int group1, int group2)
+{
+  visible_group_[0] = group0;
+  visible_group_[1] = group1;
+  visible_group_[2] = group2;
 }
 
 void BaseObject::Hide()
@@ -718,6 +709,77 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
     break;
   }
   }
+}
+
+/* ---------------------------- Command related */
+
+CommandArgs::CommandArgs(const std::string &argv)
+{
+  size_t a = 0, b = 0;
+  while (b < argv.size())
+  {
+    if (argv[b] == ',' || argv[b] == 0)
+    {
+      args_.push_back(argv.substr(a, b - a));
+      a = b = b + 1;
+    }
+    else b++;
+  }
+}
+
+template <>
+int CommandArgs::Get(size_t arg_index) const
+{
+  return atoi(args_[arg_index].c_str());
+}
+
+template <>
+double CommandArgs::Get(size_t arg_index) const
+{
+  return atof(args_[arg_index].c_str());
+}
+
+template <>
+float CommandArgs::Get(size_t arg_index) const
+{
+  return atof(args_[arg_index].c_str());
+}
+
+template <>
+std::string CommandArgs::Get(size_t arg_index) const
+{
+  return args_[arg_index];
+}
+
+CommandFnMap& BaseObject::GetCommandFnMap() const
+{
+  static CommandFnMap cmdfnmap;
+  if (cmdfnmap.empty())
+  {
+    cmdfnmap["pos"] = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetPos(args.Get<int>(0), args.Get<int>(1));
+    };
+    cmdfnmap["lr2cmd"] = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetLR2DST(
+        args.Get<int>(0), /* time */
+        args.Get<int>(1), args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), /* xywh */
+        args.Get<int>(5), /* acc_type */
+        args.Get<int>(6), args.Get<int>(7), args.Get<int>(8), args.Get<int>(9), /* argb */
+        args.Get<int>(10), args.Get<int>(11), args.Get<int>(12), /* blend, filter */
+        args.Get<int>(13), args.Get<int>(14) /* center, loop */
+      );
+    };
+    cmdfnmap["show"] = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->Show();
+    };
+    cmdfnmap["hide"] = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->Hide();
+    };
+    cmdfnmap["loop"] = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetTweenLoopTime((uint32_t)args.Get<int>(0));
+    };
+  }
+  return cmdfnmap;
 }
 
 }

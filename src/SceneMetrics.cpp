@@ -278,29 +278,29 @@ void LoadScriptLR2CSV(const std::string &filepath, Scene &scene)
   NAME("SRC_LN_BODY", "NoteField", "LNBodySprite", true), \
   NAME("SRC_AUTO_LN_BODY", "NoteField", "AutoLNBodySprite", true), \
   NAME("SRC_MINE", "NoteField", "MineSprite", true), \
-  NAME("DST_NOTE", "NoteField", "LR2cmdinit", true), \
+  NAME("DST_NOTE", "NoteField", "lr2cmd", true), \
   NAME("SRC_GROOVEGAUGE", "LifeGauge", "Sprite", true), \
-  NAME("DST_GROOVEGAUGE", "LifeGauge", "LR2cmdinit", true), \
+  NAME("DST_GROOVEGAUGE", "LifeGauge", "lr2cmd", true), \
   NAME("SRC_NOWJUDGE_1P", "Judge1P", "Sprite", true), \
-  NAME("DST_NOWJUDGE_1P", "Judge1P", "LR2cmdinit", true), \
+  NAME("DST_NOWJUDGE_1P", "Judge1P", "lr2cmd", true), \
   NAME("SRC_NOWJUDGE_2P", "Judge2P", "Sprite", true), \
-  NAME("DST_NOWJUDGE_2P", "Judge2P", "LR2cmdinit", true), \
+  NAME("DST_NOWJUDGE_2P", "Judge2P", "lr2cmd", true), \
   NAME("SRC_IMAGE", "Sprite", "Sprite", false), \
-  NAME("DST_IMAGE", "Sprite", "LR2cmdinit", false), \
+  NAME("DST_IMAGE", "Sprite", "lr2cmd", false), \
   NAME("SRC_TEXT", "Text", "Font", false), \
-  NAME("DST_TEXT", "Text", "LR2cmdinit", false), \
+  NAME("DST_TEXT", "Text", "lr2cmd", false), \
   NAME("SRC_BARGRAPH", "Graph", "Sprite", false), \
-  NAME("DST_BARGRAPH", "Graph", "LR2cmdinit", false), \
+  NAME("DST_BARGRAPH", "Graph", "lr2cmd", false), \
   NAME("SRC_SLIDER", "Slider", "Sprite", false), \
-  NAME("DST_SLIDER", "Slider", "LR2cmdinit", false), \
+  NAME("DST_SLIDER", "Slider", "lr2cmd", false), \
   NAME("SRC_NUMBER", "NumberSprite", "Sprite", false), \
-  NAME("DST_NUMBER", "NumberSprite", "LR2cmdinit", false), \
+  NAME("DST_NUMBER", "NumberSprite", "lr2cmd", false), \
   NAME("SRC_JUDGELINE", "JudgeLine", "Sprite", false), \
-  NAME("DST_JUDGELINE", "JudgeLine", "LR2cmdinit", false), \
+  NAME("DST_JUDGELINE", "JudgeLine", "lr2cmd", false), \
   NAME("SRC_LINE", "Line", "Sprite", false), \
-  NAME("DST_LINE", "Line", "LR2cmdinit", false), \
+  NAME("DST_LINE", "Line", "lr2cmd", false), \
   NAME("SRC_BUTTON", "Button", "Sprite", false), \
-  NAME("DST_BUTTON", "Button", "LR2cmdinit", false)
+  NAME("DST_BUTTON", "Button", "lr2cmd", false)
 
 #define NAME(lr2name, metricname, attr, is_metric) lr2name
   static const char *_lr2names[] = {
@@ -388,22 +388,47 @@ void LoadScriptLR2CSV(const std::string &filepath, Scene &scene)
 
     if (obj_drawtype == "DST")
     {
-      /* use LR2cmdinit attribute. */
+      /**
+       * use lr2cmd attribute.
+       *
+       * format:
+       * (timer),(op1),(op2),(op3),(loop);(commands)
+       */
+
       std::string prev_value;
       std::vector<std::string> params;
       bool prev_value_exist;
 
       prev_value_exist = curr_metrics->get(attrname, prev_value);
-      MakeParamCountSafe(value, params, 20);
-      std::string timer(params[16]);
+      MakeParamCountSafe(value, params, 19);
+      std::string timer(params[15]);
 
+      /* parameter to 13th string */
+      value = "lr2cmd:";
+      for (size_t i = 0; i <= 13; ++i)
+        value += params[16] + ",";
+      value.pop_back();
+
+      /* if first DST command, append timer / op code attribute. */
       if (prev_value_exist)
-        value = prev_value + "|" + value;
+        value = prev_value + ";" + value;
+      else
+      {
+        value = timer + "," +
+          params[16] + "," + params[17] + "," + params[18] + "," + params[14] + ";" +
+          value;
+      }
     }
     else if (obj_drawtype == "SRC")
     {
-      /* use Sprite attribute. */
-      /* (nothing to do currently) */
+      /**
+       * use Sprite attribute.
+       *
+       * format:
+       * (imgname),(sx),(sy),(sw),(sh)
+       *
+       * (nothing to do currently)
+       */
     }
 
     /* Set attribute */
