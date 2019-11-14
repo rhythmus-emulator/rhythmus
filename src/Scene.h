@@ -35,9 +35,6 @@ struct ThemeParameter
   // time to move next scene (in milisecond)
   // 0 : don't move scene to next scene automatically
   int next_scene_time;
-
-  // other untranslated attributes (may be used later)
-  std::map<std::string, std::string> attributes;
 };
 
 class SceneTask
@@ -92,16 +89,16 @@ public:
   /* @brief triggered when scene is finished
    * @warn it does not mean changing scene instantly,
    * which triggers fadeout/transition. */
-  void TriggerFadeOut();
+  void FadeOutScene(bool next);
   void TriggerFadeIn();
 
   /* @brief close scene completely & do some misc (e.g. save setting) */
-  virtual void CloseScene();
+  virtual void CloseScene(bool next);
 
   void EnableInput(bool enable_input);
 
   /* @brief Event processing */
-  virtual void ProcessInputEvent(const InputEvent& e) = 0;
+  virtual void ProcessInputEvent(const InputEvent& e);
 
   /* @brief Add images to be updated constantly. e.g. Movie */
   void RegisterImage(ImageAuto img);
@@ -114,9 +111,6 @@ public:
   void LoadObjectMetrics(const ThemeMetrics &metrics);
 
   const ThemeParameter& get_theme_parameter() const;
-
-  /* @brief load metrics to existing object,
-   * or create object by given metrics.*/
 
 protected:
   // Theme parameter list (read-only)
@@ -140,8 +134,7 @@ protected:
   virtual void doUpdate(float delta);
   virtual void doRenderAfter();
 
-  // next scene mode
-  GameSceneMode next_scene_mode_;
+  std::string prev_scene_, next_scene_;
 
 private:
   void LoadOptions();
@@ -169,8 +162,6 @@ private:
 
   // currently focused object (if exists)
   BaseObject* focused_object_;
-
-  std::string prev_scene, next_scene;
 };
 
 }

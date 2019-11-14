@@ -16,7 +16,11 @@ namespace rhythmus
 // ------------------------- class SceneManager
 
 SceneManager::SceneManager()
-  : current_scene_(nullptr) {}
+  : current_scene_(nullptr), next_scene_(nullptr)
+{
+  memset(visible_groups_, 0, sizeof(visible_groups_));
+  visible_groups_[0] = 1;
+}
 
 SceneManager::~SceneManager()
 {
@@ -38,7 +42,18 @@ void SceneManager::Initialize()
   LoadMetrics(soundset_path);
 
   // create starting scene.
-  ChangeScene();
+  switch (Game::getInstance().get_boot_mode())
+  {
+  case GameBootMode::kBootNormal:
+  case GameBootMode::kBootArcade:
+  case GameBootMode::kBootLR2:
+  case GameBootMode::kBootRefresh:
+    SceneManager::ChangeScene("SceneLoading");
+    break;
+  case GameBootMode::kBootTest:
+    SceneManager::ChangeScene("SceneTest");
+    break;
+  }
 }
 
 void SceneManager::Cleanup()
@@ -63,6 +78,23 @@ void SceneManager::Update()
   // Tick all scenemanager related timer
   timer_scene_.Tick();
 
+  // check is it necessary to change scene
+  // StartScene is called here (time critical process)
+  if (next_scene_)
+  {
+    delete current_scene_;
+    current_scene_ = next_scene_;
+    next_scene_ = nullptr;
+
+    current_scene_->StartScene();
+
+    // Reset SceneManager timer
+    // Need to refresh whole timing to set exact scene start timing
+    // As much time passed due to scene loading.
+    Timer::Update();
+    timer_scene_.Start();
+  }
+
   // Update LR2Flag (LR2 compatible layer)
   LR2Flag::Update();
 
@@ -82,70 +114,9 @@ void SceneManager::OnInputEvent(const InputEvent& e)
     current_scene_->ProcessInputEvent(e);
 }
 
-void SceneManager::ChangeScene(bool force)
-{
-  // create scene suitable for current game mode
-  Scene *new_scene = CreateNextScene();
-  Scene *prev_scene = current_scene_;
-
-  // if same scene, don't change scene
-  if (current_scene_ && *current_scene_ == *new_scene && !force)
-  {
-    delete new_scene;
-    return;
-  }
-
-  // load scene first to maximize shared resource between two scene
-  current_scene_ = new_scene;
-  new_scene->LoadScene();
-
-  // now delete previous scene
-  delete prev_scene;
-
-  // Reset SceneManager timer
-  // Need to refresh whole timing to set exact scene start timing
-  // As much time passed due to scene loading.
-  Timer::Update();
-  timer_scene_.Start();
-
-  current_scene_->StartScene();
-}
-
 Scene* SceneManager::get_current_scene()
 {
   return getInstance().current_scene_;
-}
-
-Scene* SceneManager::CreateNextScene()
-{
-  auto mode = Game::getInstance().get_game_scene_mode();
-
-  // if test mode, then directly go into test scene
-  if (mode == GameSceneMode::kGameSceneModeTest)
-    return new TestScene();
-  
-  switch (mode)
-  {
-  case GameSceneMode::kGameSceneModeLoading:
-    return new LoadingScene();
-  case GameSceneMode::kGameSceneModeSelect:
-    return new SelectScene();
-  case GameSceneMode::kGameSceneModeDecide:
-    return new DecideScene();
-  case GameSceneMode::kGameSceneModePlay:
-    return new PlayScene();
-  case GameSceneMode::kGameSceneModeResult:
-    return new ResultScene();
-  case GameSceneMode::kGameSceneModeNone:
-    /* return nullptr, which indicates not to process anything */
-    return nullptr;
-  default:
-    // NOT IMPLEMENTED or WRONG VALUE
-    ASSERT(0);
-  }
-
-  // NOT REACHABLE.
-  return nullptr;
 }
 
 
@@ -181,6 +152,61 @@ ThemeMetrics *SceneManager::getMetrics(const std::string &name)
 ThemeMetrics *SceneManager::createMetrics(const std::string &name)
 {
   return &getInstance().metrics_list_[name];
+}
+
+int SceneManager::getVisible(size_t index)
+{
+  if (index >= 1000) return;
+  return getInstance().visible_groups_[index];
+}
+
+void SceneManager::setVisible(size_t index, int value)
+{
+  if (index >= 1000) return;
+  getInstance().visible_groups_[index] = value;
+}
+
+void SceneManager::ChangeScene(const std::string &scene_name)
+{
+  static std::map <std::string, std::function<Scene*()> > sceneCreateFn;
+  if (sceneCreateFn.empty())
+  {
+    sceneCreateFn["SceneTest"] = []() { return new TestScene(); };
+    sceneCreateFn["SceneLoading"] = []() { return new LoadingScene(); };
+    sceneCreateFn["SceneSelect"] = []() { return new SelectScene(); };
+    sceneCreateFn["SceneDecide"] = []() { return new DecideScene(); };
+    sceneCreateFn["ScenePlay"] = []() { return new PlayScene(); };
+    sceneCreateFn["SceneResult"] = []() { return new ResultScene(); };
+    //sceneCreateFn["SceneCourseResult"] = []() { return new CourseResultScene(); };
+  }
+
+  auto &inst = getInstance();
+  bool is_exit = false;
+
+  if (inst.next_scene_)
+  {
+    std::cout << "Warning: Next scene is already set & cached." << std::endl;
+    return;
+  }
+
+  if (scene_name.empty() || scene_name == "exit")
+    is_exit = true;
+
+  auto it = sceneCreateFn.find(scene_name);
+  if (it == sceneCreateFn.end())
+    is_exit = true;
+
+  if (is_exit)
+  {
+    // prepare to exit game
+    Graphic::getInstance().ExitRendering();
+  }
+
+  inst.next_scene_ = it->second();
+
+  // LoadScene is done here
+  // (not time critical)
+  inst.next_scene_->LoadScene();
 }
 
 }

@@ -14,7 +14,6 @@ public:
   void Cleanup();
   void Update();
   void Render();
-  void ChangeScene(bool force=false);
 
   static Scene* get_current_scene();
   static Timer& GetSceneTimer();
@@ -24,6 +23,10 @@ public:
 
   static ThemeMetrics *getMetrics(const std::string &name);
   static ThemeMetrics *createMetrics(const std::string &name);
+  static int getVisible(size_t index);
+  static void setVisible(size_t index, int value);
+
+  static void ChangeScene(const std::string &scene_name);
 
   /* from InputEventReceiver */
   virtual void OnInputEvent(const InputEvent& e);
@@ -36,16 +39,19 @@ private:
   Setting setting_;
 
   // currently displaying scene
-  Scene* current_scene_;
+  Scene *current_scene_;
 
-  // Create next scene using current gamestate.
-  Scene* CreateNextScene();
+  // next scene cached
+  Scene *next_scene_;
 
   // Scene timer
   Timer timer_scene_;
 
   // Theme metrics
   ThemeMetricsList metrics_list_;
+
+  // group data of visibility (up to 1000 groups)
+  int visible_groups_[1000];
 };
 
 /* singleton object. */

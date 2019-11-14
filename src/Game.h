@@ -22,25 +22,6 @@ enum GameBootMode
   kBootTest, /* hidden boot mode - only for test purpose */
 };
 
-/* @brief current game scene mode. */
-enum GameSceneMode
-{
-  kGameSceneModeNone,
-  kGameSceneModeLoading,
-  kGameSceneModeMain,
-  kGameSceneModeLogin,
-  kGameSceneModeSelectMode,
-  kGameSceneModeSelect,
-  kGameSceneModeDecide,
-  kGameSceneModePlay,
-  kGameSceneModeResult,
-  kGameSceneModeCourseResult,
-  kGameSceneModeSetting,
-  kGameSceneModeKeySetting /* Special mode, only for LR2 */,
-  kGameSceneModeTest /* Special mode, only for testing */,
-  kGameSceneClose /* End of a game, Unexitable game state. */,
-};
-
 /**
  * @brief
  * Contains running status of game, including settings.
@@ -58,9 +39,6 @@ public:
   /* Update game status. */
   void Update();
 
-  /* Set next game mode */
-  void SetNextScene(GameSceneMode next_game_mode);
-
   /* Load execute argument */
   void LoadArgument(const std::string& argv);
 
@@ -76,7 +54,6 @@ public:
   bool get_do_logging() const;
   float GetAspect() const;
   GameBootMode get_boot_mode() const;
-  GameSceneMode get_game_scene_mode() const;
   Setting& get_game_setting();
   void push_song(const std::string& songpath);
   bool pop_song(std::string& songpath);
@@ -104,16 +81,9 @@ private:
   // current game boot mode.
   GameBootMode game_boot_mode_;
 
-  // current game scene.
-  GameSceneMode game_scene_;
-
   // song path list to play
   std::list<std::string> song_queue_;
 
-  // reserved next game scene.
-  GameSceneMode next_game_scene_;
-
-  void InitializeGameSceneMode();
   void InitializeGameOption();
   void ApplyGameOption();
 };

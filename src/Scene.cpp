@@ -131,7 +131,7 @@ void SceneTaskQueue::Update(float delta)
 Scene::Scene()
   : fade_time_(0), fade_duration_(0), is_input_available_(true),
     do_sort_objects_(false), enable_caching_(false),
-    focused_object_(nullptr), next_scene_mode_(GameSceneMode::kGameSceneClose)
+    focused_object_(nullptr)
 {
 }
 
@@ -170,6 +170,9 @@ void Scene::LoadScene()
   // sort object if necessary.
   if (do_sort_objects_)
     std::sort(children_.begin(), children_.end());
+
+  // send event to update LR2Flag from option.
+  EventManager::SendEvent("SceneLoaded");
 }
 
 void Scene::LoadResource()
@@ -251,7 +254,7 @@ void Scene::StartScene()
   if (theme_param_.begin_input_time > 0)
   {
     EnableInput(false);
-    SceneTask *task = new SceneTask("inputenableevent", [this] {
+    SceneTask *task = new SceneTask("inputenable", [this] {
       EnableInput(true);
     });
     task->wait_for(theme_param_.begin_input_time);
@@ -262,10 +265,10 @@ void Scene::StartScene()
   // set scenetime if necessary
   if (theme_param_.next_scene_time > 0)
   {
-    EventManager::SendEvent(Events::kEventSceneChange);
-    SceneTask *task = new SceneTask("timeoutevent", [this] {
-      this->TriggerFadeOut();
-      EventManager::SendEvent(Events::kEventSceneTimeout);
+    EventManager::SendEvent("SceneChange");
+    SceneTask *task = new SceneTask("timeout", [this] {
+      this->CloseScene(true);
+      EventManager::SendEvent("SceneTimeout");
     });
     task->wait_for(theme_param_.next_scene_time - event_time);
     scenetask_.Enqueue(task);
@@ -273,13 +276,13 @@ void Scene::StartScene()
   }
 }
 
-void Scene::TriggerFadeOut()
+void Scene::FadeOutScene(bool next)
 {
   float duration = theme_param_.fade_out_time;
   if (duration <= 0)
   {
     // immediate close scene
-    CloseScene();
+    CloseScene(next);
     return;
   }
 
@@ -290,8 +293,8 @@ void Scene::TriggerFadeOut()
 
   // disable input & disable event enqueue
   EnableInput(false);
-  SceneTask *task = new SceneTask("fadeoutevent", [this] {
-    this->CloseScene();
+  SceneTask *task = new SceneTask("fadeoutevent", [this, next] {
+    this->CloseScene(next);
   });
   task->wait_for(theme_param_.fade_out_time);
   scenetask_.DeleteAll();
@@ -307,15 +310,26 @@ void Scene::TriggerFadeIn()
   fade_time_ = 0;
 }
 
-void Scene::CloseScene()
+// XXX: change this method name to finishscene?
+void Scene::CloseScene(bool next)
 {
   SaveOptions();
-  Game::getInstance().SetNextScene(next_scene_mode_);
+  SceneManager::ChangeScene(
+    next ? next_scene_ : prev_scene_
+  );
 }
 
 void Scene::EnableInput(bool enable_input)
 {
   is_input_available_ = enable_input;
+}
+
+void Scene::ProcessInputEvent(const InputEvent& e)
+{
+  if (e.KeyCode() == GLFW_KEY_ESCAPE)
+  {
+    FadeOutScene(false);
+  }
 }
 
 void Scene::RegisterImage(ImageAuto img)
@@ -363,12 +377,9 @@ void Scene::LoadOptions()
     {
       /* general option with op flag */
       if (opt->value_op() != 0)
-        theme_param_.attributes[ std::to_string(opt->value_op()) ] = "true";
+        SceneManager::setVisible(opt->value_op(), 1);
     }
   }
-
-  // send event to update LR2Flag
-  EventManager::SendEvent(Events::kEventSceneConfigLoaded);
 }
 
 void Scene::SaveOptions()
@@ -445,8 +456,6 @@ const ThemeParameter& Scene::get_theme_parameter() const
   return theme_param_;
 }
 
-constexpr char* kLR2SubstitutePath = "LR2files/Theme";
-constexpr char* kSubstitutePath = "../themes";
 
 void Scene::LoadObjectMetrics(const ThemeMetrics &metrics)
 {

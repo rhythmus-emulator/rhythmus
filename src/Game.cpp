@@ -27,8 +27,7 @@ Setting& Game::getSetting()
 
 Game::Game()
   : setting_path_(kSettingPath),
-    game_boot_mode_(GameBootMode::kBootNormal),
-    game_scene_(GameSceneMode::kGameSceneModeNone)
+    game_boot_mode_(GameBootMode::kBootNormal)
 {
 }
 
@@ -105,9 +104,6 @@ bool Game::Load()
   // apply settings into system environment
   ApplyGameOption();
 
-  // set starting game scene mode
-  InitializeGameSceneMode();
-
   return true;
 }
 
@@ -138,27 +134,6 @@ void Game::Update()
 {
   // Tick all game timers
   // TODO
-
-
-  /* change game mode. */
-  if (next_game_scene_ != GameSceneMode::kGameSceneModeNone)
-  {
-    /* exiting status */
-    if (next_game_scene_ == GameSceneMode::kGameSceneClose)
-    {
-      Graphic::getInstance().ExitRendering();
-      return;
-    }
-
-    game_scene_ = next_game_scene_;
-    next_game_scene_ = GameSceneMode::kGameSceneModeNone;
-    SceneManager::getInstance().ChangeScene();
-  }
-}
-
-void Game::SetNextScene(GameSceneMode next_game_mode)
-{
-  next_game_scene_ = next_game_mode;
 }
 
 void Game::LoadArgument(const std::string& argv)
@@ -242,11 +217,6 @@ GameBootMode Game::get_boot_mode() const
   return game_boot_mode_;
 }
 
-GameSceneMode Game::get_game_scene_mode() const
-{
-  return game_scene_;
-}
-
 Setting& Game::get_game_setting()
 {
   return setting_;
@@ -270,22 +240,6 @@ bool Game::pop_song(std::string& songpath)
 void Game::set_do_logging(bool v)
 {
   do_logging_ = v;
-}
-
-void Game::InitializeGameSceneMode()
-{
-  switch (game_boot_mode_)
-  {
-  case GameBootMode::kBootNormal:
-  case GameBootMode::kBootArcade:
-  case GameBootMode::kBootLR2:
-  case GameBootMode::kBootRefresh:
-    game_scene_ = GameSceneMode::kGameSceneModeLoading;
-    break;
-  case GameBootMode::kBootTest:
-    game_scene_ = GameSceneMode::kGameSceneModeTest;
-    break;
-  }
 }
 
 void Game::InitializeGameOption()

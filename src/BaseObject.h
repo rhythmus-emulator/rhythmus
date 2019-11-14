@@ -200,7 +200,7 @@ public:
   int GetDrawOrder() const;
 
   bool IsTweening() const;
-  virtual bool IsVisible() const;
+  bool IsVisible() const;
 
   void Update(float delta);
   void Render();

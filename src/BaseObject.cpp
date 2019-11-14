@@ -576,6 +576,11 @@ void BaseObject::SetTweenLoopTime(uint32_t time_msec)
 
 bool BaseObject::IsVisible() const
 {
+  if (SceneManager::getVisible(visible_group_[0]) == 0
+    || SceneManager::getVisible(visible_group_[1]) == 0
+    || SceneManager::getVisible(visible_group_[2]) == 0)
+    return false;
+
   return current_prop_.display &&
     current_prop_.aBL > 0 &&
     current_prop_.aBR > 0 &&
