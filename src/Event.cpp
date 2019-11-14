@@ -114,7 +114,17 @@ void on_joystick_conn(int jid, int event)
 
 void InputEventManager::Flush()
 {
+  std::vector<InputEvent> events(kPreCacheEventCount);
+  {
+    std::lock_guard<std::mutex> lock(input_evt_lock);
+    events.swap(input_evt_messages_);
+  }
 
+  for (auto &e : events)
+  {
+    for (auto *subscriber : input_evt_receivers_)
+      subscriber->OnInputEvent(e);
+  }
 }
 
 

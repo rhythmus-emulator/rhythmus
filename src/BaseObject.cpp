@@ -152,7 +152,21 @@ void BaseObject::AddCommand(const std::string &name, const std::string &command)
     // add event handler if not registered
     SubscribeTo(name);
   }
-  else it->second += ";" + command;
+  else
+  {
+    if (it->second.empty())
+      it->second = command;
+    else
+      it->second += ";" + command;
+  }
+}
+
+/* just clear out command, without event unregister. */
+void BaseObject::ClearCommand(const std::string &name)
+{
+  auto it = commands_.find(name);
+  if (it != commands_.end())
+    commands_[name].clear();
 }
 
 void BaseObject::DeleteAllCommand()

@@ -136,6 +136,7 @@ public:
   void LoadCommandByName(const std::string &name);
   void LoadCommand(const std::string &command);
   void AddCommand(const std::string &name, const std::string &command);
+  void ClearCommand(const std::string &name);
   void DeleteAllCommand();
   void QueueCommand(const std::string &command);
 
