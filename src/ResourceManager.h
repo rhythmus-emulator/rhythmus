@@ -17,12 +17,16 @@ namespace rhythmus
 class ResourceManager
 {
 public:
-  static ImageAuto LoadImage(const std::string& path);
-  static FontAuto LoadFont(const std::string& path, FontAttributes& attrs);
-  static FontAuto LoadLR2Font(const std::string& path);
-  static FontAuto GetSystemFont();
-  static void ReleaseImage(ImageAuto img);
-  static void ReleaseFont(const FontAuto& font);
+  static Image* LoadImage(const std::string& path);
+  static void UnloadImage(Image *img);
+
+  static Font* LoadFont(const std::string& path);
+  static void UnloadFont(Font* font);
+
+  template <typename T>
+  static T* LoadObject(const std::string &path);
+  template <typename T>
+  static void UnloadObject(T* obj);
 
   static ResourceManager& getInstance();
 
@@ -55,20 +59,35 @@ public:
   void GetAllPaths(const std::string& masked_path, std::vector<std::string> &out) const;
 
   /* @brief add path replacement for some special use */
-  void AddPathReplacement(const std::string& path_from, const std::string& path_to);
+  static void SetAlias(const std::string& path_from, const std::string& path_to);
 
 private:
   ResourceManager();
   ~ResourceManager();
-
-  // cached font
-  std::list<FontAuto> fonts_;
 
   // cached paths
   std::vector<std::string> path_cached_;
 
   // path replacement
   std::map<std::string, std::string> path_replacement_;
+
+  std::string ResolveMaskedPath(const std::string &path);
+};
+
+/* @brief Object from ResourceManager using RAII model */
+template <typename T>
+class ResourceObject
+{
+public:
+  ResourceObject(T *obj)
+    : obj_(obj) {};
+  ResourceObject(const std::string &name)
+    : obj_(ResourceManager::LoadObject<T>(name)) {};
+  ~ResourceObject() { ResourceManager::UnloadObject<T>(obj); }
+  T &get() const { return *obj_; }
+  T &operator*() const { return *obj_; }
+private:
+  T *obj_;
 };
 
 }

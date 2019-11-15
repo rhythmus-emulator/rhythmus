@@ -2,56 +2,142 @@
 #include "LR2/LR2Font.h"
 #include <FreeImage.h>
 #include <iostream>
+#include <mutex>
 
 namespace rhythmus
 {
-  
+
 constexpr bool kUseCache = true;
 
-ImageAuto ResourceManager::LoadImage(const std::string& path)
+template <typename T>
+T* CreateObjectFromPath(const std::string &path);
+
+template <>
+Image *CreateObjectFromPath(const std::string &path)
 {
-  /* Most image won't be shared from scene to scene, so just load it now */
-  ImageAuto img = std::make_shared<Image>();
-  img->LoadFromPath(getInstance().GetPath(path));
-  return img;
+  // TODO
+  return CreateImage(path);
 }
 
-FontAuto ResourceManager::LoadFont(const std::string& path, FontAttributes& attrs)
+template <>
+Font *CreateObjectFromPath(const std::string &path)
 {
-  auto &r = getInstance();
-  if (kUseCache)
-  {
-    for (const auto f : r.fonts_)
-    {
-      if (f->get_path() == path && f->is_ttf_font() && f->get_attribute() == attrs)
-        return f;
-    }
-  }
-
+  // TODO
+  return CreateFont(path);
+#if 0
   FontAuto f = std::make_shared<Font>();
   f->LoadFont(getInstance().GetPath(path).c_str(), attrs);
-  r.fonts_.push_back(f);
-  return f;
-}
-
-FontAuto ResourceManager::LoadLR2Font(const std::string& path)
-{
-  auto &r = getInstance();
-  if (kUseCache)
-  {
-    for (const auto f : r.fonts_)
-    {
-      if (f->get_path() == path && !f->is_ttf_font())
-        return f;
-    }
-  }
 
   FontAuto fa = std::make_shared<LR2Font>();
   ((LR2Font*)fa.get())->ReadLR2Font(path.c_str());
-  r.fonts_.push_back(fa);
-  return fa;
+#endif
 }
 
+template <typename T>
+class ObjectPoolWithName
+{
+public:
+  T* Load(const std::string &path)
+  {
+    // find for existing object
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      auto it = objects_.begin();
+      if (it != objects_.end())
+      {
+        ++it->second.count;
+        return it->second.obj.get();
+      }
+    }
+
+    // if not, create object using constructor.
+    T* obj = CreateObjectFromPath(path);
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      objects_[path] = { 1, obj };
+    }
+    return obj;
+  }
+
+  void Unload(T *t)
+  {
+    if (!t) return;
+    std::lock_guard<std::mutex> lock(mutex_);
+    auto it = objects_.begin();
+    while (it != objects_.end())
+    {
+      if (it->second.obj.get() == t)
+        break;
+      ++it;
+    }
+    if (it != objects_.end())
+    {
+      if (--it->second.count == 0)
+      {
+        // object will be automatically destroyed as it is unique_ptr
+        objects_.erase(it);
+      }
+    }
+  }
+
+  bool Exist(const std::string &name) const
+  {
+    return objects_.find(name) != objects_.end();
+  }
+
+private:
+
+  struct ObjectWithSharedCnt
+  {
+    size_t count;
+    std::unique_ptr<T> obj;
+  };
+  std::mutex mutex_;
+  std::map<std::string, ObjectWithSharedCnt> objects_;
+};
+
+static ObjectPoolWithName<Image> gImgpool;
+static ObjectPoolWithName<Font> gFontpool;
+
+Image* ResourceManager::LoadImage(const std::string& path)
+{
+  std::string gamepath = getInstance().GetPath(path);
+  return gImgpool.Load(gamepath);
+}
+
+void ResourceManager::UnloadImage(Image *img)
+{
+  gImgpool.Unload(img);
+}
+
+template <> Image*
+ResourceManager::LoadObject(const std::string &path) { return LoadImage(path); }
+template <> void
+ResourceManager::UnloadObject(Image *img) { UnloadImage(img); }
+
+
+
+Font* ResourceManager::LoadFont(const std::string& path)
+{
+  // TODO: FontAttributes& will be processed later
+  // from file type or parameter in path.
+  std::string gamepath = getInstance().GetPath(path);
+  return gFontpool.Load(gamepath);
+}
+
+void ResourceManager::UnloadFont(Font *font)
+{
+  gFontpool.Unload(font);
+}
+
+template <> Font*
+ResourceManager::LoadObject(const std::string &path) { return LoadFont(path); }
+template <> void
+ResourceManager::UnloadObject(Font *img) { UnloadFont(img); }
+
+
+// TODO: systemfont in Loadingscreen and SceneManager::SplashText
+#if 0
 FontAuto ResourceManager::GetSystemFont()
 {
   static FontAuto sys_font;
@@ -72,23 +158,7 @@ FontAuto ResourceManager::GetSystemFont()
   }
   return sys_font;
 }
-
-void ResourceManager::ReleaseImage(ImageAuto img)
-{
-}
-
-void ResourceManager::ReleaseFont(const FontAuto& font)
-{
-  auto &r = getInstance();
-  auto ii = r.fonts_.begin();
-  for (; ii != r.fonts_.end(); ++ii)
-  {
-    if (*ii == font)
-      break;
-  }
-  if (ii != r.fonts_.end())
-    r.fonts_.erase(ii);
-}
+#endif
 
 ResourceManager& ResourceManager::getInstance()
 {
@@ -136,17 +206,13 @@ std::string ResourceManager::GetPath(const std::string& masked_path, bool &is_fo
     return masked_path;
 
   // do path mask matching for cached paths
-  for (const auto& path : path_cached_)
+  std::string r = getInstance().ResolveMaskedPath(masked_path);
+  if (r.empty())
   {
-    if (CheckMasking(path, masked_path))
-    {
-      is_found = true;
-      return path;
-    }
+    is_found = false;
+    return masked_path;
   }
-
-  // not found; return as it is
-  return masked_path;
+  return r;
 }
 
 std::string ResourceManager::GetPath(const std::string& masked_path) const
@@ -171,9 +237,30 @@ void ResourceManager::GetAllPaths(const std::string& masked_path, std::vector<st
   }
 }
 
-void ResourceManager::AddPathReplacement(const std::string& path_from, const std::string& path_to)
+void ResourceManager::SetAlias(const std::string& path_from, const std::string& path_to)
 {
-  path_replacement_[path_from] = path_to;
+  // check masked path. if so, resolve it.
+  auto &inst = getInstance();
+  inst.path_replacement_[path_from] = inst.ResolveMaskedPath(path_to);
+}
+
+std::string ResourceManager::ResolveMaskedPath(const std::string &masked_path)
+{
+  // check masking first -- if not, return as it is.
+  if (masked_path.find('*') == std::string::npos)
+    return masked_path;
+
+  // do path mask matching for cached paths
+  for (const auto& path : path_cached_)
+  {
+    if (CheckMasking(path, masked_path))
+    {
+      return path;
+    }
+  }
+
+  // if not found, return empty string
+  return std::string();
 }
 
 ResourceManager::ResourceManager()

@@ -61,6 +61,15 @@ void ThemeMetrics::set(const std::string &key, double v)
   set(key, std::to_string(v));
 }
 
+void ThemeMetrics::append(const std::string &key, const std::string &v)
+{
+  std::string pv;
+  if (!get(key, pv))
+    set(key, v);
+  else
+    set(key, pv + "," + v);
+}
+
 bool ThemeMetrics::get(const std::string &key, std::vector<std::string> &v) const
 {
   auto it = attr_.find(key);
@@ -130,14 +139,16 @@ void LoadMetricsLR2CSV(const std::string &filepath, Scene &scene)
     }
     else if (lr2name == "IMAGE")
     {
-      curr_metrics->set("Image", (int)imagecount);
-      curr_metrics->set("Image" + std::to_string(imagecount), value);
+      std::string alias = "Image" + std::to_string(imagecount);
+      curr_metrics->append("Alias", alias);
+      curr_metrics->set(alias, value);
       imagecount++;
     }
     else if (lr2name == "LR2FONT")
     {
-      curr_metrics->set("Font", (int)fontcount);
-      curr_metrics->set("Font" + std::to_string(fontcount), value);
+      std::string alias = "Font" + std::to_string(fontcount);
+      curr_metrics->append("Alias", alias);
+      curr_metrics->set(alias, value);
       fontcount++;
     }
     else if (lr2name == "FONT")

@@ -30,6 +30,8 @@ public:
   void set(const std::string &key, int v);
   void set(const std::string &key, double v);
 
+  void append(const std::string &key, const std::string &v);
+
   typedef std::map<std::string, std::string>::iterator iterator;
   typedef std::map<std::string, std::string>::const_iterator const_iterator;
   iterator begin();

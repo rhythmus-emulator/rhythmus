@@ -138,27 +138,18 @@ Scene::Scene()
 void Scene::LoadScene()
 {
   // Load scene metric (if exist)
-  std::string scene_name = get_name();
-  if (!scene_name.empty())
-  {
-    std::string scene_path =
-      Game::getInstance().GetAttribute<std::string>(scene_name);
-
-    if (!scene_path.empty())
-    {
-      LoadMetrics(scene_path);
-    }
-  }
-  else
-  {
-    std::cerr << "[Warning] Scene has no name." << std::endl;
-  }
+  std::string scene_name(get_name());
+  ASSERT(!scene_name.empty());
+  std::string scene_path =
+    Game::getInstance().GetAttribute<std::string>(scene_name);
+  if (!scene_path.empty())
+    LoadMetrics(scene_path);
 
   // Read scene-specific option if necessary.
   LoadOptions();
 
-  // Load scene-specific resources.
-  LoadResource();
+  // Load resource aliases.
+  LoadResourceAlias();
 
   // Load additional script if necessary.
   LoadScript();
@@ -175,56 +166,32 @@ void Scene::LoadScene()
   EventManager::SendEvent("SceneLoaded");
 }
 
-void Scene::LoadResource()
+void Scene::LoadResourceAlias()
 {
-  std::string loadlist_concat;
-  std::vector<std::string> loadlist;
+  std::string alias_concat;
+  std::vector<std::string> aliases;
   auto *metric = SceneManager::getMetrics(get_name());
   if (!metric) return;
 
-  if (metric->get("Images", loadlist_concat))
+  if (metric->get("Alias", alias_concat))
   {
-    Split(loadlist_concat, ',', loadlist);
-    for (const auto &imgname : loadlist)
+    Split(alias_concat, ',', aliases);
+    for (const auto &alias : aliases)
     {
-      ImageAuto img;
-      std::string imgpath;
-      if (!metric->get("Image" + imgname, imgpath))
+      std::string resolvpath;
+      if (!metric->get("Alias" + alias, resolvpath))
         continue;
-#if 0
-      std::string imgpath = Substitute(imgname, kLR2SubstitutePath, kSubstitutePath);
-      char name[10];
-      itoa(images_.size(), name, 10);
-#endif
-      img = ResourceManager::getInstance().LoadImage(imgpath);
-      img->set_name(imgname);
-      // TODO: set colorkey
-      img->CommitImage();
-      images_.push_back(img);
+      ResourceManager::SetAlias(alias, resolvpath);
     }
   }
 
-  if (metric->get("Fonts", loadlist_concat))
-  {
-    Split(loadlist_concat, ',', loadlist);
-    for (const auto &fontname : loadlist)
-    {
-      std::string fontpath;
-      if (!metric->get("Font" + fontname, fontpath))
-        continue;
 #if 0
-      std::string fontpath = Substitute(fntname, kLR2SubstitutePath, kSubstitutePath);
-      // convert filename path to .dxa
-      auto ri = fntpath.rfind('/');
-      if (ri != std::string::npos && stricmp(fntpath.substr(ri).c_str(), "/font.lr2font") == 0)
-        fntpath = fntpath.substr(0, ri) + ".dxa";
-      char name[10];
-      itoa(fonts_.size(), name, 10);
+  img->CommitImage();
+  images_.push_back(img);
+
+  fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fontpath));
+  fonts_.back()->set_name(fontname);
 #endif
-      fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fontpath));
-      fonts_.back()->set_name(fontname);
-    }
-  }
 }
 
 void Scene::LoadScript()
@@ -353,31 +320,47 @@ FontAuto Scene::GetFontByName(const std::string& name)
 
 void Scene::LoadOptions()
 {
-  /* no scene name --> return */
-  if (get_name().empty())
-    return;
+  // Load necessary option list from userpref
+  std::string scene_name(get_name());
+  auto *metric = SceneManager::getMetrics(scene_name);
+  if (!metric) return;
+  int option_count = 0;
 
-  // attempt to load values from setting
-  // (may failed but its okay)
-  // XXX: we need more general option ... possible?
-  setting_.ReloadValues("../config/" + get_name() + ".xml");
-
-  // apply settings to system
-  std::vector<Option*> opts;
-  setting_.GetAllOptions(opts);
-  for (auto *opt : opts)
+  // Load options from user option list
+  // If not exist, then add option to user option list.
+  if (metric->get("Option", option_count))
   {
-    if (opt->type() == "file")
+    for (int i = 0; i < option_count; ++i)
     {
-      /* file option */
-      ResourceManager::getInstance()
-        .AddPathReplacement(opt->get_option_string(), opt->value());
-    }
-    else
-    {
-      /* general option with op flag */
-      if (opt->value_op() != 0)
-        SceneManager::setVisible(opt->value_op(), 1);
+      std::string args_s;
+      if (!metric->get("Option" + std::to_string(i), args_s))
+        continue;
+      CommandArgs args(args_s);
+      auto &val = Setting::GetOption(scene_name, args.Get<std::string>(0));
+      if (val.empty())
+      {
+        val = Setting::SetOption(scene_name,
+          args.Get<std::string>(0), /* option name */
+          args.Get<std::string>(1), /* option type (file, flag, val ...) */
+          args.Get<std::string>(2), /* selection list */
+          args.Get<std::string>(3)  /* default value */
+        );
+      }
+
+      CommandArgs args_val(val);
+      std::string opt_cmd(args_val.Get<std::string>(0));
+      if (opt_cmd == "file")
+      {
+        ResourceManager::getInstance().MakePathHigherPriority(args_val.Get<std::string>(1));
+      }
+      else if (opt_cmd == "flag")
+      {
+        SceneManager::setVisible(args_val.Get<int>(1), 1);
+      }
+      else if (opt_cmd == "val")
+      {
+        metric->set(args_val.Get<std::string>(1), args_val.Get<std::string>(2));
+      }
     }
   }
 }
