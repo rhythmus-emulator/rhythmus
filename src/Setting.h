@@ -13,11 +13,14 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 namespace rhythmus
 {
 
 class Setting;
+class BaseObject;
+class Metric;
 constexpr char* kSettingOptionTagName = "option";
 constexpr char* kSettingKeyValueTagName = "value";
 
@@ -30,45 +33,48 @@ public:
   const std::string& value() const;
   const std::string& type() const;
   const std::string& desc() const;
-  const std::string& ns() const;
-  void set_namespace(const std::string& ns);
   void set_description(const std::string& desc);
 
   // @brief get option string used when calling SetOption()
-  const std::string& get_option_string() const;
+  const std::string& get_constraint() const;
 
   // @brief get value as int (or index)
   int value_int() const;
   int value_min() const;
   int value_max() const;
 
-  void set_op(int op);
-  int value_op() const;
   bool is_constraint() const;
 
-  // @brief select next selectable item / value
+  // @brief select next item / value
   void Next();
 
-  // @brief select previous selectable item / value
+  // @brief select previous item / value
   void Prev();
+
+  // @brief Clear all constraints.
+  void Clear();
+
+  // @brief set default option value.
+  void SetDefault(const std::string &default__);
 
   // @brief set general option
   void SetTextOption();
 
   // @brief separate selectable options with comma
+  // Starts with '!F' : file option (input as file filter)
+  // Starts with '!N' : number option (input as min,max)
+  // @warn  must call reset() method after setting SetOption()
+  //        to make option value valid.
   void SetOption(const std::string& options);
-
-  // @brief file mask(filter) option
-  void SetFileOption(const std::string& file_filter);
-
-  // @brief set as numeric option
-  void SetNumberOption(int min = 0, int max = 0x7FFFFFFF);
 
   // @brief set value
   // @warn may be value is changed due to validation check
   //       in case of constraint exists.
   void set_value(const std::string& value);
   void set_value(int value);
+
+  // @brief reset value
+  void reset_value();
 
   // @brief whether to save with constraint if it exists
   void save_with_constraint(bool v = true);
@@ -80,10 +86,10 @@ public:
 
 private:
   std::string name_;
-  std::string ns_; /* namespace */
   std::string desc_;
   std::string value_;
   std::string type_;
+  std::string default_;
 
   // selectable options, if necessary.
   std::vector<std::string> options_;
@@ -97,9 +103,6 @@ private:
   // constraint for value (for number)
   int number_min_, number_max_;
 
-  // kind of id constrain (for LR2)
-  int op_;
-
   // save with constraint, not only option value.
   // (just for option item but not want to save the options)
   bool save_with_constraint_;
@@ -109,72 +112,150 @@ private:
   void Validate(bool valid_using_number = false);
 };
 
-/* @brief Xml setting load & save class
- * @warn  Key is not duplicable. */
+/* @brief Option group */
+class OptionGroup
+{
+public:
+  OptionGroup();
+  ~OptionGroup();
+
+  /* creates option if not exists.
+   * returns added or previously existing option. */
+  Option &GetOption(const std::string &name);
+
+  /* Delete options (Also deleted from Settings) */
+  void DeleteOption(const std::string &name);
+
+  /* check is option exists */
+  bool Exist(const std::string &name) const;
+
+  typedef std::map<std::string, Option>::iterator iterator;
+  iterator begin() { return options_.begin(); }
+  iterator end() { return options_.end(); }
+
+private:
+  std::map<std::string, Option> options_;
+};
+
+/* @brief Option group container. */
+class OptionList
+{
+public:
+  bool LoadFromFile(const std::string &filepath);
+  void LoadFromMetrics(const Metric &metric);
+
+  /* @brief read only option value from file */
+  bool ReadFromFile(const std::string &filepath);
+
+  /* @brief save only option value to file */
+  bool SaveToFile(const std::string &path);
+
+  OptionGroup &GetGroup(const std::string &groupname);
+  OptionGroup &DeleteGroup(const std::string &groupname);
+  void Clear();
+
+private:
+  std::map<std::string, OptionGroup> option_groups_;
+};
+
+
+/*
+ * @brief Read-only key-value theme properties used for scene elements
+ *
+ * @params exist bool
+ * @params get value
+ * @params set value
+ * @params set_default set value if not exist (set default value)
+ */
+class Metric
+{
+public:
+  Metric(const std::string &name);
+  ~Metric();
+
+  void set_name(const std::string &name);
+  const std::string& name() const;
+
+  bool exist(const std::string &key) const;
+
+  template <typename T>
+  T get(const std::string &key) const;
+
+  void set(const std::string &key, const std::string &v);
+  void set(const std::string &key, int v);
+  void set(const std::string &key, double v);
+  void set(const std::string &key, bool v);
+
+  template <typename T>
+  void set_fallback(const std::string &key, T v)
+  {
+    if (!exist(key)) set(key, v);
+  }
+
+  typedef std::map<std::string, std::string>::iterator iterator;
+  typedef std::map<std::string, std::string>::const_iterator const_iterator;
+  iterator begin();
+  const_iterator cbegin() const;
+  iterator end();
+  const_iterator cend() const;
+
+private:
+  std::string name_;
+  std::map<std::string, std::string> attr_;
+};
+
+class MetricList
+{
+public:
+  void ReadMetricFromFile(const std::string &filepath);
+  void Clear();
+
+  bool exist(const std::string &group, std::string &key) const;
+
+  template <typename T>
+  T get(const std::string &group, const std::string &key) const
+  {
+    auto it = metricmap_.find(group);
+    ASSERT_M(it != metricmap_.end(), "Metric group '" + group + "' is not found.");
+    return it->second.get<T>(key);
+  }
+
+  void set(const std::string &group, const std::string &key, const std::string &v);
+  void set(const std::string &group, const std::string &key, int v);
+  void set(const std::string &group, const std::string &key, double v);
+  void set(const std::string &group, const std::string &key, bool v);
+
+private:
+  std::map<std::string, Metric> metricmap_;
+
+  void ReadLR2Metric(const std::string &filepath);
+  void ReadLR2SS(const std::string &filepath);
+};
+
+
+/* @brief Metric for single object */
+
+
+/* @brief Container for Option, ThemeOption, and ThemeMetrics. */
 class Setting
 {
 public:
-  Setting();
-  ~Setting();
-
-  bool Open(const std::string& setting_path);
-  bool Save();
-  bool SaveAs(const std::string& setting_path);
-  void Close();
-
   // @brief only reloads value, not loading entire options / attributes.
   bool ReloadValues(const std::string& setting_path = std::string());
 
-  // @brief set scope for searching option
-  void SetNamespace(const std::string& ns = "");
+  void ReadFromMetrics(const Metric &metric);
+  void ReadFromFile(const std::string &filepath);
+  static void ReadAll();
+  static void ClearAll();
+  static void ReloadAll();
 
-  /* @brief if failed to find specified node, then calls LoadPref internally. */
-  template <typename T>
-  void LoadOptionValue(const std::string& key, T& value) const
-  {
-    const Option *opt = GetOption(key);
-    if (!opt)
-      return;
-    ConvertFromString(opt->value(), value);
-  }
-
-  /* @brief Set setting with node with specified name. */
-  template <typename T>
-  void SetOptionValue(const std::string& key, const T& value)
-  {
-    Option *opt = GetOption(key);
-    if (!opt)
-      return;
-    std::string v = ConvertToString(value);
-    opt->set_value(v);
-  }
-
-  const Option* GetOption(const std::string& name) const;
-  Option* GetOption(const std::string& name);
-
-  /* @brief Set setting with pref node, which can store option setting. */
-  Option* NewOption(const std::string& option_name, bool get_if_exists = true);
-
-  void GetAllOptions(std::vector<Option*> out);
-
-  bool Exist(const std::string& key) const;
-
-  /**
-   * @brief Get path from path filter
-   * @warn input string itself will be returned if no proper file option is found
-   */
-  std::string GetPathFromOptions(const std::string& path_filter);
-
-  /* @brief command to settings. */
-  void LoadProperty(const std::string& prop_name, const std::string& value);
-
-  /* @brief validate all options */
-  void ValidateAll();
+  static OptionList &GetSystemSetting();
+  static OptionList &GetThemeSetting();
+  static MetricList &GetThemeMetricList();
 
 private:
-  std::string path_;
-  std::string ns_; /* currently saelected namespace */
-  std::vector<Option*> options_;
+  /* static class. */
+  Setting();
 };
 
 template <typename T>

@@ -11,8 +11,6 @@
 namespace rhythmus
 {
 
-constexpr const char* kSettingPath = "../config/config.xml";
-
 Game Game::game_;
 
 Game& Game::getInstance()
@@ -20,14 +18,8 @@ Game& Game::getInstance()
   return game_;
 }
 
-Setting& Game::getSetting()
-{
-  return game_.setting_;
-}
-
 Game::Game()
-  : setting_path_(kSettingPath),
-    game_boot_mode_(GameBootMode::kBootNormal)
+  : game_boot_mode_(GameBootMode::kBootNormal)
 {
 }
 
@@ -86,48 +78,12 @@ std::string GetValueConverted(const char* v)
   return std::string(v);
 }
 
-bool Game::Load()
-{
-  // Set default value - in case of key is not existing.
-  Default();
-
-  // before loading option, set constraint & initialize.
-  InitializeGameOption();
-  setting_.ValidateAll();
-
-  // just load option values - not option node itself.
-  if (!setting_.ReloadValues(setting_path_))
-  {
-    std::cerr << "Failed to game load settings, use default value." << std::endl;
-  }
-
-  // apply settings into system environment
-  ApplyGameOption();
-
-  return true;
-}
-
-bool Game::Save()
-{
-  return setting_.Save();
-}
-
 void Game::Default()
 {
-  setting_path_ = kSettingPath;
   width_ = 640;
   height_ = 480;
   log_path_ = "../log/log.txt";
   do_logging_ = false;
-}
-
-void Game::LoadOrDefault()
-{
-  if (!Load())
-  {
-    std::cerr << "Failed to load game setting file. use default settings." << std::endl;
-    Default();
-  }
 }
 
 void Game::Update()
@@ -217,11 +173,6 @@ GameBootMode Game::get_boot_mode() const
   return game_boot_mode_;
 }
 
-Setting& Game::get_game_setting()
-{
-  return setting_;
-}
-
 void Game::push_song(const std::string& songpath)
 {
   song_queue_.push_back(songpath);
@@ -244,78 +195,12 @@ void Game::set_do_logging(bool v)
 
 void Game::InitializeGameOption()
 {
-  /* Initialize game setting constraints */
-  {
-    Option &option = *setting_.NewOption("Resolution");
-    option.set_description("Game resolution.");
-    // TODO: get exact information from graphic card
-    option.SetOption("640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200");
-  }
-
-  {
-    Option &option = *setting_.NewOption("SoundDevice");
-    option.set_description("Set default sound device.");
-    option.SetOption("");   // empty
-  }
-
-  {
-    Option &option = *setting_.NewOption("SoundBufferSize");
-    option.set_description("Sound latency increases if sound buffer is big. If sound flickers, use large buffer size.");
-    option.SetOption("1024,2048,3072,4096,8192,16384");
-    option.set_value(2048); // default value
-  }
-
-  {
-    Option &option = *setting_.NewOption("Volume");
-    option.set_description("Set game volume.");
-    option.SetOption("0,10,20,30,40,50,60,70,80,90,100");
-  }
-
-  {
-    Option &option = *setting_.NewOption("GameMode");
-    option.set_description("Set game mode, whether to run as arcade or home.");
-    option.SetOption("Home,Arcade,LR2");
-  }
-
-  {
-    Option &option = *setting_.NewOption("Logging");
-    option.set_description("For development.");
-    option.SetOption("Off,On");
-  }
-
-  {
-    Option &option = *setting_.NewOption("SelectScene");
-    option.set_description("File path of select scene.");
-    option.SetFileOption("../themes/*/select/*.lr2skin");
-  }
-
-  {
-    Option &option = *setting_.NewOption("DecideScene");
-    option.set_description("File path of decide scene.");
-    option.SetFileOption("../themes/*/decide/*.lr2skin");
-  }
-
-  {
-    Option &option = *setting_.NewOption("PlayScene");
-    option.set_description("File path of play scene.");
-    option.SetFileOption("../themes/*/play/*.lr2skin");
-  }
-
-  {
-    Option &option = *setting_.NewOption("ResultScene");
-    option.set_description("File path of result scene.");
-    option.SetFileOption("../themes/*/result/*.lr2skin");
-  }
-
-  {
-    Option &option = *setting_.NewOption("CourseResultScene");
-    option.set_description("File path of course result scene.");
-    option.SetFileOption("../themes/*/courseresult/*.lr2skin");
-  }
 }
 
 void Game::ApplyGameOption()
 {
+  /* TODO: move graphic related options to Graphic class. */
+#if 0
   {
     /* a little trick */
     std::string res;
@@ -343,6 +228,7 @@ SetAttribute(scenename, o->value()); }
   SET_SCENE_PARAM("CourseResultScene");
 
 #undef SET_SCENE_PARAM
+#endif
 }
 
 }

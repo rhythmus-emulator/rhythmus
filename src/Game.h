@@ -30,11 +30,7 @@ class Game
 {
 public:
   static Game& getInstance();
-  static Setting& getSetting();
-  bool Load();
-  bool Save();
   void Default();
-  void LoadOrDefault();
 
   /* Update game status. */
   void Update();
@@ -54,7 +50,6 @@ public:
   bool get_do_logging() const;
   float GetAspect() const;
   GameBootMode get_boot_mode() const;
-  Setting& get_game_setting();
   void push_song(const std::string& songpath);
   bool pop_song(std::string& songpath);
 
@@ -65,9 +60,6 @@ private:
   ~Game();
 
   static Game game_;
-
-  // setting of game context
-  Setting setting_;
 
   std::string setting_path_;
 
