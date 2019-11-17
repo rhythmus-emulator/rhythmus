@@ -140,8 +140,8 @@ private:
   void LoadOptions();
   void SaveOptions();
 
-  /* @brief load scene specific resource. */
-  void LoadResource();
+  /* @brief Load and set scene specific resource aliases. */
+  void LoadResourceAlias();
 
   /* @brief load scene specific script 
    * to create and initialize object, event, etc. */

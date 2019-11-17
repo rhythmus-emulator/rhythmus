@@ -60,7 +60,6 @@ void SceneManager::Cleanup()
 {
   if (current_scene_)
   {
-    current_scene_->CloseScene();
     delete current_scene_;
     current_scene_ = 0;
 
@@ -205,7 +204,8 @@ void SceneManager::ChangeScene(const std::string &scene_name)
   inst.next_scene_ = it->second();
 
   // LoadScene is done here
-  // (not time critical)
+  // (time-consuming loading is done which is not time critical
+  //  e.g. Texture loading)
   inst.next_scene_->LoadScene();
 }
 
