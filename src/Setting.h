@@ -240,11 +240,6 @@ private:
 class Setting
 {
 public:
-  // @brief only reloads value, not loading entire options / attributes.
-  bool ReloadValues(const std::string& setting_path = std::string());
-
-  void ReadFromMetrics(const Metric &metric);
-  void ReadFromFile(const std::string &filepath);
   static void ReadAll();
   static void ClearAll();
   static void ReloadAll();
