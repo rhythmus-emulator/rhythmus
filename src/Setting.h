@@ -38,18 +38,11 @@ public:
   // @brief get option string used when calling SetOption()
   const std::string& get_constraint() const;
 
-  // @brief get value as int (or index)
-  int value_int() const;
-  int value_min() const;
-  int value_max() const;
-
-  bool is_constraint() const;
-
   // @brief select next item / value
-  void Next();
+  virtual void Next();
 
   // @brief select previous item / value
-  void Prev();
+  virtual void Prev();
 
   // @brief Clear all constraints.
   void Clear();
@@ -57,34 +50,30 @@ public:
   // @brief set default option value.
   void SetDefault(const std::string &default__);
 
-  // @brief set general option
-  void SetTextOption();
-
   // @brief separate selectable options with comma
   // Starts with '!F' : file option (input as file filter)
   // Starts with '!N' : number option (input as min,max)
   // @warn  must call reset() method after setting SetOption()
   //        to make option value valid.
-  void SetOption(const std::string& options);
+  virtual void SetOption(const std::string& optionstr);
 
   // @brief set value
   // @warn may be value is changed due to validation check
   //       in case of constraint exists.
-  void set_value(const std::string& value);
-  void set_value(int value);
+  virtual void set_value(const std::string& value);
+  virtual void set_value(int value);
 
   // @brief reset value
   void reset_value();
 
   // @brief whether to save with constraint if it exists
-  void save_with_constraint(bool v = true);
+  void save_with_constraint(bool v);
 
-  // @brief copy constraint from other option
-  void CopyConstraint(const Option& option);
+  // @brief utility function to create option
+  static Option* CreateOption(
+    const std::string &name, const std::string &optionstr);
 
-  friend class Setting;
-
-private:
+protected:
   std::string name_;
   std::string desc_;
   std::string value_;
@@ -94,53 +83,68 @@ private:
   // selectable options, if necessary.
   std::vector<std::string> options_;
 
-  // option for original string
-  std::string option_filter_;
+  // currently selected index
+  size_t curr_sel_idx_;
 
+  // option for original string
+  std::string constraint_;
+
+  // save with constraint, not only option value.
+  // (just for option item but not want to save the options)
+  bool save_with_constraint_;
+};
+
+class FileOption : public Option
+{
+public:
+  FileOption(const std::string &key);
+  virtual void SetOption(const std::string& optionstr);
+private:
+};
+
+class TextOption : public Option
+{
+public:
+  TextOption(const std::string &key);
+  virtual void Next();
+  virtual void Prev();
+  virtual void set_value(const std::string& value);
+private:
+};
+
+class NumberOption : public Option
+{
+public:
+  NumberOption(const std::string &key);
+
+  // @brief get value as int (or index)
+  int value_int() const;
+  int value_min() const;
+  int value_max() const;
+
+  // @brief set number option with (min),(max)
+  virtual void SetOption(const std::string& optionstr);
+  virtual void Next();
+  virtual void Prev();
+
+  virtual void set_value(const std::string& value);
+  virtual void set_value(int value);
+
+private:
   // selected value (for number)
   int number_;
 
   // constraint for value (for number)
   int number_min_, number_max_;
-
-  // save with constraint, not only option value.
-  // (just for option item but not want to save the options)
-  bool save_with_constraint_;
-
-  // @brief validate option if it's not existing in selectable options.
-  // @param valid_using_number use number first to check validation
-  void Validate(bool valid_using_number = false);
-};
-
-/* @brief Option group */
-class OptionGroup
-{
-public:
-  OptionGroup();
-  ~OptionGroup();
-
-  /* creates option if not exists.
-   * returns added or previously existing option. */
-  Option &GetOption(const std::string &name);
-
-  /* Delete options (Also deleted from Settings) */
-  void DeleteOption(const std::string &name);
-
-  /* check is option exists */
-  bool Exist(const std::string &name) const;
-
-  typedef std::map<std::string, Option>::iterator iterator;
-  iterator begin() { return options_.begin(); }
-  iterator end() { return options_.end(); }
-
-private:
-  std::map<std::string, Option> options_;
 };
 
 /* @brief Option group container. */
 class OptionList
 {
 public:
+  OptionList();
+  ~OptionList();
+
   bool LoadFromFile(const std::string &filepath);
   void LoadFromMetrics(const Metric &metric);
 
@@ -150,12 +154,13 @@ public:
   /* @brief save only option value to file */
   bool SaveToFile(const std::string &path);
 
-  OptionGroup &GetGroup(const std::string &groupname);
-  OptionGroup &DeleteGroup(const std::string &groupname);
+  Option *GetOption(const std::string &key) const;
+  Option &SetOption(const std::string &key, const std::string &optionstr);
+  void DeleteOption(const std::string &key);
   void Clear();
 
 private:
-  std::map<std::string, OptionGroup> option_groups_;
+  std::map<std::string, Option*> options_;
 };
 
 

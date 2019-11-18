@@ -26,8 +26,7 @@ inline const char* GetSafeString(const char* p)
 // ----------------------------- class Option
 
 Option::Option(const std::string& name)
-  : name_(name), type_("text"),
-    number_(0), number_min_(0), number_max_(0x7FFFFFFF),
+  : name_(name), type_("option"), curr_sel_idx_(0),
     save_with_constraint_(false) {}
 
 const std::string& Option::name() const
@@ -57,60 +56,31 @@ void Option::set_description(const std::string& desc)
 
 const std::string& Option::get_constraint() const
 {
-  return option_filter_;
-}
-
-int Option::value_int() const
-{
-  return number_min_ + number_;
-}
-
-int Option::value_min() const
-{
-  return number_min_;
-}
-
-int Option::value_max() const
-{
-  return number_max_;
-}
-
-bool Option::is_constraint() const
-{
-  return save_with_constraint_;
+  return constraint_;
 }
 
 void Option::Next()
 {
-  number_ = std::min(number_ + 1, number_max_);
-
-  if (type_ == "number")
-  {
-    value_ = std::to_string(number_);
-  }
-  else /* file, option */
-  {
-    value_ = options_[number_];
-  }
+  if (options_.empty())
+    return;
+  if (curr_sel_idx_ + 1 >= options_.size())
+    return;
+  value_ = options_[++curr_sel_idx_];
 }
 
 void Option::Prev()
 {
-  number_ = std::max(number_ - 1, number_min_);
-
-  if (type_ == "number")
-  {
-    value_ = std::to_string(number_);
-  }
-  else /* file, option */
-  {
-    value_ = options_[number_];
-  }
+  if (options_.empty())
+    return;
+  if (curr_sel_idx_ == 0)
+    return;
+  value_ = options_[--curr_sel_idx_];
 }
 
 void Option::Clear()
 {
-  type_ = "text";
+  options_.clear();
+  constraint_.clear();
 }
 
 void Option::SetDefault(const std::string &default__)
@@ -118,54 +88,20 @@ void Option::SetDefault(const std::string &default__)
   default_ = default__;
 }
 
-void Option::SetTextOption()
-{
-  type_ = "text";
-  option_filter_.clear();
-  options_.clear();
-}
-
 void Option::SetOption(const std::string& options)
 {
-  Clear();
-  std::string optionstr(options);
-  if (options[0] == '!' && options.size() > 2)
-  {
-    optionstr = optionstr.substr(2);
-    if (options[1] == 'N')
-    {
-      std::vector<std::string> params;
-      type_ = "number";
-      Split(optionstr, ',', params);
-      number_min_ = atoi(params[0].c_str());
-      number_max_ = atoi(params[1].c_str());
-    }
-    else if (options[2] == 'F')
-    {
-      type_ = "file";
-      ResourceManager::getInstance().GetAllPaths(optionstr, options_);
-    }
-    else
-    {
-      type_ = "text"; /* invalid? */
-      return;
-    }
-  }
-  else
-  {
-    type_ = "option";
-    Split(optionstr, ',', options_);
-  }
-
-  type_ = "option";
-  option_filter_ = options;
+  constraint_ = options;
+  Split(options, ',', options_);
 }
 
 void Option::set_value(const std::string& option)
 {
   value_ = option;
-  number_ = atoi(option.c_str());
-  Validate();
+}
+
+void Option::set_value(int value)
+{
+  set_value(std::to_string(value));
 }
 
 void Option::reset_value()
@@ -173,105 +109,106 @@ void Option::reset_value()
   set_value(default_);
 }
 
-void Option::set_value(int value)
-{
-  number_ = value;
-  value_ = std::to_string(value);
-  Validate(true);
-}
-
 void Option::save_with_constraint(bool v)
 {
   save_with_constraint_ = v;
 }
 
-// @brief validate option properly after setting value_.
-//        internally called in SetSelected(). for internal use.
-void Option::Validate(bool valid_using_number)
+Option* Option::CreateOption(
+  const std::string &name, const std::string &optionstr)
 {
-  if (type_ == "text")
+  Option *option = nullptr;
+  if (optionstr.size() > 2 && optionstr[0] == '#')
   {
-    /* do nothing */
-  }
-  if (type_ == "number")
-  {
-    if (number_ > number_max_ || number_ < number_min_)
+    if (optionstr[1] == 'F')
     {
-      // constraint failed, do re-validate
-      number_ = std::min(std::max(number_, number_min_), number_max_);
-      value_ = std::to_string(number_);
-      Validate();
+      // create as file option
+      option = new FileOption(name);
+    }
+    else if (optionstr[1] == 'N')
+    {
+      // create as number option
+      option = new NumberOption(name);
     }
   }
-  else /* file, option */
-  {
-    if (options_.empty())
-      return;
+  else
+    option = new Option(name);
 
-    if (!valid_using_number)
-    {
-      auto iter = std::find(options_.begin(), options_.end(), value_);
-      if (iter == options_.end())
-      {
-        // constraint failed, set it to first value (or default)
-        value_ = options_.front();
-        number_ = 0;
-      }
-      else
-      {
-        number_ = (int)(iter - options_.begin());
-      }
-    }
-    else
-    {
-      if (options_.empty())
-      {
-        number_ = 0;
-        value_.clear();
-        return;
-      }
-      number_ = std::max(0, std::min(number_, (int)options_.size() - 1));
-      value_ = options_[number_];
-    }
-  }
+  if (option)
+    option->SetOption(optionstr);
+
+  return option;
 }
 
-void Option::CopyConstraint(const Option& option)
+FileOption::FileOption(const std::string &key)
+  : Option(key) {}
+
+void FileOption::SetOption(const std::string &options)
 {
-  desc_ = option.desc_;
-  value_ = option.value_;
-  type_ = option.type_;
-  options_ = option.options_;
-  option_filter_ = option.option_filter_;
-  number_ = option.number_;
-  number_min_ = option.number_min_;
-  number_max_ = option.number_max_;
+  ResourceManager::getInstance().GetAllPaths(options, options_);
 }
+
+TextOption::TextOption(const std::string &key)
+  : Option(key) {}
+
+void TextOption::Next() {}
+void TextOption::Prev() {}
+void TextOption::set_value(const std::string& value) { value_ = value; }
+
+NumberOption::NumberOption(const std::string& key)
+  : Option(key), number_(0), number_min_(0), number_max_(0x7FFFFFFF)
+{
+  type_ = "number";
+}
+
+int NumberOption::value_int() const
+{
+  return number_min_ + number_;
+}
+
+int NumberOption::value_min() const
+{
+  return number_min_;
+}
+
+int NumberOption::value_max() const
+{
+  return number_max_;
+}
+
+void NumberOption::SetOption(const std::string& options)
+{
+  std::string smin, smax;
+  Split(options, ',', smin, smax);
+  number_min_ = atoi(smin.c_str());
+  number_max_ = atoi(smax.c_str());
+}
+
+void NumberOption::Next() { number_ = std::min(number_max_, number_ + 1); }
+void NumberOption::Prev() { number_ = std::max(number_min_, number_ - 1); }
+
+void NumberOption::set_value(const std::string& value)
+{
+  set_value(atoi(value.c_str()));
+}
+
+void NumberOption::set_value(int value)
+{
+  if (value > number_max_) value = number_max_;
+  if (value < number_min_) value = number_min_;
+  number_ = value;
+  Option::set_value(std::to_string(number_));
+}
+
 
 
 // --------------------------- class OptionList
 
-OptionGroup::OptionGroup()
-{
-}
+OptionList::OptionList() {}
 
-OptionGroup::~OptionGroup()
+OptionList::~OptionList()
 {
-}
-
-Option &OptionGroup::GetOption(const std::string &name)
-{
-  return options_[name];
-}
-
-void OptionGroup::DeleteOption(const std::string &name)
-{
-  options_.erase(name);
-}
-
-bool OptionGroup::Exist(const std::string &name) const
-{
-  return options_.find(name) != options_.end();
+  Clear();
 }
 
 bool OptionList::LoadFromFile(const std::string &filepath)
@@ -287,34 +224,22 @@ bool OptionList::LoadFromFile(const std::string &filepath)
   if (doc.LoadFile(filepath.c_str()) != XML_SUCCESS)
     return false;
   XMLElement *root = doc.RootElement();
-  XMLElement *groupnode, *optnode;
+  XMLElement *optnode;
 
-  groupnode = root->FirstChildElement("Group");
-  while (groupnode)
+  optnode = root->FirstChildElement("Option");
+  while (optnode)
   {
-    const char *grpname = groupnode->Attribute("name");
-    if (!grpname)
+    const char *name = optnode->Attribute("name");
+    const char *constraint = optnode->Attribute("constraint");
+    const char *desc = optnode->Attribute("desc");
+    if (!name)
       continue;
-    optnode = groupnode->FirstChildElement("Option");
-    while (optnode)
-    {
-      const char *name = optnode->Attribute("name");
-      const char *constraint = optnode->Attribute("constraint");
-      const char *desc = optnode->Attribute("desc");
-      if (!name)
-        continue;
 
-      Option &option = GetGroup(grpname).GetOption(name);
-      if (!constraint)
-        option.SetTextOption();
-      else
-        option.SetOption(constraint);
-      if (desc)
-        option.set_description(desc);
+    auto &option = SetOption(name, constraint);
+    if (desc)
+      option.set_description(desc);
 
-      optnode = optnode->NextSiblingElement("Option");
-    }
-    groupnode = groupnode->NextSiblingElement("Group");
+    optnode = optnode->NextSiblingElement("Option");
   }
 
   return true;
@@ -328,18 +253,17 @@ void OptionList::LoadFromMetrics(const Metric &metric)
   std::vector<std::string> params;
   for (int i = 0; i < optioncount; ++i)
   {
-    /* groupname : metric name */
     /* attr,default,select list */
     params = std::move(metric.get<decltype(params)>("Option" + std::to_string(i)));
-    OptionGroup &group = option_groups_[metric.name()];
-    auto &option = group.GetOption(params[0]);
-    option.SetDefault(params[1]);
+
     /* XXX: so dirty code, need to tidy it */
     std::string optstr;
     for (size_t i = 2; i < params.size(); ++i)
       optstr += params[i] + ",";
     if (!optstr.empty()) optstr.pop_back();
-    option.SetOption(optstr);
+
+    auto &option = SetOption(params[0], optstr);
+    option.SetDefault(params[1]);
   }
 }
 
@@ -359,21 +283,16 @@ bool OptionList::ReadFromFile(const std::string &filepath)
     return false;
   XMLElement *root = doc.RootElement();
 
-  for (auto &group : option_groups_)
+  for (auto &it : options_)
   {
-    XMLElement *groupnode = root->FirstChildElement(group.first.c_str());
-    if (!groupnode)
+    auto &opt = *it.second;
+    XMLElement *valnode = root->FirstChildElement(opt.name().c_str());
+    if (!valnode)
       continue;
-    for (auto &option : group.second)
-    {
-      XMLElement *valnode = groupnode->FirstChildElement(option.first.c_str());
-      if (!valnode)
-        continue;
-      const char* val = valnode->Attribute("value");
-      if (!val)
-        continue;
-      option.second.set_value(val);
-    }
+    const char* val = valnode->Attribute("value");
+    if (!val)
+      continue;
+    opt.set_value(val);
   }
 
   return true;
@@ -388,36 +307,56 @@ bool OptionList::SaveToFile(const std::string &path)
   XMLElement *root = doc.NewElement(kDefaultRootTagName);
   doc.InsertFirstChild(root);
 
-  XMLElement *nodegroup, *nodeval;
-  for (auto &group : option_groups_)
+  XMLElement *nodeval;
+  for (auto &it : options_)
   {
-    std::string groupname(group.first);
-    nodegroup = doc.NewElement(groupname.c_str());
-    root->InsertFirstChild(nodegroup);
-    for (auto &options : group.second)
-    {
-      nodeval = doc.NewElement(options.first.c_str());
-      nodegroup->InsertFirstChild(nodeval);
-      nodeval->SetAttribute("value", options.second.value().c_str());
-    }
+    auto &opt = *it.second;
+    nodeval = doc.NewElement(opt.name().c_str());
+    root->InsertFirstChild(nodeval);
+    nodeval->SetAttribute("value", opt.value().c_str());
   }
 
   return doc.SaveFile(path.c_str()) == XML_SUCCESS;
 }
 
-OptionGroup &OptionList::GetGroup(const std::string &groupname)
+Option *OptionList::GetOption(const std::string &key) const
 {
-  return option_groups_[groupname];
+  auto it = options_.find(key);
+  if (it != options_.end())
+    return it->second;
+  else
+    return nullptr;
 }
 
-OptionGroup &OptionList::DeleteGroup(const std::string &groupname)
+Option &OptionList::SetOption(const std::string &key, const std::string &optionstr)
 {
-  option_groups_.erase(groupname);
+  Option *option = Option::CreateOption(key, optionstr);
+  auto &it = options_.find(key);
+  if (it == options_.end())
+  {
+    options_[key] = option;
+  }
+  else
+  {
+    delete it->second;
+    it->second = option;
+  }
+  return *option;
+}
+
+void OptionList::DeleteOption(const std::string &key)
+{
+  auto it = options_.find(key);
+  if (it == options_.end()) return;
+  delete it->second;
+  options_.erase(it);
 }
 
 void OptionList::Clear()
 {
-  option_groups_.clear();
+  for (auto &it : options_)
+    delete it.second;
+  options_.clear();
 }
 
 
