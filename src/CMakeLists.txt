@@ -19,8 +19,8 @@ set (RHYTHMUS_SOURCES
     Timer.cpp
     main.cpp
     SceneManager.cpp
-	SceneMetrics.cpp
     Scene.cpp
+	Script.cpp
 	Event.cpp
 	Song.cpp
 	Sound.cpp
@@ -63,8 +63,8 @@ set (RHYTHMUS_HEADERS
     Graphic.h
     Error.h
     SceneManager.h
-	SceneMetrics.h
     Scene.h
+	Script.h
 	Event.h
 	Song.h
 	Sound.h

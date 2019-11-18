@@ -659,11 +659,18 @@ void MetricList::ReadLR2SS(const std::string &filepath)
   }
 }
 
-bool MetricList::exist(const std::string &group, std::string &key) const
+bool MetricList::exist(const std::string &group, const std::string &key) const
 {
   auto it = metricmap_.find(group);
   if (it == metricmap_.end()) return false;
   return it->second.exist(group);
+}
+
+Metric *MetricList::get_metric(const std::string &group)
+{
+  auto it = metricmap_.find(group);
+  if (it == metricmap_.end()) return nullptr;
+  else return &it->second;
 }
 
 void MetricList::set(const std::string &group, const std::string &key, const std::string &v)
@@ -776,6 +783,12 @@ OptionList &Setting::GetSystemSetting()
       Option &option = *setting_.NewOption("Logging");
       option.set_description("For development.");
       option.SetOption("Off,On");
+    }
+
+    {
+      Option &option = *setting_.NewOption("SoundSet");
+      option.set_description("Soundset file.");
+      option.SetFileOption("../sound/*.lr2ss");
     }
 
     {

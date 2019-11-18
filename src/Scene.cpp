@@ -1,5 +1,7 @@
 #include "Scene.h"
 #include "SceneManager.h"       /* preference */
+#include "Setting.h"
+#include "Script.h"
 #include "LR2/LR2Sprite.h"
 #include "LR2/LR2Font.h"
 #include "LR2/LR2Text.h"
@@ -137,22 +139,13 @@ Scene::Scene()
 
 void Scene::LoadScene()
 {
-  // Load scene metric (if exist)
-  std::string scene_name(get_name());
-  ASSERT(!scene_name.empty());
-  std::string scene_path =
-    Game::getInstance().GetAttribute<std::string>(scene_name);
-  if (!scene_path.empty())
-    LoadMetrics(scene_path);
-
-  // Read scene-specific option if necessary.
-  LoadOptions();
-
-  // Load resource aliases.
-  LoadResourceAlias();
-
-  // Load additional script if necessary.
-  LoadScript();
+  // Load scene specific script if necessary.
+  if (Setting::GetThemeMetricList().exist(get_name(), "script"))
+  {
+    Script::ExecuteFromPath(
+      Setting::GetThemeMetricList().get<std::string>(get_name(), "script")
+    );
+  }
 
   // Initialize objects.
   for (auto *obj : children_)
@@ -164,43 +157,6 @@ void Scene::LoadScene()
 
   // send event to update LR2Flag from option.
   EventManager::SendEvent("SceneLoaded");
-}
-
-void Scene::LoadResourceAlias()
-{
-  std::string alias_concat;
-  std::vector<std::string> aliases;
-  auto *metric = SceneManager::getMetrics(get_name());
-  if (!metric) return;
-
-  if (metric->get("Alias", alias_concat))
-  {
-    Split(alias_concat, ',', aliases);
-    for (const auto &alias : aliases)
-    {
-      std::string resolvpath;
-      if (!metric->get("Alias" + alias, resolvpath))
-        continue;
-      ResourceManager::SetAlias(alias, resolvpath);
-    }
-  }
-
-#if 0
-  img->CommitImage();
-  images_.push_back(img);
-
-  fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fontpath));
-  fonts_.back()->set_name(fontname);
-#endif
-}
-
-void Scene::LoadScript()
-{
-  std::string script_path;
-  auto *metric = SceneManager::getMetrics(get_name());
-  if (!metric) return;
-  if (!metric->get("script", script_path)) return;
-  rhythmus::LoadScript(script_path);
 }
 
 void Scene::StartScene()
@@ -280,7 +236,6 @@ void Scene::TriggerFadeIn()
 // XXX: change this method name to finishscene?
 void Scene::CloseScene(bool next)
 {
-  SaveOptions();
   SceneManager::ChangeScene(
     next ? next_scene_ : prev_scene_
   );
@@ -316,62 +271,6 @@ FontAuto Scene::GetFontByName(const std::string& name)
   for (const auto& font : fonts_)
     if (font->get_name() == name) return font;
   return nullptr;
-}
-
-void Scene::LoadOptions()
-{
-  // Load necessary option list from userpref
-  std::string scene_name(get_name());
-  auto *metric = SceneManager::getMetrics(scene_name);
-  if (!metric) return;
-  int option_count = 0;
-
-  // Load options from user option list
-  // If not exist, then add option to user option list.
-  if (metric->get("Option", option_count))
-  {
-    for (int i = 0; i < option_count; ++i)
-    {
-      std::string args_s;
-      if (!metric->get("Option" + std::to_string(i), args_s))
-        continue;
-      CommandArgs args(args_s);
-      auto &val = Setting::GetOption(scene_name, args.Get<std::string>(0));
-      if (val.empty())
-      {
-        val = Setting::SetOption(scene_name,
-          args.Get<std::string>(0), /* option name */
-          args.Get<std::string>(1), /* option type (file, flag, val ...) */
-          args.Get<std::string>(2), /* selection list */
-          args.Get<std::string>(3)  /* default value */
-        );
-      }
-
-      CommandArgs args_val(val);
-      std::string opt_cmd(args_val.Get<std::string>(0));
-      if (opt_cmd == "file")
-      {
-        ResourceManager::getInstance().MakePathHigherPriority(args_val.Get<std::string>(1));
-      }
-      else if (opt_cmd == "flag")
-      {
-        SceneManager::setVisible(args_val.Get<int>(1), 1);
-      }
-      else if (opt_cmd == "val")
-      {
-        metric->set(args_val.Get<std::string>(1), args_val.Get<std::string>(2));
-      }
-    }
-  }
-}
-
-void Scene::SaveOptions()
-{
-  /* no scene name --> return */
-  if (get_name().empty())
-    return;
-
-  setting_.Save();
 }
 
 bool Scene::is_input_available() const
@@ -437,28 +336,6 @@ void Scene::doRenderAfter()
 const ThemeParameter& Scene::get_theme_parameter() const
 {
   return theme_param_;
-}
-
-
-void Scene::LoadObjectMetrics(const ThemeMetrics &metrics)
-{
-  /* First, check is given object metrics is generic & able to be created to object.
-   * if not, search for currently existing object. */
-
-  BaseObject *target_object = CreateObjectFromMetrics(metrics);
-
-  if (target_object)
-  {
-    RegisterChild(target_object);
-  }
-  else
-  {
-    if (target_object = FindChildByName(metrics.name()))
-      target_object->Load(metrics);
-    else
-      std::cerr << "Warning: object metric " << metrics.name() <<
-      " is invalid and cannot appliable." << std::endl;
-  }
 }
 
 }

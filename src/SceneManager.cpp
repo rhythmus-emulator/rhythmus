@@ -5,9 +5,9 @@
 #include "scene/DecideScene.h"
 #include "scene/PlayScene.h"
 #include "scene/ResultScene.h"
-#include "LR2/LR2SceneLoader.h"
 #include "LR2/LR2Flag.h"
 #include "Util.h"
+#include "Setting.h"
 #include <iostream>
 
 namespace rhythmus
@@ -29,18 +29,6 @@ SceneManager::~SceneManager()
 
 void SceneManager::Initialize()
 {
-  // load scenemanager(global scene) settings.
-  // XXX: is it necessary?
-  if (!setting_.Open("../config/scene.xml"))
-  {
-    std::cerr << "Cannot open Scene preference file. use default value." << std::endl;
-  }
-
-  // load soundset.
-  // TODO: load soundset file path setting from game
-  std::string soundset_path = "../sound/lr2.lr2ss";
-  LoadMetrics(soundset_path);
-
   // create starting scene.
   switch (Game::getInstance().get_boot_mode())
   {
@@ -62,14 +50,7 @@ void SceneManager::Cleanup()
   {
     delete current_scene_;
     current_scene_ = 0;
-
-    // automatically save scene settings
-    if (!setting_.Save())
-    {
-      std::cerr << "Cannot save Scene preference file." << std::endl;
-    }
   }
-  metrics_list_.clear();
 }
 
 void SceneManager::Update()
@@ -133,24 +114,6 @@ SceneManager& SceneManager::getInstance()
 {
   static SceneManager scenemanager_;
   return scenemanager_;
-}
-
-Setting& SceneManager::getSetting()
-{
-  return getInstance().setting_;
-}
-
-ThemeMetrics *SceneManager::getMetrics(const std::string &name)
-{
-  auto &metrics = getInstance().metrics_list_;
-  auto it = metrics.find(name);
-  if (it == metrics.end()) return nullptr;
-  return &it->second;
-}
-
-ThemeMetrics *SceneManager::createMetrics(const std::string &name)
-{
-  return &getInstance().metrics_list_[name];
 }
 
 int SceneManager::getVisible(size_t index)

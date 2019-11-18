@@ -107,17 +107,11 @@ public:
 
   FontAuto GetFontByName(const std::string& name);
 
-  /* @brief load metrics for children. */
-  void LoadObjectMetrics(const ThemeMetrics &metrics);
-
   const ThemeParameter& get_theme_parameter() const;
 
 protected:
   // Theme parameter list (read-only)
   ThemeParameter theme_param_;
-
-  // Theme options
-  Setting setting_;
 
   // image resources loaded by this scene
   std::vector<ImageAuto> images_;
@@ -137,16 +131,6 @@ protected:
   std::string prev_scene_, next_scene_;
 
 private:
-  void LoadOptions();
-  void SaveOptions();
-
-  /* @brief Load and set scene specific resource aliases. */
-  void LoadResourceAlias();
-
-  /* @brief load scene specific script 
-   * to create and initialize object, event, etc. */
-  void LoadScript();
-
   // fade in/out specified time
   // fade_duration with positive: fade-in
   // fade_duration with negative: fade-out

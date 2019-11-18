@@ -32,7 +32,6 @@
 namespace rhythmus
 {
 
-class ThemeMetrics;
 class BaseObject;
 
 /** @brief Drawing properties of Object */
@@ -150,7 +149,7 @@ public:
   virtual void RunCommand(const std::string &command, const std::string& value);
 
   /* @brief Load property(resource). */
-  virtual void Load(const ThemeMetrics& metric);
+  virtual void Load(const Metric& metric);
 
   /* @brief Initialize object from metric information. */
   virtual void Initialize();

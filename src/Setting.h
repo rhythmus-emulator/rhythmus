@@ -215,7 +215,7 @@ public:
   void ReadMetricFromFile(const std::string &filepath);
   void Clear();
 
-  bool exist(const std::string &group, std::string &key) const;
+  bool exist(const std::string &group, const std::string &key) const;
 
   template <typename T>
   T get(const std::string &group, const std::string &key) const
@@ -224,6 +224,8 @@ public:
     ASSERT_M(it != metricmap_.end(), "Metric group '" + group + "' is not found.");
     return it->second.get<T>(key);
   }
+
+  Metric *get_metric(const std::string &group);
 
   void set(const std::string &group, const std::string &key, const std::string &v);
   void set(const std::string &group, const std::string &key, int v);

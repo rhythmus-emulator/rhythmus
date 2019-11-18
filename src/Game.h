@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Timer.h"
-#include "Setting.h"
 #include <stdint.h>
 #include <string>
 #include <vector>

@@ -1,6 +1,6 @@
 #include "BaseObject.h"
-#include "SceneMetrics.h"
 #include "SceneManager.h"
+#include "Setting.h"
 #include "LR2/LR2SceneLoader.h"   // XXX: atoi_op
 #include "Util.h"
 #include <iostream>
@@ -183,11 +183,8 @@ void BaseObject::QueueCommand(const std::string &command)
     tween_.back().commands = command;
 }
 
-void BaseObject::Load(const ThemeMetrics& metric)
+void BaseObject::Load(const Metric& metric)
 {
-  int value;
-  std::string s;
-
   // process event handler registering
   // XXX: is this code is good enough?
   for (auto it = metric.cbegin(); it != metric.cend(); ++it)
@@ -198,14 +195,14 @@ void BaseObject::Load(const ThemeMetrics& metric)
     }
   }
 
-  if (metric.get("zindex", value))
-    draw_order_ = value;
+  if (metric.exist("zindex"))
+    draw_order_ = metric.get<int>("zindex");
   
-  if (metric.get("lr2cmd", s))
+  if (metric.exist("lr2cmd"))
   {
     std::vector<std::string> v;
     std::string timer_and_op, cmd;
-    Split(s, ';', timer_and_op, cmd);
+    Split(metric.get<std::string>("lr2cmd"), ';', timer_and_op, cmd);
     Split(timer_and_op, ',', v);
     std::string timer(v[0]);
 
@@ -227,7 +224,7 @@ void BaseObject::Load(const ThemeMetrics& metric)
 void BaseObject::Initialize()
 {
   if (get_name().empty()) return;
-  auto *m = SceneManager::getMetrics(get_name());
+  auto *m = Setting::GetThemeMetricList().get_metric(get_name());
   if (m)
     Load(*m);
 }
