@@ -694,9 +694,12 @@ void MetricList::set(const std::string &group, const std::string &key, bool v)
 void Setting::ReadAll()
 {
   static char *metric_option_attrs[] = {
-    "",
-    "",
-    "",
+    "ThemeFile",
+    "SelectSceneFile",
+    "DecideSceneFile",
+    "PlaySceneFile",
+    "ResultSceneFile",
+    "CourseResultSceneFile",
     0
   };
 
@@ -704,9 +707,12 @@ void Setting::ReadAll()
   // after that, read user setting, as it may depends on metrics.
   GetSystemSetting().ReadFromFile(kSettingPath);
   {
+    std::string filepath;
     for (size_t i = 0; metric_option_attrs[i]; ++i)
     {
-
+      auto *option = GetSystemSetting().GetOption(metric_option_attrs[i]);
+      if (!option) continue;
+      GetThemeMetricList().ReadMetricFromFile(option->value());
     }
   }
   GetThemeSetting().ReadFromFile(kThemeSettingPath);
