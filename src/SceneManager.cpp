@@ -161,7 +161,7 @@ void SceneManager::ChangeScene(const std::string &scene_name)
   if (is_exit)
   {
     // prepare to exit game
-    Graphic::getInstance().ExitRendering();
+    Game::Exit();
   }
 
   inst.next_scene_ = it->second();

@@ -300,4 +300,79 @@ std::string GetUtf8FromWString(const std::wstring& wstring)
 }
 #endif
 
+// -------------------------------- CommandArgs
+
+CommandArgs::CommandArgs(const std::string &argv) { Set(argv); }
+
+CommandArgs::CommandArgs(const std::string &argv, size_t arg_count)
+{ Set(argv, arg_count); }
+
+void CommandArgs::Set(const std::string &argv)
+{
+  size_t a = 0, b = 0;
+  args_.clear();
+  while (b < argv.size())
+  {
+    if (argv[b] == ',' || argv[b] == 0)
+    {
+      args_.push_back(argv.substr(a, b - a));
+      a = b = b + 1;
+    }
+    else b++;
+  }
+}
+
+void CommandArgs::Set(const std::string &argv, size_t arg_count)
+{
+  size_t a = 0, b = 0;
+  args_.clear();
+  if (arg_count == 0) return; /* prevent underflow */
+
+  while (b < argv.size() && b < arg_count)
+  {
+    if (b == arg_count - 1)
+    {
+      std::string sa, sb;
+      Split(argv.substr(a), ',', sa, sb);
+      args_.push_back(sa);
+      break;
+    }
+
+    if (argv[b] == ',' || argv[b] == 0)
+    {
+      args_.push_back(argv.substr(a, b - a));
+      a = b = b + 1;
+    }
+    else b++;
+  }
+  while (b < arg_count)
+  {
+    args_.emplace_back(std::string());
+  }
+}
+
+template <>
+int CommandArgs::Get(size_t arg_index) const
+{
+  return atoi(args_[arg_index].c_str());
+}
+
+template <>
+double CommandArgs::Get(size_t arg_index) const
+{
+  return atof(args_[arg_index].c_str());
+}
+
+template <>
+float CommandArgs::Get(size_t arg_index) const
+{
+  return atof(args_[arg_index].c_str());
+}
+
+template <>
+std::string CommandArgs::Get(size_t arg_index) const
+{
+  return args_[arg_index];
+}
+
 }

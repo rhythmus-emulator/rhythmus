@@ -11,6 +11,8 @@ namespace rhythmus
 class Logger
 {
 public:
+  static void Initialize();
+
   void HookStdOut();
   void UnHookStdOut();
   void Flush();

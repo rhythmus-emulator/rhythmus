@@ -24,16 +24,22 @@ class Metric;
 constexpr char* kSettingOptionTagName = "option";
 constexpr char* kSettingKeyValueTagName = "value";
 
+template <typename T>
+void ConvertFromString(const std::string& src, T& dst);
+
+template <typename T>
+std::string ConvertToString(const T& dst);
+
 class Option
 {
 public:
-  Option(const std::string& key);
+  Option();
 
-  const std::string& name() const;
-  const std::string& value() const;
+  template <typename T> T value() const;
+
   const std::string& type() const;
   const std::string& desc() const;
-  void set_description(const std::string& desc);
+  Option &set_description(const std::string& desc);
 
   // @brief get option string used when calling SetOption()
   const std::string& get_constraint() const;
@@ -48,7 +54,7 @@ public:
   void Clear();
 
   // @brief set default option value.
-  void SetDefault(const std::string &default__);
+  Option &SetDefault(const std::string &default__);
 
   // @brief separate selectable options with comma
   // Starts with '!F' : file option (input as file filter)
@@ -70,11 +76,9 @@ public:
   void save_with_constraint(bool v);
 
   // @brief utility function to create option
-  static Option* CreateOption(
-    const std::string &name, const std::string &optionstr);
+  static Option* CreateOption(const std::string &optionstr);
 
 protected:
-  std::string name_;
   std::string desc_;
   std::string value_;
   std::string type_;
@@ -97,7 +101,7 @@ protected:
 class FileOption : public Option
 {
 public:
-  FileOption(const std::string &key);
+  FileOption();
   virtual void SetOption(const std::string& optionstr);
 private:
 };
@@ -105,7 +109,7 @@ private:
 class TextOption : public Option
 {
 public:
-  TextOption(const std::string &key);
+  TextOption();
   virtual void Next();
   virtual void Prev();
   virtual void set_value(const std::string& value);
@@ -115,7 +119,7 @@ private:
 class NumberOption : public Option
 {
 public:
-  NumberOption(const std::string &key);
+  NumberOption();
 
   // @brief get value as int (or index)
   int value_int() const;
@@ -156,6 +160,7 @@ public:
 
   Option *GetOption(const std::string &key) const;
   Option &SetOption(const std::string &key, const std::string &optionstr);
+  Option &SetOption(const std::string &key, Option *option);
   void DeleteOption(const std::string &key);
   void Clear();
 
@@ -239,10 +244,6 @@ private:
   void ReadLR2SS(const std::string &filepath);
 };
 
-
-/* @brief Metric for single object */
-
-
 /* @brief Container for Option, ThemeOption, and ThemeMetrics. */
 class Setting
 {
@@ -250,6 +251,7 @@ public:
   static void ReadAll();
   static void ClearAll();
   static void ReloadAll();
+  static void SaveAll();
 
   static OptionList &GetSystemSetting();
   static OptionList &GetThemeSetting();
@@ -259,11 +261,5 @@ private:
   /* static class. */
   Setting();
 };
-
-template <typename T>
-void ConvertFromString(const std::string& src, T& dst);
-
-template <typename T>
-std::string ConvertToString(const T& dst);
 
 }

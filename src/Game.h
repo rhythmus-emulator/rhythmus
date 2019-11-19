@@ -28,8 +28,12 @@ enum GameBootMode
 class Game
 {
 public:
+  static void Initialize();
+  static void Loop();
+  static void Cleanup();
+  static void Exit();
+
   static Game& getInstance();
-  void Default();
 
   /* Update game status. */
   void Update();
@@ -37,22 +41,11 @@ public:
   /* Load execute argument */
   void LoadArgument(const std::string& argv);
 
-  template<typename T>
-  T GetAttribute(const std::string& key) const;
-  void SetAttribute(const std::string& key, const std::string& value);
-
-  void set_setting_path(const std::string& path);
-  uint16_t get_window_width() const;
-  uint16_t get_window_height() const;
-  std::string get_window_title() const;
-  std::string get_log_path() const;
-  bool get_do_logging() const;
-  float GetAspect() const;
   GameBootMode get_boot_mode() const;
   void push_song(const std::string& songpath);
   bool pop_song(std::string& songpath);
 
-  void set_do_logging(bool v);
+  static const std::string &get_window_title();
 
 private:
   Game();
@@ -60,23 +53,14 @@ private:
 
   static Game game_;
 
-  std::string setting_path_;
-
-  uint16_t width_, height_;
-  std::string log_path_;
-  bool do_logging_;
-
-  // misc attributes
-  std::map<std::string, std::string> attributes_;
+  // is game loop running?
+  bool is_running_;
 
   // current game boot mode.
   GameBootMode game_boot_mode_;
 
   // song path list to play
   std::list<std::string> song_queue_;
-
-  void InitializeGameOption();
-  void ApplyGameOption();
 };
 
 }

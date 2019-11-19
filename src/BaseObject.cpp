@@ -1,5 +1,6 @@
 #include "BaseObject.h"
 #include "SceneManager.h"
+#include "Util.h"
 #include "Setting.h"
 #include "LR2/LR2SceneLoader.h"   // XXX: atoi_op
 #include "Util.h"
@@ -728,44 +729,6 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
 }
 
 /* ---------------------------- Command related */
-
-CommandArgs::CommandArgs(const std::string &argv)
-{
-  size_t a = 0, b = 0;
-  while (b < argv.size())
-  {
-    if (argv[b] == ',' || argv[b] == 0)
-    {
-      args_.push_back(argv.substr(a, b - a));
-      a = b = b + 1;
-    }
-    else b++;
-  }
-}
-
-template <>
-int CommandArgs::Get(size_t arg_index) const
-{
-  return atoi(args_[arg_index].c_str());
-}
-
-template <>
-double CommandArgs::Get(size_t arg_index) const
-{
-  return atof(args_[arg_index].c_str());
-}
-
-template <>
-float CommandArgs::Get(size_t arg_index) const
-{
-  return atof(args_[arg_index].c_str());
-}
-
-template <>
-std::string CommandArgs::Get(size_t arg_index) const
-{
-  return args_[arg_index];
-}
 
 CommandFnMap& BaseObject::GetCommandFnMap() const
 {

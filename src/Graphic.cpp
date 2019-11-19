@@ -1,9 +1,10 @@
 #include "Graphic.h"
 #include "Game.h"
+#include "Setting.h"
+#include "Util.h"
 #include "SceneManager.h"
 #include "Timer.h"
 #include "Logger.h"
-#include "Event.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
 
@@ -49,8 +50,7 @@ public:
   virtual void OnEvent()
   {
     fps_ = GetTickRate();
-    if (Game::getInstance().get_do_logging())
-      Logger::Info("FPS: %.2lf", fps_);
+    Logger::Info("FPS: %.2lf", fps_);
   }
 } FpsTimer;
 
@@ -59,11 +59,27 @@ GLFWwindow* Graphic::window()
   return window_;
 }
 
+float Graphic::width() const { return width_; }
+float Graphic::height() const { return height_; }
+float Graphic::GetAspect() const { return (float)width_ / height_; }
+
 void Graphic::Initialize()
 {
-  Game &game = Game::getInstance();
-  sWidth = game.get_window_width();
-  sHeight = game.get_window_height();
+  getInstance().InitializeInternal();
+}
+
+void Graphic::InitializeInternal()
+{
+  // set width / height
+  {
+    std::string w, h;
+    Split(
+      Setting::GetSystemSetting().GetOption("Resolution")->value<std::string>(),
+      'x', w, h
+    );
+    width_ = atoi(w.c_str());
+    height_ = atoi(h.c_str());
+  }
 
   glfwSetErrorCallback(error_callback);
   if (!glfwInit())
@@ -73,7 +89,7 @@ void Graphic::Initialize()
   }
 
   window_ = glfwCreateWindow(sWidth, sHeight,
-    game.get_window_title().c_str(), NULL, NULL
+    Game::get_window_title().c_str(), NULL, NULL
   );
   if (!window_)
   {
@@ -130,47 +146,35 @@ void Graphic::Initialize()
   FpsTimer.Start();
 }
 
-void Graphic::LoopRendering()
+void Graphic::Render()
 {
-  while (!glfwWindowShouldClose(window_))
-  {
-    glViewport(0, 0, sWidth, sHeight);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    /* Update main timer in graphic(main) thread. */
-    Timer::Update();
-    FpsTimer.Tick();
-
-    /* Process cached events in main thread.
-     * COMMENT: Event must be processed before Update() method
-     * (e.g. Wheel flickering when items Rebuild after Event flush)
-     */
-    InputEventManager::Flush();
-    EventManager::Flush();
-
-    /* Update whole game context */
-    Game::getInstance().Update();
-    SceneManager::getInstance().Update();
-
-    /* Main Rendering */
-    SceneManager::getInstance().Render();
-    Flush();
-
-    glfwSwapBuffers(window_);
-    glfwPollEvents();
-
-    /* Flush stdout into log message */
-    Logger::getInstance().Flush();
-  }
+  getInstance().RenderInternal();
 }
 
-/* Just send close message to system */
-void Graphic::ExitRendering()
+void Graphic::RenderInternal()
 {
-  glfwSetWindowShouldClose(window_, 1);
+  FpsTimer.Tick();
+
+  glViewport(0, 0, sWidth, sHeight);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  SceneManager::getInstance().Update();
+  SceneManager::getInstance().Render();
+  Flush();
+
+  glfwSwapBuffers(window_);
+  glfwPollEvents();
+
+  /* Flush stdout into log message */
+  Logger::getInstance().Flush();
 }
 
 void Graphic::Cleanup()
+{
+  getInstance().CleanupInternal();
+}
+
+void Graphic::CleanupInternal()
 {
   if (window_)
   {
@@ -184,6 +188,16 @@ void Graphic::Cleanup()
     free(vi_);
     vi_ = 0;
   }
+}
+
+void Graphic::SignalWindowClose()
+{
+  glfwSetWindowShouldClose(getInstance().window_, 1);
+}
+
+bool Graphic::IsWindowShouldClose()
+{
+  glfwWindowShouldClose(getInstance().window_);
 }
 
 Graphic& Graphic::getInstance()
@@ -316,8 +330,7 @@ void Graphic::SetProjOrtho()
   current_proj_mode_ = 1;
 
   m_projection_ = glm::ortho(
-    0.0f, (float)Game::getInstance().get_window_width(),
-    (float)Game::getInstance().get_window_height(), 0.0f,
+    0.0f, (float)width_, (float)height_, 0.0f,
     -1.0f, 1.0f
   );
   glUseProgram(quad_shader_.prog_id);
@@ -330,8 +343,8 @@ void Graphic::SetProjOrtho()
  */
 void Graphic::SetProjPerspectiveCenter()
 {
-  SetProjPerspective(Game::getInstance().get_window_width() / 2.0f,
-                     Game::getInstance().get_window_height() / 2.0f);
+  SetProjPerspective(width_ / 2.0f,
+                     height_ / 2.0f);
 }
 
 /**
@@ -355,8 +368,8 @@ void Graphic::SetProjPerspective(float cx, float cy)
   );
 #endif
 
-  const float fWidth = Game::getInstance().get_window_width();
-  const float fHeight = Game::getInstance().get_window_height();
+  const float fWidth = width_;
+  const float fHeight = height_;
   const float fVanishPointX = cx;
   const float fVanishPointY = cy;
   //float fovRadians = glm::radians(30.0f);

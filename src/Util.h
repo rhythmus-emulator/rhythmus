@@ -78,4 +78,21 @@ bool CompareFilename(const std::string &path1, const std::string &path2);
 std::string GetUtf8FromWString(const std::wstring& wstring);
 #endif
 
+/** @brief Argument for object command. */
+class CommandArgs
+{
+public:
+  CommandArgs() = default;
+  CommandArgs(const std::string &argv);
+  CommandArgs(const std::string &argv, size_t arg_count);
+
+  void Set(const std::string &argv);
+  void Set(const std::string &argv, size_t arg_count);
+
+  template <typename T>
+  T Get(size_t arg_index) const;
+private:
+  std::vector<std::string> args_;
+};
+
 RHYTHMUS_NAMESPACE_END

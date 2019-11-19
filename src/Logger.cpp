@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "Game.h"
 #include "Timer.h"
+#include "Setting.h"
 #include <iostream>
 
 namespace rhythmus
@@ -22,6 +23,16 @@ struct cout_redirect {
 private:
   std::streambuf * old;
 };
+
+void Logger::Initialize()
+{
+  if (Setting::GetSystemSetting().GetOption("Logging")->value() == "true")
+  {
+    Logger::getInstance().log_path_ = "../log/log.txt";
+    Logger::getInstance().StartLogging();
+    Logger::getInstance().HookStdOut();
+  }
+}
 
 void Logger::HookStdOut()
 {

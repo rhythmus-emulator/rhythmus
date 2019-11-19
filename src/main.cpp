@@ -1,16 +1,9 @@
 #include "Logger.h"
 #include "Graphic.h"
 #include "Game.h"
-#include "Sound.h"
-#include "Timer.h"
-#include "Player.h"
-#include "ResourceManager.h"
-#include "SceneManager.h"
-#include "LR2/LR2Flag.h"  // For updating LR2 flag
 #include "Event.h"
 #include "Util.h"
 #include "Song.h"
-#include "TaskPool.h"
 #include <iostream>
 
 // declare windows header latest due to constant conflicts
@@ -44,53 +37,14 @@ int main(int argc, char **argv)
 {
 #endif
 
-  // before starting initialization, system path should be cached first.
-  ResourceManager::CacheSystemDirectory();
-
-  /**
-   * Initialization
-   */
-  Graphic &graphic = Graphic::getInstance();
-  Game &game = Game::getInstance();
   for (int i = 0; i < argc; i++)
-    game.LoadArgument(argv[i]);
+    Game::getInstance().LoadArgument(argv[i]);
 
-  // Load/Set game settings first before initializing other objects
-  game.LoadOrDefault();
+  Game::Initialize();
 
-  Player::Initialize();
-  Logger::getInstance().StartLogging();
-  Logger::getInstance().HookStdOut();
-  TaskPool::getInstance().SetPoolSize(4);
-  graphic.Initialize();
-  SceneManager::getInstance().Initialize();
-  Timer::Initialize();
-  SoundDriver::getInstance().Initialize();
+  Game::Loop();
 
-  // Event Initialization
-  EventManager::Initialize();
-  LR2Flag::SubscribeEvent(); // Don't need to do if you won't support LR2 skin
-
-  /**
-   * Main game loop
-   */
-  graphic.LoopRendering();
-
-  /**
-   * Cleanup
-   */
+  Game::Cleanup();
   
-  Player::Cleanup();
-  TaskPool::getInstance().ClearTaskPool();
-  SceneManager::getInstance().Cleanup();
-  SongResource::getInstance().Clear();
-  graphic.Cleanup();
-  SoundDriver::getInstance().Destroy();
-  if (!game.Save())
-  {
-    std::cerr << "Settings not saved." << std::endl;
-  }
-  Logger::getInstance().FinishLogging();
-
   exit(EXIT_SUCCESS);
 }

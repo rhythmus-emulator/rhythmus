@@ -1,9 +1,16 @@
 #include "Game.h"
+#include "Graphic.h"
 #include "Timer.h"
 #include "Logger.h"
 #include "Util.h"
 #include "Song.h"
 #include "SceneManager.h"
+#include "Sound.h"
+#include "Player.h"
+#include "ResourceManager.h"
+#include "SceneManager.h"
+#include "LR2/LR2Flag.h"  // For updating LR2 flag
+
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <algorithm>
@@ -19,12 +26,79 @@ Game& Game::getInstance()
 }
 
 Game::Game()
-  : game_boot_mode_(GameBootMode::kBootNormal)
+  : is_running_(false), game_boot_mode_(GameBootMode::kBootNormal)
 {
 }
 
 Game::~Game()
 {
+}
+
+void Game::Initialize()
+{
+  // before starting initialization, system path should be cached first.
+  ResourceManager::CacheSystemDirectory();
+
+  // load settings before logging.
+  Setting::ReadAll();
+
+  // Start logging.
+  Logger::getInstance().StartLogging();
+  Logger::getInstance().HookStdOut();
+
+  // initialize threadpool / graphic / sound
+  TaskPool::getInstance().SetPoolSize(4);
+  Graphic::Initialize();
+  SoundDriver::getInstance().Initialize();
+
+  // initialize all other elements ...
+  EventManager::Initialize();
+  LR2Flag::SubscribeEvent(); // Don't need to do if you won't support LR2 skin
+  Timer::Initialize();
+  Player::Initialize();
+  SceneManager::getInstance().Initialize();
+
+  getInstance().is_running_ = true;
+}
+
+void Game::Loop()
+{
+  while (getInstance().is_running_ && !Graphic::IsWindowShouldClose())
+  {
+    /* Update main timer in graphic(main) thread. */
+    Timer::Update();
+
+    /**
+     * Process cached events in main thread.
+     * COMMENT: Event must be processed before Update() method
+     * (e.g. Wheel flickering when items Rebuild after Event flush)
+     */
+    InputEventManager::Flush();
+    EventManager::Flush();
+
+    Graphic::Render();
+  }
+}
+
+/* @warn do not call this method directly! call Exit() instead. */
+void Game::Cleanup()
+{
+  Player::Cleanup();
+  TaskPool::getInstance().ClearTaskPool();
+  SceneManager::getInstance().Cleanup();
+  SongResource::getInstance().Clear();
+  Graphic::getInstance().Cleanup();
+  SoundDriver::getInstance().Destroy();
+  Setting::SaveAll();
+  Logger::getInstance().FinishLogging();
+}
+
+/* @warn this method does not exits game instantly;
+ * exit after current game loop. */
+void Game::Exit()
+{
+  getInstance().is_running_ = false;
+  Graphic::SignalWindowClose();
 }
 
 /* macro to deal with save/load properties */
@@ -78,14 +152,6 @@ std::string GetValueConverted(const char* v)
   return std::string(v);
 }
 
-void Game::Default()
-{
-  width_ = 640;
-  height_ = 480;
-  log_path_ = "../log/log.txt";
-  do_logging_ = false;
-}
-
 void Game::Update()
 {
   // Tick all game timers
@@ -119,53 +185,10 @@ void Game::LoadArgument(const std::string& argv)
   }
 }
 
-template<>
-std::string Game::GetAttribute(const std::string& key) const
+const std::string &Game::get_window_title()
 {
-  const auto ii = attributes_.find(key);
-  if (ii != attributes_.end())
-    return ii->second;
-  else return std::string();
-}
-
-void Game::SetAttribute(const std::string& key, const std::string& value)
-{
-  attributes_[key] = value;
-}
-
-void Game::set_setting_path(const std::string& path)
-{
-  setting_path_ = path;
-}
-
-uint16_t Game::get_window_width() const
-{
-  return width_;
-}
-
-uint16_t Game::get_window_height() const
-{
-  return height_;
-}
-
-std::string Game::get_window_title() const
-{
-  return "Rhythmus 190800";
-}
-
-std::string Game::get_log_path() const
-{
-  return log_path_;
-}
-
-bool Game::get_do_logging() const
-{
-  return do_logging_;
-}
-
-float Game::GetAspect() const
-{
-  return (float)width_ / height_;
+  static std::string name("Rhythmus 190800");
+  return name;
 }
 
 GameBootMode Game::get_boot_mode() const
@@ -185,50 +208,6 @@ bool Game::pop_song(std::string& songpath)
   songpath = song_queue_.front();
   song_queue_.pop_front();
   return true;
-}
-
-
-void Game::set_do_logging(bool v)
-{
-  do_logging_ = v;
-}
-
-void Game::InitializeGameOption()
-{
-}
-
-void Game::ApplyGameOption()
-{
-  /* TODO: move graphic related options to Graphic class. */
-#if 0
-  {
-    /* a little trick */
-    std::string res;
-    setting_.LoadOptionValue("Resolution", res);
-    size_t res_sep = res.find('x');
-    if (res_sep == std::string::npos)
-    {
-      std::cerr << "Invalid resolution value: " << res << std::endl;
-      return;
-    }
-    width_ = atoi(res.c_str());
-    height_ = atoi(res.c_str() + res_sep + 1);
-  }
-
-  setting_.LoadOptionValue("Logging", do_logging_);
-
-#define SET_SCENE_PARAM(scenename) \
-{ Option* o; if ((o = setting_.GetOption(scenename)))\
-SetAttribute(scenename, o->value()); }
-
-  SET_SCENE_PARAM("SelectScene");
-  SET_SCENE_PARAM("DecideScene");
-  SET_SCENE_PARAM("PlayScene");
-  SET_SCENE_PARAM("ResultScene");
-  SET_SCENE_PARAM("CourseResultScene");
-
-#undef SET_SCENE_PARAM
-#endif
 }
 
 }

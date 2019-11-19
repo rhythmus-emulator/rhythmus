@@ -317,8 +317,8 @@ void Scene::doRenderAfter()
     if (fade_alpha_ > 1)
       fade_alpha_ = 1;
 
-    float w = Game::getInstance().get_window_width();
-    float h = Game::getInstance().get_window_height();
+    float w = Graphic::getInstance().width();
+    float h = Graphic::getInstance().height();
     vi[1].x = w;
     vi[2].x = w;
     vi[2].y = h;

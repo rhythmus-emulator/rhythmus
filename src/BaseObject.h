@@ -21,6 +21,7 @@
 
 #include "Graphic.h"
 #include "Event.h"
+#include "Setting.h"
 
 #include <string>
 #include <vector>
@@ -33,6 +34,7 @@ namespace rhythmus
 {
 
 class BaseObject;
+class CommandArgs;
 
 /** @brief Drawing properties of Object */
 struct DrawProperty
@@ -43,17 +45,6 @@ struct DrawProperty
   float sx, sy, sw, sh;     // texture src crop
   ProjectionInfo pi;
   bool display;             // display: show or hide
-};
-
-/** @brief Argument for object command. */
-class CommandArgs
-{
-public:
-  CommandArgs(const std::string &argv);
-  template <typename T>
-  T Get(size_t arg_index) const;
-private:
-  std::vector<std::string> args_;
 };
 
 /** @brief Command function type for object. */

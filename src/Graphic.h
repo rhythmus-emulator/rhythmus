@@ -69,10 +69,14 @@ struct ShaderInfo {
 class Graphic
 {
 public:
-  void Initialize();
-  void LoopRendering();
-  void ExitRendering();
-  void Cleanup();
+  static void Render();
+  static void Initialize();
+  static void Cleanup();
+  static void SignalWindowClose();
+  static bool IsWindowShouldClose();
+
+  static Graphic& getInstance();
+
   void SetProjOrtho();
   void SetProjPerspective(float cx, float cy);
   void SetProjPerspectiveCenter();
@@ -81,8 +85,9 @@ public:
   static void GetResolutions(std::vector<std::string>& out);
   void CenterWindow();
   GLFWwindow* window();
-
-  static Graphic& getInstance();
+  float width() const;
+  float height() const;
+  float GetAspect() const;
 
   static void RenderQuad();
   static void SetMatrix(const ProjectionInfo& pi);
@@ -95,6 +100,7 @@ public:
   static void Flush();
 
   static double GetFPS();
+
 private:
   Graphic();
   ~Graphic();
@@ -104,6 +110,7 @@ private:
   void SetView(float x, float y, float dist);
 
   GLFWwindow* window_;
+  float width_, height_;
   ShaderInfo quad_shader_;
   int current_proj_mode_;
   glm::mat4 m_projection_, m_view_, m_model_;
@@ -113,6 +120,10 @@ private:
   int vi_idx_;
   GLuint tex_id_;
   GLuint src_blend_mode_;
+
+  void InitializeInternal();
+  void RenderInternal();
+  void CleanupInternal();
 };
 
 }

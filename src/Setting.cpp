@@ -25,19 +25,24 @@ inline const char* GetSafeString(const char* p)
 
 // ----------------------------- class Option
 
-Option::Option(const std::string& name)
-  : name_(name), type_("option"), curr_sel_idx_(0),
+Option::Option()
+  : type_("option"), curr_sel_idx_(0),
     save_with_constraint_(false) {}
 
-const std::string& Option::name() const
-{
-  return name_;
-}
-
-const std::string& Option::value() const
-{
-  return value_;
-}
+template <> const std::string& Option::value() const
+{ return value_; }
+template <> const char* Option::value() const
+{ return value_.c_str(); }
+template <> int Option::value() const
+{ return atoi(value_.c_str()); }
+template <> size_t Option::value() const
+{ return (size_t)atoi(value_.c_str()); }
+template <> double Option::value() const
+{ return atof(value_.c_str()); }
+template <> float Option::value() const
+{ return atof(value_.c_str()); }
+template <> bool Option::value() const
+{ return value_ == "true"; }
 
 const std::string& Option::type() const
 {
@@ -49,9 +54,10 @@ const std::string& Option::desc() const
   return desc_;
 }
 
-void Option::set_description(const std::string& desc)
+Option &Option::set_description(const std::string& desc)
 {
   desc_ = desc;
+  return *this;
 }
 
 const std::string& Option::get_constraint() const
@@ -83,9 +89,10 @@ void Option::Clear()
   constraint_.clear();
 }
 
-void Option::SetDefault(const std::string &default__)
+Option &Option::SetDefault(const std::string &default__)
 {
   default_ = default__;
+  return *this;
 }
 
 void Option::SetOption(const std::string& options)
@@ -114,8 +121,7 @@ void Option::save_with_constraint(bool v)
   save_with_constraint_ = v;
 }
 
-Option* Option::CreateOption(
-  const std::string &name, const std::string &optionstr)
+Option* Option::CreateOption(const std::string &optionstr)
 {
   Option *option = nullptr;
   if (optionstr.size() > 2 && optionstr[0] == '#')
@@ -123,16 +129,16 @@ Option* Option::CreateOption(
     if (optionstr[1] == 'F')
     {
       // create as file option
-      option = new FileOption(name);
+      option = new FileOption();
     }
     else if (optionstr[1] == 'N')
     {
       // create as number option
-      option = new NumberOption(name);
+      option = new NumberOption();
     }
   }
   else
-    option = new Option(name);
+    option = new Option();
 
   if (option)
     option->SetOption(optionstr);
@@ -140,23 +146,21 @@ Option* Option::CreateOption(
   return option;
 }
 
-FileOption::FileOption(const std::string &key)
-  : Option(key) {}
+FileOption::FileOption() {}
 
 void FileOption::SetOption(const std::string &options)
 {
   ResourceManager::getInstance().GetAllPaths(options, options_);
 }
 
-TextOption::TextOption(const std::string &key)
-  : Option(key) {}
+TextOption::TextOption() {}
 
 void TextOption::Next() {}
 void TextOption::Prev() {}
 void TextOption::set_value(const std::string& value) { value_ = value; }
 
-NumberOption::NumberOption(const std::string& key)
-  : Option(key), number_(0), number_min_(0), number_max_(0x7FFFFFFF)
+NumberOption::NumberOption()
+  : number_(0), number_min_(0), number_max_(0x7FFFFFFF)
 {
   type_ = "number";
 }
@@ -286,7 +290,7 @@ bool OptionList::ReadFromFile(const std::string &filepath)
   for (auto &it : options_)
   {
     auto &opt = *it.second;
-    XMLElement *valnode = root->FirstChildElement(opt.name().c_str());
+    XMLElement *valnode = root->FirstChildElement(it.first.c_str());
     if (!valnode)
       continue;
     const char* val = valnode->Attribute("value");
@@ -311,9 +315,9 @@ bool OptionList::SaveToFile(const std::string &path)
   for (auto &it : options_)
   {
     auto &opt = *it.second;
-    nodeval = doc.NewElement(opt.name().c_str());
+    nodeval = doc.NewElement(it.first.c_str());
     root->InsertFirstChild(nodeval);
-    nodeval->SetAttribute("value", opt.value().c_str());
+    nodeval->SetAttribute("value", opt.value<std::string>().c_str());
   }
 
   return doc.SaveFile(path.c_str()) == XML_SUCCESS;
@@ -330,7 +334,11 @@ Option *OptionList::GetOption(const std::string &key) const
 
 Option &OptionList::SetOption(const std::string &key, const std::string &optionstr)
 {
-  Option *option = Option::CreateOption(key, optionstr);
+  return SetOption(key, Option::CreateOption(optionstr));
+}
+
+Option &OptionList::SetOption(const std::string &key, Option *option)
+{
   auto &it = options_.find(key);
   if (it == options_.end())
   {
@@ -719,7 +727,7 @@ void Setting::ReadAll()
     {
       auto *option = GetSystemSetting().GetOption(metric_option_attrs[i]);
       if (!option) continue;
-      GetThemeMetricList().ReadMetricFromFile(option->value());
+      GetThemeMetricList().ReadMetricFromFile(option->value<std::string>());
     }
   }
   GetThemeSetting().ReadFromFile(kThemeSettingPath);
@@ -738,90 +746,82 @@ void Setting::ReloadAll()
   ReadAll();
 }
 
+void Setting::SaveAll()
+{
+  if (!GetSystemSetting().SaveToFile(kSettingPath))
+    std::cerr << "Failed to save Game setting." << std::endl;
+  if (!GetThemeSetting().SaveToFile(kThemeSettingPath))
+    std::cerr << "Failed to save Theme setting." << std::endl;
+}
+
 OptionList &Setting::GetSystemSetting()
 {
   static OptionList sysoptions;
   static bool is_initialized = false;
   if (!is_initialized)
   {
-    // TODO: add basic system options here.
-#if 0
-  /* Initialize game setting constraints */
-    {
-      Option &option = *setting_.NewOption("Resolution");
-      option.set_description("Game resolution.");
-      // TODO: get exact information from graphic card
-      option.SetOption("640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200");
-    }
+    is_initialized = true;
 
-    {
-      Option &option = *setting_.NewOption("SoundDevice");
-      option.set_description("Set default sound device.");
-      option.SetOption("");   // empty
-    }
+    /* Initialize game settings */
+    sysoptions.SetOption("Resolution", "640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200")
+      .SetDefault("640x480")
+      .set_description("Game resolution")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("SoundBufferSize");
-      option.set_description("Sound latency increases if sound buffer is big. If sound flickers, use large buffer size.");
-      option.SetOption("1024,2048,3072,4096,8192,16384");
-      option.set_value(2048); // default value
-    }
+    sysoptions.SetOption("SoundDevice", "Default")
+      .SetDefault("Default")
+      .set_description("Set default sound device.")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("Volume");
-      option.set_description("Set game volume.");
-      option.SetOption("0,10,20,30,40,50,60,70,80,90,100");
-    }
+    sysoptions.SetOption("SoundBufferSize", "1024,2048,3072,4096,8192,16384")
+      .SetDefault("2048")
+      .set_description("Sound latency increases if sound buffer is big. If sound flickers, use large buffer size.")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("GameMode");
-      option.set_description("Set game mode, whether to run as arcade or home.");
-      option.SetOption("Home,Arcade,LR2");
-    }
+    sysoptions.SetOption("Volume", "0,10,20,30,40,50,60,70,80,90,100")
+      .SetDefault("70")
+      .set_description("Set game volume.")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("Logging");
-      option.set_description("For development.");
-      option.SetOption("Off,On");
-    }
+    sysoptions.SetOption("GameMode", "Home,Arcade,LR2")
+      .SetDefault("LR2")
+      .set_description("Set game mode, whether to run as arcade or home.")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("SoundSet");
-      option.set_description("Soundset file.");
-      option.SetFileOption("../sound/*.lr2ss");
-    }
+    sysoptions.SetOption("Logging", "Off,On")
+      .SetDefault("On")
+      .set_description("For development.")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("SelectScene");
-      option.set_description("File path of select scene.");
-      option.SetFileOption("../themes/*/select/*.lr2skin");
-    }
+    sysoptions.SetOption("SoundSet", "!F../sound/*.lr2ss")
+      .set_description("Soundset file.")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("DecideScene");
-      option.set_description("File path of decide scene.");
-      option.SetFileOption("../themes/*/decide/*.lr2skin");
-    }
+    sysoptions.SetOption("Theme", "")
+      .set_description("Theme path.")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("PlayScene");
-      option.set_description("File path of play scene.");
-      option.SetFileOption("../themes/*/play/*.lr2skin");
-    }
+    sysoptions.SetOption("SelectScene", "!F../themes/*/select/*.lr2skin")
+      .set_description("Theme path of select scene.")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("ResultScene");
-      option.set_description("File path of result scene.");
-      option.SetFileOption("../themes/*/result/*.lr2skin");
-    }
+    sysoptions.SetOption("DecideScene", "!F../themes/*/decide/*.lr2skin")
+      .set_description("Theme path of decide scene.")
+      .reset_value();
 
-    {
-      Option &option = *setting_.NewOption("CourseResultScene");
-      option.set_description("File path of course result scene.");
-      option.SetFileOption("../themes/*/courseresult/*.lr2skin");
-    }
-#endif
+    sysoptions.SetOption("PlayScene", "!F../themes/*/play/*.lr2skin")
+      .set_description("Theme path of play scene.")
+      .reset_value();
+
+    sysoptions.SetOption("ResultScene", "!F../themes/*/result/*.lr2skin")
+      .set_description("Theme path of result scene.")
+      .reset_value();
+
+    sysoptions.SetOption("CourseResultScene", "!F../themes/*/courseresult/*.lr2skin")
+      .set_description("Theme path of courseresult scene.")
+      .reset_value();
   }
+
   return sysoptions;
 }
 
