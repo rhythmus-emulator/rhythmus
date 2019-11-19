@@ -1,4 +1,6 @@
 #include "ResourceManager.h"
+#include "Image.h"
+#include "Font.h"
 #include "LR2/LR2Font.h"
 #include <FreeImage.h>
 #include <iostream>
@@ -15,22 +17,43 @@ T* CreateObjectFromPath(const std::string &path);
 template <>
 Image *CreateObjectFromPath(const std::string &path)
 {
-  // TODO
-  return CreateImage(path);
+  Image *img = new Image();
+  img->LoadFromPath(path);
+  img->CommitImage();
+  return img;
 }
 
 template <>
 Font *CreateObjectFromPath(const std::string &path)
 {
-  // TODO
-  return CreateFont(path);
-#if 0
-  FontAuto f = std::make_shared<Font>();
-  f->LoadFont(getInstance().GetPath(path).c_str(), attrs);
+  std::string fn, cmd, ext;
+  Split(path, '|', fn, cmd);
+  std::string ext = GetExtension(fn);
+  FontAttributes attr;
+  Font *font;
+  if (ext == "ttf")
+  {
+    font = new Font();
+  }
+  else if (ext == "dxa")
+  {
+    font = new LR2Font();
+  }
+  else
+  {
+    std::cerr << "Unknown Font file: " << path << std::endl;
+  }
 
-  FontAuto fa = std::make_shared<LR2Font>();
-  ((LR2Font*)fa.get())->ReadLR2Font(path.c_str());
-#endif
+  attr.SetFromCommand(cmd);
+
+  if (!font->LoadFont(fn.c_str(), attr))
+  {
+    std::cerr << "Invalid Font file: " << path << std::endl;
+    delete font;
+    return nullptr;
+  }
+
+  return font;
 }
 
 template <typename T>
@@ -130,35 +153,15 @@ void ResourceManager::UnloadFont(Font *font)
   gFontpool.Unload(font);
 }
 
+Font* ResourceManager::LoadSystemFont()
+{
+  return LoadFont("../system/default.ttf|size:5;bg:0xFFFFFFFF");
+}
+
 template <> Font*
 ResourceManager::LoadObject(const std::string &path) { return LoadFont(path); }
 template <> void
 ResourceManager::UnloadObject(Font *img) { UnloadFont(img); }
-
-
-// TODO: systemfont in Loadingscreen and SceneManager::SplashText
-#if 0
-FontAuto ResourceManager::GetSystemFont()
-{
-  static FontAuto sys_font;
-  if (!sys_font)
-  {
-    FontAttributes fnt_attr_;
-    memset(&fnt_attr_, 0, sizeof(fnt_attr_));
-    fnt_attr_.color = 0xFFFFFFFF;
-    fnt_attr_.size = 5;
-    sys_font = ResourceManager::LoadFont("../system/default.ttf", fnt_attr_);
-    if (!sys_font)
-    {
-      std::cerr << "Failed to read system font." << std::endl;
-      return nullptr;
-    }
-    // commit default glyphs
-    sys_font->Commit();
-  }
-  return sys_font;
-}
-#endif
 
 ResourceManager& ResourceManager::getInstance()
 {

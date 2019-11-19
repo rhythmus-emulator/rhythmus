@@ -49,6 +49,8 @@ struct FontAttributes
   /* Texture of font border. color option is ignored when tex is set. */
   FontFillTexture outline_tex;
 
+  void SetFromCommand(const std::string &command);
+
   /* @warn this method is in development.
    * may cannot distinguish different font. */
   bool operator==(const FontAttributes& attr) const

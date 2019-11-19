@@ -103,10 +103,6 @@ public:
   /* @brief Add images to be updated constantly. e.g. Movie */
   void RegisterImage(ImageAuto img);
 
-  ImageAuto GetImageByName(const std::string& name);
-
-  FontAuto GetFontByName(const std::string& name);
-
   const ThemeParameter& get_theme_parameter() const;
 
 protected:

@@ -1,5 +1,6 @@
 #include "Font.h"
 #include "SceneManager.h"
+#include "Util.h"
 #include "rutil.h"  /* Text encoding to UTF32 */
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -19,6 +20,45 @@ int ftLibCnt;
 constexpr int defFontCacheWidth = 2048;
 constexpr int defFontCacheHeight = 2048;
 
+inline uint32_t HexToUint(const char *hex)
+{
+  if (hex[0] == '0' && hex[1] == 'x')
+    hex += 2;
+  return (uint32_t)strtol(hex, NULL, 16);
+}
+
+void FontAttributes::SetFromCommand(const std::string &command)
+{
+  std::vector<std::string> params;
+  std::string a, b;
+  Split(command, ';', params);
+  for (const auto &s : params)
+  {
+    Split(s, ':', a, b);
+    CommandArgs args(b);
+    if (a == "size")
+    {
+      size = args.Get<int>(0);
+    }
+    else if (a == "fg")
+    {
+      color = HexToUint(args.Get<std::string>(0).c_str());
+    }
+    else if (a == "border")
+    {
+      outline_width = args.Get<int>(0);
+      outline_color = HexToUint(args.Get<std::string>(1).c_str());
+    }
+    else if (a == "texture")
+    {
+      // TODO
+    }
+    else if (a == "bordertexture")
+    {
+      // TODO
+    }
+  }
+}
 
 // --------------------------- class FontBitmap
 

@@ -1,8 +1,6 @@
 #include "BaseObject.h"
 #include "SceneManager.h"
-#include "Util.h"
 #include "Setting.h"
-#include "LR2/LR2SceneLoader.h"   // XXX: atoi_op
 #include "Util.h"
 #include <iostream>
 

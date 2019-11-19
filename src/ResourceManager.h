@@ -22,6 +22,7 @@ public:
 
   static Font* LoadFont(const std::string& path);
   static void UnloadFont(Font* font);
+  static Font* LoadSystemFont();
 
   template <typename T>
   static T* LoadObject(const std::string &path);

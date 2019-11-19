@@ -14,6 +14,18 @@
 namespace rhythmus
 {
 
+Script::Script()
+{}
+
+Script::~Script()
+{}
+
+Script &Script::getInstance()
+{
+  static Script instance;
+  return instance;
+}
+
 void Script::ExecuteFromPath(const std::string &path)
 {
   std::string ext(GetExtension(path));
@@ -151,7 +163,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       {
         // load OPCODE from Option.
         std::string option_name(args.Get<std::string>(1));
-        std::string option_val = Setting::GetThemeSetting().GetOption(option_name)->value();
+        std::string option_val(Setting::GetThemeSetting().GetOption(option_name)->value<std::string>());
         int option_idx = atoi(option_val.c_str());
         int op_idx = args.Get<int>(2);
         flags_[op_idx + option_idx] = 1;
@@ -161,7 +173,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
         // make path priority from Option.
         std::string option_name(args.Get<std::string>(1));
         ResourceManager::getInstance().MakePathHigherPriority(
-          Setting::GetThemeSetting().GetOption(option_name)->value()
+          Setting::GetThemeSetting().GetOption(option_name)->value<std::string>()
         );
       }
       else if (lr2name == "IMAGE")
@@ -305,13 +317,5 @@ void Script::ExecuteLR2Script(const std::string &filepath)
     }
   }
 }
-
-#if 0
-  img->CommitImage();
-  images_.push_back(img);
-
-  fonts_.push_back(ResourceManager::getInstance().LoadLR2Font(fontpath));
-  fonts_.back()->set_name(fontname);
-#endif
 
 }

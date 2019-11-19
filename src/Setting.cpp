@@ -254,20 +254,12 @@ void OptionList::LoadFromMetrics(const Metric &metric)
   if (!metric.exist("Option"))
     return;
   int optioncount = metric.get<int>("Option");
-  std::vector<std::string> params;
   for (int i = 0; i < optioncount; ++i)
   {
     /* attr,default,select list */
-    params = std::move(metric.get<decltype(params)>("Option" + std::to_string(i)));
-
-    /* XXX: so dirty code, need to tidy it */
-    std::string optstr;
-    for (size_t i = 2; i < params.size(); ++i)
-      optstr += params[i] + ",";
-    if (!optstr.empty()) optstr.pop_back();
-
-    auto &option = SetOption(params[0], optstr);
-    option.SetDefault(params[1]);
+    CommandArgs args(metric.get<std::string>("Option" + std::to_string(i)), 3);
+    auto &option = SetOption(args.Get<std::string>(0), args.Get<std::string>(2));
+    option.SetDefault(args.Get<std::string>(1));
   }
 }
 

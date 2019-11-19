@@ -259,20 +259,6 @@ void Scene::RegisterImage(ImageAuto img)
   images_.push_back(img);
 }
 
-ImageAuto Scene::GetImageByName(const std::string& name)
-{
-  for (const auto& img : images_)
-    if (img->get_name() == name) return img;
-  return nullptr;
-}
-
-FontAuto Scene::GetFontByName(const std::string& name)
-{
-  for (const auto& font : fonts_)
-    if (font->get_name() == name) return font;
-  return nullptr;
-}
-
 bool Scene::is_input_available() const
 {
   return is_input_available_;
