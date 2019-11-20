@@ -11,32 +11,6 @@
 namespace rhythmus
 {
 
-// Parameters with scene theme (read-only).
-// All time parameters are in miliseconds.
-// @depreciated removed later.
-struct ThemeParameter
-{
-  ThemeParameter();
-
-  std::string gamemode;
-  std::string title;
-  std::string maker;
-  std::string preview;
-
-  // texture transparent color key in RGB. default is 0,0,0
-  unsigned char transcolor[3];
-
-  // input starting time of current scene begin
-  int begin_input_time;
-
-  // fade in / out time
-  int fade_in_time, fade_out_time;
-
-  // time to move next scene (in milisecond)
-  // 0 : don't move scene to next scene automatically
-  int next_scene_time;
-};
-
 class SceneTask
 {
 public:
@@ -103,12 +77,7 @@ public:
   /* @brief Add images to be updated constantly. e.g. Movie */
   void RegisterImage(ImageAuto img);
 
-  const ThemeParameter& get_theme_parameter() const;
-
 protected:
-  // Theme parameter list (read-only)
-  ThemeParameter theme_param_;
-
   // image resources loaded by this scene
   std::vector<ImageAuto> images_;
 
@@ -132,7 +101,18 @@ private:
   // fade_duration with negative: fade-out
   float fade_time_, fade_duration_;
 
+  // fade in / out time
+  int fade_in_time_, fade_out_time_;
+
+  // input availablity
   bool is_input_available_;
+
+  // input starting time of current scene begin
+  int begin_input_time_;
+
+  // time to move next scene (in milisecond)
+  // 0 : don't move scene to next scene automatically
+  int next_scene_time_;
 
   // @brief enable sorting objects in LoadScene()
   bool do_sort_objects_;

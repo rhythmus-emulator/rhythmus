@@ -91,6 +91,8 @@ public:
 
   template <typename T>
   T Get(size_t arg_index) const;
+
+  size_t size() const;
 private:
   std::vector<std::string> args_;
 };

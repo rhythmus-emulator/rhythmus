@@ -375,4 +375,6 @@ std::string CommandArgs::Get(size_t arg_index) const
   return args_[arg_index];
 }
 
+size_t CommandArgs::size() const { return args_.size(); }
+
 }

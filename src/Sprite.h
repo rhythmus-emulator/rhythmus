@@ -16,11 +16,8 @@ public:
   virtual ~Sprite();
 
   /* Set sprite's image */
-  void SetImage(ImageAuto img);
-
-  /* Set sprite's image from current scene resource scope. */
-  void SetImageByName(const std::string& name);
-
+  void SetImageByPath(const std::string &path);
+  
   /**
    * 0: Don't use blending (always 100% alpha)
    * 1: Use basic alpha blending (Default)
@@ -31,10 +28,10 @@ public:
   void ReplaySprite();
 
   /* @brief Load property(resource). */
-  virtual void Load(const ThemeMetrics& metric);
+  virtual void Load(const Metric &metric);
 
 protected:
-  ImageAuto img_;
+  Image *img_;
 
   // sprite animation property
   // divx : sprite division by x pos

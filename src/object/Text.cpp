@@ -1,5 +1,5 @@
 #include "Text.h"
-#include "SceneManager.h"
+#include "ResourceManager.h"
 #include <algorithm>
 
 RHYTHMUS_NAMESPACE_BEGIN
@@ -7,27 +7,17 @@ RHYTHMUS_NAMESPACE_BEGIN
 // --------------------------------- class Text
 
 Text::Text()
-  : text_alignment_(TextAlignments::kTextAlignLeft),
-  text_position_(0), do_line_breaking_(true)
+  : font_(nullptr), text_alignment_(TextAlignments::kTextAlignLeft),
+    text_position_(0), do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
   text_render_ctx_.width = text_render_ctx_.height = .0f;
-  SetFont(nullptr);
-}
-
-Text::Text(Font* font)
-  : text_alignment_(TextAlignments::kTextAlignLeft),
-  text_position_(0), do_line_breaking_(true)
-{
-  alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
-  alignment_attrs_.tx = alignment_attrs_.ty = .0f;
-  text_render_ctx_.width = text_render_ctx_.height = .0f;
-  SetFont(font);
 }
 
 Text::~Text()
 {
+  ResourceManager::UnloadFont(font_);
 }
 
 float Text::GetTextWidth()
@@ -35,15 +25,11 @@ float Text::GetTextWidth()
   return text_render_ctx_.width;
 }
 
-void Text::SetFont(Font* font)
+void Text::SetFontByPath(const std::string& path)
 {
-  font_ = font;
-}
-
-void Text::SetFontByName(const std::string& name)
-{
-  auto *font = SceneManager::getInstance().get_current_scene()->GetFontByName(name).get();
-  SetFont(font);
+  if (font_)
+    ResourceManager::UnloadFont(font_);
+  font_ = ResourceManager::LoadFont(path);
 }
 
 void Text::SetText(const std::string& s)

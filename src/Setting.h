@@ -180,11 +180,8 @@ private:
 class Metric
 {
 public:
-  Metric(const std::string &name);
+  Metric();
   ~Metric();
-
-  void set_name(const std::string &name);
-  const std::string& name() const;
 
   bool exist(const std::string &key) const;
 
@@ -210,7 +207,6 @@ public:
   const_iterator cend() const;
 
 private:
-  std::string name_;
   std::map<std::string, std::string> attr_;
 };
 

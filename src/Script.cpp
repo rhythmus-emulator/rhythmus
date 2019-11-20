@@ -53,14 +53,13 @@ void Script::ExecuteFromPath(const std::string &path)
 constexpr char* kLR2SubstitutePath = "LR2files/Theme";
 constexpr char* kSubstitutePath = "../themes";
 
-BaseObject* CreateObjectFromMetric(const Metric &metrics)
+BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
 {
   BaseObject *obj = nullptr;
-  std::string _typename = metrics.name();
 
-  if (_typename == "Sprite")
+  if (objtype == "Sprite")
     obj = new Sprite();
-  else if (_typename == "Text")
+  else if (objtype == "Text")
     obj = new Text();
 
   if (!obj) return nullptr;
@@ -132,7 +131,8 @@ void Script::ExecuteLR2Script(const std::string &filepath)
 
   Scene *scene = SceneManager::get_current_scene();
   LR2SceneLoader loader;
-  std::vector<Metric> object_metrics;
+  std::vector<std::pair<std::string, Metric> /* objtype, metric */>
+    object_metrics;
   std::map<std::string, Metric*> object_processing;
 
   ASSERT(scene);
@@ -242,8 +242,8 @@ void Script::ExecuteLR2Script(const std::string &filepath)
     Metric *curr_metrics = nullptr;
     if (object_processing[name] == nullptr || obj_type == "SRC")
     {
-      object_metrics.emplace_back(Metric(name));
-      curr_metrics = &object_metrics.back();
+      object_metrics.push_back({ name, Metric() });
+      curr_metrics = &object_metrics.back().second;
     }
     else curr_metrics = object_processing[name];
 
@@ -299,19 +299,22 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   /* set zindex for all object metrics & process metric to scene */
   {
     size_t idx = 0;
-    for (auto &metric : object_metrics)
+    for (auto &m : object_metrics)
     {
+      std::string &name = m.first;
+      Metric &metric = m.second;
+
       metric.set("zindex", (int)idx);
-      BaseObject *obj = CreateObjectFromMetric(metric);
+      BaseObject *obj = CreateObjectFromMetric(name, metric);
       if (obj)
         scene->RegisterChild(obj);
       else
       {
-        if (obj = scene->FindChildByName(metric.name()))
+        if (obj = scene->FindChildByName(name))
           obj->Load(metric);
         else
-          std::cerr << "Warning: object metric " << metric.name() <<
-          " is invalid and cannot appliable." << std::endl;
+          std::cerr << "Warning: object metric '" << name <<
+          "' is invalid and cannot appliable." << std::endl;
       }
       idx++;
     }

@@ -1,6 +1,6 @@
 #include "Sprite.h"
 #include "Game.h"
-#include "SceneManager.h" // to use scene timer
+#include "ResourceManager.h"
 #include "Util.h"
 #include <iostream>
 #include <algorithm>
@@ -9,7 +9,7 @@ namespace rhythmus
 {
 
 Sprite::Sprite()
-  : divx_(1), divy_(1), cnt_(1), interval_(0), blending_(1),
+  : img_(nullptr), divx_(1), divy_(1), cnt_(1), interval_(0), blending_(1),
     idx_(0), eclipsed_time_(0),
     sx_(0), sy_(0), sw_(1.0f), sh_(1.0f), tex_attribute_(0)
 {
@@ -17,17 +17,18 @@ Sprite::Sprite()
 
 Sprite::~Sprite()
 {
+  ResourceManager::UnloadImage(img_);
 }
 
-void Sprite::SetImage(ImageAuto img)
+void Sprite::SetImageByPath(const std::string &path)
 {
+  Image *img = ResourceManager::LoadImage(path);
+  if (!img)
+    return;
+  if (img_)
+    ResourceManager::UnloadImage(img_);
+
   img_ = img;
-}
-
-void Sprite::SetImageByName(const std::string& name)
-{
-  auto img = SceneManager::getInstance().get_current_scene()->GetImageByName(name);
-  SetImage(img);
 
   /* default image src set */
   sx_ = sy_ = 0.f;
@@ -44,32 +45,29 @@ void Sprite::ReplaySprite()
   eclipsed_time_ = 0;
 }
 
-void Sprite::Load(const ThemeMetrics& metric)
+void Sprite::Load(const Metric& metric)
 {
   BaseObject::Load(metric);
 
-  std::string value;
-  int v;
-  if (metric.get("sprite", value))
-    RunCommand("sprite", value);
-  if (metric.get("blend", v))
-    blending_ = v;
-  if (metric.get("sprite", value))
+  if (metric.exist("blend"))
+    blending_ = metric.get<int>("blend");
+
+  if (metric.exist("sprite"))
   {
     /* imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
-    std::vector<std::string> params;
-    MakeParamCountSafe(value, params, 12);
+    CommandArgs args(metric.get<std::string>("sprite"), 12);
 
-    SetImageByName(params[0]);
+    SetImageByPath(args.Get<std::string>(0));
+
     if (!img_)
       return;
 
-    if (params.size() > 4)
+    if (args.size() > 4)
     {
-      int sx = atoi(params[1].c_str());
-      int sy = atoi(params[2].c_str());
-      int sw = atoi(params[3].c_str());
-      int sh = atoi(params[4].c_str());
+      int sx = args.Get<int>(1);
+      int sy = args.Get<int>(2);
+      int sw = args.Get<int>(3);
+      int sh = args.Get<int>(4);
 
       sx_ = sx / (float)img_->get_width();
       sy_ = sy / (float)img_->get_height();
@@ -79,25 +77,21 @@ void Sprite::Load(const ThemeMetrics& metric)
       else sh_ = sh / (float)img_->get_height();
     }
 
-    if (params.size() > 7)
+    if (args.size() > 7)
     {
-      int divx = atoi(params[5].c_str());
-      int divy = atoi(params[6].c_str());
-      int cycle = atoi(params[7].c_str());    /* total loop time */
-      int timer = 0;
-      if (params.size() > 8)
-        timer = atoi(params[8].c_str());    /* timer id in LR2 form */
+      int divx = args.Get<int>(5);
+      int divy = args.Get<int>(6);
 
       divx_ = divx > 0 ? divx : 1;
       divy_ = divy > 0 ? divy : 1;
       cnt_ = divx_ * divy_;
-      interval_ = cycle;
+      interval_ = args.Get<int>(7);
     }
 
-    if (params.size() > 9)
+    if (args.size() > 8)
     {
       // Register event : Sprite restarting
-      AddCommand("LR" + params[9] + "On", "replay");
+      AddCommand("LR" + args.Get<std::string>(8) + "On", "replay");
     }
   }
 }
@@ -105,26 +99,22 @@ void Sprite::Load(const ThemeMetrics& metric)
 void Sprite::doRender()
 {
   // If hide, then not draw
-  if (!IsVisible())
+  if (!img_ || !IsVisible())
     return;
 
-  if (img_)
+  Graphic::SetTextureId(img_->get_texture_ID());
+  switch (blending_)
   {
-    Graphic::SetTextureId(img_->get_texture_ID());
-    switch (blending_)
-    {
-    case 0:
-      Graphic::SetBlendMode(GL_ZERO);
-      break;
-    case 1:
-      Graphic::SetBlendMode(GL_ONE_MINUS_SRC_ALPHA);
-      break;
-    case 2:
-      Graphic::SetBlendMode(GL_ONE);
-      break;
-    }
+  case 0:
+    Graphic::SetBlendMode(GL_ZERO);
+    break;
+  case 1:
+    Graphic::SetBlendMode(GL_ONE_MINUS_SRC_ALPHA);
+    break;
+  case 2:
+    Graphic::SetBlendMode(GL_ONE);
+    break;
   }
-  else return;
 
   const DrawProperty &ti = current_prop_;
 

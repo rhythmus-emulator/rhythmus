@@ -12,16 +12,6 @@
 namespace rhythmus
 {
 
-// ----------------------- ThemeParameter
-
-ThemeParameter::ThemeParameter()
-{
-  memset(transcolor, 0, sizeof(transcolor));
-  begin_input_time = 0;
-  fade_in_time = fade_out_time = 0;
-  next_scene_time = 0;
-}
-
 // ---------------------------- SceneTask
 SceneTask::SceneTask(const std::string& name, std::function<void()> func)
   : name_(name), func_(std::move(func)), wait_time_(0), is_ran_(false) {}
@@ -131,7 +121,9 @@ void SceneTaskQueue::Update(float delta)
 // -------------------------------- Scene
 
 Scene::Scene()
-  : fade_time_(0), fade_duration_(0), is_input_available_(true),
+  : fade_time_(0), fade_duration_(0),
+    fade_in_time_(0), fade_out_time_(0),
+    is_input_available_(true), begin_input_time_(0), next_scene_time_(0),
     do_sort_objects_(false), enable_caching_(false),
     focused_object_(nullptr)
 {
@@ -167,41 +159,41 @@ void Scene::StartScene()
   TriggerFadeIn();
 
   // constraints for theme parameters
-  if (theme_param_.next_scene_time > 0)
+  if (next_scene_time_ > 0)
   {
-    if (theme_param_.begin_input_time > theme_param_.next_scene_time)
-      theme_param_.begin_input_time = theme_param_.next_scene_time;
+    if (begin_input_time_ > next_scene_time_)
+      begin_input_time_ = next_scene_time_;
   }
 
   // set input avail time
-  if (theme_param_.begin_input_time > 0)
+  if (begin_input_time_ > 0)
   {
     EnableInput(false);
     SceneTask *task = new SceneTask("inputenable", [this] {
       EnableInput(true);
     });
-    task->wait_for(theme_param_.begin_input_time);
+    task->wait_for(begin_input_time_);
     scenetask_.Enqueue(task);
-    event_time += theme_param_.begin_input_time;
+    event_time += begin_input_time_;
   }
 
   // set scenetime if necessary
-  if (theme_param_.next_scene_time > 0)
+  if (next_scene_time_ > 0)
   {
     EventManager::SendEvent("SceneChange");
     SceneTask *task = new SceneTask("timeout", [this] {
       this->CloseScene(true);
       EventManager::SendEvent("SceneTimeout");
     });
-    task->wait_for(theme_param_.next_scene_time - event_time);
+    task->wait_for(next_scene_time_ - event_time);
     scenetask_.Enqueue(task);
-    event_time += theme_param_.next_scene_time;
+    event_time += next_scene_time_;
   }
 }
 
 void Scene::FadeOutScene(bool next)
 {
-  float duration = theme_param_.fade_out_time;
+  float duration = fade_out_time_;
   if (duration <= 0)
   {
     // immediate close scene
@@ -219,7 +211,7 @@ void Scene::FadeOutScene(bool next)
   SceneTask *task = new SceneTask("fadeoutevent", [this, next] {
     this->CloseScene(next);
   });
-  task->wait_for(theme_param_.fade_out_time);
+  task->wait_for(fade_out_time_);
   scenetask_.DeleteAll();
   scenetask_.Enqueue(task);
   scenetask_.IsEnqueueable(false);
@@ -227,7 +219,7 @@ void Scene::FadeOutScene(bool next)
 
 void Scene::TriggerFadeIn()
 {
-  float duration = theme_param_.fade_in_time;
+  float duration = fade_in_time_;
   if (fade_duration_ != 0) return;
   fade_duration_ = duration;
   fade_time_ = 0;
@@ -317,11 +309,6 @@ void Scene::doRenderAfter()
     memcpy(Graphic::get_vertex_buffer(), vi, sizeof(VertexInfo) * 4);
     Graphic::RenderQuad();
   }
-}
-
-const ThemeParameter& Scene::get_theme_parameter() const
-{
-  return theme_param_;
 }
 
 }

@@ -362,13 +362,9 @@ void OptionList::Clear()
 
 // ------------------------- class Metric
 
-Metric::Metric(const std::string &name) : name_(name) {}
+Metric::Metric() {}
 
 Metric::~Metric() {}
-
-void Metric::set_name(const std::string &name) { name_ = name; }
-
-const std::string& Metric::name() const { return name_; }
 
 bool Metric::exist(const std::string &key) const
 {
@@ -675,9 +671,7 @@ Metric *MetricList::get_metric(const std::string &group)
 
 void MetricList::set(const std::string &group, const std::string &key, const std::string &v)
 {
-  auto it = metricmap_.find(group);
-  ASSERT_M(it != metricmap_.end(), "Metric group '" + group + "' is not found.");
-  it->second.set(key, v);
+  metricmap_[group].set(key, v);
 }
 
 void MetricList::set(const std::string &group, const std::string &key, int v)
