@@ -16,17 +16,13 @@ public:
   virtual void LoadScene();
   virtual void StartScene();
   virtual void CloseScene();
-  virtual bool ProcessEvent(const EventMessage& e);
+  virtual void ProcessInputEvent(const InputEvent& e);
 
-  virtual const std::string GetSceneName() const;
 private:
   Sprite spr_;
   Sprite spr2_;
   Sprite spr_bg_;
-  Font font_;
   Text text_;
-  ImageAuto img_movie_;
-  FontAuto lr2font_;
   Text lr2text_;
 };
 
