@@ -76,6 +76,8 @@ void Game::Loop()
     InputEventManager::Flush();
     EventManager::Flush();
 
+    ResourceManager::UpdateMovie();
+
     Graphic::Render();
   }
 }

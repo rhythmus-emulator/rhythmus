@@ -39,7 +39,6 @@ void TestScene::LoadScene()
 
   const std::string text_to_print = u8"Hello World!\nWith Line breaking\nあえいおう가나다ㅏ";
 
-  // TODO: call PrepareText() by default?
   text_.SetFontByPath(
     "../test/gyeonggi.ttf|"
     "size:12;fg:0xfffffff;border:2,0xff666666"
@@ -51,12 +50,11 @@ void TestScene::LoadScene()
   //text_.SetSize(200, 300);
   text_.SetAlignment(TextAlignments::kTextAlignStretch);
 
-  // TODO: SetLoopMove(true) to image.
   spr_bg_.SetImageByPath("../test/msel.mpg");
   spr_bg_.SetPos(0, 0);
   spr_bg_.SetSize(800, 480);
 
-  // TODO: SetNullGlyphAsCodePoint
+  lr2text_.font()->SetNullGlyphAsCodePoint(L'?');
   lr2text_.SetFontByPath("../test/artistfnt.dxa");
   lr2text_.SetText(u8"1234abcdΘΙΚΛあえいおう楽しい熙ⅷ黑");
   //lr2text_.SetText(u8"!\"#$%&'()/df");
@@ -70,8 +68,6 @@ void TestScene::LoadScene()
   AddChild(&spr2_);
   AddChild(&text_);
   AddChild(&lr2text_);
-
-  // TODO: RegisterImage for movie update!
 }
 
 void TestScene::CloseScene()

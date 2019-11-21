@@ -59,6 +59,16 @@ Font *CreateObjectFromPath(const std::string &path)
 template <typename T>
 class ObjectPoolWithName
 {
+private:
+  struct ObjectWithSharedCnt
+  {
+    size_t count;
+    std::unique_ptr<T> obj;
+  };
+
+  std::mutex mutex_;
+  std::map<std::string, ObjectWithSharedCnt> objects_;
+
 public:
   T* Load(const std::string &path)
   {
@@ -108,15 +118,9 @@ public:
     return objects_.find(name) != objects_.end();
   }
 
-private:
-
-  struct ObjectWithSharedCnt
-  {
-    size_t count;
-    std::unique_ptr<T> obj;
-  };
-  std::mutex mutex_;
-  std::map<std::string, ObjectWithSharedCnt> objects_;
+  typedef std::map<std::string, ObjectWithSharedCnt>::iterator iterator;
+  iterator begin() { return object_.begin(); }
+  iterator end() { return object_.end(); }
 };
 
 static ObjectPoolWithName<Image> gImgpool;
@@ -162,6 +166,14 @@ template <> Font*
 ResourceManager::LoadObject(const std::string &path) { return LoadFont(path); }
 template <> void
 ResourceManager::UnloadObject(Font *img) { UnloadFont(img); }
+
+void ResourceManager::UpdateMovie()
+{
+  // Update images
+  float delta = Timer::GetGameTimeDelta();
+  for (const auto& it : gImgpool)
+    it.second.obj->Update(delta);
+}
 
 ResourceManager& ResourceManager::getInstance()
 {

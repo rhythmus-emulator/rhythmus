@@ -39,6 +39,7 @@ void Text::SetText(const std::string& s)
   Clear();
 
   text_ = s;
+  font_->PrepareText(s);
   font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
 
   for (const auto& tvi : text_render_ctx_.textvertex)
@@ -70,6 +71,8 @@ void Text::Clear()
   text_render_ctx_.height = text_render_ctx_.width = 0;
   text_.clear();
 }
+
+Font *Text::font() { return font_; }
 
 void Text::doUpdate(float)
 {

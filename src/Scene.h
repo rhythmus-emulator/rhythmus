@@ -74,16 +74,7 @@ public:
   /* @brief Event processing */
   virtual void ProcessInputEvent(const InputEvent& e);
 
-  /* @brief Add images to be updated constantly. e.g. Movie */
-  void RegisterImage(ImageAuto img);
-
 protected:
-  // image resources loaded by this scene
-  std::vector<ImageAuto> images_;
-
-  // font resource loaded by this scene
-  std::vector<FontAuto> fonts_;
-
   // generally used scene queued tasks
   SceneTaskQueue scenetask_;
 

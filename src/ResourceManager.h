@@ -29,6 +29,8 @@ public:
   template <typename T>
   static void UnloadObject(T* obj);
 
+  static void UpdateMovie();
+
   static ResourceManager& getInstance();
 
   static void CacheSystemDirectory();

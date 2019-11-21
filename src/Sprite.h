@@ -27,6 +27,8 @@ public:
 
   void ReplaySprite();
 
+  Image *image();
+
   /* @brief Load property(resource). */
   virtual void Load(const Metric &metric);
 

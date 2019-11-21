@@ -246,11 +246,6 @@ void Scene::ProcessInputEvent(const InputEvent& e)
   }
 }
 
-void Scene::RegisterImage(ImageAuto img)
-{
-  images_.push_back(img);
-}
-
 bool Scene::is_input_available() const
 {
   return is_input_available_;
@@ -258,10 +253,6 @@ bool Scene::is_input_available() const
 
 void Scene::doUpdate(float delta)
 {
-  // Update images
-  for (const auto& img: images_)
-    img->Update(delta);
-
   // scheduled events
   scenetask_.Update(delta);
 

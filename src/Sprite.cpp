@@ -45,6 +45,8 @@ void Sprite::ReplaySprite()
   eclipsed_time_ = 0;
 }
 
+Image *Sprite::image() { return img_; }
+
 void Sprite::Load(const Metric& metric)
 {
   BaseObject::Load(metric);

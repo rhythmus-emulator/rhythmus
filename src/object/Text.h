@@ -31,6 +31,8 @@ public:
   void SetLineBreaking(bool enable_line_break);
   void Clear();
 
+  Font *font();
+
 protected:
   virtual void doRender();
   virtual void doUpdate(float);
