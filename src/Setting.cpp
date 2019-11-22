@@ -558,7 +558,8 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     }
     else if (lr2name == "BAR_CENTER" || lr2name == "BAR_AVAILABLE")
     {
-      curr_metrics->set("MenuCenter", GetFirstParam(value));
+      curr_metrics->set("CenterIndex", GetFirstParam(value));
+      curr_metrics->set("PositionType", 1); /* use bar position */
     }
     else if (lr2name == "TRANSCLOLR")
     {
@@ -580,9 +581,40 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     {
       curr_metrics->set("Timeout", GetFirstParam(value));
     }
+    else if (lr2name == "LOADSTART")
+    {
+      // ignore this parameter
+    }
+    else if (lr2name == "LOADEND")
+    {
+      curr_metrics->set("LoadingDelay", GetFirstParam(value));
+    }
+    else if (lr2name == "PLAYSTART")
+    {
+      curr_metrics->set("ReadyDelay", GetFirstParam(value));
+    }
+    else if (lr2name == "SCRATCHSIDE")
+    {
+      curr_metrics->set("PlaySide", GetFirstParam(value));
+    }
     else if (lr2name == "HELPFILE")
     {
       // TODO
+    }
+    else if (lr2name == "SRC_BAR_BODY")
+    {
+      // TODO
+      // BarType1Sprite
+    }
+    else if (lr2name == "DST_BAR_BODY_ON")
+    {
+      // TODO
+    }
+    else if (lr2name == "DST_BAR_BODY_OFF")
+    {
+      // TODO
+      // Bar1OnLoad
+      // Reset Bar Count
     }
   }
 }

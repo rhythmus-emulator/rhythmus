@@ -41,8 +41,8 @@ public:
    * context is changed.
    * e.g. Change of song difficulty
    */
-  virtual void Load();
-  void set_data(MenuData* d);
+  virtual void Load(const Metric &metric);
+  virtual void set_data(MenuData* d);
   void set_focus(bool focused);
   MenuData* get_data();
 
@@ -102,8 +102,7 @@ public:
 
   /* TODO: curve & rot with z pos? */
 
-  virtual void LoadProperty(const std::string& prop_name, const std::string& value);
-  virtual void Load();
+  virtual void Load(const Metric &metric);
 
 protected:
   // select item data

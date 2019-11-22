@@ -7,30 +7,13 @@ namespace rhythmus
 DecideScene::DecideScene()
 {
   set_name("DecideScene");
-  // default action: go to GamePlay scene
-  next_scene_mode_ = GameSceneMode::kGameSceneModePlay;
+  prev_scene_ = "SelectScene";
+  next_scene_ = "PlayScene";
 }
 
-void DecideScene::LoadScene()
+void DecideScene::ProcessInputEvent(const InputEvent& e)
 {
-  Scene::LoadScene();
-}
-
-bool DecideScene::ProcessEvent(const EventMessage& e)
-{
-  if (e.IsKeyUp() && e.GetKeycode() == GLFW_KEY_ESCAPE)
-  {
-    // in case of song preload
-    SongResource::getInstance().CancelLoad();
-    next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
-    TriggerFadeOut();
-    return false;
-  }
-
-  if (!is_input_available())
-    return true;
-
-  return true;
+  Scene::ProcessInputEvent(e);
 }
 
 }

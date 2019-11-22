@@ -24,9 +24,10 @@ MenuItem::MenuItem()
 {
 }
 
-void MenuItem::Load()
+void MenuItem::Load(const Metric &metric)
 {
-  Sprite::Load();
+  // TODO
+  Sprite::Load(metric);
 }
 
 void MenuItem::set_data(MenuData* d)
@@ -55,8 +56,8 @@ Menu::Menu()
   memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
 
   // Set bar position expr param with default
-  pos_expr_param_.bar_offset_x = Game::getInstance().get_window_width() - 540;
-  pos_expr_param_.bar_center_y = Game::getInstance().get_window_height() / 2;
+  pos_expr_param_.bar_offset_x = Graphic::getInstance().width() - 540;
+  pos_expr_param_.bar_center_y = Graphic::getInstance().height() / 2;
   pos_expr_param_.bar_height = 40;
   pos_expr_param_.bar_width = 540;
   pos_expr_param_.bar_margin = 1;
@@ -209,7 +210,7 @@ void Menu::RebuildItems()
     if (item->get_data() == cur_data)
       continue; // no need to invalidate
     item->set_data(cur_data);
-    item->Load();
+    //item->Load();
   }
 }
 
@@ -359,8 +360,8 @@ void Menu::UpdateItemPosByFixed()
         obj1->get_draw_property(),
         obj2->get_draw_property(),
         ratio, EaseTypes::kEaseLinear);
-      bar_[i]->LoadDrawProperty(d);
-      //bar_[i]->Show();
+      // TODO: apply alpha?
+      bar_[i]->SetPos(d.x, d.y);
     }
   }
 }
@@ -369,64 +370,31 @@ void Menu::doRender()
 {
 }
 
-void Menu::LoadProperty(const std::string& prop_name, const std::string& value)
-{
-  /* LR2 type commands */
-  if (prop_name == "#DST_BAR_BODY_ON")
-  {
-    pos_method_ =
-      MenuPosMethod::kMenuPosFixed;
-
-    int attr = atoi(GetFirstParam(value).c_str());
-    if (attr < 0 || attr >= kDefaultBarCount) return;
-    pos_fixed_param_.tween_bar_focus[attr].LoadProperty(prop_name, value);
-
-    if (attr > display_count_) display_count_ = attr;
-  }
-  else if (prop_name == "#DST_BAR_BODY_OFF")
-  {
-    // set pos type automatically
-    pos_method_ =
-      MenuPosMethod::kMenuPosFixed;
-
-    int attr = atoi(GetFirstParam(value).c_str());
-    if (attr < 0 || attr > kDefaultBarCount) return;
-    pos_fixed_param_.tween_bar[attr].LoadProperty(prop_name, value);
-
-    if (attr > display_count_) display_count_ = attr;
-  }
-  else if (prop_name == "#SRC_BAR_BODY")
-  {
-    int attr = atoi(GetFirstParam(value).c_str());
-    if (attr < 0 || attr >= 30) return;
-
-    Sprite *spr = new Sprite();
-    spr->set_name("BARIMG" + std::to_string(attr));
-    RegisterChild(spr);
-    AddChild(spr);
-
-    // not for rendering but for updating
-    spr->Hide();
-
-    spr->LoadProperty(prop_name, value);
-  }
-  else if (prop_name == "#BAR_CENTER")
-  {
-    int idx = atoi(GetFirstParam(value).c_str());
-    set_focus_max_index(idx);
-    set_focus_min_index(idx);
-    set_focus_index(idx);
-
-  }
-}
-
 MenuItem* Menu::CreateMenuItem()
 {
   return new MenuItem();
 }
 
-void Menu::Load()
+void Menu::Load(const Metric &metric)
 {
+  pos_method_ = metric.get<int>("PositionType");
+  int center_index = metric.get<int>("CenterIndex");
+  if (center_index)
+  {
+    set_focus_max_index(center_index);
+    set_focus_min_index(center_index);
+    set_focus_index(center_index);
+  }
+  int barcount = metric.get<int>("BarCount");
+  set_display_count(barcount);
+  for (int i = 0; i < barcount; ++i)
+  {
+    // TODO: need to make new metric for this bar?
+    // Bar1OnLoad --> OnLoad ?
+    pos_fixed_param_.tween_bar[i].Load(metric);
+  }
+
+  // Load sounds XXX: here?
   wheel_sound_.Load();
 
   // Build item and set basic position

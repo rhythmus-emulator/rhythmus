@@ -20,24 +20,11 @@ MusicWheelData* MusicWheelItem::get_data()
   return static_cast<MusicWheelData*>(MenuItem::get_data());
 }
 
-void MusicWheelItem::Load()
+void MusicWheelItem::set_data(MusicWheelData* d)
 {
-  if (!get_data())
-    return;
-
-  // set Sprite background
-  Sprite* obj =
-    dynamic_cast<Sprite*>(get_parent()->FindChildByName(
-      "BARIMG" + std::to_string(get_data()->type)
-    ));
-  if (obj)
-    LoadSprite(*obj);
-
-  // update title text
+  SetImage(((MusicWheel*)get_parent())->select_bar_img_[d->type]);
   title().SetText(get_data()->title);
-
-  // update level text
-  // TODO
+  // TODO: update level text
 }
 
 
@@ -45,12 +32,18 @@ void MusicWheelItem::Load()
 
 MusicWheel::MusicWheel()
 {
+  set_name("MusicWheel");
   set_infinite_scroll(true);
   set_display_count(24);
   set_focus_max_index(12);
   set_focus_min_index(12);
   set_focus_index(12);
   wheel_sound_.set_name("");
+}
+
+MusicWheel::~MusicWheel()
+{
+  Clear();
 }
 
 MusicWheelData& MusicWheel::get_data(int dataindex)
@@ -67,34 +60,35 @@ MenuItem* MusicWheel::CreateMenuItem()
 {
   MusicWheelItem* item = new MusicWheelItem();
   item->set_parent(this);
-  item->title().SetFontByName(title_font_);
-  item->title().LoadTween(title_dst_);
+  item->title().SetFontByPath(title_font_);
+  item->title().RunCommand("OnLoad", title_dst_);
   item->title().Show();
   return item;
 }
 
-void MusicWheel::LoadProperty(const std::string& prop_name, const std::string& value)
+void SetBarTypeCount(size_t typesize)
 {
-  if (prop_name == "#SRC_BAR_TITLE")
-  {
-    // MUST be called after BAR_BODY commands
-    std::vector<std::string> params;
-    MakeParamCountSafe(value, params, 2);
-    if (params[0] != "0") return;
-    title_font_ = params[1];
-    return;
-  }
-  else if (prop_name == "#DST_BAR_TITLE")
-  {
-    // TODO: only for "0" attribute now ...
-    std::string wh = GetFirstParam(value);
-    if (wh != "0") return;
-    title_dst_.LoadProperty(prop_name, value);
-    return;
-  }
-  // TODO: BAR_LEVEL, ...
 
-  Menu::LoadProperty(prop_name, value);
+}
+
+void MusicWheel::Load(const Metric &metric)
+{
+  Menu::Load(metric);
+
+  title_font_ = metric.get<std::string>("BarTitleFont");
+  title_dst_ = metric.get<std::string>("BarTitleFontOnLoad");
+  bar_type_count_ = metric.get<int>("BarType");
+  for (size_t i = 0; i < bar_type_count_; ++i)
+  {
+    select_bar_img_[i] = ResourceManager::LoadImage(
+      metric.get<std::string>("BarType" + std::to_string(i))
+    );
+  }
+}
+
+void MusicWheel::Clear()
+{
+  bar_type_count_ = 0;
 }
 
 }

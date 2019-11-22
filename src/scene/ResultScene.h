@@ -9,10 +9,7 @@ class ResultScene : public Scene
 {
 public:
   ResultScene();
-  virtual void LoadScene();
-  virtual void StartScene();
-  virtual void CloseScene();
-  virtual bool ProcessEvent(const EventMessage& e);
+  virtual void ProcessInputEvent(const InputEvent& e);
 };
 
 }

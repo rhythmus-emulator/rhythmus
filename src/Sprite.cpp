@@ -9,7 +9,8 @@ namespace rhythmus
 {
 
 Sprite::Sprite()
-  : img_(nullptr), divx_(1), divy_(1), cnt_(1), interval_(0), blending_(1),
+  : img_(nullptr), img_owned_(true),
+    divx_(1), divy_(1), cnt_(1), interval_(0), blending_(1),
     idx_(0), eclipsed_time_(0),
     sx_(0), sy_(0), sw_(1.0f), sh_(1.0f), tex_attribute_(0)
 {
@@ -17,7 +18,8 @@ Sprite::Sprite()
 
 Sprite::~Sprite()
 {
-  ResourceManager::UnloadImage(img_);
+  if (img_ && img_owned_)
+    ResourceManager::UnloadImage(img_);
 }
 
 void Sprite::SetImageByPath(const std::string &path)
@@ -25,14 +27,24 @@ void Sprite::SetImageByPath(const std::string &path)
   Image *img = ResourceManager::LoadImage(path);
   if (!img)
     return;
-  if (img_)
+  if (img_ && img_owned_)
     ResourceManager::UnloadImage(img_);
 
   img_ = img;
+  img_owned_ = true;
 
   /* default image src set */
   sx_ = sy_ = 0.f;
   sw_ = sh_ = 1.f;
+}
+
+void Sprite::SetImage(Image *img)
+{
+  if (img_ && img_owned_)
+    ResourceManager::UnloadImage(img_);
+
+  img_ = img;
+  img_owned_ = false;
 }
 
 void Sprite::SetBlend(int blend_mode)

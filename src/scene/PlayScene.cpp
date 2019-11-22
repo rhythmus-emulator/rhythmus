@@ -11,15 +11,32 @@ PlayScene::PlayScene()
 {
   set_name("PlayScene");
 
-  memset(&theme_play_param_, 0, sizeof(theme_play_param_));
-
-  // next scene: result
-  next_scene_mode_ = GameSceneMode::kGameSceneModeResult;
+  // TODO: check for bootmode
+  next_scene_ = "ResultScene";
+  prev_scene_ = "SelectScene";
 }
 
 void PlayScene::LoadScene()
 {
   Scene::LoadScene();
+
+  Metric *metric = Setting::GetThemeMetricList().get_metric(get_name());
+  ASSERT(metric);
+  theme_play_param_.load_wait_time = metric->get<int>("LoadingDelay");
+  theme_play_param_.ready_time = metric->get<int>("ReadyDelay");
+
+  // TODO
+  size_t lanecount = 7;
+  for (size_t i = 0; i < lanecount; ++i)
+  {
+    AddChild(&notefield_[i]);
+    notefield_[i].set_player_id(0);
+    notefield_[i].set_track_idx(i);
+
+    // TODO: create new metric for notefield?
+    // Lane1OnLoad --> OnLoad
+    notefield_[i].Load(*metric);
+  }
 
   // TODO: enqueue event: song loading
   // TODO: If course, enqueue charts to player.
@@ -31,7 +48,7 @@ void PlayScene::LoadScene()
     std::string song_path;
     if (!Game::getInstance().pop_song(song_path))
     {
-      CloseScene();
+      CloseScene(false);
       return;
     }
     SongResource::getInstance().LoadSong(song_path);
@@ -46,11 +63,11 @@ void PlayScene::StartScene()
   // trigger event force to trigger some related events.
   if (Game::getInstance().get_boot_mode() == GameBootMode::kBootPlay)
   {
-    EventManager::SendEvent(Events::kEventSongSelectChanged);
+    EventManager::SendEvent("SongSelectChanged");
   }
 
   // send loading event
-  EventManager::SendEvent(Events::kEventPlayLoading);
+  EventManager::SendEvent("PlayLoading");
 
   // enqueue event: after song resource loading
   {
@@ -66,7 +83,7 @@ void PlayScene::StartScene()
       END_EACH_PLAYER()
 
       // trigger song ready event
-      EventManager::SendEvent(Events::kEventPlayReady);
+      EventManager::SendEvent("PlayReady");
     });
     task->wait_for(theme_play_param_.load_wait_time);
     task->wait_cond([this] {
@@ -79,7 +96,7 @@ void PlayScene::StartScene()
   {
     SceneTask *task = new SceneTask("songplaytask", [this] {
       // trigger song play event
-      EventManager::SendEvent(Events::kEventPlayStart);
+      EventManager::SendEvent("PlayStart");
 
       // Play song & trigger players to start
       FOR_EACH_PLAYER(p, i)
@@ -96,7 +113,7 @@ void PlayScene::StartScene()
   // enqueue event: song finished
   {
     SceneTask *task = new SceneTask("songfinishedtask", [this] {
-      this->CloseScene();
+      this->CloseScene(true);
       this->play_status_ = 3;
     });
     task->wait_cond([this] {
@@ -109,22 +126,25 @@ void PlayScene::StartScene()
   Scene::StartScene();
 }
 
-void PlayScene::CloseScene()
+void PlayScene::CloseScene(bool next)
 {
-  // Save record & replay for all players
-  FOR_EACH_PLAYER(p, i)
+  if (next)
   {
-    if (p->GetPlayContext())
-      p->GetPlayContext()->SavePlay();
+    // Save record & replay for all players
+    FOR_EACH_PLAYER(p, i)
+    {
+      if (p->GetPlayContext())
+        p->GetPlayContext()->SavePlay();
+    }
+    END_EACH_PLAYER()
   }
-  END_EACH_PLAYER()
 
-  Scene::CloseScene();
+  Scene::CloseScene(next);
 }
 
-bool PlayScene::ProcessEvent(const EventMessage& e)
+void PlayScene::ProcessInputEvent(const InputEvent& e)
 {
-  if (e.IsKeyDown() && e.GetKeycode() == GLFW_KEY_ESCAPE)
+  if (e.type() == InputEvents::kOnKeyDown && e.KeyCode() == GLFW_KEY_ESCAPE)
   {
     FOR_EACH_PLAYER(p, i)
     {
@@ -133,12 +153,12 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
     }
     END_EACH_PLAYER()
     SongResource::getInstance().CancelLoad();
-    TriggerFadeOut();
-    return false;
+    FadeOutScene(false);
+    return;
   }
 
   if (!is_input_available())
-    return true;
+    return;
 
   FOR_EACH_PLAYER(p, i)
   {
@@ -146,8 +166,6 @@ bool PlayScene::ProcessEvent(const EventMessage& e)
       p->GetPlayContext()->ProcessInputEvent(e);
   }
   END_EACH_PLAYER()
-
-  return true;
 }
 
 void PlayScene::doUpdate(float delta)
@@ -168,45 +186,6 @@ void PlayScene::doUpdate(float delta)
       p->GetPlayContext()->Update(delta);
   }
   END_EACH_PLAYER()
-}
-
-void PlayScene::LoadProperty(const std::string& prop_name, const std::string& value)
-{
-  if (prop_name == "#SCRATCHSIDE")
-  {
-    theme_play_param_.playside = atoi(value.c_str());
-  }
-  else if (prop_name == "#LOADSTART")
-  {
-    // ignore this parameter
-    //theme_play_param_.loadend_wait_time += atoi(value.c_str());
-  }
-  else if (prop_name == "#LOADEND")
-  {
-    theme_play_param_.load_wait_time = atoi(value.c_str());
-  }
-  else if (prop_name == "#PLAYSTART")
-  {
-    theme_play_param_.ready_time = atoi(value.c_str());
-  }
-  else if (prop_name == "#SRC_NOTE")
-  {
-    std::vector<std::string> params;
-    MakeParamCountSafe(value, params, 13);
-    size_t i = atoi(params[0].c_str());
-    notefield_[i].set_player_id(0);
-    notefield_[i].set_track_idx(i);
-    notefield_[i].LoadProperty(prop_name, value);
-    AddChild(&notefield_[i]);
-  }
-  else if (prop_name == "#DST_NOTE")
-  {
-    std::vector<std::string> params;
-    MakeParamCountSafe(value, params, 3);
-    size_t i = atoi(params[0].c_str());
-    notefield_[i].LoadProperty(prop_name, value);
-  }
-  else Scene::LoadProperty(prop_name, value);
 }
 
 }

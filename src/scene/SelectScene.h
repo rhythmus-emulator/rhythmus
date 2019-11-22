@@ -14,13 +14,8 @@ public:
   SelectScene();
 
   virtual void LoadScene();
-  virtual void StartScene();
-  virtual void CloseScene();
-  virtual bool ProcessEvent(const EventMessage& e);
-
-  virtual void LoadProperty(const std::string& prop_name, const std::string& value);
-
-  MusicWheel& get_wheel();
+  virtual void CloseScene(bool next);
+  virtual void ProcessInputEvent(const InputEvent& e);
 
 private:
   MusicWheel wheel_;

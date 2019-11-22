@@ -6,35 +6,21 @@ namespace rhythmus
 ResultScene::ResultScene()
 {
   set_name("ResultScene");
-  next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
+
+  // TODO: check for bootmode to decide next scene
+  next_scene_ = "SelectScene";
+  prev_scene_ = "SelectScene";
 }
 
-void ResultScene::LoadScene()
-{
-  Scene::LoadScene();
-}
-
-void ResultScene::StartScene()
-{
-}
-
-void ResultScene::CloseScene()
-{
-  Scene::CloseScene();
-}
-
-bool ResultScene::ProcessEvent(const EventMessage& e)
+void ResultScene::ProcessInputEvent(const InputEvent& e)
 {
   if (!is_input_available())
-    return true;
+    return;
 
-  if (e.IsKeyDown())
+  if (e.type() == InputEvents::kOnKeyUp)
   {
-    TriggerFadeOut();
-    return false;
+    FadeOutScene(true);
   }
-
-  return true;
 }
 
 }

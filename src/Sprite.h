@@ -15,8 +15,13 @@ public:
   Sprite(const Sprite& spr) = default;
   virtual ~Sprite();
 
-  /* Set sprite's image */
+  /* Set sprite's image by path */
   void SetImageByPath(const std::string &path);
+
+  /* Set sprite's image by prefetch image.
+   * @warn The image is not owned by this sprite,
+   * so be aware of texture leaking. */
+  void SetImage(Image *img);
   
   /**
    * 0: Don't use blending (always 100% alpha)
@@ -34,6 +39,7 @@ public:
 
 protected:
   Image *img_;
+  bool img_owned_;
 
   // sprite animation property
   // divx : sprite division by x pos

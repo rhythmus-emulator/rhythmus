@@ -194,7 +194,7 @@ public:
   bool is_alive() const;
   bool is_finished() const;
 
-  void ProcessInputEvent(const EventMessage& e);
+  void ProcessInputEvent(const InputEvent& e);
 
   void Update(float delta);
 
@@ -306,7 +306,8 @@ public:
 private:
   std::string player_name_;
   PlayerTypes player_type_;
-  Setting setting_;
+  OptionList config_;
+  std::string config_path_;
   bool is_guest_;
 
 #define USER_PROP(type, varname) \

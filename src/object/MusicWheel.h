@@ -31,7 +31,7 @@ public:
   Text& title();
   NumberText& level();
   MusicWheelData* get_data();
-  virtual void Load();
+  virtual void set_data(MusicWheelData* d);
 
 protected:
   Text title_;
@@ -42,19 +42,25 @@ class MusicWheel : public Menu
 {
 public:
   MusicWheel();
-  MusicWheelData& get_data(int dataindex);
-  MusicWheelData& get_selected_data(int player_num);
+  ~MusicWheel();
 
-  void LoadProperty(const std::string& prop_name, const std::string& value);
+  MusicWheelData &get_data(int dataindex);
+  MusicWheelData &get_selected_data(int player_num);
+
+  virtual void Load(const Metric &metric);
+  friend class MusicWheelItem;
 
 private:
+  size_t bar_type_count_;
+
   // textures for each bar type
-  Sprite* select_bar_src_[NUM_SELECT_BAR_TYPES];
+  Image *select_bar_img_[NUM_SELECT_BAR_TYPES];
 
   std::string title_font_;
-  BaseObject title_dst_;
+  std::string title_dst_;
 
   virtual MenuItem* CreateMenuItem();
+  void Clear();
 };
 
 }

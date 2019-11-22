@@ -552,11 +552,8 @@ bool PlayContext::is_finished() const
   return true;
 }
 
-void PlayContext::ProcessInputEvent(const EventMessage& e)
+void PlayContext::ProcessInputEvent(const InputEvent& e)
 {
-  if (!e.IsInput())
-    return;
-
   // get track from keycode setting
   int track_no = -1;
   for (size_t i = 0; i < kMaxTrackSize; ++i)
@@ -565,7 +562,7 @@ void PlayContext::ProcessInputEvent(const EventMessage& e)
     {
       if (player_.curr_keysetting_->keycode_per_track_[i][j] == 0)
         break;
-      if (player_.curr_keysetting_->keycode_per_track_[i][j] == e.GetKeycode())
+      if (player_.curr_keysetting_->keycode_per_track_[i][j] == e.KeyCode())
       {
         track_no = i;
         break;
@@ -581,9 +578,10 @@ void PlayContext::ProcessInputEvent(const EventMessage& e)
   auto *obj = track_context_[track_no].get_curr_judged_note();
   if (obj)
   {
-    double judgetime = (e.GetTime() - Timer::GetGameTime()) * 1000 + songtime_;
+    double judgetime = (e.time() - Timer::GetGameTime()) * 1000 + songtime_;
     int event_type = JudgeEventTypes::kJudgeEventDown;
-    if (e.IsKeyUp()) event_type = JudgeEventTypes::kJudgeEventUp;
+    if (e.type() == InputEvents::kOnKeyUp)
+      event_type = JudgeEventTypes::kJudgeEventUp;
 
     // sound first before judgement
     // TODO: get sounding object before judgement
@@ -675,23 +673,7 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
   default_keysetting_.keycode_per_track_[7][0] = GLFW_KEY_LEFT_SHIFT;
   default_keysetting_.keycode_per_track_[7][1] = GLFW_KEY_SEMICOLON;
   curr_keysetting_ = &default_keysetting_;
-}
 
-Player::~Player()
-{
-  Save();
-}
-
-void Player::Load()
-{
-  if (!setting_.Open(format_string(
-    "../player/%s.xml",
-    player_name_.c_str())))
-  {
-    std::cerr << "Cannot load player preference (maybe default setting will used)"
-      << std::endl;
-    return;
-  }
   // TODO: use preset options like game setting does
 #if 0
   setting_.Load<double>("speed", game_speed_);
@@ -711,6 +693,23 @@ void Player::Load()
   setting_.Load<int>("bms_dp_class", bms_dp_class_);
 #endif
 
+  config_path_ = format_string("../player/%s.xml", player_name_.c_str());
+}
+
+Player::~Player()
+{
+  Save();
+}
+
+void Player::Load()
+{
+  if (!config_.ReadFromFile(config_path_))
+  {
+    std::cerr << "Cannot load player preference (maybe default setting will used)"
+      << std::endl;
+    return;
+  }
+
   // TODO: load keysetting
 }
 
@@ -719,7 +718,7 @@ void Player::Save()
   if (is_guest_)
     return;
 
-  setting_.Save();
+  config_.SaveToFile(config_path_);
 }
 
 /* @warn: must load proper song to SongResource instance before this function. */
