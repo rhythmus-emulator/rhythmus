@@ -18,8 +18,6 @@ namespace rhythmus
 SceneManager::SceneManager()
   : current_scene_(nullptr), next_scene_(nullptr)
 {
-  memset(visible_groups_, 0, sizeof(visible_groups_));
-  visible_groups_[0] = 1;
 }
 
 SceneManager::~SceneManager()
@@ -55,9 +53,6 @@ void SceneManager::Cleanup()
 
 void SceneManager::Update()
 {
-  // Tick all scenemanager related timer
-  timer_scene_.Tick();
-
   // check is it necessary to change scene
   // StartScene is called here (time critical process)
   if (next_scene_)
@@ -68,18 +63,13 @@ void SceneManager::Update()
 
     current_scene_->StartScene();
 
-    // Reset SceneManager timer
-    // Need to refresh whole timing to set exact scene start timing
+    // Need to refresh game timer to set exact scene start timing
     // As much time passed due to scene loading.
     Timer::Update();
-    timer_scene_.Start();
   }
 
-  // Update LR2Flag (LR2 compatible layer)
-  LR2Flag::Update();
-
   if (current_scene_)
-    current_scene_->Update(timer_scene_.GetDeltaTime() * 1000);
+    current_scene_->Update(Timer::SystemTimer().GetDeltaTime() * 1000);
 }
 
 void SceneManager::Render()
@@ -100,32 +90,10 @@ Scene* SceneManager::get_current_scene()
 }
 
 
-Timer& SceneManager::GetSceneTimer()
-{
-  return getInstance().timer_scene_;
-}
-
-uint32_t SceneManager::GetSceneTickTime()
-{
-  return getInstance().timer_scene_.GetDeltaTimeInMillisecond();
-}
-
 SceneManager& SceneManager::getInstance()
 {
   static SceneManager scenemanager_;
   return scenemanager_;
-}
-
-int SceneManager::getVisible(size_t index)
-{
-  if (index >= 1000) return;
-  return getInstance().visible_groups_[index];
-}
-
-void SceneManager::setVisible(size_t index, int value)
-{
-  if (index >= 1000) return;
-  getInstance().visible_groups_[index] = value;
 }
 
 void SceneManager::ChangeScene(const std::string &scene_name)

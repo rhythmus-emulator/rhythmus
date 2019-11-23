@@ -578,7 +578,8 @@ void PlayContext::ProcessInputEvent(const InputEvent& e)
   auto *obj = track_context_[track_no].get_curr_judged_note();
   if (obj)
   {
-    double judgetime = (e.time() - Timer::GetGameTime()) * 1000 + songtime_;
+    double judgetime =
+      (e.time() - Timer::SystemTimer().GetTime()) * 1000 + songtime_;
     int event_type = JudgeEventTypes::kJudgeEventDown;
     if (e.type() == InputEvents::kOnKeyUp)
       event_type = JudgeEventTypes::kJudgeEventUp;

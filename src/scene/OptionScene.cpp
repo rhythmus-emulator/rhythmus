@@ -102,7 +102,8 @@ void BuildOptions()
 OptionScene::OptionScene() : option_mode_(1)
 {
   BuildOptions();
-  next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
+  next_scene_ = "SelectScene";
+  prev_scene_ = "SelectScene";
 }
 
 void OptionScene::LoadScene()
@@ -124,29 +125,32 @@ void OptionScene::StartScene()
   Scene::StartScene();
 }
 
-void OptionScene::CloseScene()
+void OptionScene::CloseScene(bool next)
 {
-  ApplyOptions();
-  Scene::CloseScene();
+  if (next)
+  {
+    ApplyOptions();
+  }
+  Scene::CloseScene(next);
 }
 
-bool OptionScene::ProcessEvent(const EventMessage& e)
+void OptionScene::ProcessInputEvent(const InputEvent& e)
 {
   if (is_input_available())
-    return true;
+    return;
 
-  if (e.IsKeyUp())
+  if (e.type() == InputEvents::kOnKeyUp)
   {
-    if (e.GetKeycode() == GLFW_KEY_ENTER)
+    /*if (e.KeyCode() == GLFW_KEY_ENTER)
     {
       EnterOptionItem();
     }
-    else if (e.GetKeycode() == GLFW_KEY_ESCAPE)
+    else */
+    if (e.KeyCode() == GLFW_KEY_ESCAPE)
     {
       EscapeOptionItem();
     }
   }
-  return true;
 }
 
 void OptionScene::EnterOptionItem()
@@ -161,7 +165,7 @@ void OptionScene::EnterOptionItem()
 void OptionScene::EscapeOptionItem()
 {
   //BuildOptionItemData();
-  CloseScene();
+  CloseScene(false);
 }
 
 void OptionScene::BuildOptionItemData()

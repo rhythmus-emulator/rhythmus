@@ -2,6 +2,7 @@
 #include "SceneManager.h"
 #include "Setting.h"
 #include "Util.h"
+#include "Script.h"
 #include <iostream>
 
 namespace rhythmus
@@ -184,6 +185,9 @@ void BaseObject::QueueCommand(const std::string &command)
 
 void BaseObject::Load(const Metric& metric)
 {
+  // create command function table
+  CreateCommandFnMap();
+
   // process event handler registering
   // XXX: is this code is good enough?
   for (auto it = metric.cbegin(); it != metric.cend(); ++it)
@@ -212,7 +216,7 @@ void BaseObject::Load(const Metric& metric)
     }
 
     /* create message handler & set op code */
-    AddCommand("LR" + timer + "On", cmd + ";loop:" + v[4]);
+    AddCommand("LR" + timer, cmd + ";loop:" + v[4]);
     AddCommand("LR" + timer + "Off", "hide");
     SetVisibleGroup(
       atoi(v[1].c_str()), atoi(v[2].c_str()), atoi(v[3].c_str())
@@ -572,9 +576,9 @@ void BaseObject::SetTweenLoopTime(uint32_t time_msec)
 
 bool BaseObject::IsVisible() const
 {
-  if (SceneManager::getVisible(visible_group_[0]) == 0
-    || SceneManager::getVisible(visible_group_[1]) == 0
-    || SceneManager::getVisible(visible_group_[2]) == 0)
+  if (Script::getInstance().GetFlag(visible_group_[0]) == 0
+    || Script::getInstance().GetFlag(visible_group_[1]) == 0
+    || Script::getInstance().GetFlag(visible_group_[2]) == 0)
     return false;
 
   return current_prop_.display &&
@@ -593,8 +597,6 @@ bool BaseObject::IsTweening() const
 // milisecond
 void BaseObject::Update(float delta)
 {
-  if (!IsUpdatable())
-    return;
   UpdateTween(delta);
   doUpdate(delta);
   for (auto* p : children_)
@@ -627,7 +629,6 @@ void BaseObject::doUpdate(float delta) {}
 void BaseObject::doRender() {}
 void BaseObject::doUpdateAfter(float delta) {}
 void BaseObject::doRenderAfter() {}
-bool BaseObject::IsUpdatable() { return true; }
 
 
 #define TWEEN_ATTRS \
@@ -726,37 +727,43 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
   }
 }
 
+void BaseObject::LoadFromLR2SRC(const std::string &cmd)
+{
+  /* implemented later */
+}
+
 /* ---------------------------- Command related */
 
-CommandFnMap& BaseObject::GetCommandFnMap() const
+const CommandFnMap& BaseObject::GetCommandFnMap() const
 {
-  static CommandFnMap cmdfnmap;
-  if (cmdfnmap.empty())
-  {
-    cmdfnmap["pos"] = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->SetPos(args.Get<int>(0), args.Get<int>(1));
-    };
-    cmdfnmap["lr2cmd"] = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->SetLR2DST(
-        args.Get<int>(0), /* time */
-        args.Get<int>(1), args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), /* xywh */
-        args.Get<int>(5), /* acc_type */
-        args.Get<int>(6), args.Get<int>(7), args.Get<int>(8), args.Get<int>(9), /* argb */
-        args.Get<int>(10), args.Get<int>(11), args.Get<int>(12), /* blend, filter */
-        args.Get<int>(13), args.Get<int>(14) /* center, loop */
-      );
-    };
-    cmdfnmap["show"] = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->Show();
-    };
-    cmdfnmap["hide"] = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->Hide();
-    };
-    cmdfnmap["loop"] = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->SetTweenLoopTime((uint32_t)args.Get<int>(0));
-    };
-  }
-  return cmdfnmap;
+  return cmdfnmap_;
+}
+
+void BaseObject::CreateCommandFnMap()
+{
+  cmdfnmap_.clear();
+  cmdfnmap_["pos"] = [](void *o, CommandArgs& args) {
+    static_cast<BaseObject*>(o)->SetPos(args.Get<int>(0), args.Get<int>(1));
+  };
+  cmdfnmap_["lr2cmd"] = [](void *o, CommandArgs& args) {
+    static_cast<BaseObject*>(o)->SetLR2DST(
+      args.Get<int>(0), /* time */
+      args.Get<int>(1), args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), /* xywh */
+      args.Get<int>(5), /* acc_type */
+      args.Get<int>(6), args.Get<int>(7), args.Get<int>(8), args.Get<int>(9), /* argb */
+      args.Get<int>(10), args.Get<int>(11), args.Get<int>(12), /* blend, filter */
+      args.Get<int>(13), args.Get<int>(14) /* center, loop */
+    );
+  };
+  cmdfnmap_["show"] = [](void *o, CommandArgs& args) {
+    static_cast<BaseObject*>(o)->Show();
+  };
+  cmdfnmap_["hide"] = [](void *o, CommandArgs& args) {
+    static_cast<BaseObject*>(o)->Hide();
+  };
+  cmdfnmap_["loop"] = [](void *o, CommandArgs& args) {
+    static_cast<BaseObject*>(o)->SetTweenLoopTime((uint32_t)args.Get<int>(0));
+  };
 }
 
 }

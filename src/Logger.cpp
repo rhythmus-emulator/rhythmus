@@ -26,7 +26,7 @@ private:
 
 void Logger::Initialize()
 {
-  if (Setting::GetSystemSetting().GetOption("Logging")->value() == "true")
+  if (Setting::GetSystemSetting().GetOption("Logging")->value<bool>())
   {
     Logger::getInstance().log_path_ = "../log/log.txt";
     Logger::getInstance().StartLogging();
@@ -73,7 +73,7 @@ void Logger::StartLogging()
 {
   FinishLogging();
   const char *mode = "w";
-  f_ = fopen(Game::getInstance().get_log_path().c_str(), mode);
+  f_ = fopen(log_path_.c_str(), mode);
   if (!f_) return;  // log starting failed
   Info("Logging started.");
 }
@@ -135,7 +135,7 @@ void Logger::Log_Internal(int level, const char* msg, va_list l)
   if (msg[0] == 0) return;
 
   char time_str[64];
-  uint32_t cur_time = Timer::GetGameTimeInMillisecond();
+  uint32_t cur_time = Timer::SystemTimer().GetTimeInMillisecond();
   uint32_t
     th = cur_time / 3600 / 1000 % 100,
     tm = cur_time / 60 / 1000 % 60,

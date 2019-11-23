@@ -1,5 +1,6 @@
 #include "Text.h"
 #include "ResourceManager.h"
+#include "Script.h"
 #include <algorithm>
 
 RHYTHMUS_NAMESPACE_BEGIN
@@ -8,7 +9,7 @@ RHYTHMUS_NAMESPACE_BEGIN
 
 Text::Text()
   : font_(nullptr), text_alignment_(TextAlignments::kTextAlignLeft),
-    text_position_(0), do_line_breaking_(true)
+    text_position_(0), do_line_breaking_(true), table_index_(0)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
@@ -17,19 +18,37 @@ Text::Text()
 
 Text::~Text()
 {
-  ResourceManager::UnloadFont(font_);
-}
-
-float Text::GetTextWidth()
-{
-  return text_render_ctx_.width;
+  SetFont(nullptr);
 }
 
 void Text::SetFontByPath(const std::string& path)
 {
+  SetFont(ResourceManager::LoadFont(path));
+
+  /* if text previously exists, call SetText() internally */
+  if (!text_.empty())
+    SetText(text_);
+}
+
+void Text::SetSystemFont()
+{
+  SetFont(ResourceManager::LoadSystemFont());
+
+  /* if text previously exists, call SetText() internally */
+  if (!text_.empty())
+    SetText(text_);
+}
+
+void Text::SetFont(Font *font)
+{
   if (font_)
     ResourceManager::UnloadFont(font_);
-  font_ = ResourceManager::LoadFont(path);
+  font_ = font;
+}
+
+float Text::GetTextWidth() const
+{
+  return text_render_ctx_.width;
 }
 
 void Text::SetText(const std::string& s)
@@ -47,6 +66,21 @@ void Text::SetText(const std::string& s)
     text_render_ctx_.width = std::max(text_render_ctx_.width, (float)tvi.vi[2].x);
     text_render_ctx_.height = std::max(text_render_ctx_.height, (float)tvi.vi[2].y);
   }
+}
+
+void Text::SetTextTableIndex(size_t idx)
+{
+  table_index_ = idx;
+}
+
+size_t Text::GetTextTableIndex() const
+{
+  return table_index_;
+}
+
+void Text::SetTextFromTable()
+{
+  SetText(Script::getInstance().GetString(table_index_));
 }
 
 // XXX: Font alignment to right won't work when text is multiline.
@@ -186,6 +220,74 @@ void Text::doRender()
 #endif
 }
 
+void Text::Load(const Metric& metric)
+{
+  BaseObject::Load(metric);
+
+  if (metric.exist("font"))
+    SetFontByPath(metric.get<std::string>("font"));
+  if (metric.exist("text"))
+    SetText(metric.get<std::string>("text"));
+  if (metric.exist("align"))
+  {
+    SetAlignment((TextAlignments)metric.get<int>("align"));
+  }
+  if (metric.exist("lr2font"))
+  {
+    LoadFromLR2SRC(metric.get<std::string>("lr2font"));
+  }
+}
+
+/* do LR2 type alignment. */
+void Text::SetLR2Alignment(int alignment)
+{
+  switch (alignment)
+  {
+    // left
+    SetAlignment(TextAlignments::kTextAlignFitMaxsize);
+    break;
+  case 1:
+    // center
+    SetAlignment(TextAlignments::kTextAlignCenterFitMaxsize);
+    SetTextPosition(1);
+    break;
+  case 2:
+    // right
+    SetAlignment(TextAlignments::kTextAlignRightFitMaxsize);
+    SetTextPosition(2);
+    break;
+  }
+}
+
+void Text::LoadFromLR2SRC(const std::string &cmd)
+{
+  CommandArgs args(cmd);
+  SetFontByPath(args.Get<std::string>(0));
+
+  /* track change of text table */
+  std::string eventname = args.Get<std::string>(1);
+  cmdfnmap_[eventname] = [](void *o, CommandArgs& args) {
+    static_cast<Text*>(o)->SetTextFromTable();
+  };
+  SubscribeTo(eventname);
+  /* set value instantly */
+  SetTextTableIndex(atoi(eventname.c_str()));
+
+  /* alignment */
+  SetLR2Alignment(args.Get<int>(2));
+
+  /* editable */
+  //args.Get<int>(2);
+}
+
+void Text::CreateCommandFnMap()
+{
+  BaseObject::CreateCommandFnMap();
+  cmdfnmap_["text"] = [](void *o, CommandArgs& args) {
+    static_cast<Text*>(o)->SetText(args.Get<std::string>(0));
+  };
+}
+
 
 // --------------------------- class NumberText
 
@@ -247,6 +349,49 @@ void NumberText::doUpdate(float delta)
       sprintf(out_str, fmt_str, disp_number_);
     SetText(num_str);
   }
+}
+
+void NumberText::Load(const Metric& metric)
+{
+  Text::Load(metric);
+  if (metric.exist("sprite"))
+  {
+    LoadFromLR2SRC(metric.get<std::string>("sprite"));
+  }
+  if (metric.exist("number"))
+    SetText(metric.get<std::string>("number"));
+}
+
+void NumberText::SetTextFromTable()
+{
+  SetNumber(Script::getInstance().GetNumber(GetTextTableIndex()));
+}
+
+void NumberText::LoadFromLR2SRC(const std::string &cmd)
+{
+  // TODO: LR2 sprite font implementation
+  // (image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align)
+  CommandArgs args(cmd);
+
+  /* track change of number table */
+  std::string eventname = args.Get<std::string>(9);
+  cmdfnmap_[eventname] = [](void *o, CommandArgs& args) {
+    static_cast<NumberText*>(o)->SetTextFromTable();
+  };
+  SubscribeTo(eventname);
+  /* set value instantly */
+  SetTextTableIndex(atoi(eventname.c_str()));
+
+  /* alignment */
+  SetLR2Alignment(args.Get<int>(10));
+}
+
+void NumberText::CreateCommandFnMap()
+{
+  Text::CreateCommandFnMap();
+  cmdfnmap_["number"] = [](void *o, CommandArgs& args) {
+    static_cast<NumberText*>(o)->SetNumber(args.Get<int>(0));
+  };
 }
 
 RHYTHMUS_NAMESPACE_END

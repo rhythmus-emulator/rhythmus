@@ -8,6 +8,7 @@
 #include "object/Text.h"
 
 #include "LR2/LR2SceneLoader.h"
+#include "LR2/LR2Flag.h"
 #include "Util.h"
 #include <iostream>
 
@@ -15,10 +16,45 @@ namespace rhythmus
 {
 
 Script::Script()
-{}
+{
+  memset(flags_, 0, sizeof(flags_));
+  memset(numbers_, 0, sizeof(numbers_));
+
+  // XXX: by default ...? or in select scene start?
+  flags_[50] = 1;  // OFFLINE
+  flags_[52] = 1;  // EXTRA MODE OFF
+}
 
 Script::~Script()
 {}
+
+void Script::SetFlag(int flag_no, int value)
+{
+  flags_[flag_no] = value;
+}
+
+int Script::GetFlag(int flag_no) const
+{
+  if (flag_no < 0)
+    return flags_[-flag_no] == 0 ? 1 : 0;
+  else
+    return flags_[flag_no] > 0 ? 1 : 0;
+}
+
+void Script::SetString(size_t idx, const std::string &value)
+{
+  strings_[idx] = value;
+  EventManager::SendEvent("Text" + std::to_string(idx));
+}
+
+void Script::SetNumber(size_t idx, int number)
+{
+  numbers_[idx] = number;
+  EventManager::SendEvent("Number" + std::to_string(idx));
+}
+
+const std::string& Script::GetString(size_t idx) const { return strings_[idx]; }
+int Script::GetNumber(size_t idx) const { return numbers_[idx]; }
 
 Script &Script::getInstance()
 {
@@ -81,27 +117,27 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   NAME("SRC_AUTO_LN_BODY", "NoteField", "AutoLNBodySprite", true), \
   NAME("SRC_MINE", "NoteField", "MineSprite", true), \
   NAME("DST_NOTE", "NoteField", "lr2cmd", true), \
-  NAME("SRC_GROOVEGAUGE", "LifeGauge", "Sprite", true), \
+  NAME("SRC_GROOVEGAUGE", "LifeGauge", "sprite", true), \
   NAME("DST_GROOVEGAUGE", "LifeGauge", "lr2cmd", true), \
-  NAME("SRC_NOWJUDGE_1P", "Judge1P", "Sprite", true), \
+  NAME("SRC_NOWJUDGE_1P", "Judge1P", "sprite", true), \
   NAME("DST_NOWJUDGE_1P", "Judge1P", "lr2cmd", true), \
-  NAME("SRC_NOWJUDGE_2P", "Judge2P", "Sprite", true), \
+  NAME("SRC_NOWJUDGE_2P", "Judge2P", "sprite", true), \
   NAME("DST_NOWJUDGE_2P", "Judge2P", "lr2cmd", true), \
-  NAME("SRC_IMAGE", "Sprite", "Sprite", false), \
+  NAME("SRC_IMAGE", "Sprite", "sprite", false), \
   NAME("DST_IMAGE", "Sprite", "lr2cmd", false), \
-  NAME("SRC_TEXT", "Text", "Font", false), \
+  NAME("SRC_TEXT", "Text", "lr2font", false), \
   NAME("DST_TEXT", "Text", "lr2cmd", false), \
-  NAME("SRC_BARGRAPH", "Graph", "Sprite", false), \
+  NAME("SRC_BARGRAPH", "Graph", "sprite", false), \
   NAME("DST_BARGRAPH", "Graph", "lr2cmd", false), \
-  NAME("SRC_SLIDER", "Slider", "Sprite", false), \
+  NAME("SRC_SLIDER", "Slider", "sprite", false), \
   NAME("DST_SLIDER", "Slider", "lr2cmd", false), \
-  NAME("SRC_NUMBER", "NumberSprite", "Sprite", false), \
+  NAME("SRC_NUMBER", "NumberSprite", "sprite", false), \
   NAME("DST_NUMBER", "NumberSprite", "lr2cmd", false), \
-  NAME("SRC_JUDGELINE", "JudgeLine", "Sprite", false), \
+  NAME("SRC_JUDGELINE", "JudgeLine", "sprite", false), \
   NAME("DST_JUDGELINE", "JudgeLine", "lr2cmd", false), \
-  NAME("SRC_LINE", "Line", "Sprite", false), \
+  NAME("SRC_LINE", "Line", "sprite", false), \
   NAME("DST_LINE", "Line", "lr2cmd", false), \
-  NAME("SRC_BUTTON", "Button", "Sprite", false), \
+  NAME("SRC_BUTTON", "Button", "sprite", false), \
   NAME("DST_BUTTON", "Button", "lr2cmd", false)
 
 #define NAME(lr2name, metricname, attr, is_metric) lr2name
@@ -240,7 +276,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
     /* Create new metric (or retrive previous one)
      * If not special metric, then add new metric to metric_append_list. */
     Metric *curr_metrics = nullptr;
-    if (object_processing[name] == nullptr || obj_type == "SRC")
+    if (object_processing[name] == nullptr || obj_drawtype == "SRC")
     {
       object_metrics.push_back({ name, Metric() });
       curr_metrics = &object_metrics.back().second;
@@ -260,7 +296,6 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       std::vector<std::string> params;
       bool prev_value_exist;
 
-      prev_value_exist = curr_metrics->exist(attrname);
       MakeParamCountSafe(value, params, 19);
       std::string timer(params[15]);
 
@@ -271,6 +306,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       value.pop_back();
 
       /* if first DST command, append timer / op code attribute. */
+      prev_value_exist = curr_metrics->exist(attrname);
       if (prev_value_exist)
         value = curr_metrics->get<std::string>(attrname) + ";" + value;
       else
@@ -283,10 +319,11 @@ void Script::ExecuteLR2Script(const std::string &filepath)
     else if (obj_drawtype == "SRC")
     {
       /**
-       * use Sprite attribute.
+       * use SRC attribute for Sprite, Text, etc.
        *
        * format:
-       * (imgname),(sx),(sy),(sw),(sh)
+       * (imgname),(sx),(sy),(sw),(sh),(divx),(divy),(cycle),(timer)
+       * (fontname),(sourcename),(align),(editable)
        *
        * (nothing to do currently)
        */
@@ -319,6 +356,9 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       idx++;
     }
   }
+
+  /* Hook event */
+  LR2Flag::HookEvent();
 }
 
 }

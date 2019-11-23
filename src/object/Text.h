@@ -23,9 +23,12 @@ public:
   virtual ~Text();
 
   void SetFontByPath(const std::string& path);
+  void SetSystemFont();
 
-  float GetTextWidth();
+  float GetTextWidth() const;
   void SetText(const std::string& s);
+  void SetTextTableIndex(size_t idx);
+  size_t GetTextTableIndex() const;
   void SetAlignment(TextAlignments align);
   void SetTextPosition(int position_attr);
   void SetLineBreaking(bool enable_line_break);
@@ -33,7 +36,14 @@ public:
 
   Font *font();
 
+  virtual void Load(const Metric& metric);
+
 protected:
+  void SetFont(Font *font);
+  virtual void SetTextFromTable();
+  virtual void SetLR2Alignment(int alignment);
+  virtual void LoadFromLR2SRC(const std::string &cmd);
+  virtual void CreateCommandFnMap();
   virtual void doRender();
   virtual void doUpdate(float);
 
@@ -71,6 +81,9 @@ private:
 
   // is line-breaking enabled?
   bool do_line_breaking_;
+
+  // text table index
+  size_t table_index_;
 };
 
 class NumberText : public Text
@@ -93,7 +106,12 @@ public:
    */
   void SetFormat(const std::string& number_format);
 
+  virtual void Load(const Metric& metric);
+
 protected:
+  virtual void SetTextFromTable();
+  virtual void LoadFromLR2SRC(const std::string &cmd);
+  virtual void CreateCommandFnMap();
   virtual void doUpdate(float);
 
 private:

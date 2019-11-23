@@ -170,7 +170,7 @@ ResourceManager::UnloadObject(Font *img) { UnloadFont(img); }
 void ResourceManager::UpdateMovie()
 {
   // Update images
-  float delta = Timer::GetGameTimeDelta();
+  float delta = (float)Timer::SystemTimer().GetDeltaTime();
   for (const auto& it : gImgpool)
     it.second.obj->Update(delta);
 }

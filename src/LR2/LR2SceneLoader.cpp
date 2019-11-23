@@ -2,8 +2,9 @@
 #include "LR2Flag.h"
 #include "LR2Sprite.h"
 #include "LR2Font.h"
+#include "Script.h" /* flag_no */
 #include "Util.h"
-#include "rutil.h" /* utf-8 file load */
+#include "rutil.h"  /* utf-8 file load */
 #include <iostream>
 
 namespace rhythmus
@@ -83,7 +84,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     if (cmd == "#IF")
     {
       int cond = atoi_op(val.c_str());
-      if (LR2Flag::GetFlag(cond))
+      if (Script::getInstance().GetFlag(cond))
         if_stack_.emplace_back(IfStmt{ 0, false });
       else
         if_stack_.emplace_back(IfStmt{ 1, true });
@@ -101,7 +102,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
       }
 
       int cond = atoi_op(val.c_str());
-      if (LR2Flag::GetFlag(cond))
+      if (Script::getInstance().GetFlag(cond))
       {
         if_stack_.back().cond_is_true = true;
         if_stack_.back().cond_match_count++;

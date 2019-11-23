@@ -7,10 +7,10 @@ namespace rhythmus
 
 // --------------------------- class OptionItem
 
-void OptionItem::Load()
+void OptionItem::Load(const Metric &metric)
 {
-  option_name.SetFont(ResourceManager::GetSystemFont().get());
-  MenuItem::Load();
+  option_name.SetSystemFont();  // XXX: fix later
+  MenuItem::Load(metric);
 }
 
 // --------------------------- class OptionMenu
@@ -24,9 +24,9 @@ OptionMenu::OptionMenu()
   set_focus_index(1);
 }
 
-void OptionMenu::Load()
+void OptionMenu::Load(const Metric &metric)
 {
-  Menu::Load();
+  Menu::Load(metric);
 }
 
 MenuItem* OptionMenu::CreateMenuItem()

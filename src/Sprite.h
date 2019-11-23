@@ -66,7 +66,8 @@ protected:
   virtual void doUpdate(float delta);
   virtual void doRender();
 
-  virtual CommandFnMap& GetCommandFnMap() const;
+  virtual void LoadFromLR2SRC(const std::string &cmd);
+  virtual void CreateCommandFnMap();
 };
 
 /* Sprite may not need to be shared. */

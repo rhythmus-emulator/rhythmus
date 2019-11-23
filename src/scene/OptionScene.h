@@ -12,8 +12,8 @@ public:
   OptionScene();
   virtual void LoadScene();
   virtual void StartScene();
-  virtual void CloseScene();
-  virtual bool ProcessEvent(const EventMessage& e);
+  virtual void CloseScene(bool next);
+  virtual void ProcessInputEvent(const InputEvent& e);
 
 private:
   OptionMenu menu_;

@@ -53,7 +53,6 @@ void Game::Initialize()
 
   // initialize all other elements ...
   EventManager::Initialize();
-  LR2Flag::SubscribeEvent(); // Don't need to do if you won't support LR2 skin
   Timer::Initialize();
   Player::Initialize();
   SceneManager::getInstance().Initialize();

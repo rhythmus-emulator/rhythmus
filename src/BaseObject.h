@@ -204,6 +204,8 @@ protected:
 
   BaseObject *parent_;
 
+  CommandFnMap cmdfnmap_;
+
   // children for rendering (not released when this object is destructed)
   std::vector<BaseObject*> children_;
 
@@ -235,9 +237,12 @@ protected:
   virtual void doRender();
   virtual void doUpdateAfter(float delta);
   virtual void doRenderAfter();
-  virtual bool IsUpdatable();
 
-  virtual CommandFnMap& GetCommandFnMap() const;
+  // Only called by LR2CMD
+  virtual void LoadFromLR2SRC(const std::string &cmd);
+
+  const CommandFnMap& GetCommandFnMap() const;
+  virtual void CreateCommandFnMap();
 };
 
 void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,

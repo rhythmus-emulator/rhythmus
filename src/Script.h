@@ -17,6 +17,14 @@ public:
 
   Script();
   ~Script();
+
+  void SetFlag(int flag_no, int value);
+  int GetFlag(int flag_no) const;
+  void SetString(size_t idx, const std::string &value);
+  const std::string& GetString(size_t idx) const;
+  void SetNumber(size_t idx, int number);
+  int GetNumber(size_t idx) const;
+
   static Script &getInstance();
 
 private:
@@ -24,6 +32,12 @@ private:
   
   /* for LR2 op code */
   int flags_[1000];
+
+  /* for string cache (LR2) */
+  std::string strings_[1000];
+
+  /* for number cache (LR2) */
+  int numbers_[1000];
 };
 
 }

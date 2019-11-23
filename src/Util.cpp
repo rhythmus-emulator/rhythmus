@@ -358,6 +358,12 @@ int CommandArgs::Get(size_t arg_index) const
 }
 
 template <>
+size_t CommandArgs::Get(size_t arg_index) const
+{
+  return (size_t)atoi(args_[arg_index].c_str());
+}
+
+template <>
 double CommandArgs::Get(size_t arg_index) const
 {
   return atof(args_[arg_index].c_str());

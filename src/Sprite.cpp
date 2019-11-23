@@ -68,45 +68,7 @@ void Sprite::Load(const Metric& metric)
 
   if (metric.exist("sprite"))
   {
-    /* imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
-    CommandArgs args(metric.get<std::string>("sprite"), 12);
-
-    SetImageByPath(args.Get<std::string>(0));
-
-    if (!img_)
-      return;
-
-    if (args.size() > 4)
-    {
-      int sx = args.Get<int>(1);
-      int sy = args.Get<int>(2);
-      int sw = args.Get<int>(3);
-      int sh = args.Get<int>(4);
-
-      sx_ = sx / (float)img_->get_width();
-      sy_ = sy / (float)img_->get_height();
-      if (sw < 0) sw_ = 1.0f;
-      else sw_ = sw / (float)img_->get_width();
-      if (sh < 0) sh_ = 1.0f;
-      else sh_ = sh / (float)img_->get_height();
-    }
-
-    if (args.size() > 7)
-    {
-      int divx = args.Get<int>(5);
-      int divy = args.Get<int>(6);
-
-      divx_ = divx > 0 ? divx : 1;
-      divy_ = divy > 0 ? divy : 1;
-      cnt_ = divx_ * divy_;
-      interval_ = args.Get<int>(7);
-    }
-
-    if (args.size() > 8)
-    {
-      // Register event : Sprite restarting
-      AddCommand("LR" + args.Get<std::string>(8) + "On", "replay");
-    }
+    LoadFromLR2SRC(metric.get<std::string>("sprite"));
   }
 }
 
@@ -208,20 +170,58 @@ void Sprite::doUpdate(float delta)
   }
 }
 
-CommandFnMap& Sprite::GetCommandFnMap() const
+void Sprite::LoadFromLR2SRC(const std::string &cmd)
 {
-  static CommandFnMap cmdfnmap;
-  if (cmdfnmap.empty())
+  /* imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
+  CommandArgs args(cmd, 12);
+
+  SetImageByPath(args.Get<std::string>(0));
+
+  if (!img_)
+    return;
+
+  if (args.size() > 4)
   {
-    cmdfnmap = BaseObject::GetCommandFnMap();
-    cmdfnmap["blend"] = [](void *o, CommandArgs& args) {
-      static_cast<Sprite*>(o)->SetBlend(args.Get<int>(0));
-    };
-    cmdfnmap["replay"] = [](void *o, CommandArgs& args) {
-      static_cast<Sprite*>(o)->ReplaySprite();
-    };
+    int sx = args.Get<int>(1);
+    int sy = args.Get<int>(2);
+    int sw = args.Get<int>(3);
+    int sh = args.Get<int>(4);
+
+    sx_ = sx / (float)img_->get_width();
+    sy_ = sy / (float)img_->get_height();
+    if (sw < 0) sw_ = 1.0f;
+    else sw_ = sw / (float)img_->get_width();
+    if (sh < 0) sh_ = 1.0f;
+    else sh_ = sh / (float)img_->get_height();
   }
-  return cmdfnmap;
+
+  if (args.size() > 7)
+  {
+    int divx = args.Get<int>(5);
+    int divy = args.Get<int>(6);
+
+    divx_ = divx > 0 ? divx : 1;
+    divy_ = divy > 0 ? divy : 1;
+    cnt_ = divx_ * divy_;
+    interval_ = args.Get<int>(7);
+  }
+
+  if (args.size() > 8)
+  {
+    // Register event : Sprite restarting
+    AddCommand("LR" + args.Get<std::string>(8), "replay");
+  }
+}
+
+void Sprite::CreateCommandFnMap()
+{
+  BaseObject::CreateCommandFnMap();
+  cmdfnmap_["blend"] = [](void *o, CommandArgs& args) {
+    static_cast<Sprite*>(o)->SetBlend(args.Get<int>(0));
+  };
+  cmdfnmap_["replay"] = [](void *o, CommandArgs& args) {
+    static_cast<Sprite*>(o)->ReplaySprite();
+  };
 }
 
 }

@@ -127,7 +127,7 @@ void SongList::Load()
       invalidate_list_.push_back(check.songpath);
   }
   total_inval_size_ = invalidate_list_.size();
-  EventManager::SendEvent(Events::kEventSongListLoaded);
+  EventManager::SendEvent("SongListLoaded");
 
   size_t thread_count_ = TaskPool::getInstance().GetPoolSize();
   for (size_t i = 0; i < thread_count_; ++i)
