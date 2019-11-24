@@ -6,6 +6,7 @@
 /* Basic objects for CreateObjectFromMetric */
 #include "Sprite.h"
 #include "object/Text.h"
+#include "object/Number.h"
 
 #include "LR2/LR2SceneLoader.h"
 #include "LR2/LR2Flag.h"
@@ -97,6 +98,8 @@ BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
     obj = new Sprite();
   else if (objtype == "Text")
     obj = new Text();
+  else if (objtype == "NumberSprite")
+    obj = new NumberSprite();
 
   if (!obj) return nullptr;
   obj->Load(metrics);
@@ -123,6 +126,11 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   NAME("DST_NOWJUDGE_1P", "Judge1P", "lr2cmd", true), \
   NAME("SRC_NOWJUDGE_2P", "Judge2P", "sprite", true), \
   NAME("DST_NOWJUDGE_2P", "Judge2P", "lr2cmd", true), \
+  NAME("SRC_BAR_BODY", "MusicWheel", "lr2src", true), \
+  NAME("DST_BAR_BODY_ON", "MusicWheel", "lr2cmd", true), \
+  NAME("DST_BAR_BODY_OFF", "MusicWheel", "lr2cmd", true), \
+  NAME("SRC_BAR_TITLE", "MusicWheel", "BarTitle", true), \
+  NAME("DST_BAR_TITLE", "MusicWheel", "BarTitlelr2cmd", true), \
   NAME("SRC_IMAGE", "Sprite", "sprite", false), \
   NAME("DST_IMAGE", "Sprite", "lr2cmd", false), \
   NAME("SRC_TEXT", "Text", "lr2font", false), \
@@ -271,6 +279,17 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       // add number to object name
       // e.g. OnLoad --> Note1OnLoad
       name = "Note" + value_idx_str + name;
+    }
+
+    if (lr2name == "SRC_BAR_BODY")
+    {
+      name = "BarType" + value_idx_str + name;
+    }
+
+    if (lr2name == "DST_BAR_BODY_ON" ||
+      lr2name == "DST_BAR_BODY_OFF")
+    {
+      name = "Bar" + value_idx_str + name;
     }
 
     /* Create new metric (or retrive previous one)

@@ -601,21 +601,6 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     {
       // TODO
     }
-    else if (lr2name == "SRC_BAR_BODY")
-    {
-      // TODO
-      // BarType1Sprite
-    }
-    else if (lr2name == "DST_BAR_BODY_ON")
-    {
-      // TODO
-    }
-    else if (lr2name == "DST_BAR_BODY_OFF")
-    {
-      // TODO
-      // Bar1OnLoad
-      // Reset Bar Count
-    }
   }
 }
 

@@ -36,6 +36,7 @@ public:
 
   /* @brief Load property(resource). */
   virtual void Load(const Metric &metric);
+  virtual void LoadFromLR2SRC(const std::string &cmd);
 
 protected:
   Image *img_;
@@ -66,7 +67,6 @@ protected:
   virtual void doUpdate(float delta);
   virtual void doRender();
 
-  virtual void LoadFromLR2SRC(const std::string &cmd);
   virtual void CreateCommandFnMap();
 };
 

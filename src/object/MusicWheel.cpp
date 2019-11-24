@@ -11,20 +11,34 @@ MusicWheelItem::MusicWheelItem()
   AddChild(&level_);
 }
 
-Text& MusicWheelItem::title() { return title_; }
-
-NumberText& MusicWheelItem::level() { return level_; }
-
-MusicWheelData* MusicWheelItem::get_data()
+void MusicWheelItem::Load(const Metric &metric)
 {
-  return static_cast<MusicWheelData*>(MenuItem::get_data());
+  // TODO: SetFontFromPath() if BarTitleFontPath Exists? / BarTitleOnLoad command.
+  title_.LoadFromLR2SRC(metric.get<std::string>("BarTitle"));
+  title_.LoadFromLR2DST(metric.get<std::string>("BarTitlelr2cmd"));
+
+  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
+  {
+    // TODO: SetImageFromPath() if attr exists?
+    background_[i].LoadFromLR2SRC(metric.get<std::string>("BarType" + std::to_string(i) + "lr2src"));
+  }
+
+  // TODO: Set NumberText or NumberSprite.
 }
 
-void MusicWheelItem::set_data(MusicWheelData* d)
+void MusicWheelItem::LoadFromMenuData(MenuData *d)
 {
-  SetImage(((MusicWheel*)get_parent())->select_bar_img_[d->type]);
-  title().SetText(get_data()->title);
-  // TODO: update level text
+  MusicWheelData *data = static_cast<MusicWheelData*>(d);
+
+  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
+  {
+    if (i == data->type)
+      background_[i].Show();
+    else
+      background_[i].Hide();
+  }
+
+  title_.SetText(data->title);
 }
 
 
@@ -38,7 +52,6 @@ MusicWheel::MusicWheel()
   set_focus_max_index(12);
   set_focus_min_index(12);
   set_focus_index(12);
-  wheel_sound_.set_name("");
 }
 
 MusicWheel::~MusicWheel()
@@ -60,35 +73,12 @@ MenuItem* MusicWheel::CreateMenuItem()
 {
   MusicWheelItem* item = new MusicWheelItem();
   item->set_parent(this);
-  item->title().SetFontByPath(title_font_);
-  item->title().RunCommand("OnLoad", title_dst_);
-  item->title().Show();
   return item;
-}
-
-void SetBarTypeCount(size_t typesize)
-{
-
 }
 
 void MusicWheel::Load(const Metric &metric)
 {
   Menu::Load(metric);
-
-  title_font_ = metric.get<std::string>("BarTitleFont");
-  title_dst_ = metric.get<std::string>("BarTitleFontOnLoad");
-  bar_type_count_ = metric.get<int>("BarType");
-  for (size_t i = 0; i < bar_type_count_; ++i)
-  {
-    select_bar_img_[i] = ResourceManager::LoadImage(
-      metric.get<std::string>("BarType" + std::to_string(i))
-    );
-  }
-}
-
-void MusicWheel::Clear()
-{
-  bar_type_count_ = 0;
 }
 
 }

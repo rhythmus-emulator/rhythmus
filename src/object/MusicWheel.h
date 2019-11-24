@@ -3,6 +3,7 @@
 #include "Song.h"
 #include "Menu.h"
 #include "Text.h"
+#include "Number.h"
 #include <string>
 
 namespace rhythmus
@@ -23,19 +24,18 @@ public:
   int index;
 };
 
-/* @brief Pure music wheel item interface (no inheritance) */
+/* @brief Pure music wheel item interface */
 class MusicWheelItem : public MenuItem
 {
 public:
   MusicWheelItem();
-  Text& title();
-  NumberText& level();
-  MusicWheelData* get_data();
-  virtual void set_data(MusicWheelData* d);
+  virtual void Load(const Metric &metric);
+  virtual void LoadFromMenuData(MenuData *d);
 
-protected:
-  Text title_;
+private:
+  Sprite background_[NUM_SELECT_BAR_TYPES];
   NumberText level_;
+  Text title_;
 };
 
 class MusicWheel : public Menu
@@ -51,16 +51,7 @@ public:
   friend class MusicWheelItem;
 
 private:
-  size_t bar_type_count_;
-
-  // textures for each bar type
-  Image *select_bar_img_[NUM_SELECT_BAR_TYPES];
-
-  std::string title_font_;
-  std::string title_dst_;
-
   virtual MenuItem* CreateMenuItem();
-  void Clear();
 };
 
 }

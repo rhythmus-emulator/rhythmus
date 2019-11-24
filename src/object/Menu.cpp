@@ -24,13 +24,7 @@ MenuItem::MenuItem()
 {
 }
 
-void MenuItem::Load(const Metric &metric)
-{
-  // TODO
-  Sprite::Load(metric);
-}
-
-void MenuItem::set_data(MenuData* d)
+void MenuItem::LoadFromMenuData(MenuData *d)
 {
   data_ = d;
 }
@@ -166,22 +160,10 @@ void Menu::set_infinite_scroll(bool inf_scroll)
 
 void Menu::RebuildItems()
 {
-  /**
-   * Create Menuitem (if not created) & prepare index necessary for item rebuilding
-   * - Prepare spare item as much as kScrollPosMaxDiff * 2
-   */
   int start_data_idx = data_index_ - focus_index_ - kScrollPosMaxDiff;
   int end_data_idx = start_data_idx + display_count_ + kScrollPosMaxDiff * 2;
   int data_idx = start_data_idx;
   int build_item_count = display_count_ + kScrollPosMaxDiff * 2;
-  while (bar_.size() < build_item_count)
-  {
-    auto *item = CreateMenuItem();
-    AddChild(item);
-    bar_.push_back(item);
-  }
-  for (int i = build_item_count; i < bar_.size(); ++i)
-    bar_[i]->Hide();
 
   /**
    * Before reset item, shift it.
@@ -201,16 +183,15 @@ void Menu::RebuildItems()
     data_idx++;
     if (!inf_scroll_ && (data_idx_prev < 0 || data_idx_prev >= size()))
     {
-      // this will make item hidden
-      item->set_data(nullptr);
+      item->Hide();
       continue;
     }
 
     MenuData* cur_data = data_[data_idx_safe];
     if (item->get_data() == cur_data)
       continue; // no need to invalidate
-    item->set_data(cur_data);
-    //item->Load();
+
+    item->LoadFromMenuData(cur_data);
   }
 }
 
@@ -385,17 +366,28 @@ void Menu::Load(const Metric &metric)
     set_focus_min_index(center_index);
     set_focus_index(center_index);
   }
-  int barcount = metric.get<int>("BarCount");
-  set_display_count(barcount);
-  for (int i = 0; i < barcount; ++i)
+  display_count_ = metric.get<int>("BarCount");
+
+  // Build items (bar item)
+  while (bar_.size() < display_count_)
+  {
+    auto *item = CreateMenuItem();
+    item->set_parent(this);
+    item->Load(metric);
+  }
+
+  // Build items (position)
+  for (int i = 0; i < display_count_; ++i)
   {
     // TODO: need to make new metric for this bar?
     // Bar1OnLoad --> OnLoad ?
     pos_fixed_param_.tween_bar[i].Load(metric);
   }
 
-  // Load sounds XXX: here?
-  wheel_sound_.Load();
+  // Load sounds
+  wheel_sound_.Load(
+    Setting::GetThemeMetricList().get<std::string>("Sound", "MusicSelect")
+  );
 
   // Build item and set basic position
   RebuildItems();

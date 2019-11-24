@@ -142,6 +142,12 @@ public:
   /* @brief Load property(resource). */
   virtual void Load(const Metric& metric);
 
+  /* @brief Load from LR2SRC (for LR2) */
+  virtual void LoadFromLR2SRC(const std::string &cmd);
+
+  /* @brief Load from LR2DST (for LR2) */
+  virtual void LoadFromLR2DST(const std::string &cmd);
+
   /* @brief Initialize object from metric information. */
   virtual void Initialize();
 
@@ -237,9 +243,6 @@ protected:
   virtual void doRender();
   virtual void doUpdateAfter(float delta);
   virtual void doRenderAfter();
-
-  // Only called by LR2CMD
-  virtual void LoadFromLR2SRC(const std::string &cmd);
 
   const CommandFnMap& GetCommandFnMap() const;
   virtual void CreateCommandFnMap();

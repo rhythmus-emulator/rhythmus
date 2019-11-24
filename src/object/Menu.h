@@ -29,20 +29,12 @@ public:
 };
 
 /* @brief Context of rendering select item */
-class MenuItem : public Sprite
+class MenuItem : public BaseObject
 {
 public:
   MenuItem();
 
-  /**
-   * @brief
-   * Invalidate current item by using own property.
-   * Call this method when something rendering
-   * context is changed.
-   * e.g. Change of song difficulty
-   */
-  virtual void Load(const Metric &metric);
-  virtual void set_data(MenuData* d);
+  virtual void LoadFromMenuData(MenuData *d);
   void set_focus(bool focused);
   MenuData* get_data();
 

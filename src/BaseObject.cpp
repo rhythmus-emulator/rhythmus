@@ -202,26 +202,7 @@ void BaseObject::Load(const Metric& metric)
     draw_order_ = metric.get<int>("zindex");
   
   if (metric.exist("lr2cmd"))
-  {
-    std::vector<std::string> v;
-    std::string timer_and_op, cmd;
-    Split(metric.get<std::string>("lr2cmd"), ';', timer_and_op, cmd);
-    Split(timer_and_op, ',', v);
-    std::string timer(v[0]);
-
-    if (v.size() < 5)
-    {
-      std::cerr << "Error : LR2CMD attribute requires more than 5 arguments." << std::endl;
-      return;
-    }
-
-    /* create message handler & set op code */
-    AddCommand("LR" + timer, cmd + ";loop:" + v[4]);
-    AddCommand("LR" + timer + "Off", "hide");
-    SetVisibleGroup(
-      atoi(v[1].c_str()), atoi(v[2].c_str()), atoi(v[3].c_str())
-    );
-  }
+    LoadFromLR2DST(metric.get<std::string>("lr2cmd"));
 }
 
 void BaseObject::Initialize()
@@ -730,6 +711,28 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
 void BaseObject::LoadFromLR2SRC(const std::string &cmd)
 {
   /* implemented later */
+}
+
+void BaseObject::LoadFromLR2DST(const std::string &c)
+{
+  std::vector<std::string> v;
+  std::string timer_and_op, cmd;
+  Split(c, ';', timer_and_op, cmd);
+  Split(timer_and_op, ',', v);
+  std::string timer(v[0]);
+
+  if (v.size() < 5)
+  {
+    std::cerr << "Error : LR2CMD attribute requires more than 5 arguments." << std::endl;
+    return;
+  }
+
+  /* create message handler & set op code */
+  AddCommand("LR" + timer, cmd + ";loop:" + v[4]);
+  AddCommand("LR" + timer + "Off", "hide");
+  SetVisibleGroup(
+    atoi(v[1].c_str()), atoi(v[2].c_str()), atoi(v[3].c_str())
+  );
 }
 
 /* ---------------------------- Command related */

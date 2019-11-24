@@ -37,12 +37,12 @@ public:
   Font *font();
 
   virtual void Load(const Metric& metric);
+  virtual void LoadFromLR2SRC(const std::string &cmd);
 
 protected:
   void SetFont(Font *font);
   virtual void SetTextFromTable();
   virtual void SetLR2Alignment(int alignment);
-  virtual void LoadFromLR2SRC(const std::string &cmd);
   virtual void CreateCommandFnMap();
   virtual void doRender();
   virtual void doUpdate(float);
@@ -84,43 +84,6 @@ private:
 
   // text table index
   size_t table_index_;
-};
-
-class NumberText : public Text
-{
-public:
-  NumberText();
-  void SetNumber(int number);
-  void SetNumber(double number);
-  template <typename T> T GetNumber() const;
-  void SetNumberChangeTime(float msec);
-
-  /**
-   * Set number format
-   * e.g. %04d : show number always 4 digits
-   *      %3d : show number at least 3 digits
-   *      +%03d : show number always 3 digits with plus/minus sign always
-   *      %03f : show number always 3 digits + decimal (if decimal exists)
-   *      %02.2f : show number in form of 2 digits + 2 decimal always.
-   *      %f : show number in full digits
-   */
-  void SetFormat(const std::string& number_format);
-
-  virtual void Load(const Metric& metric);
-
-protected:
-  virtual void SetTextFromTable();
-  virtual void LoadFromLR2SRC(const std::string &cmd);
-  virtual void CreateCommandFnMap();
-  virtual void doUpdate(float);
-
-private:
-  double number_;
-  double disp_number_;
-  float number_change_duration_;
-  float number_change_remain_;
-  bool need_update_;
-  std::string number_format_;
 };
 
 RHYTHMUS_NAMESPACE_END
