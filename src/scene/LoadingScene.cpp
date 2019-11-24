@@ -13,31 +13,27 @@ std::string current_loading_file;
 
 LoadingScene::~LoadingScene()
 {
-}
-
-const std::string LoadingScene::GetSceneName() const
-{
-  return "LoadingScene";
+  set_name("LoadingScene");
+  next_scene_ = "SelectScene";
+  prev_scene_ = "Exit";
 }
 
 void LoadingScene::LoadScene()
 {
-  sys_font_ = ResourceManager::GetSystemFont();
-  message_text_.SetFont(sys_font_.get());
-  current_file_text_.SetFont(sys_font_.get());
-
+  current_file_text_.SetSystemFont();
+  message_text_.SetSystemFont();
 
   message_text_.SetPos(
     320,
-    Game::getInstance().get_window_height() - 160
+    Graphic::getInstance().width() - 160
   );
   current_file_text_.SetPos(
     320,
-    Game::getInstance().get_window_height() - 120
+    Graphic::getInstance().height() - 120
   );
   loading_bar_.SetPos(
     240,
-    Game::getInstance().get_window_height() - 120
+    Graphic::getInstance().height() - 120
   );
 
   // Register childs
@@ -52,26 +48,20 @@ void LoadingScene::StartScene()
   message_text_.SetText("Song loading ...");
 }
 
-void LoadingScene::CloseScene()
+void LoadingScene::ProcessInputEvent(const InputEvent& e)
 {
-  Scene::CloseScene();
-}
-
-bool LoadingScene::ProcessEvent(const EventMessage& e)
-{
-  if (e.IsKeyUp() && e.GetKeycode() == GLFW_KEY_ESCAPE)
+  if (e.type() == InputEvents::kOnKeyUp)
   {
-    // cancel all loading thread and directly exit game
-    Graphic::getInstance().ExitRendering();
-    return false;
+    if (e.KeyCode() == GLFW_KEY_ESCAPE)
+    {
+      // cancel all loading thread and exit game instantly
+      Game::Exit();
+    }
+    else if (SongList::getInstance().is_loaded())
+    {
+      CloseScene(true);
+    }
   }
-  else if (e.IsKeyUp() && SongList::getInstance().is_loaded())
-  {
-    // go to next scene (select) directly
-    next_scene_mode_ = GameSceneMode::kGameSceneModeSelect;
-    CloseScene();
-  }
-  return true;
 }
 
 void LoadingScene::doUpdate(float)
@@ -82,8 +72,6 @@ void LoadingScene::doUpdate(float)
   {
     std::string path = SongList::getInstance().get_loading_filename();
     int prog = static_cast<int>(SongList::getInstance().get_progress() * 100);
-    sys_font_->PrepareText(path);
-    sys_font_->Commit();
     message_text_.SetText("Loading " + std::to_string(prog) + "%");
     current_file_text_.SetText(path);
   }
@@ -94,7 +82,7 @@ void LoadingScene::doUpdate(float)
       // run first time when loading is done
       std::cout << "LoadingScene: Song list loading finished." << std::endl;
       SongList::getInstance().select(0);  // select first item
-      EventManager::SendEvent(Events::kEventSongListLoadFinished);
+      EventManager::SendEvent("SongListLoadFinished");
       check_loaded = true;
     }
 

@@ -20,7 +20,6 @@ namespace rhythmus
 
 class Setting;
 class BaseObject;
-class Metric;
 constexpr char* kSettingOptionTagName = "option";
 constexpr char* kSettingKeyValueTagName = "value";
 
@@ -29,6 +28,77 @@ void ConvertFromString(const std::string& src, T& dst);
 
 template <typename T>
 std::string ConvertToString(const T& dst);
+
+/*
+ * @brief Read-only key-value theme properties used for scene elements
+ *
+ * @params exist bool
+ * @params get value
+ * @params set value
+ * @params set_default set value if not exist (set default value)
+ */
+class Metric
+{
+public:
+  Metric();
+  ~Metric();
+
+  bool exist(const std::string &key) const;
+
+  template <typename T>
+  T get(const std::string &key) const;
+
+  void set(const std::string &key, const std::string &v);
+  void set(const std::string &key, int v);
+  void set(const std::string &key, double v);
+  void set(const std::string &key, bool v);
+
+  template <typename T>
+  void set_fallback(const std::string &key, T v)
+  {
+    if (!exist(key)) set(key, v);
+  }
+
+  typedef std::map<std::string, std::string>::iterator iterator;
+  typedef std::map<std::string, std::string>::const_iterator const_iterator;
+  iterator begin();
+  const_iterator cbegin() const;
+  iterator end();
+  const_iterator cend() const;
+
+private:
+  std::map<std::string, std::string> attr_;
+};
+
+class MetricList
+{
+public:
+  void ReadMetricFromFile(const std::string &filepath);
+  void Clear();
+
+  bool exist(const std::string &group, const std::string &key) const;
+
+  template <typename T>
+  T get(const std::string &group, const std::string &key) const
+  {
+    auto it = metricmap_.find(group);
+    ASSERT_M(it != metricmap_.end(), "Metric group '" + group + "' is not found.");
+    return it->second.get<T>(key);
+  }
+
+  Metric *get_metric(const std::string &group);
+
+  void set(const std::string &group, const std::string &key, const std::string &v);
+  void set(const std::string &group, const std::string &key, int v);
+  void set(const std::string &group, const std::string &key, double v);
+  void set(const std::string &group, const std::string &key, bool v);
+
+private:
+  std::map<std::string, Metric> metricmap_;
+
+  void ReadLR2Metric(const std::string &filepath);
+  void ReadLR2SS(const std::string &filepath);
+};
 
 class Option
 {
@@ -168,77 +238,6 @@ private:
   std::map<std::string, Option*> options_;
 };
 
-
-/*
- * @brief Read-only key-value theme properties used for scene elements
- *
- * @params exist bool
- * @params get value
- * @params set value
- * @params set_default set value if not exist (set default value)
- */
-class Metric
-{
-public:
-  Metric();
-  ~Metric();
-
-  bool exist(const std::string &key) const;
-
-  template <typename T>
-  T get(const std::string &key) const;
-
-  void set(const std::string &key, const std::string &v);
-  void set(const std::string &key, int v);
-  void set(const std::string &key, double v);
-  void set(const std::string &key, bool v);
-
-  template <typename T>
-  void set_fallback(const std::string &key, T v)
-  {
-    if (!exist(key)) set(key, v);
-  }
-
-  typedef std::map<std::string, std::string>::iterator iterator;
-  typedef std::map<std::string, std::string>::const_iterator const_iterator;
-  iterator begin();
-  const_iterator cbegin() const;
-  iterator end();
-  const_iterator cend() const;
-
-private:
-  std::map<std::string, std::string> attr_;
-};
-
-class MetricList
-{
-public:
-  void ReadMetricFromFile(const std::string &filepath);
-  void Clear();
-
-  bool exist(const std::string &group, const std::string &key) const;
-
-  template <typename T>
-  T get(const std::string &group, const std::string &key) const
-  {
-    auto it = metricmap_.find(group);
-    ASSERT_M(it != metricmap_.end(), "Metric group '" + group + "' is not found.");
-    return it->second.get<T>(key);
-  }
-
-  Metric *get_metric(const std::string &group);
-
-  void set(const std::string &group, const std::string &key, const std::string &v);
-  void set(const std::string &group, const std::string &key, int v);
-  void set(const std::string &group, const std::string &key, double v);
-  void set(const std::string &group, const std::string &key, bool v);
-
-private:
-  std::map<std::string, Metric> metricmap_;
-
-  void ReadLR2Metric(const std::string &filepath);
-  void ReadLR2SS(const std::string &filepath);
-};
 
 /* @brief Container for Option, ThemeOption, and ThemeMetrics. */
 class Setting

@@ -62,6 +62,7 @@ namespace rhythmus
         i->second();
         // Call redirected event instantly
         EventManager::Flush();
+        return true;
       }
     };
 

@@ -38,10 +38,16 @@ InputEventReceiver::~InputEventReceiver()
     input_evt_receivers_.erase(it);
 }
 
+InputEvent::InputEvent() : type_(0), time_(0)
+{
+  // XXX: should not be called ...?
+  memset(argv_, 0, sizeof(argv_));
+}
+
 InputEvent::InputEvent(int type) : type_(type)
 {
   memset(argv_, 0, sizeof(argv_));
-  time_ = Timer::GetUncachedGameTime();
+  time_ = Timer::GetUncachedSystemTime();
 }
 
 int InputEvent::type() const { return type_; }

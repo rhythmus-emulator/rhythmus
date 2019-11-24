@@ -158,6 +158,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   static const char *_metricnames[] = {
     NAMES, 0
   };
+#undef NAME
 
 #define NAME(lr2name, metricname, attr, is_metric) attr
   static const char *_attrnames[] = {

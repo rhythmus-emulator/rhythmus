@@ -109,10 +109,9 @@ void GameSound::set_name(const std::string &name)
 void GameSound::Load()
 {
   std::string path;
-  auto *m = SceneManager::getMetrics(name_);
-  if (!m) return;
-  if (!m->get("path", path)) return;
-  if (rmixer::Sound::Load(path))
+  if (!Setting::GetThemeMetricList().exist("Sound", name_))
+    return;
+  if (rmixer::Sound::Load(Setting::GetThemeMetricList().get<std::string>("Sound", name_)))
     RegisterToMixer(&SoundDriver::getMixer());
 }
 
@@ -144,16 +143,16 @@ void SoundDriver::Initialize()
   using namespace rmixer;
 
   // get output device from Game settings
-  auto& setting = Game::getInstance().getSetting();
+  auto& setting = Setting::GetSystemSetting();
   std::string device_name;
-  if (setting.Exist("SoundDevice"))
+  if (setting.GetOption("SoundDevice"))
   {
-    setting.LoadOptionValue("SoundDevice", device_name);
+    device_name = setting.GetOption("SoundDevice")->value<std::string>();
     device = alcOpenDevice(device_name.c_str());
   }
 
   // load sound buffer size (fallback: use default value)
-  setting.LoadOptionValue("SoundBufferSize", buffer_size_);
+  buffer_size_ = setting.GetOption("SoundBufferSize")->value<size_t>();
 
   if (!device)
   {

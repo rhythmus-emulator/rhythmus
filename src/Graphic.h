@@ -99,8 +99,6 @@ public:
   static void SetBlendMode(GLuint blend_mode);
   static void Flush();
 
-  static double GetFPS();
-
 private:
   Graphic();
   ~Graphic();

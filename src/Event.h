@@ -32,18 +32,11 @@ public:
   static void Flush();
 };
 
-class InputEventReceiver
-{
-public:
-  InputEventReceiver();
-  ~InputEventReceiver();
-  virtual void OnInputEvent(const InputEvent &e) = 0;
-};
-
 /* @brief Only for Input related event */
 class InputEvent
 {
 public:
+  InputEvent();
   InputEvent(int type);
 
   /* type index of enum InputEvents */
@@ -67,6 +60,14 @@ private:
   int argv_[4];
 };
 
+class InputEventReceiver
+{
+public:
+  InputEventReceiver();
+  ~InputEventReceiver();
+  virtual void OnInputEvent(const InputEvent &e) = 0;
+};
+
 /**
  * @brief
  * Events related to game 
@@ -76,6 +77,7 @@ private:
 class EventMessage
 {
 public:
+  EventMessage() = default;
   EventMessage(const std::string &name);
   void SetEventName(const std::string &name);
   const std::string &GetEventName() const;

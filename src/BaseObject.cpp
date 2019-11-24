@@ -216,6 +216,7 @@ void BaseObject::Initialize()
 bool BaseObject::OnEvent(const EventMessage& msg)
 {
   LoadCommandByName(msg.GetEventName());
+  return true;
 }
 
 void BaseObject::AddTweenState(const DrawProperty &draw_prop, uint32_t time_duration, int ease_type, bool loop)

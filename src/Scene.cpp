@@ -2,11 +2,8 @@
 #include "SceneManager.h"       /* preference */
 #include "Setting.h"
 #include "Script.h"
-#include "LR2/LR2Sprite.h"
-#include "LR2/LR2Font.h"
-#include "LR2/LR2Text.h"
-#include "rutil.h"              /* for string modification */
 #include "Util.h"
+#include <algorithm>
 #include <iostream>
 
 namespace rhythmus

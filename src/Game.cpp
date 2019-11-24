@@ -67,6 +67,8 @@ void Game::Loop()
     /* Update main timer in graphic(main) thread. */
     Timer::Update();
 
+    /* TODO: Update Logger to log fps information. */
+
     /**
      * Process cached events in main thread.
      * COMMENT: Event must be processed before Update() method

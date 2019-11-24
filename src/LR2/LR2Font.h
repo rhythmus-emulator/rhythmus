@@ -1,7 +1,6 @@
 #pragma once
 
 #include "object/Text.h"
-#include "LR2Sprite.h"
 #include <vector>
 #include <string>
 

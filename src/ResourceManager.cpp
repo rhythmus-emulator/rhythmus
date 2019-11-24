@@ -1,6 +1,7 @@
 #include "ResourceManager.h"
 #include "Image.h"
 #include "Font.h"
+#include "Timer.h"
 #include "LR2/LR2Font.h"
 #include <FreeImage.h>
 #include <iostream>
@@ -28,7 +29,7 @@ Font *CreateObjectFromPath(const std::string &path)
 {
   std::string fn, cmd, ext;
   Split(path, '|', fn, cmd);
-  std::string ext = GetExtension(fn);
+  ext = GetExtension(fn);
   FontAttributes attr;
   Font *font;
   if (ext == "ttf")
@@ -62,6 +63,13 @@ class ObjectPoolWithName
 private:
   struct ObjectWithSharedCnt
   {
+    ObjectWithSharedCnt() = default;
+    ObjectWithSharedCnt(size_t c, T* o)
+    {
+      count = c;
+      obj.reset(o);
+    }
+
     size_t count;
     std::unique_ptr<T> obj;
   };
@@ -84,10 +92,10 @@ public:
     }
 
     // if not, create object using constructor.
-    T* obj = CreateObjectFromPath(path);
+    T* obj = CreateObjectFromPath<T>(path);
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      objects_[path] = { 1, obj };
+      objects_[path] = ObjectWithSharedCnt( 1, obj );
     }
     return obj;
   }
@@ -118,9 +126,10 @@ public:
     return objects_.find(name) != objects_.end();
   }
 
-  typedef std::map<std::string, ObjectWithSharedCnt>::iterator iterator;
-  iterator begin() { return object_.begin(); }
-  iterator end() { return object_.end(); }
+  typename std::map<std::string, ObjectWithSharedCnt>::iterator begin()
+  { return objects_.begin(); }
+  typename std::map<std::string, ObjectWithSharedCnt>::iterator end()
+  { return objects_.end(); }
 };
 
 static ObjectPoolWithName<Image> gImgpool;

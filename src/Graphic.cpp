@@ -35,25 +35,6 @@ void on_resize(GLFWwindow* w, GLint width, GLint height)
   sHeight = height;
 }
 
-// FPS
-double fps_;
-
-// Timer for calculating FPS
-class FPSTimer : public Timer
-{
-public:
-  FPSTimer()
-  {
-    SetEventInterval(5, true);
-  }
-
-  virtual void OnEvent()
-  {
-    fps_ = GetTickRate();
-    Logger::Info("FPS: %.2lf", fps_);
-  }
-} FpsTimer;
-
 GLFWwindow* Graphic::window()
 {
   return window_;
@@ -141,9 +122,6 @@ void Graphic::InitializeInternal()
 
   // Vsync enabled
   glfwSwapInterval(1);
-
-  // FPS timer start
-  FpsTimer.Start();
 }
 
 void Graphic::Render()
@@ -153,8 +131,6 @@ void Graphic::Render()
 
 void Graphic::RenderInternal()
 {
-  FpsTimer.Tick();
-
   glViewport(0, 0, sWidth, sHeight);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -197,7 +173,7 @@ void Graphic::SignalWindowClose()
 
 bool Graphic::IsWindowShouldClose()
 {
-  glfwWindowShouldClose(getInstance().window_);
+  return glfwWindowShouldClose(getInstance().window_) != 0;
 }
 
 Graphic& Graphic::getInstance()
@@ -660,11 +636,6 @@ Graphic::~Graphic()
    * But automatic Cleanup would occur if initialization failed.
    */
   Cleanup();
-}
-
-double Graphic::GetFPS()
-{
-  return fps_;
 }
 
 }

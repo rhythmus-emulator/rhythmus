@@ -9,6 +9,7 @@ namespace rhythmus
 class NumberInterface
 {
 public:
+  NumberInterface();
   void SetNumber(int number);
   void SetNumber(double number);
   template <typename T> T GetNumber() const;
