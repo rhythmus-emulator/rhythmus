@@ -381,6 +381,8 @@ Option::Option()
 
 template <> const std::string& Option::value() const
 { return value_; }
+template <> std::string Option::value() const
+{ return value_; }
 template <> const char* Option::value() const
 { return value_.c_str(); }
 template <> int Option::value() const

@@ -133,6 +133,11 @@ std::string GetExtension(const std::string& path)
   return rutil::GetExtension(path);
 }
 
+std::string Upper(const std::string &s)
+{
+  return rutil::upper(s);
+}
+
 std::string Substitute(const std::string& path_, const std::string& startswith, const std::string& relplacewith)
 {
   std::string path = path_;
