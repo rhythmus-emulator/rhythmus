@@ -40,7 +40,7 @@ void FontAttributes::SetFromCommand(const std::string &command)
     {
       size = args.Get<int>(0);
     }
-    else if (a == "fg")
+    else if (a == "color")
     {
       color = HexToUint(args.Get<std::string>(0).c_str());
     }

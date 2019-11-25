@@ -94,7 +94,7 @@ Timer &Timer::SystemTimer()
 /* Should be thread-safe. Use atomic store here. */
 void Timer::Update()
 {
-  SystemTimer().Update();
+  SystemTimer().Tick();
 }
 
 void Timer::Initialize()

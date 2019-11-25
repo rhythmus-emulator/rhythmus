@@ -316,11 +316,13 @@ void CommandArgs::Set(const std::string &argv)
 {
   size_t a = 0, b = 0;
   args_.clear();
-  while (b < argv.size())
+  while (1)
   {
     if (argv[b] == ',' || argv[b] == 0)
     {
       args_.push_back(argv.substr(a, b - a));
+      if (argv[b] == 0)
+        break;
       a = b = b + 1;
     }
     else b++;
@@ -333,7 +335,7 @@ void CommandArgs::Set(const std::string &argv, size_t arg_count)
   args_.clear();
   if (arg_count == 0) return; /* prevent underflow */
 
-  while (b < argv.size() && b < arg_count)
+  while (args_.size() < arg_count)
   {
     if (b == arg_count - 1)
     {
@@ -346,6 +348,8 @@ void CommandArgs::Set(const std::string &argv, size_t arg_count)
     if (argv[b] == ',' || argv[b] == 0)
     {
       args_.push_back(argv.substr(a, b - a));
+      if (argv[b] == 0)
+        break;
       a = b = b + 1;
     }
     else b++;

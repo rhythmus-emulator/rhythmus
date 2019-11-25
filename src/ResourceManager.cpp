@@ -168,7 +168,7 @@ void ResourceManager::UnloadFont(Font *font)
 
 Font* ResourceManager::LoadSystemFont()
 {
-  return LoadFont("../system/default.ttf|size:5;bg:0xFFFFFFFF");
+  return LoadFont("../system/default.ttf|size:5;color:0xFFFFFFFF");
 }
 
 template <> Font*

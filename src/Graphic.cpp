@@ -58,8 +58,8 @@ void Graphic::InitializeInternal()
       Setting::GetSystemSetting().GetOption("Resolution")->value<std::string>(),
       'x', w, h
     );
-    width_ = atoi(w.c_str());
-    height_ = atoi(h.c_str());
+    sWidth = width_ = atoi(w.c_str());
+    sHeight = height_ = atoi(h.c_str());
   }
 
   glfwSetErrorCallback(error_callback);
