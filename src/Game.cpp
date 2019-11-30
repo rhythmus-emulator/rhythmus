@@ -43,8 +43,7 @@ void Game::Initialize()
   Setting::ReadAll();
 
   // Start logging.
-  Logger::getInstance().StartLogging();
-  Logger::getInstance().HookStdOut();
+  Logger::Initialize();
 
   // initialize threadpool / graphic / sound
   TaskPool::getInstance().SetPoolSize(4);

@@ -54,8 +54,9 @@ void TestScene::LoadScene()
   spr_bg_.SetPos(0, 0);
   spr_bg_.SetSize(800, 480);
 
-  lr2text_.font()->SetNullGlyphAsCodePoint(L'?');
   lr2text_.SetFontByPath("../test/artistfnt.dxa");
+  ASSERT(lr2text_.font());
+  lr2text_.font()->SetNullGlyphAsCodePoint(L'?');
   lr2text_.SetText(u8"1234abcdΘΙΚΛあえいおう楽しい熙ⅷ黑");
   //lr2text_.SetText(u8"!\"#$%&'()/df");
   lr2text_.SetPos(30, 200);

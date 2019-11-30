@@ -87,6 +87,7 @@ public:
   }
 
   Metric *get_metric(const std::string &group);
+  Metric *create_metric(const std::string &group);
 
   void set(const std::string &group, const std::string &key, const std::string &v);
   void set(const std::string &group, const std::string &key, int v);

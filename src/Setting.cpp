@@ -169,6 +169,7 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     std::cerr << "Unknown type of LR2 metric file: " << filepath << std::endl;
     return;
   }
+  curr_metrics = Setting::GetThemeMetricList().create_metric(group);
 
   // convert csv commands into metrics
   for (auto &v : loader)
@@ -352,6 +353,11 @@ Metric *MetricList::get_metric(const std::string &group)
   else return &it->second;
 }
 
+Metric *MetricList::create_metric(const std::string &group)
+{
+  return &metricmap_[group];
+}
+
 void MetricList::set(const std::string &group, const std::string &key, const std::string &v)
 {
   metricmap_[group].set(key, v);
@@ -394,7 +400,8 @@ template <> double Option::value() const
 template <> float Option::value() const
 { return (float)atof(value_.c_str()); }
 template <> bool Option::value() const
-{ return value_ == "true"; }
+{ return strnicmp(value_.c_str(), "true", 4) == 0
+      || strnicmp(value_.c_str(), "on", 2) == 0; }
 
 const std::string& Option::type() const
 {
@@ -439,6 +446,7 @@ void Option::Clear()
 {
   options_.clear();
   constraint_.clear();
+  default_.clear();
 }
 
 Option &Option::SetDefault(const std::string &default__)
@@ -451,11 +459,18 @@ void Option::SetOption(const std::string& options)
 {
   constraint_ = options;
   Split(options, ',', options_);
+  // set default if it's empty.
+  if (default_.empty() && !options_.empty())
+    default_ = options_.front();
 }
 
 void Option::set_value(const std::string& option)
 {
-  value_ = option;
+  auto i = std::find(options_.begin(), options_.end(), option);
+  if (i == options_.end())
+    value_ = default_;
+  else
+    value_ = option;
 }
 
 void Option::set_value(int value)
@@ -476,24 +491,30 @@ void Option::save_with_constraint(bool v)
 Option* Option::CreateOption(const std::string &optionstr)
 {
   Option *option = nullptr;
-  if (optionstr.size() > 2 && optionstr[0] == '#')
+  std::string optionvalue;
+  if (optionstr.size() > 2 && optionstr[0] == '!')
   {
     if (optionstr[1] == 'F')
     {
       // create as file option
       option = new FileOption();
+      optionvalue = optionstr.substr(2);
     }
     else if (optionstr[1] == 'N')
     {
       // create as number option
       option = new NumberOption();
+      optionvalue = optionstr.substr(2);
     }
   }
   else
+  {
     option = new Option();
+    optionvalue = optionstr;
+  }
 
   if (option)
-    option->SetOption(optionstr);
+    option->SetOption(optionvalue);
 
   return option;
 }
@@ -503,6 +524,9 @@ FileOption::FileOption() {}
 void FileOption::SetOption(const std::string &options)
 {
   ResourceManager::getInstance().GetAllPaths(options, options_);
+  // set default if it's empty.
+  if (default_.empty() && !options_.empty())
+    default_ = options_.front();
 }
 
 TextOption::TextOption() {}
@@ -716,12 +740,13 @@ void OptionList::Clear()
 void Setting::ReadAll()
 {
   static char *metric_option_attrs[] = {
-    "ThemeFile",
-    "SelectSceneFile",
-    "DecideSceneFile",
-    "PlaySceneFile",
-    "ResultSceneFile",
-    "CourseResultSceneFile",
+    "SoundSet",
+    "Theme",
+    "SelectScene",
+    "DecideScene",
+    "PlayScene",
+    "ResultScene",
+    "CourseResultScene",
     0
   };
 
