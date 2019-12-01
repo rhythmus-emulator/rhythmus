@@ -18,6 +18,13 @@ LR2Font::LR2Font()
 
 LR2Font::~LR2Font() {}
 
+bool LR2Font::LoadFont(const char* path, const FontAttributes&)
+{
+  ReadLR2Font(path);
+  // XXX: always true?
+  return true;
+}
+
 void LR2Font::ReadLR2Font(const char* path)
 {
   ClearGlyph();

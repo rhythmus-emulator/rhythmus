@@ -12,10 +12,10 @@ class LR2Font : public Font
 public:
   LR2Font();
   virtual ~LR2Font();
-
-  void ReadLR2Font(const char* path);
+  virtual bool LoadFont(const char* path, const FontAttributes&);
 
 private:
+  void ReadLR2Font(const char* path);
   void UploadTextureFile(const char* p, size_t len);
 };
 

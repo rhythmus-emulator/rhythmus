@@ -126,7 +126,7 @@ public:
   void set_name(const std::string& name);
   const std::string& get_name() const;
 
-  bool LoadFont(const char* ttfpath, const FontAttributes& attrs);
+  virtual bool LoadFont(const char* ttfpath, const FontAttributes& attrs);
   void PrepareText(const std::string& text_utf8);
   void PrepareGlyph(uint32_t *chrs, int count);
   void Commit();

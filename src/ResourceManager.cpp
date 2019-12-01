@@ -83,7 +83,7 @@ public:
     // find for existing object
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      auto it = objects_.begin();
+      auto it = objects_.find(path);
       if (it != objects_.end())
       {
         ++it->second.count;

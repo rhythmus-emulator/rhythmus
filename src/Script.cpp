@@ -20,6 +20,7 @@ Script::Script()
 {
   memset(flags_, 0, sizeof(flags_));
   memset(numbers_, 0, sizeof(numbers_));
+  flags_[0] = 1;
 
   // XXX: by default ...? or in select scene start?
   flags_[50] = 1;  // OFFLINE
