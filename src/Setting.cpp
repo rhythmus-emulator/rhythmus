@@ -140,6 +140,7 @@ void MetricList::Clear()
 constexpr char* kLR2SubstitutePath = "LR2files/Theme";
 constexpr char* kSubstitutePath = "../themes";
 
+/* @brief compatible layer from LR2 to metric-based */
 void MetricList::ReadLR2Metric(const std::string &filepath)
 {
   LR2SceneLoader loader;
@@ -154,15 +155,15 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
    * (kind of trick; no group information is given at file) */
   std::string group;
   if (filepath.find("select") != std::string::npos)
-    group = "SceneSelect";
+    group = "SelectScene";
   else if (filepath.find("decide") != std::string::npos)
-    group = "SceneDecide";
+    group = "DecideScene";
   else if (filepath.find("play") != std::string::npos)
-    group = "ScenePlay";
+    group = "PlayScene";
   else if (filepath.find("courseresult") != std::string::npos) /* must courseresult first */
-    group = "SceneCourseResult";
+    group = "CourseResultScene";
   else if (filepath.find("result") != std::string::npos)
-    group = "SceneResult";
+    group = "ResultScene";
 
   if (group.empty())
   {
@@ -170,6 +171,14 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     return;
   }
   curr_metrics = Setting::GetThemeMetricList().create_metric(group);
+
+  if (group == "SelectScene")
+  {
+    // use element-wise position type
+    curr_metrics->set("PositionType", 1);
+    // XXX: default 30?
+    curr_metrics->set("BarCount", 30);
+  }
 
   // convert csv commands into metrics
   for (auto &v : loader)

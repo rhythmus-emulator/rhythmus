@@ -34,10 +34,10 @@ void SceneManager::Initialize()
   case GameBootMode::kBootArcade:
   case GameBootMode::kBootLR2:
   case GameBootMode::kBootRefresh:
-    SceneManager::ChangeScene("SceneLoading");
+    SceneManager::ChangeScene("LoadingScene");
     break;
   case GameBootMode::kBootTest:
-    SceneManager::ChangeScene("SceneTest");
+    SceneManager::ChangeScene("TestScene");
     break;
   }
 }
@@ -101,13 +101,13 @@ void SceneManager::ChangeScene(const std::string &scene_name)
   static std::map <std::string, std::function<Scene*()> > sceneCreateFn;
   if (sceneCreateFn.empty())
   {
-    sceneCreateFn["SceneTest"] = []() { return new TestScene(); };
-    sceneCreateFn["SceneLoading"] = []() { return new LoadingScene(); };
-    sceneCreateFn["SceneSelect"] = []() { return new SelectScene(); };
-    sceneCreateFn["SceneDecide"] = []() { return new DecideScene(); };
-    sceneCreateFn["ScenePlay"] = []() { return new PlayScene(); };
-    sceneCreateFn["SceneResult"] = []() { return new ResultScene(); };
-    //sceneCreateFn["SceneCourseResult"] = []() { return new CourseResultScene(); };
+    sceneCreateFn["TestScene"] = []() { return new TestScene(); };
+    sceneCreateFn["LoadingScene"] = []() { return new LoadingScene(); };
+    sceneCreateFn["SelectScene"] = []() { return new SelectScene(); };
+    sceneCreateFn["DecideScene"] = []() { return new DecideScene(); };
+    sceneCreateFn["PlayScene"] = []() { return new PlayScene(); };
+    sceneCreateFn["ResultScene"] = []() { return new ResultScene(); };
+    //sceneCreateFn["CourseResultScene"] = []() { return new CourseResultScene(); };
   }
 
   auto &inst = getInstance();
