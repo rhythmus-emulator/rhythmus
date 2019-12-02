@@ -7,10 +7,10 @@ namespace rhythmus
 
 // ------------------------- class LoadingScene
 
-LoadingScene::~LoadingScene()
+LoadingScene::LoadingScene()
 {
-  set_name("LoadingScene");
-  next_scene_ = "SelectScene";
+  set_name("SceneLoading");
+  next_scene_ = "SceneSelect";
   prev_scene_ = "Exit";
 }
 

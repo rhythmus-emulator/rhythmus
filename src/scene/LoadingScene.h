@@ -9,7 +9,7 @@ namespace rhythmus
 class LoadingScene: public Scene
 {
 public:
-  virtual ~LoadingScene();
+  LoadingScene();
 
   virtual void LoadScene();
   virtual void StartScene();

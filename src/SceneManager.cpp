@@ -119,7 +119,7 @@ void SceneManager::ChangeScene(const std::string &scene_name)
     return;
   }
 
-  if (scene_name.empty() || scene_name == "exit")
+  if (scene_name.empty() || stricmp(scene_name.c_str(), "exit") == 0)
     is_exit = true;
 
   auto it = sceneCreateFn.find(scene_name);
@@ -130,6 +130,7 @@ void SceneManager::ChangeScene(const std::string &scene_name)
   {
     // prepare to exit game
     Game::Exit();
+    return;
   }
 
   inst.next_scene_ = it->second();
