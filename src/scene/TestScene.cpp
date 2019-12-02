@@ -41,7 +41,7 @@ void TestScene::LoadScene()
 
   text_.SetFontByPath(
     "../test/gyeonggi.ttf|"
-    "size:12;fg:0xfffffff;border:2,0xff666666"
+    "size:12;color:0xffffffff;border:2,0xff666666"
   );
   text_.SetText(text_to_print);
   text_.SetPos(30, 10);

@@ -18,7 +18,6 @@ public:
 private:
   Text message_text_;
   Text current_file_text_;
-  Image img_;
   Sprite loading_bar_;
 
   virtual void doUpdate(float);

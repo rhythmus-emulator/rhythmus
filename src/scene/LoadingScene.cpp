@@ -5,10 +5,6 @@
 namespace rhythmus
 {
 
-// singletons used for loading context
-
-std::string current_loading_file;
-
 // ------------------------- class LoadingScene
 
 LoadingScene::~LoadingScene()
@@ -25,7 +21,7 @@ void LoadingScene::LoadScene()
 
   message_text_.SetPos(
     320,
-    Graphic::getInstance().width() - 160
+    Graphic::getInstance().height() - 160
   );
   current_file_text_.SetPos(
     320,
@@ -83,15 +79,17 @@ void LoadingScene::doUpdate(float)
       std::cout << "LoadingScene: Song list loading finished." << std::endl;
       SongList::getInstance().select(0);  // select first item
       EventManager::SendEvent("SongListLoadFinished");
+
+      current_file_text_.Clear();
+      message_text_.SetText("Ready ...!");
+
+#if 0
+      Game::getInstance().SetNextGameMode(GameMode::kGameModeSelect);
+      Game::getInstance().ChangeGameMode();
+#endif
+
       check_loaded = true;
     }
-
-    current_file_text_.Clear();
-    message_text_.SetText("Ready ...!");
-#if 0
-    Game::getInstance().SetNextGameMode(GameMode::kGameModeSelect);
-    Game::getInstance().ChangeGameMode();
-#endif
   }
 }
 

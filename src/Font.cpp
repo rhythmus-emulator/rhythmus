@@ -24,7 +24,7 @@ inline uint32_t HexToUint(const char *hex)
 {
   if (hex[0] == '0' && hex[1] == 'x')
     hex += 2;
-  return (uint32_t)strtol(hex, NULL, 16);
+  return (uint32_t)strtoll(hex, NULL, 16);
 }
 
 void FontAttributes::SetFromCommand(const std::string &command)

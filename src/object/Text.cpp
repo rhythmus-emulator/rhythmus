@@ -190,6 +190,8 @@ void Text::doRender()
 
   /* TESTCODE for rendering whole glyph texture */
 #if 0
+  if (text_render_ctx_.textvertex.empty())
+    return;
   Graphic::SetTextureId(text_render_ctx_.textvertex[0].texid);
   VertexInfo *vi = Graphic::get_vertex_buffer();
   vi[0].x = 10;
