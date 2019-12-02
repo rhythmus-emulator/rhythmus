@@ -45,6 +45,7 @@ Font *CreateObjectFromPath(const std::string &path)
     std::cerr << "Unknown Font file: " << path << std::endl;
   }
 
+  memset(&attr, 0, sizeof(attr));
   attr.SetFromCommand(cmd);
 
   if (!font->LoadFont(fn.c_str(), attr))
@@ -179,7 +180,7 @@ ResourceManager::UnloadObject(Font *img) { UnloadFont(img); }
 void ResourceManager::UpdateMovie()
 {
   // Update images
-  float delta = (float)Timer::SystemTimer().GetDeltaTime();
+  float delta = (float)Timer::SystemTimer().GetDeltaTime() * 1000;
   for (const auto& it : gImgpool)
     it.second.obj->Update(delta);
 }

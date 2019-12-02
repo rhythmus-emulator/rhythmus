@@ -1,6 +1,5 @@
 #include "Timer.h"
 #include <GLFW/glfw3.h>
-#include <atomic>
 
 namespace rhythmus
 {
@@ -91,7 +90,6 @@ Timer &Timer::SystemTimer()
   return sys_timer;
 }
 
-/* Should be thread-safe. Use atomic store here. */
 void Timer::Update()
 {
   SystemTimer().Tick();

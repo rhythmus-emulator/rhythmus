@@ -59,6 +59,7 @@ void Text::SetText(const std::string& s)
 
   text_ = s;
   font_->PrepareText(s);
+  font_->Commit();
   font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
 
   for (const auto& tvi : text_render_ctx_.textvertex)
