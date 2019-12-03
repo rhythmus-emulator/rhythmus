@@ -48,10 +48,12 @@ MusicWheel::MusicWheel()
 {
   set_name("MusicWheel");
   set_infinite_scroll(true);
+#if 0
   set_display_count(24);
   set_focus_max_index(12);
   set_focus_min_index(12);
   set_focus_index(12);
+#endif
 }
 
 MusicWheel::~MusicWheel()

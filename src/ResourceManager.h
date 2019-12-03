@@ -37,6 +37,12 @@ public:
 
   /**
    * @brief
+   * check resource states and deallocates all resource objects.
+   */
+  void Cleanup();
+
+  /**
+   * @brief
    * Cache a folder and it's subdirectory path.
    * (considering as it's game system directory)
    * Cached paths are used for masked-path searching.

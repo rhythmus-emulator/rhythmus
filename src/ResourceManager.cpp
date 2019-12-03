@@ -2,6 +2,7 @@
 #include "Image.h"
 #include "Font.h"
 #include "Timer.h"
+#include "Logger.h"
 #include "LR2/LR2Font.h"
 #include <FreeImage.h>
 #include <iostream>
@@ -122,6 +123,11 @@ public:
     }
   }
 
+  void Clear()
+  {
+    objects_.clear();
+  }
+
   bool Exist(const std::string &name) const
   {
     return objects_.find(name) != objects_.end();
@@ -189,6 +195,22 @@ ResourceManager& ResourceManager::getInstance()
 {
   static ResourceManager m;
   return m;
+}
+
+void ResourceManager::Cleanup()
+{
+  for (const auto& it : gImgpool)
+  {
+    Logger::Error("[Error] Memory leak found (image): %s", it.second.obj->get_path().c_str());
+  }
+
+  for (const auto& it : gFontpool)
+  {
+    Logger::Error("[Error] Memory leak found (font): %s", it.second.obj->get_path().c_str());
+  }
+
+  gImgpool.Clear();
+  gFontpool.Clear();
 }
 
 void ResourceManager::CacheSystemDirectory()

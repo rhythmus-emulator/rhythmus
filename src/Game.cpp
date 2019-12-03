@@ -92,6 +92,7 @@ void Game::Cleanup()
   Graphic::getInstance().Cleanup();
   SoundDriver::getInstance().Destroy();
   Setting::SaveAll();
+  ResourceManager::getInstance().Cleanup();
   Logger::getInstance().FinishLogging();
 }
 

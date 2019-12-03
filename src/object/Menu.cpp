@@ -285,11 +285,12 @@ void Menu::UpdateItemPos()
 void Menu::UpdateItemPosByExpr()
 {
   int x, y, i;
+  int display_count = (int)bar_.size();
 
   // firstly - set all object's position
-  for (i = 0; i < display_count_ + kScrollPosMaxDiff * 2; ++i)
+  for (i = 0; i < display_count; ++i)
   {
-    double pos = i - display_count_ / 2 + scroll_delta_;
+    double pos = i - display_count / 2 + scroll_delta_;
     x = pos_expr_param_.bar_offset_x + pos_expr_param_.curve_size *
       (1.0 - cos(pos / pos_expr_param_.curve_level));
     y = pos_expr_param_.bar_center_y +
@@ -301,8 +302,8 @@ void Menu::UpdateItemPosByExpr()
 
   // decide range of object to show
   int start_idx_show = kScrollPosMaxDiff + floor(scroll_delta_);
-  int end_idx_show = start_idx_show + display_count_;
-  for (i = 0; i < display_count_ + kScrollPosMaxDiff * 2; ++i)
+  int end_idx_show = display_count - kScrollPosMaxDiff + ceil(scroll_delta_);
+  for (i = 0; i < display_count; ++i)
   {
     if (i < start_idx_show || i > end_idx_show)
       bar_[i]->Hide();
@@ -315,12 +316,12 @@ void Menu::UpdateItemPosByFixed()
 {
   int i, ii;
   double ratio = scroll_delta_ - floor(scroll_delta_);
+  int display_count = (int)bar_.size();
 
   // decide range of object to show
-  int start_idx_show = kScrollPosMaxDiff + floor(scroll_delta_) + 1 /* LR2 specific trick */;
-  int end_idx_show = start_idx_show +
-    display_count_ > 28 ? 28 : display_count_ /* XXX: Number is limited here! */;
-  for (i = 0; i < display_count_ + kScrollPosMaxDiff * 2; ++i)
+  int start_idx_show = kScrollPosMaxDiff + floor(scroll_delta_);
+  int end_idx_show = display_count - kScrollPosMaxDiff + ceil(scroll_delta_);
+  for (i = 0; i < display_count; ++i)
   {
     if (i < start_idx_show || i >= end_idx_show)
       bar_[i]->Hide();

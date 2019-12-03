@@ -35,11 +35,6 @@ void SelectScene::LoadScene()
   MakeSelectDataList();
 
   Scene::LoadScene();
-
-  // Create and load wheel metric wheel metric is not exist
-  Metric *metric = Setting::GetThemeMetricList().get_metric(get_name());
-  if (!Setting::GetThemeMetricList().get_metric("MusicWheel"))
-    wheel_.Load(*metric);
 }
 
 void SelectScene::CloseScene(bool next)
