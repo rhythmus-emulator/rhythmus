@@ -180,6 +180,9 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     curr_metrics->set("BarCount", 30);
   }
 
+  // use itself as script file.
+  curr_metrics->set("script", filepath);
+
   // convert csv commands into metrics
   for (auto &v : loader)
   {
@@ -352,7 +355,7 @@ bool MetricList::exist(const std::string &group, const std::string &key) const
 {
   auto it = metricmap_.find(group);
   if (it == metricmap_.end()) return false;
-  return it->second.exist(group);
+  return it->second.exist(key);
 }
 
 Metric *MetricList::get_metric(const std::string &group)
