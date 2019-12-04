@@ -232,6 +232,7 @@ public:
   Option *GetOption(const std::string &key) const;
   Option &SetOption(const std::string &key, const std::string &optionstr);
   Option &SetOption(const std::string &key, Option *option);
+  void SetOptionFromMetric(Metric *metric);
   void DeleteOption(const std::string &key);
   void Clear();
 

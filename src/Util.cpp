@@ -335,9 +335,9 @@ void CommandArgs::Set(const std::string &argv, size_t arg_count)
   args_.clear();
   if (arg_count == 0) return; /* prevent underflow */
 
-  while (args_.size() < arg_count)
+  while (args_.size() < arg_count && b <= argv.size())
   {
-    if (b == arg_count - 1)
+    if (args_.size() == arg_count - 1)
     {
       std::string sa, sb;
       Split(argv.substr(a), ',', sa, sb);
@@ -354,9 +354,10 @@ void CommandArgs::Set(const std::string &argv, size_t arg_count)
     }
     else b++;
   }
-  while (b < arg_count)
+  while (args_.size() < arg_count)
   {
     args_.emplace_back(std::string());
+    ++b;
   }
 }
 

@@ -56,9 +56,21 @@ int Metric::get(const std::string &key) const
 }
 
 template <>
+size_t Metric::get(const std::string &key) const
+{
+  return (size_t)get<int>(key);
+}
+
+template <>
 double Metric::get(const std::string &key) const
 {
   return atof(get<std::string>(key).c_str());
+}
+
+template <>
+float Metric::get(const std::string &key) const
+{
+  return (float)get<double>(key);
 }
 
 #if 0
@@ -215,8 +227,11 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     }
     else if (lr2name == "CUSTOMFILE")
     {
+      CommandArgs args(value, 3);
       curr_metrics->set("Option", (int)optioncount);
-      curr_metrics->set("Option" + std::to_string(optioncount), value);
+      curr_metrics->set("Option" + std::to_string(optioncount),
+        args.Get<std::string>(0) + ",!F" + args.Get<std::string>(1) + "," + args.Get<std::string>(2)
+      );
       optioncount++;
     }
     else if (lr2name == "IMAGE")
@@ -731,6 +746,21 @@ Option &OptionList::SetOption(const std::string &key, Option *option)
   return *option;
 }
 
+void OptionList::SetOptionFromMetric(Metric *metric)
+{
+  if (!metric) return;
+  if (metric->exist("Option"))
+  {
+    auto count = metric->get<size_t>("Option");
+    for (auto i = 0; i < count; ++i)
+    {
+      std::string option_str = metric->get<std::string>("Option" + std::to_string(i+1));
+      CommandArgs args(option_str, 2);
+      SetOption(args.Get<std::string>(0), args.Get<std::string>(1));
+    }
+  }
+}
+
 void OptionList::DeleteOption(const std::string &key)
 {
   auto it = options_.find(key);
@@ -773,6 +803,15 @@ void Setting::ReadAll()
       if (!option) continue;
       GetThemeMetricList().ReadMetricFromFile(option->value<std::string>());
     }
+  }
+
+  // create theme option from ThemeMetric,
+  // and load stored option value.
+  for (size_t i = 2; metric_option_attrs[i]; ++i)
+  {
+    GetThemeSetting().SetOptionFromMetric(
+      GetThemeMetricList().get_metric(metric_option_attrs[i])
+    );
   }
   GetThemeSetting().ReadFromFile(kThemeSettingPath);
 }
