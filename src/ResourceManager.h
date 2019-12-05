@@ -58,6 +58,14 @@ public:
 
   /**
    * @brief
+   * Use when resource path need to be replaced.
+   * (for LR2)
+   */
+  void SetPrefixReplace(const std::string &prefix_from, const std::string &prefix_to);
+  void ClearPrefixReplace();
+
+  /**
+   * @brief
    * Get cached file path masked path.
    * Result is returned as input is if it's not masked path or not found.
    */
@@ -80,7 +88,12 @@ private:
   // path replacement
   std::map<std::string, std::string> path_replacement_;
 
-  std::string ResolveMaskedPath(const std::string &path);
+  // path prefix replacement
+  std::string path_prefix_replace_from_;
+  std::string path_prefix_replace_to_;
+
+  std::string ResolveMaskedPath(const std::string &path) const;
+  std::string PrefixReplace(const std::string &path) const;
 };
 
 /* @brief Object from ResourceManager using RAII model */

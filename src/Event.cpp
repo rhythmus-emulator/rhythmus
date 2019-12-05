@@ -207,6 +207,19 @@ EventManager::EventManager()
 {
 }
 
+EventManager::~EventManager()
+{
+  // clear all subscriber.
+  // use game event lock to prevent call Flush() method while cleanup.
+  std::lock_guard<std::mutex> lock(game_evt_lock);
+  for (auto i : event_subscribers_)
+  {
+    for (auto *e : i.second)
+      e->subscription_.clear();
+  }
+  event_subscribers_.clear();
+}
+
 void EventManager::Subscribe(EventReceiver& e, const std::string &name)
 {
   e.SubscribeTo(name);

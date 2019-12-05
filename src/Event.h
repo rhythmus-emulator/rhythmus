@@ -95,6 +95,7 @@ public:
   void UnsubscribeAll();
 
   virtual bool OnEvent(const EventMessage& msg);
+  friend class EventManager;
 
 private:
   /* to what events it subscribed. */
@@ -124,6 +125,7 @@ public:
   static EventManager& getInstance();
 private:
   EventManager();
+  ~EventManager();
 
   /* subscribers are stored in it */
   std::map<std::string, std::set<EventReceiver*> > event_subscribers_;

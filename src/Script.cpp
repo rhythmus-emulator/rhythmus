@@ -197,6 +197,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   {
     LR2SceneLoader loader;
     size_t image_idx = 0, font_idx = 0;
+    loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
     loader.Load(filepath);
     for (auto &v : loader)
     {
@@ -225,12 +226,12 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       else if (lr2name == "IMAGE")
       {
         // TODO: value with "continue" ?
-        ResourceManager::SetAlias("Image" + std::to_string(image_idx++), args.Get<std::string>(1));
+        ResourceManager::SetAlias("Image" + std::to_string(image_idx++), args.Get<std::string>(0));
       }
-      else if (lr2name == "FONT")
+      else if (lr2name == "LR2FONT")
       {
         // TODO: value with "continue" ?
-        ResourceManager::SetAlias("Font" + std::to_string(image_idx++), args.Get<std::string>(1));
+        ResourceManager::SetAlias("Font" + std::to_string(font_idx++), args.Get<std::string>(0));
       }
 
     }
@@ -323,7 +324,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       /* parameter to 13th string */
       value = "lr2cmd:";
       for (size_t i = 0; i <= 13; ++i)
-        value += params[16] + ",";
+        value += params[i] + ",";
       value.pop_back();
 
       /* if first DST command, append timer / op code attribute. */
@@ -346,8 +347,12 @@ void Script::ExecuteLR2Script(const std::string &filepath)
        * (imgname),(sx),(sy),(sw),(sh),(divx),(divy),(cycle),(timer)
        * (fontname),(sourcename),(align),(editable)
        *
-       * (nothing to do currently)
+       * change filename alias.
        */
+      if (obj_type == "TEXT")
+        value = "Font" + value;
+      else
+        value = "Image" + value;
     }
 
     /* Set attribute */

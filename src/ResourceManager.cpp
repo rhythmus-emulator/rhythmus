@@ -41,9 +41,16 @@ Font *CreateObjectFromPath(const std::string &path)
   {
     font = new LR2Font();
   }
+  else if (ext == "lr2font" && fn.size() > 13)
+  {
+    // /font.lr2font file
+    fn = fn.substr(0, fn.size() - 13) + ".dxa";
+    font = new LR2Font();
+  }
   else
   {
     std::cerr << "Unknown Font file: " << path << std::endl;
+    return nullptr;
   }
 
   memset(&attr, 0, sizeof(attr));
@@ -162,10 +169,12 @@ ResourceManager::UnloadObject(Image *img) { UnloadImage(img); }
 
 Font* ResourceManager::LoadFont(const std::string& path)
 {
-  // TODO: FontAttributes& will be processed later
+  // FontAttributes& will be processed later
   // from file type or parameter in path.
-  std::string gamepath = getInstance().GetPath(path);
-  return gFontpool.Load(gamepath);
+  std::string fn, attr;
+  Split(path, '|', fn, attr);
+  std::string gamepath = getInstance().GetPath(fn);
+  return gFontpool.Load(gamepath + "|" + attr);
 }
 
 void ResourceManager::UnloadFont(Font *font)
@@ -201,12 +210,14 @@ void ResourceManager::Cleanup()
 {
   for (const auto& it : gImgpool)
   {
-    Logger::Error("[Error] Memory leak found (image): %s", it.second.obj->get_path().c_str());
+    if (!it.second.obj) continue;
+    Logger::Error("Memory leak found (image): %s", it.second.obj->get_path().c_str());
   }
 
   for (const auto& it : gFontpool)
   {
-    Logger::Error("[Error] Memory leak found (font): %s", it.second.obj->get_path().c_str());
+    if (!it.second.obj) continue;
+    Logger::Error("Memory leak found (font): %s", it.second.obj->get_path().c_str());
   }
 
   gImgpool.Clear();
@@ -236,6 +247,18 @@ void ResourceManager::MakePathHigherPriority(const std::string& path)
   std::rotate(path_cached_.begin(), it, path_cached_.end());
 }
 
+void ResourceManager::SetPrefixReplace(const std::string &prefix_from, const std::string &prefix_to)
+{
+  path_prefix_replace_from_ = prefix_from;
+  path_prefix_replace_to_ = prefix_to;
+}
+
+void ResourceManager::ClearPrefixReplace()
+{
+  path_prefix_replace_from_.clear();
+  path_prefix_replace_to_.clear();
+}
+
 std::string ResourceManager::GetPath(const std::string& masked_path, bool &is_found) const
 {
   is_found = false;
@@ -250,14 +273,14 @@ std::string ResourceManager::GetPath(const std::string& masked_path, bool &is_fo
 
   // check masking first -- if not, return as it is.
   if (masked_path.find('*') == std::string::npos)
-    return masked_path;
+    return PrefixReplace(masked_path);
 
   // do path mask matching for cached paths
   std::string r = getInstance().ResolveMaskedPath(masked_path);
   if (r.empty())
   {
     is_found = false;
-    return masked_path;
+    return PrefixReplace(masked_path);
   }
   return r;
 }
@@ -279,7 +302,7 @@ void ResourceManager::GetAllPaths(const std::string& masked_path, std::vector<st
   {
     if (CheckMasking(path, masked_path))
     {
-      out.push_back(path);
+      out.push_back(PrefixReplace(path));
     }
   }
 }
@@ -291,23 +314,38 @@ void ResourceManager::SetAlias(const std::string& path_from, const std::string& 
   inst.path_replacement_[path_from] = inst.ResolveMaskedPath(path_to);
 }
 
-std::string ResourceManager::ResolveMaskedPath(const std::string &masked_path)
+std::string ResourceManager::ResolveMaskedPath(const std::string &masked_path) const
 {
   // check masking first -- if not, return as it is.
   if (masked_path.find('*') == std::string::npos)
-    return masked_path;
+    return PrefixReplace(masked_path);
 
   // do path mask matching for cached paths
   for (const auto& path : path_cached_)
   {
     if (CheckMasking(path, masked_path))
     {
-      return path;
+      return PrefixReplace(path);
     }
   }
 
   // if not found, return empty string
   return std::string();
+}
+
+std::string ResourceManager::PrefixReplace(const std::string &path) const
+{
+  std::string newpath = path;
+  for (size_t i = 0; i < newpath.size(); ++i)
+    if (newpath[i] == '\\') newpath[i] = '/';
+  if (path_prefix_replace_from_.empty()) return newpath;
+  if (strnicmp(
+    path_prefix_replace_from_.c_str(),
+    newpath.c_str(), path_prefix_replace_from_.size()) == 0)
+  {
+    return path_prefix_replace_to_ + newpath.substr(path_prefix_replace_from_.size());
+  }
+  else return newpath;
 }
 
 ResourceManager::ResourceManager()

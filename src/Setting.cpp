@@ -221,18 +221,18 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     }
     else if (lr2name == "CUSTOMOPTION")
     {
+      optioncount++;
       curr_metrics->set("Option", (int)optioncount);
       curr_metrics->set("Option" + std::to_string(optioncount), value);
-      optioncount++;
     }
     else if (lr2name == "CUSTOMFILE")
     {
+      optioncount++;
       CommandArgs args(value, 3);
       curr_metrics->set("Option", (int)optioncount);
       curr_metrics->set("Option" + std::to_string(optioncount),
         args.Get<std::string>(0) + ",!F" + args.Get<std::string>(1) + "," + args.Get<std::string>(2)
       );
-      optioncount++;
     }
     else if (lr2name == "IMAGE")
     {
@@ -296,6 +296,11 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
       // TODO
     }
   }
+
+  /* turn on path prefix for LR2. */
+  ResourceManager::getInstance().SetPrefixReplace(
+    "LR2files/Theme", kSubstitutePath
+  );
 }
 
 void MetricList::ReadLR2SS(const std::string &filepath)
