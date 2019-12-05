@@ -131,6 +131,7 @@ void Scene::LoadScene()
   // Load scene specific script if necessary.
   if (Setting::GetThemeMetricList().exist(get_name(), "script"))
   {
+    Script::getInstance().SetContextScene(this);
     Script::ExecuteFromPath(
       Setting::GetThemeMetricList().get<std::string>(get_name(), "script")
     );

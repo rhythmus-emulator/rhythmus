@@ -16,7 +16,7 @@
 namespace rhythmus
 {
 
-Script::Script()
+Script::Script() : scene_(nullptr)
 {
   memset(flags_, 0, sizeof(flags_));
   memset(numbers_, 0, sizeof(numbers_));
@@ -29,6 +29,11 @@ Script::Script()
 
 Script::~Script()
 {}
+
+void Script::SetContextScene(Scene *scene)
+{
+  scene_ = scene;
+}
 
 void Script::SetFlag(int flag_no, int value)
 {
@@ -175,18 +180,15 @@ void Script::ExecuteLR2Script(const std::string &filepath)
 #undef NAME
 #endif
 
-  Scene *scene = SceneManager::get_current_scene();
   LR2SceneLoader loader;
   std::vector<std::pair<std::string, Metric> /* objtype, metric */>
     object_metrics;
   std::map<std::string, Metric*> object_processing;
 
-  ASSERT(scene);
-
   loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
 
   /*
-   * initialization.
+   * flag initialization.
    */
   for (size_t i = 900; i < 1000; ++i)
     flags_[i] = 0;
@@ -360,6 +362,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   }
 
   /* set zindex for all object metrics & process metric to scene */
+  if (scene_)
   {
     size_t idx = 0;
     for (auto &m : object_metrics)
@@ -370,10 +373,10 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       metric.set("zindex", (int)idx);
       BaseObject *obj = CreateObjectFromMetric(name, metric);
       if (obj)
-        scene->RegisterChild(obj);
+        scene_->RegisterChild(obj);
       else
       {
-        if (obj = scene->FindChildByName(name))
+        if (obj = scene_->FindChildByName(name))
           obj->Load(metric);
         else
           std::cerr << "Warning: object metric '" << name <<

@@ -5,6 +5,8 @@
 namespace rhythmus
 {
 
+class Scene;
+
 /**
  * @brief
  * Processes all types scripts to modify current gamestate, scene object, etc.
@@ -18,6 +20,7 @@ public:
   Script();
   ~Script();
 
+  void SetContextScene(Scene *scene);
   void SetFlag(int flag_no, int value);
   int GetFlag(int flag_no) const;
   void SetString(size_t idx, const std::string &value);
@@ -38,6 +41,9 @@ private:
 
   /* for number cache (LR2) */
   int numbers_[1000];
+
+  /* script context scene */
+  Scene *scene_;
 };
 
 }
