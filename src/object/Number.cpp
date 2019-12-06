@@ -173,6 +173,10 @@ void NumberSprite::doUpdate(float delta)
 
 void NumberSprite::doRender()
 {
+  // If hide, then not draw
+  if (!img_ || !IsVisible())
+    return;
+
   Graphic::SetTextureId(image()->get_texture_ID());
   for (const auto &tvi : tvi_)
   {
