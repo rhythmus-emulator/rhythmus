@@ -186,10 +186,11 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
 
   if (group == "SelectScene")
   {
+    auto *m = Setting::GetThemeMetricList().create_metric("MusicWheel");
     // use element-wise position type
-    curr_metrics->set("PositionType", 1);
+    m->set("PositionType", 1);
     // XXX: default 30?
-    curr_metrics->set("BarCount", 30);
+    m->set("BarCount", 30);
   }
 
   // use itself as script file.
@@ -252,8 +253,9 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     }
     else if (lr2name == "BAR_CENTER" || lr2name == "BAR_AVAILABLE")
     {
-      curr_metrics->set("CenterIndex", GetFirstParam(value));
-      curr_metrics->set("PositionType", 1); /* use bar position */
+      auto *m = Setting::GetThemeMetricList().create_metric("MusicWheel");
+      m->set("CenterIndex", GetFirstParam(value));
+      m->set("PositionType", 1); /* use bar position */
     }
     else if (lr2name == "TRANSCLOLR")
     {

@@ -375,6 +375,7 @@ void Menu::Load(const Metric &metric)
     auto *item = CreateMenuItem();
     item->set_parent(this);
     item->Load(metric);
+    bar_.push_back(item);
   }
 
   // Build items (position)
@@ -387,7 +388,7 @@ void Menu::Load(const Metric &metric)
 
   // Load sounds
   wheel_sound_.Load(
-    Setting::GetThemeMetricList().get<std::string>("Sound", "MusicSelect")
+    Setting::GetThemeMetricList().get<std::string>("Sound", "SongSelectChange")
   );
 
   // Build item and set basic position

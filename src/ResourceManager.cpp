@@ -321,11 +321,12 @@ std::string ResourceManager::ResolveMaskedPath(const std::string &masked_path) c
     return PrefixReplace(masked_path);
 
   // do path mask matching for cached paths
+  std::string replaced_path = PrefixReplace(masked_path);
   for (const auto& path : path_cached_)
   {
-    if (CheckMasking(path, masked_path))
+    if (CheckMasking(path, replaced_path))
     {
-      return PrefixReplace(path);
+      return path;
     }
   }
 
