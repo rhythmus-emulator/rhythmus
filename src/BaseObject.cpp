@@ -360,7 +360,7 @@ void BaseObject::SetAcceleration(int acc)
 void BaseObject::SetLR2DST(
   int time, int x, int y, int w, int h, int acc_type,
   int a, int r, int g, int b, int blend, int filter, int angle,
-  int center, int loop)
+  int center)
 {
   // DST specifies time information as the time of motion
   // So we need to calculate 'duration' of that motion.
@@ -755,8 +755,8 @@ void BaseObject::CreateCommandFnMap()
       args.Get<int>(1), args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), /* xywh */
       args.Get<int>(5), /* acc_type */
       args.Get<int>(6), args.Get<int>(7), args.Get<int>(8), args.Get<int>(9), /* argb */
-      args.Get<int>(10), args.Get<int>(11), args.Get<int>(12), /* blend, filter */
-      args.Get<int>(13), args.Get<int>(14) /* center, loop */
+      args.Get<int>(10), args.Get<int>(11), args.Get<int>(12), /* blend, filter, angle */
+      args.Get<int>(13) /* center */
     );
   };
   cmdfnmap_["show"] = [](void *o, CommandArgs& args) {

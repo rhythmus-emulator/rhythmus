@@ -101,4 +101,9 @@ void Timer::Initialize()
   SystemTimer().Start();
 }
 
+void Timer::ClearDelta()
+{
+  delta_ = 0;
+}
+
 }

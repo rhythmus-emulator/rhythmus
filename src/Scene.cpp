@@ -145,7 +145,8 @@ void Scene::LoadScene()
   if (do_sort_objects_)
     std::sort(children_.begin(), children_.end());
 
-  // send event to update LR2Flag from option.
+  // Start event for all objects
+  // XXX: Maybe we can 
   EventManager::SendEvent("SceneLoaded");
 }
 

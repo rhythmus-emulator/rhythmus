@@ -188,7 +188,7 @@ public:
   void SetAcceleration(int acc);
   void SetLR2DST(int time, int x, int y, int w, int h, int acc_type,
     int a, int r, int g, int b, int blend, int filter, int angle,
-    int center, int loop);
+    int center);
   void SetVisibleGroup(int group0 = 0, int group1 = 0, int group2 = 0);
   void Hide();
   void Show();

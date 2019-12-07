@@ -25,6 +25,7 @@ public:
   bool IsTimerStarted();
   void Tick();
   double GetTickRate() const;
+  void ClearDelta();
 
   static Timer &SystemTimer();
   static double GetUncachedSystemTime();

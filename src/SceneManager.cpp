@@ -54,7 +54,7 @@ void SceneManager::Cleanup()
 void SceneManager::Update()
 {
   // check is it necessary to change scene
-  // StartScene is called here (time critical process)
+  // StartScene is called here. (time critical process)
   if (next_scene_)
   {
     delete current_scene_;
@@ -63,9 +63,11 @@ void SceneManager::Update()
 
     current_scene_->StartScene();
 
-    // Need to refresh game timer to set exact scene start timing
-    // As much time passed due to scene loading.
+    // Need to refresh game timer & clear out delta
+    // to set exact scene start timing,
+    // as much time passed due to scene loading.
     Timer::Update();
+    Timer::SystemTimer().ClearDelta();
   }
 
   if (current_scene_)
