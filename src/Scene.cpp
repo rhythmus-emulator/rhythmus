@@ -145,9 +145,7 @@ void Scene::LoadScene()
   if (do_sort_objects_)
     std::sort(children_.begin(), children_.end());
 
-  // Start event for all objects
-  // XXX: Maybe we can 
-  EventManager::SendEvent("SceneLoaded");
+  EventManager::SendEvent("Load");
 }
 
 void Scene::StartScene()

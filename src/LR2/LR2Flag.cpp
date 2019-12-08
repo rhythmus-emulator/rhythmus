@@ -32,7 +32,7 @@ namespace rhythmus
       static EventFnMap fnmap;
       if (fnmap.empty())
       {
-        fnmap["SceneLoaded"] = []() { EventManager::SendEvent("LR0"); };
+        fnmap["Load"] = []() { EventManager::SendEvent("LR0"); };
         fnmap["PlayLoading"] = []() {
           Script::getInstance().SetFlag(80, 1);   // Loading
           Script::getInstance().SetFlag(81, 0);   // Loaded

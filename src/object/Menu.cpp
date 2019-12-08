@@ -331,11 +331,6 @@ void Menu::UpdateItemPosByFixed()
       ASSERT(ii >= 0 && ii < 30);
       BaseObject *obj1 = &pos_fixed_param_.tween_bar[ii + 1];
       BaseObject *obj2 = &pos_fixed_param_.tween_bar[ii];
-      if (!obj1->get_draw_property().display || !obj2->get_draw_property().display)
-      {
-        bar_[i]->Hide();
-        continue;
-      }
 
       DrawProperty d;
       MakeTween(d,
@@ -344,12 +339,18 @@ void Menu::UpdateItemPosByFixed()
         ratio, EaseTypes::kEaseLinear);
       // TODO: apply alpha?
       bar_[i]->SetPos(d.x, d.y);
+      bar_[i]->Show();
     }
   }
 }
 
 void Menu::doRender()
 {
+  auto display_count = bar_.size();
+  for (auto i = 0; i < display_count; ++i)
+  {
+    bar_[i]->Render();
+  }
 }
 
 MenuItem* Menu::CreateMenuItem()
@@ -383,7 +384,15 @@ void Menu::Load(const Metric &metric)
   {
     // TODO: need to make new metric for this bar?
     // Bar1OnLoad --> OnLoad ?
-    pos_fixed_param_.tween_bar[i].Load(metric);
+    //pos_fixed_param_.tween_bar[i].Load(metric);
+    /*
+    pos_fixed_param_.tween_bar[i].AddCommand(
+      "Load", metric.get<std::string>(format_string("Bar%dOnLoad", i))
+    );
+    */
+    pos_fixed_param_.tween_bar[i].LoadFromLR2DST(
+      metric.get<std::string>(format_string("Bar%dlr2cmd", i))
+    );
   }
 
   // Load sounds
