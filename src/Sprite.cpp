@@ -213,15 +213,21 @@ void Sprite::LoadFromLR2SRC(const std::string &cmd)
   }
 }
 
-void Sprite::CreateCommandFnMap()
+const CommandFnMap& Sprite::GetCommandFnMap()
 {
-  BaseObject::CreateCommandFnMap();
-  cmdfnmap_["blend"] = [](void *o, CommandArgs& args) {
-    static_cast<Sprite*>(o)->SetBlend(args.Get<int>(0));
-  };
-  cmdfnmap_["replay"] = [](void *o, CommandArgs& args) {
-    static_cast<Sprite*>(o)->ReplaySprite();
-  };
+  static CommandFnMap cmdfnmap_;
+  if (cmdfnmap_.empty())
+  {
+    cmdfnmap_ = BaseObject::GetCommandFnMap();
+    cmdfnmap_["blend"] = [](void *o, CommandArgs& args) {
+      static_cast<Sprite*>(o)->SetBlend(args.Get<int>(0));
+    };
+    cmdfnmap_["replay"] = [](void *o, CommandArgs& args) {
+      static_cast<Sprite*>(o)->ReplaySprite();
+    };
+  }
+
+  return cmdfnmap_;
 }
 
 }

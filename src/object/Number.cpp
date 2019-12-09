@@ -27,7 +27,7 @@ void NumberInterface::SetNumber(double number) {
   need_update_ = true;
 }
 
-template <> int NumberInterface::GetNumber() const { return number_; }
+template <> int NumberInterface::GetNumber() const { return (int)number_; }
 template <> double NumberInterface::GetNumber() const { return number_; }
 void NumberInterface::SetNumberChangeTime(float msec)
 {
@@ -145,23 +145,30 @@ void NumberSprite::LoadFromLR2SRC(const std::string &cmd)
 
   /* track change of number table */
   std::string eventname = args.Get<std::string>(9);
-  cmdfnmap_[eventname] = [](void *o, CommandArgs& args) {
-    static_cast<NumberSprite*>(o)->SetTextFromTable();
-  };
+  AddCommand(eventname, "numberupdate");
   SubscribeTo(eventname);
-  /* set value instantly */
+
+  /* set number value index instantly */
   SetTextTableIndex(atoi(eventname.c_str()));
 
   /* alignment */
   SetLR2Alignment(args.Get<int>(10));
 }
 
-void NumberSprite::CreateCommandFnMap()
+const CommandFnMap& NumberSprite::GetCommandFnMap()
 {
-  Sprite::CreateCommandFnMap();
-  cmdfnmap_["number"] = [](void *o, CommandArgs& args) {
-    static_cast<NumberSprite*>(o)->SetNumber(args.Get<int>(0));
-  };
+  static CommandFnMap cmdfnmap_;
+  if (cmdfnmap_.empty())
+  {
+    cmdfnmap_ = Sprite::GetCommandFnMap();
+    cmdfnmap_["number"] = [](void *o, CommandArgs& args) {
+      static_cast<NumberSprite*>(o)->SetNumber(args.Get<int>(0));
+    };
+    cmdfnmap_["numberupdate"] = [](void *o, CommandArgs& args) {
+      static_cast<NumberSprite*>(o)->SetTextFromTable();
+    };
+  }
+  return cmdfnmap_;
 }
 
 void NumberSprite::doUpdate(float delta)
@@ -222,9 +229,7 @@ void NumberText::LoadFromLR2SRC(const std::string &cmd)
 
   /* track change of number table */
   std::string eventname = args.Get<std::string>(9);
-  cmdfnmap_[eventname] = [](void *o, CommandArgs& args) {
-    static_cast<NumberText*>(o)->SetTextFromTable();
-  };
+  AddCommand(eventname, "numberupdate");
   SubscribeTo(eventname);
   /* set value instantly */
   SetTextTableIndex(atoi(eventname.c_str()));
@@ -233,12 +238,20 @@ void NumberText::LoadFromLR2SRC(const std::string &cmd)
   SetLR2Alignment(args.Get<int>(10));
 }
 
-void NumberText::CreateCommandFnMap()
+const CommandFnMap& NumberText::GetCommandFnMap()
 {
-  Text::CreateCommandFnMap();
-  cmdfnmap_["number"] = [](void *o, CommandArgs& args) {
-    static_cast<NumberText*>(o)->SetNumber(args.Get<int>(0));
-  };
+  static CommandFnMap cmdfnmap_;
+  if (cmdfnmap_.empty())
+  {
+    cmdfnmap_ = Text::GetCommandFnMap();
+    cmdfnmap_["number"] = [](void *o, CommandArgs& args) {
+      static_cast<NumberText*>(o)->SetNumber(args.Get<int>(0));
+    };
+    cmdfnmap_["numberupdate"] = [](void *o, CommandArgs& args) {
+      static_cast<NumberText*>(o)->SetTextFromTable();
+    };
+  }
+  return cmdfnmap_;
 }
 
 }

@@ -55,7 +55,7 @@ public:
 
 private:
   virtual void SetTextFromTable();
-  virtual void CreateCommandFnMap();
+  virtual const CommandFnMap& GetCommandFnMap();
   virtual void doUpdate(float);
   virtual void doRender();
 
@@ -74,7 +74,7 @@ public:
 
 private:
   virtual void SetTextFromTable();
-  virtual void CreateCommandFnMap();
+  virtual const CommandFnMap& GetCommandFnMap();
   virtual void doUpdate(float);
 };
 

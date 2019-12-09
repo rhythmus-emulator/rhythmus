@@ -185,9 +185,6 @@ void BaseObject::QueueCommand(const std::string &command)
 
 void BaseObject::Load(const Metric& metric)
 {
-  // create command function table
-  CreateCommandFnMap();
-
   // process event handler registering
   // XXX: is this code is good enough?
   for (auto it = metric.cbegin(); it != metric.cend(); ++it)
@@ -738,36 +735,41 @@ void BaseObject::LoadFromLR2DST(const std::string &c)
 
 /* ---------------------------- Command related */
 
-const CommandFnMap& BaseObject::GetCommandFnMap() const
+const CommandFnMap& BaseObject::GetCommandFnMap()
 {
-  return cmdfnmap_;
-}
+  static CommandFnMap cmdfnmap_;
+  if (cmdfnmap_.empty())
+  {
+    static auto fn_Pos = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetPos(args.Get<int>(0), args.Get<int>(1));
+    };
+    static auto fn_SetLR2DST = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetLR2DST(
+        args.Get<int>(0), /* time */
+        args.Get<int>(1), args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), /* xywh */
+        args.Get<int>(5), /* acc_type */
+        args.Get<int>(6), args.Get<int>(7), args.Get<int>(8), args.Get<int>(9), /* argb */
+        args.Get<int>(10), args.Get<int>(11), args.Get<int>(12), /* blend, filter, angle */
+        args.Get<int>(13) /* center */
+      );
+    };
+    static auto fn_Show = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->Show();
+    };
+    static auto fn_Hide = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->Hide();
+    };
+    static auto fn_Loop = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetTweenLoopTime((uint32_t)args.Get<int>(0));
+    };
+    cmdfnmap_["pos"] = fn_Pos;
+    cmdfnmap_["lr2cmd"] = fn_SetLR2DST;
+    cmdfnmap_["show"] = fn_Show;
+    cmdfnmap_["hide"] = fn_Hide;
+    cmdfnmap_["loop"] = fn_Loop;
+  }
 
-void BaseObject::CreateCommandFnMap()
-{
-  cmdfnmap_.clear();
-  cmdfnmap_["pos"] = [](void *o, CommandArgs& args) {
-    static_cast<BaseObject*>(o)->SetPos(args.Get<int>(0), args.Get<int>(1));
-  };
-  cmdfnmap_["lr2cmd"] = [](void *o, CommandArgs& args) {
-    static_cast<BaseObject*>(o)->SetLR2DST(
-      args.Get<int>(0), /* time */
-      args.Get<int>(1), args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), /* xywh */
-      args.Get<int>(5), /* acc_type */
-      args.Get<int>(6), args.Get<int>(7), args.Get<int>(8), args.Get<int>(9), /* argb */
-      args.Get<int>(10), args.Get<int>(11), args.Get<int>(12), /* blend, filter, angle */
-      args.Get<int>(13) /* center */
-    );
-  };
-  cmdfnmap_["show"] = [](void *o, CommandArgs& args) {
-    static_cast<BaseObject*>(o)->Show();
-  };
-  cmdfnmap_["hide"] = [](void *o, CommandArgs& args) {
-    static_cast<BaseObject*>(o)->Hide();
-  };
-  cmdfnmap_["loop"] = [](void *o, CommandArgs& args) {
-    static_cast<BaseObject*>(o)->SetTweenLoopTime((uint32_t)args.Get<int>(0));
-  };
+  return cmdfnmap_;
 }
 
 }

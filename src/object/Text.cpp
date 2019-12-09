@@ -269,11 +269,10 @@ void Text::LoadFromLR2SRC(const std::string &cmd)
 
   /* track change of text table */
   std::string eventname = args.Get<std::string>(1);
-  cmdfnmap_[eventname] = [](void *o, CommandArgs& args) {
-    static_cast<Text*>(o)->SetTextFromTable();
-  };
+  AddCommand(eventname, "textupdate");
   SubscribeTo(eventname);
-  /* set value instantly */
+  
+  /* set text index for update */
   SetTextTableIndex(atoi(eventname.c_str()));
 
   /* alignment */
@@ -283,12 +282,20 @@ void Text::LoadFromLR2SRC(const std::string &cmd)
   //args.Get<int>(2);
 }
 
-void Text::CreateCommandFnMap()
+const CommandFnMap& Text::GetCommandFnMap()
 {
-  BaseObject::CreateCommandFnMap();
-  cmdfnmap_["text"] = [](void *o, CommandArgs& args) {
-    static_cast<Text*>(o)->SetText(args.Get<std::string>(0));
-  };
+  static CommandFnMap cmdfnmap_;
+  if (cmdfnmap_.empty())
+  {
+    cmdfnmap_ = BaseObject::GetCommandFnMap();
+    cmdfnmap_["text"] = [](void *o, CommandArgs& args) {
+      static_cast<Text*>(o)->SetText(args.Get<std::string>(0));
+    };
+    cmdfnmap_["textupdate"] = [](void *o, CommandArgs& args) {
+      static_cast<Text*>(o)->SetTextFromTable();
+    };
+  }
+  return cmdfnmap_;
 }
 
 RHYTHMUS_NAMESPACE_END

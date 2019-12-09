@@ -210,8 +210,6 @@ protected:
 
   BaseObject *parent_;
 
-  CommandFnMap cmdfnmap_;
-
   // children for rendering (not released when this object is destructed)
   std::vector<BaseObject*> children_;
 
@@ -244,8 +242,7 @@ protected:
   virtual void doUpdateAfter(float delta);
   virtual void doRenderAfter();
 
-  const CommandFnMap& GetCommandFnMap() const;
-  virtual void CreateCommandFnMap();
+  virtual const CommandFnMap& GetCommandFnMap();
 };
 
 void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,

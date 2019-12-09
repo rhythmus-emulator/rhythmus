@@ -67,7 +67,7 @@ protected:
   virtual void doUpdate(float delta);
   virtual void doRender();
 
-  virtual void CreateCommandFnMap();
+  virtual const CommandFnMap& GetCommandFnMap();
 };
 
 /* Sprite may not need to be shared. */

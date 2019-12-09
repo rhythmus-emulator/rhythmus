@@ -360,6 +360,8 @@ MenuItem* Menu::CreateMenuItem()
 
 void Menu::Load(const Metric &metric)
 {
+  BaseObject::Load(metric);
+
   pos_method_ = metric.get<int>("PositionType");
   int center_index = metric.get<int>("CenterIndex");
   if (center_index)
@@ -393,6 +395,7 @@ void Menu::Load(const Metric &metric)
     pos_fixed_param_.tween_bar[i].LoadFromLR2DST(
       metric.get<std::string>(format_string("Bar%dlr2cmd", i))
     );
+    pos_fixed_param_.tween_bar[i].LoadCommandByName("LR0");
   }
 
   // Load sounds

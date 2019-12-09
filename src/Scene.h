@@ -60,6 +60,8 @@ public:
   /* @brief start scene e.g. start scene timer */
   virtual void StartScene();
 
+  virtual void Load(const Metric& metric);
+
   /* @brief triggered when scene is finished
    * @warn it does not mean changing scene instantly,
    * which triggers fadeout/transition. */

@@ -179,7 +179,9 @@ void Script::ExecuteLR2Script(const std::string &filepath)
 #undef NAME
 
   LR2SceneLoader loader;
-  std::vector<std::pair<std::string, Metric> /* objtype, metric */>
+  std::vector<
+    std::tuple<std::string, Metric*, bool>
+    /* objtype, metric, is_ref */ >
     object_metrics;
   std::map<std::string, Metric*> object_processing;
 
@@ -306,15 +308,17 @@ void Script::ExecuteLR2Script(const std::string &filepath)
     else if (Setting::GetThemeMetricList().get_metric(name))
     {
       object_processing[name]
-       = curr_metrics
-       = Setting::GetThemeMetricList().get_metric(name);
+        = curr_metrics
+        = Setting::GetThemeMetricList().get_metric(name);
+      /* need to push metric to add zindex data */
+      object_metrics.push_back({ name, curr_metrics, true });
     }
     else
     {
-      object_metrics.push_back({ name, Metric() });
+      object_metrics.push_back({ name, new Metric(), false });
       object_processing[name]
         = curr_metrics
-        = &object_metrics.back().second;
+        = std::get<1>(object_metrics.back());
     }
 
     if (obj_drawtype == "DST")
@@ -377,13 +381,17 @@ void Script::ExecuteLR2Script(const std::string &filepath)
     size_t idx = 0;
     for (auto &m : object_metrics)
     {
-      std::string &name = m.first;
-      Metric &metric = m.second;
+      std::string &name = std::get<0>(m);
+      Metric *metric = std::get<1>(m);
+      bool is_delete = !std::get<2>(m);
 
-      metric.set("zindex", (int)idx);
-      BaseObject *obj = CreateObjectFromMetric(name, metric);
+      metric->set("zindex", (int)idx);
+      BaseObject *obj = CreateObjectFromMetric(name, *metric);
       if (obj)
         scene_->RegisterChild(obj);
+
+      if (is_delete)
+        delete metric;
 #if 0
       else
       {

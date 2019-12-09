@@ -128,14 +128,17 @@ Scene::Scene()
 
 void Scene::LoadScene()
 {
+  auto *m = Setting::GetThemeMetricList().get_metric(get_name());
+  ASSERT_M(m, "No scene metric had been found.");
+
   // Load scene specific script if necessary.
-  if (Setting::GetThemeMetricList().exist(get_name(), "script"))
+  if (m->exist("script"))
   {
     Script::getInstance().SetContextScene(this);
-    Script::ExecuteFromPath(
-      Setting::GetThemeMetricList().get<std::string>(get_name(), "script")
-    );
+    Script::ExecuteFromPath(m->get<std::string>("script"));
   }
+
+  Scene::Load(*m);
 
   // Initialize objects.
   for (auto *obj : children_)
@@ -143,7 +146,12 @@ void Scene::LoadScene()
 
   // sort object if necessary.
   if (do_sort_objects_)
-    std::sort(children_.begin(), children_.end());
+  {
+    std::sort(children_.begin(), children_.end(),
+      [](BaseObject *o1, BaseObject *o2) {
+        return o1->GetDrawOrder() < o2->GetDrawOrder();
+      });
+  }
 
   EventManager::SendEvent("Load");
 }
@@ -186,6 +194,12 @@ void Scene::StartScene()
     scenetask_.Enqueue(task);
     event_time += next_scene_time_;
   }
+}
+
+void Scene::Load(const Metric& metric)
+{
+  if (metric.exist("sort"))
+    do_sort_objects_ = metric.get<bool>("sort");
 }
 
 void Scene::FadeOutScene(bool next)

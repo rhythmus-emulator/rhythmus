@@ -184,8 +184,10 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
   }
   curr_metrics = Setting::GetThemeMetricList().create_metric(group);
 
+  // default settings
   // use itself as script file.
   curr_metrics->set("script", filepath);
+  curr_metrics->set("sort", true);
 
   // convert csv commands into metrics
   for (auto &v : loader)

@@ -43,9 +43,9 @@ protected:
   void SetFont(Font *font);
   virtual void SetTextFromTable();
   virtual void SetLR2Alignment(int alignment);
-  virtual void CreateCommandFnMap();
   virtual void doRender();
   virtual void doUpdate(float);
+  virtual const CommandFnMap& GetCommandFnMap();
 
 private:
   // Font.
