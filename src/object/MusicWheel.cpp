@@ -9,6 +9,11 @@ MusicWheelItem::MusicWheelItem()
 {
   AddChild(&title_);
   AddChild(&level_);
+
+  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
+  {
+    AddChild(&background_[i]);
+  }
 }
 
 void MusicWheelItem::Load(const Metric &metric)
@@ -21,6 +26,8 @@ void MusicWheelItem::Load(const Metric &metric)
   {
     // TODO: SetImageFromPath() if attr exists?
     background_[i].LoadFromLR2SRC(metric.get<std::string>("BarType" + std::to_string(i) + "lr2src"));
+    // TODO: set proper width / height
+    background_[i].SetSize(300, 20);
   }
 
   // TODO: Set NumberText or NumberSprite.

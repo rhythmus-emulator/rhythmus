@@ -314,20 +314,19 @@ void Menu::UpdateItemPosByExpr()
 
 void Menu::UpdateItemPosByFixed()
 {
-  int i, ii;
   double ratio = scroll_delta_ - floor(scroll_delta_);
   int display_count = (int)bar_.size();
 
   // decide range of object to show
   int start_idx_show = kScrollPosMaxDiff + floor(scroll_delta_);
   int end_idx_show = display_count - kScrollPosMaxDiff + ceil(scroll_delta_);
-  for (i = 0; i < display_count; ++i)
+  for (int i = 0; i < display_count; ++i)
   {
     if (i < start_idx_show || i >= end_idx_show)
       bar_[i]->Hide();
     else
     {
-      ii = i - start_idx_show;
+      int ii = i - start_idx_show;
       ASSERT(ii >= 0 && ii < 30);
       BaseObject *obj1 = &pos_fixed_param_.tween_bar[ii + 1];
       BaseObject *obj2 = &pos_fixed_param_.tween_bar[ii];
@@ -338,7 +337,8 @@ void Menu::UpdateItemPosByFixed()
         obj2->get_draw_property(),
         ratio, EaseTypes::kEaseLinear);
       // TODO: apply alpha?
-      bar_[i]->SetPos(d.x, d.y);
+      //bar_[i]->SetPos(d.x, d.y);
+      bar_[i]->SetPos(200, 200);
       bar_[i]->Show();
     }
   }
