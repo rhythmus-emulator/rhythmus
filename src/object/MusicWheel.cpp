@@ -26,6 +26,7 @@ void MusicWheelItem::Load(const Metric &metric)
   {
     // TODO: SetImageFromPath() if attr exists?
     background_[i].LoadFromLR2SRC(metric.get<std::string>("BarType" + std::to_string(i) + "lr2src"));
+    // TODO: Call LoadFromLR2DST and clear position data after it.
     // TODO: set proper width / height
     background_[i].SetSize(300, 20);
   }
@@ -46,6 +47,10 @@ void MusicWheelItem::LoadFromMenuData(MenuData *d)
   }
 
   title_.SetText(data->title);
+  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
+  {
+    // TODO: display proper bar type
+  }
 }
 
 

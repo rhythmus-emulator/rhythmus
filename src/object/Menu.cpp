@@ -337,8 +337,7 @@ void Menu::UpdateItemPosByFixed()
         obj2->get_draw_property(),
         ratio, EaseTypes::kEaseLinear);
       // TODO: apply alpha?
-      //bar_[i]->SetPos(d.x, d.y);
-      bar_[i]->SetPos(200, 200);
+      bar_[i]->SetPos(d.pi.x, d.pi.y);
       bar_[i]->Show();
     }
   }

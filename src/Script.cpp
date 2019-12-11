@@ -291,10 +291,14 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       attrname = "BarType" + value_idx_str + attrname;
     }
 
-    if (lr2name == "DST_BAR_BODY_ON" ||
-      lr2name == "DST_BAR_BODY_OFF")
+    if (lr2name == "DST_BAR_BODY_ON")
     {
       attrname = "Bar" + value_idx_str + attrname;
+    }
+
+    if (lr2name == "DST_BAR_BODY_OFF")
+    {
+      attrname = "BarOff" + value_idx_str + attrname;
     }
 
     /* If not generic metrics(need to create one) and previously exists, update it.
