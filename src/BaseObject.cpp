@@ -225,9 +225,6 @@ void BaseObject::Load(const Metric& metric)
 {
   if (metric.exist("zindex"))
     draw_order_ = metric.get<int>("zindex");
-  
-  if (metric.exist("lr2cmd"))
-    LoadFromLR2DST(metric.get<std::string>("lr2cmd"));
 
   LoadCommand(metric);
 }
@@ -765,28 +762,6 @@ void BaseObject::LoadFromLR2SRC(const std::string &cmd)
   /* implemented later */
 }
 
-void BaseObject::LoadFromLR2DST(const std::string &c)
-{
-  std::vector<std::string> v;
-  std::string timer_and_op, cmd;
-  Split(c, ';', timer_and_op, cmd);
-  Split(timer_and_op, ',', v);
-  std::string timer(v[0]);
-
-  if (v.size() < 5)
-  {
-    std::cerr << "Error : LR2CMD attribute requires more than 5 arguments." << std::endl;
-    return;
-  }
-
-  /* create message handler & set op code */
-  AddCommand("LR" + timer, cmd + ";loop:" + v[4]);
-  AddCommand("LR" + timer + "Off", "hide");
-  SetVisibleGroup(
-    atoi(v[1].c_str()), atoi(v[2].c_str()), atoi(v[3].c_str())
-  );
-}
-
 /* ---------------------------- Command related */
 
 const CommandFnMap& BaseObject::GetCommandFnMap()
@@ -798,14 +773,30 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
       static_cast<BaseObject*>(o)->SetPos(args.Get<int>(0), args.Get<int>(1));
     };
     static auto fn_SetLR2DST = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->SetLR2DST(
-        args.Get<int>(0), /* time */
-        args.Get<int>(1), args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), /* xywh */
-        args.Get<int>(5), /* acc_type */
-        args.Get<int>(6), args.Get<int>(7), args.Get<int>(8), args.Get<int>(9), /* argb */
-        args.Get<int>(10), args.Get<int>(11), args.Get<int>(12), /* blend, filter, angle */
-        args.Get<int>(13) /* center */
+      auto *b = static_cast<BaseObject*>(o);
+      CommandArgs la;
+      la.set_separator('|');
+      for (size_t i = 1; i < args.size(); ++i)
+      {
+        la.Set(args.Get<std::string>(i));
+        b->SetLR2DST(
+          la.Get<int>(0), /* time */
+          la.Get<int>(1), la.Get<int>(2), la.Get<int>(3), la.Get<int>(4), /* xywh */
+          la.Get<int>(5), /* acc_type */
+          la.Get<int>(6), la.Get<int>(7), la.Get<int>(8), la.Get<int>(9), /* argb */
+          la.Get<int>(10), la.Get<int>(11), la.Get<int>(12), /* blend, filter, angle */
+          la.Get<int>(13) /* center */
+        );
+      }
+      la.Set(args.Get<std::string>(0));
+      b->SetVisibleGroup(
+        la.Get<int>(0), la.Get<int>(1), la.Get<int>(2)
       );
+      b->SetTweenLoopTime(la.Get<int>(3));
+    };
+    static auto fn_LR2CmdInit = [](void *o, CommandArgs &args) {
+      auto *b = static_cast<BaseObject*>(o);
+      b->SetVisibleGroup(args.Get<int>(0), args.Get<int>(1), args.Get<int>(2));
     };
     static auto fn_Show = [](void *o, CommandArgs& args) {
       static_cast<BaseObject*>(o)->Show();

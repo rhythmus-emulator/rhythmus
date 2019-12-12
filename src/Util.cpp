@@ -307,10 +307,11 @@ std::string GetUtf8FromWString(const std::wstring& wstring)
 
 // -------------------------------- CommandArgs
 
-CommandArgs::CommandArgs(const std::string &argv) { Set(argv); }
+CommandArgs::CommandArgs(const std::string &argv)
+  : sep_(',') { Set(argv); }
 
 CommandArgs::CommandArgs(const std::string &argv, size_t arg_count)
-{ Set(argv, arg_count); }
+  : sep_(',') { Set(argv, arg_count); }
 
 void CommandArgs::Set(const std::string &argv)
 {
@@ -318,7 +319,7 @@ void CommandArgs::Set(const std::string &argv)
   args_.clear();
   while (1)
   {
-    if (argv[b] == ',' || argv[b] == 0)
+    if (argv[b] == sep_ || argv[b] == 0)
     {
       args_.push_back(argv.substr(a, b - a));
       if (argv[b] == 0)
@@ -340,12 +341,12 @@ void CommandArgs::Set(const std::string &argv, size_t arg_count)
     if (args_.size() == arg_count - 1)
     {
       std::string sa, sb;
-      Split(argv.substr(a), ',', sa, sb);
+      Split(argv.substr(a), sep_, sa, sb);
       args_.push_back(sa);
       break;
     }
 
-    if (argv[b] == ',' || argv[b] == 0)
+    if (argv[b] == sep_ || argv[b] == 0)
     {
       args_.push_back(argv.substr(a, b - a));
       if (argv[b] == 0)
@@ -359,6 +360,11 @@ void CommandArgs::Set(const std::string &argv, size_t arg_count)
     args_.emplace_back(std::string());
     ++b;
   }
+}
+
+void CommandArgs::set_separator(char sep)
+{
+  sep_ = sep;
 }
 
 template <>

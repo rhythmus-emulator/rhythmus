@@ -88,6 +88,7 @@ public:
 
   void Set(const std::string &argv);
   void Set(const std::string &argv, size_t arg_count);
+  void set_separator(char sep);
 
   template <typename T>
   T Get(size_t arg_index) const;
@@ -95,6 +96,7 @@ public:
   size_t size() const;
 private:
   std::vector<std::string> args_;
+  char sep_;
 };
 
 RHYTHMUS_NAMESPACE_END

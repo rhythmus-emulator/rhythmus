@@ -180,31 +180,27 @@ void Sprite::LoadFromLR2SRC(const std::string &cmd)
   if (!img_)
     return;
 
-  if (args.size() > 4)
-  {
-    int sx = args.Get<int>(1);
-    int sy = args.Get<int>(2);
-    int sw = args.Get<int>(3);
-    int sh = args.Get<int>(4);
+  int sx = args.Get<int>(1);
+  int sy = args.Get<int>(2);
+  int sw = args.Get<int>(3);
+  int sh = args.Get<int>(4);
 
-    sx_ = sx / (float)img_->get_width();
-    sy_ = sy / (float)img_->get_height();
-    if (sw < 0) sw_ = 1.0f;
-    else sw_ = sw / (float)img_->get_width();
-    if (sh < 0) sh_ = 1.0f;
-    else sh_ = sh / (float)img_->get_height();
-  }
+  sx_ = sx / (float)img_->get_width();
+  sy_ = sy / (float)img_->get_height();
+  if (sw < 0) sw_ = 1.0f;
+  else sw_ = sw / (float)img_->get_width();
+  if (sh < 0) sh_ = 1.0f;
+  else sh_ = sh / (float)img_->get_height();
 
-  if (args.size() > 7)
-  {
-    int divx = args.Get<int>(5);
-    int divy = args.Get<int>(6);
+  int divx = args.Get<int>(5);
+  int divy = args.Get<int>(6);
 
-    divx_ = divx > 0 ? divx : 1;
-    divy_ = divy > 0 ? divy : 1;
-    cnt_ = divx_ * divy_;
-    interval_ = args.Get<int>(7);
-  }
+  divx_ = divx > 0 ? divx : 1;
+  divy_ = divy > 0 ? divy : 1;
+  cnt_ = divx_ * divy_;
+  interval_ = args.Get<int>(7);
+
+  SetSize(sw / divx_, sh / divy_);
 
   if (args.size() > 8)
   {

@@ -116,64 +116,65 @@ BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
 void Script::ExecuteLR2Script(const std::string &filepath)
 {
 #define NAMES \
-  NAME("SRC_NOTE", "Note%d", "sprite", false), \
-  NAME("SRC_AUTO_NOTE", "Note%dAuto", "sprite", false), \
-  NAME("SRC_LN_END", "Note%dLNEnd", "sprite", false), \
-  NAME("SRC_AUTO_LN_END", "Note%dAutoLNEndy", "sprite", false), \
-  NAME("SRC_LN_START", "Note%dLNStart", "sprite", false), \
-  NAME("SRC_AUTO_LN_START", "Note%dAutoLNStart", "sprite", false), \
-  NAME("SRC_LN_BODY", "Note%dLNBody", "sprite", false), \
-  NAME("SRC_AUTO_LN_BODY", "Note%dAutoLNBody", "sprite", false), \
-  NAME("SRC_MINE", "Note%dMine", "sprite", false), \
-  NAME("DST_NOTE", "NoteField", "Note%dlr2cmd", false), \
-  NAME("SRC_GROOVEGAUGE", "LifeGauge%dP", "sprite", false), \
-  NAME("DST_GROOVEGAUGE", "LifeGauge%dP", "lr2cmd", false), \
-  NAME("SRC_NOWJUDGE_1P", "Judge1P", "sprite", false), \
-  NAME("DST_NOWJUDGE_1P", "Judge1P", "lr2cmd", false), \
-  NAME("SRC_NOWJUDGE_2P", "Judge2P", "sprite", false), \
-  NAME("DST_NOWJUDGE_2P", "Judge2P", "lr2cmd", false), \
-  NAME("SRC_BAR_BODY", "MusicWheelType%d", "lr2src", false), \
-  NAME("DST_BAR_BODY_ON", "MusicWheel", "Bar%dlr2cmd", false), \
-  NAME("DST_BAR_BODY_OFF", "MusicWheel", "Bar%dlr2cmd", false), \
-  NAME("SRC_BAR_TITLE", "MusicWheelTitle", "lr2font", false), \
-  NAME("DST_BAR_TITLE", "MusicWheelTitle", "lr2cmd", false), \
-  NAME("SRC_IMAGE", "Sprite", "sprite", true), \
-  NAME("DST_IMAGE", "Sprite", "lr2cmd", false), \
-  NAME("SRC_TEXT", "Text", "lr2font", true), \
-  NAME("DST_TEXT", "Text", "lr2cmd", false), \
-  NAME("SRC_BARGRAPH", "Graph", "sprite", true), \
-  NAME("DST_BARGRAPH", "Graph", "lr2cmd", false), \
-  NAME("SRC_SLIDER", "Slider", "sprite", true), \
-  NAME("DST_SLIDER", "Slider", "lr2cmd", false), \
-  NAME("SRC_NUMBER", "NumberSprite", "sprite", true), \
-  NAME("DST_NUMBER", "NumberSprite", "lr2cmd", false), \
-  NAME("SRC_JUDGELINE", "JudgeLine", "sprite", true), \
-  NAME("DST_JUDGELINE", "JudgeLine", "lr2cmd", false), \
-  NAME("SRC_LINE", "Line", "sprite", true), \
-  NAME("DST_LINE", "Line", "lr2cmd", false), \
-  NAME("SRC_BUTTON", "Button", "sprite", true), \
-  NAME("DST_BUTTON", "Button", "lr2cmd", false)
+  NAME("SRC_NOTE", "Note%d", "sprite", 0), \
+  NAME("SRC_AUTO_NOTE", "Note%dAuto", "sprite", 0), \
+  NAME("SRC_LN_END", "Note%dLNEnd", "sprite", 0), \
+  NAME("SRC_AUTO_LN_END", "Note%dAutoLNEndy", "sprite", 0), \
+  NAME("SRC_LN_START", "Note%dLNStart", "sprite", 0), \
+  NAME("SRC_AUTO_LN_START", "Note%dAutoLNStart", "sprite", 0), \
+  NAME("SRC_LN_BODY", "Note%dLNBody", "sprite", 0), \
+  NAME("SRC_AUTO_LN_BODY", "Note%dAutoLNBody", "sprite", 0), \
+  NAME("SRC_MINE", "Note%dMine", "sprite", 0), \
+  NAME("DST_NOTE", "NoteField", "Note%dlr2cmd", 0), \
+  NAME("SRC_GROOVEGAUGE", "LifeGauge%dP", "sprite", 0), \
+  NAME("DST_GROOVEGAUGE", "LifeGauge%dP", "OnLR", 0), \
+  NAME("SRC_NOWJUDGE_1P", "Judge1P", "sprite", 0), \
+  NAME("DST_NOWJUDGE_1P", "Judge1P", "OnLR", 0), \
+  NAME("SRC_NOWJUDGE_2P", "Judge2P", "sprite", 0), \
+  NAME("DST_NOWJUDGE_2P", "Judge2P", "OnLR", 0), \
+  NAME("SRC_BAR_BODY", "MusicWheelType%d", "sprite", 0), \
+  NAME("DST_BAR_BODY_ON", "MusicWheel", "Bar%dOnLR", 0), \
+  NAME("DST_BAR_BODY_OFF", "MusicWheel", "Bar%dOnLR", 0), \
+  NAME("SRC_BAR_TITLE", "MusicWheelTitle", "lr2font", 0), \
+  NAME("DST_BAR_TITLE", "MusicWheelTitle", "OnLR", 0), \
+  NAME("SRC_IMAGE", "Sprite", "sprite", 2), \
+  NAME("DST_IMAGE", "Sprite", "OnLR", 1), \
+  NAME("SRC_TEXT", "Text", "lr2font", 2), \
+  NAME("DST_TEXT", "Text", "OnLR", 1), \
+  NAME("SRC_BARGRAPH", "Graph", "sprite", 2), \
+  NAME("DST_BARGRAPH", "Graph", "OnLR", 1), \
+  NAME("SRC_SLIDER", "Slider", "sprite", 2), \
+  NAME("DST_SLIDER", "Slider", "OnLR", 1), \
+  NAME("SRC_NUMBER", "NumberSprite", "sprite", 2), \
+  NAME("DST_NUMBER", "NumberSprite", "OnLR", 1), \
+  NAME("SRC_JUDGELINE", "JudgeLine", "sprite", 2), \
+  NAME("DST_JUDGELINE", "JudgeLine", "OnLR", 1), \
+  NAME("SRC_LINE", "Line", "sprite", 2), \
+  NAME("DST_LINE", "Line", "OnLR", 1), \
+  NAME("SRC_BUTTON", "Button", "sprite", 2), \
+  NAME("DST_BUTTON", "Button", "OnLR", 1)
 
-#define NAME(lr2name, metricname, attr, is_metric) lr2name
+#define NAME(lr2name, metricname, attr, _objtype) lr2name
   static const char *_lr2names[] = {
     NAMES, 0
   };
 #undef NAME
 
-#define NAME(lr2name, metricname, attr, is_metric) metricname
+#define NAME(lr2name, metricname, attr, _objtype) metricname
   static const char *_metricnames[] = {
     NAMES, 0
   };
 #undef NAME
 
-#define NAME(lr2name, metricname, attr, is_metric) attr
+#define NAME(lr2name, metricname, attr, _objtype) attr
   static const char *_attrnames[] = {
     NAMES, 0
   };
 #undef NAME
 
-#define NAME(lr2name, metricname, attr, is_generic) is_generic
-  static const bool _is_generic[] = {
+#define NAME(lr2name, metricname, attr, _objtype) _objtype
+  /* 0:Metric 1:Use previous 2:Create */
+  static const int _objtypes[] = {
     NAMES, 0
   };
 #undef NAME
@@ -277,17 +278,24 @@ void Script::ExecuteLR2Script(const std::string &filepath)
      * If Thememetrics, retrieve one and update it.
      * Otherwise, create new metric (or retrive previous one). */
     Metric *curr_metrics = nullptr;
-    if (object_processing[name] && !_is_generic[nameidx])
+    if (_objtypes[nameidx] == 0)
+    {
+      if (object_processing[name])
+      {
+        curr_metrics = object_processing[name];
+      }
+      else
+      {
+        object_processing[name]
+          = curr_metrics
+          = Setting::GetThemeMetricList().create_metric(name);
+        /* need to push metric to add zindex data */
+        object_metrics.push_back({ name, curr_metrics, true });
+      }
+    }
+    else if (_objtypes[nameidx] == 1)
     {
       curr_metrics = object_processing[name];
-    }
-    else if (Setting::GetThemeMetricList().get_metric(name))
-    {
-      object_processing[name]
-        = curr_metrics
-        = Setting::GetThemeMetricList().get_metric(name);
-      /* need to push metric to add zindex data */
-      object_metrics.push_back({ name, curr_metrics, true });
     }
     else
     {
@@ -316,18 +324,23 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       /* parameter to 13th string */
       value = "lr2cmd:";
       for (size_t i = 0; i <= 13; ++i)
-        value += params[i] + ",";
+        value += params[i] + "|";
       value.pop_back();
+
+      /* Rename attrname using timer id */
+      attrname = attrname + timer;
 
       /* if first DST command, append timer / op code attribute. */
       prev_value_exist = curr_metrics->exist(attrname);
       if (prev_value_exist)
-        value = curr_metrics->get<std::string>(attrname) + ";" + value;
+        value = curr_metrics->get<std::string>(attrname) + "," + value;
       else
       {
-        value = timer + "," +
-          params[16] + "," + params[17] + "," + params[18] + "," + params[14] + ";" +
+        value = "lr2cmd:" +
+          params[16] + "|" + params[17] + "|" + params[18] + "|" + params[14] + "," +
           value;
+        /* set Off event in first time */
+        curr_metrics->set(attrname + "Off", "hide");
       }
     }
     else if (obj_drawtype == "SRC")

@@ -30,7 +30,7 @@ void MusicWheelItem::Load(const Metric &metric)
     background_[i].LoadCommandWithPrefix("Bar" + std::to_string(i), metric);
     // Call LoadFromLR2DST and clear position data after it if necessary
     // (for LR2 compatibility)
-    if (true)
+    if (true /* TODO: BarTypeSpritePosRemove metric */)
       background_[i].SetAllTweenPos(0, 0);
   }
 
