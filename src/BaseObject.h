@@ -123,24 +123,32 @@ public:
   BaseObject* FindRegisteredChildByName(const std::string& name);
   BaseObject* GetLastChild();
 
-  void LoadCommandByName(const std::string &name);
-  void LoadCommand(const std::string &command);
-  void AddCommand(const std::string &name, const std::string &command);
+  void RunCommandByName(const std::string &name);
+  void RunCommand(const std::string &command);
   void ClearCommand(const std::string &name);
   void DeleteAllCommand();
   void QueueCommand(const std::string &command);
+  void LoadCommand(const std::string &name, const std::string &command);
+  void LoadCommand(const Metric& metric);
+  void LoadCommandWithPrefix(const std::string &prefix, const Metric& metric);
+  void LoadCommandWithNamePrefix(const Metric& metric);
+
+  /* alias for LoadCommand */
+  void AddCommand(const std::string &name, const std::string &command);
 
   /**
    * @brief
-   * Run command which mainly changes mutable attribute(e.g. tween)
+   * Run single command which mainly changes mutable attribute(e.g. tween)
    * of the object.
    * Types of executable command and function are mapped
    * in GetCommandFnMap() function, which is refered by this procedure.
    */
-  virtual void RunCommand(const std::string &command, const std::string& value);
+  void RunCommand(const std::string &commandname, const std::string& value);
 
   /* @brief Load property(resource). */
-  virtual void Load(const Metric& metric);
+  virtual void Load(const Metric &metric);
+  void LoadByText(const std::string &metric_text);
+  void LoadByName();
 
   /* @brief Load from LR2SRC (for LR2) */
   virtual void LoadFromLR2SRC(const std::string &cmd);
@@ -194,6 +202,7 @@ public:
   void Show();
   void SetDrawOrder(int order);
   int GetDrawOrder() const;
+  void SetAllTweenPos(int x, int y);
 
   bool IsTweening() const;
   bool IsVisible() const;

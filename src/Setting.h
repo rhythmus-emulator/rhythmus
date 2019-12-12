@@ -41,7 +41,11 @@ class Metric
 {
 public:
   Metric();
+  Metric(const std::string &metric_text);
   ~Metric();
+
+  /* set metric from text. e.g. (attr):(value);(attr):(value) ... */
+  void SetFromText(const std::string &metric_text);
 
   bool exist(const std::string &key) const;
 
@@ -67,6 +71,7 @@ public:
   const_iterator cend() const;
 
 private:
+  void resolve_fallback(const std::string &key);
   std::map<std::string, std::string> attr_;
 };
 

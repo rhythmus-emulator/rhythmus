@@ -380,21 +380,12 @@ void Menu::Load(const Metric &metric)
     bar_.push_back(item);
   }
 
-  // Build items (position)
+  // Set item position
   for (int i = 0; i < display_count_; ++i)
   {
-    // TODO: need to make new metric for this bar?
-    // Bar1OnLoad --> OnLoad ?
-    //pos_fixed_param_.tween_bar[i].Load(metric);
-    /*
-    pos_fixed_param_.tween_bar[i].AddCommand(
-      "Load", metric.get<std::string>(format_string("Bar%dOnLoad", i))
-    );
-    */
-    pos_fixed_param_.tween_bar[i].LoadFromLR2DST(
-      metric.get<std::string>(format_string("Bar%dlr2cmd", i))
-    );
-    pos_fixed_param_.tween_bar[i].LoadCommandByName("LR0");
+    pos_fixed_param_.tween_bar[i].set_name(format_string("Bar%d", i));
+    pos_fixed_param_.tween_bar[i].LoadCommandWithNamePrefix(metric);
+    //pos_fixed_param_.tween_bar[i].RunCommandByName("LR0");
   }
 
   // Load sounds

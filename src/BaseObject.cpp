@@ -99,6 +99,29 @@ BaseObject* BaseObject::GetLastChild()
   else return nullptr;
 }
 
+void BaseObject::RunCommandByName(const std::string &event_name)
+{
+  auto it = commands_.find(event_name);
+  if (it != commands_.end())
+    RunCommand(it->second);
+}
+
+void BaseObject::RunCommand(const std::string& command)
+{
+  size_t ia = 0, ib = 0;
+  std::string cmd_type, value;
+  while (ib < command.size())
+  {
+    if (command[ib] == ';' || command[ib] == 0)
+    {
+      Split(command.substr(ia, ib - ia), ':', cmd_type, value);
+      RunCommand(cmd_type, value);
+      ia = ib = ib + 1;
+    }
+    else ++ib;
+  }
+}
+
 void BaseObject::RunCommand(const std::string &command, const std::string& value)
 {
   auto &fnmap = GetCommandFnMap();
@@ -115,49 +138,6 @@ void BaseObject::RunCommand(const std::string &command, const std::string& value
     {
       std::cerr << "Error: Command parameter is not enough to execute " << command << std::endl;
     }
-  }
-}
-
-void BaseObject::LoadCommandByName(const std::string &event_name)
-{
-  auto it = commands_.find(event_name);
-  if (it != commands_.end())
-    LoadCommand(it->second);
-}
-
-void BaseObject::LoadCommand(const std::string& command)
-{
-  size_t ia = 0, ib = 0;
-  std::string cmd_type, value;
-  while (ib < command.size())
-  {
-    if (command[ib] == ';' || command[ib] == 0)
-    {
-      Split(command.substr(ia, ib - ia), ':', cmd_type, value);
-      RunCommand(cmd_type, value);
-      ia = ib = ib + 1;
-    }
-    else ++ib;
-  }
-}
-
-void BaseObject::AddCommand(const std::string &name, const std::string &command)
-{
-  // Append command if already exist.
-  auto it = commands_.find(name);
-  if (it == commands_.end())
-  {
-    commands_[name] = command;
-
-    // add event handler if not registered
-    SubscribeTo(name);
-  }
-  else
-  {
-    if (it->second.empty())
-      it->second = command;
-    else
-      it->second += ";" + command;
   }
 }
 
@@ -183,23 +163,88 @@ void BaseObject::QueueCommand(const std::string &command)
     tween_.back().commands = command;
 }
 
-void BaseObject::Load(const Metric& metric)
+void BaseObject::LoadCommand(const std::string &name, const std::string &command)
+{
+  // Append command if already exist.
+  auto it = commands_.find(name);
+  if (it == commands_.end())
+  {
+    commands_[name] = command;
+
+    // add event handler if not registered
+    SubscribeTo(name);
+  }
+  else
+  {
+    if (it->second.empty())
+      it->second = command;
+    else
+      it->second += ";" + command;
+  }
+}
+
+void BaseObject::LoadCommand(const Metric& metric)
 {
   // process event handler registering
   // XXX: is this code is good enough?
   for (auto it = metric.cbegin(); it != metric.cend(); ++it)
   {
-    if (it->first.size() >= 5 && strnicmp(it->first.c_str(), "On", 2) == 0)
+    if (it->first.size() >= 5 /* XXX: 'On' prefix? */
+        && strnicmp(it->first.c_str(), "On", 2) == 0)
     {
-      AddCommand(it->first.substr(2), it->second);
+      LoadCommand(it->first.substr(2), it->second);
     }
   }
+}
 
+void BaseObject::LoadCommandWithPrefix(const std::string &prefix, const Metric& metric)
+{
+  for (auto it = metric.cbegin(); it != metric.cend(); ++it)
+  {
+    if (strnicmp(it->first.c_str(), prefix.c_str(), prefix.size()) == 0)
+    {
+      LoadCommand(it->first.substr(prefix.size()), it->second);
+    }
+  }
+}
+
+void BaseObject::LoadCommandWithNamePrefix(const Metric& metric)
+{
+  if (get_name().empty())
+    return;
+  std::string prefix = get_name() + "On";
+  LoadCommandWithPrefix(prefix, metric);
+}
+
+void BaseObject::AddCommand(const std::string &name, const std::string &command)
+{
+  LoadCommand(name, command);
+}
+
+void BaseObject::Load(const Metric& metric)
+{
   if (metric.exist("zindex"))
     draw_order_ = metric.get<int>("zindex");
   
   if (metric.exist("lr2cmd"))
     LoadFromLR2DST(metric.get<std::string>("lr2cmd"));
+
+  LoadCommand(metric);
+}
+
+void BaseObject::LoadByText(const std::string &metric_text)
+{
+  Load(Metric(metric_text));
+}
+
+void BaseObject::LoadByName()
+{
+  if (get_name().empty())
+    return;
+  Metric *m = Setting::GetThemeMetricList().get_metric(get_name());
+  if (!m)
+    return;
+  Load(*m);
 }
 
 void BaseObject::Initialize()
@@ -212,7 +257,7 @@ void BaseObject::Initialize()
 
 bool BaseObject::OnEvent(const EventMessage& msg)
 {
-  LoadCommandByName(msg.GetEventName());
+  RunCommandByName(msg.GetEventName());
   return true;
 }
 
@@ -439,6 +484,15 @@ int BaseObject::GetDrawOrder() const
   return draw_order_;
 }
 
+void BaseObject::SetAllTweenPos(int x, int y)
+{
+  for (auto &t : tween_)
+  {
+    t.draw_prop.pi.x = x;
+    t.draw_prop.pi.y = y;
+  }
+}
+
 // milisecond
 void BaseObject::UpdateTween(float delta_ms)
 {
@@ -480,7 +534,7 @@ void BaseObject::UpdateTween(float delta_ms)
       // trigger event if exist
       if (!t.commands.empty())
       {
-        LoadCommand(t.commands);
+        RunCommand(t.commands);
       }
 
       // loop tween by push it again.

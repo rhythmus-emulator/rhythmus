@@ -16,19 +16,22 @@ MusicWheelItem::MusicWheelItem()
   }
 }
 
+/* @warn use same metric that MusicWheel used. */
 void MusicWheelItem::Load(const Metric &metric)
 {
-  // TODO: SetFontFromPath() if BarTitleFontPath Exists? / BarTitleOnLoad command.
-  title_.LoadFromLR2SRC(metric.get<std::string>("BarTitle"));
-  title_.LoadFromLR2DST(metric.get<std::string>("BarTitlelr2cmd"));
+  title_.set_name("MusicWheelTitle");
+  title_.LoadByName();
+  title_.LoadCommandWithNamePrefix(metric);
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
-    // TODO: SetImageFromPath() if attr exists?
-    background_[i].LoadFromLR2SRC(metric.get<std::string>("BarType" + std::to_string(i) + "lr2src"));
-    // TODO: Call LoadFromLR2DST and clear position data after it.
-    // TODO: set proper width / height
-    background_[i].SetSize(300, 20);
+    background_[i].set_name("MusicWheelType" + std::to_string(i));
+    background_[i].LoadByName();
+    background_[i].LoadCommandWithPrefix("Bar" + std::to_string(i), metric);
+    // Call LoadFromLR2DST and clear position data after it if necessary
+    // (for LR2 compatibility)
+    if (true)
+      background_[i].SetAllTweenPos(0, 0);
   }
 
   // TODO: Set NumberText or NumberSprite.

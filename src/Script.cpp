@@ -116,27 +116,27 @@ BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
 void Script::ExecuteLR2Script(const std::string &filepath)
 {
 #define NAMES \
-  NAME("SRC_NOTE", "NoteField", "NoteSprite", false), \
-  NAME("SRC_AUTO_NOTE", "NoteField", "AutoNoteSprite", false), \
-  NAME("SRC_LN_END", "NoteField", "LNEndSprite", false), \
-  NAME("SRC_AUTO_LN_END", "NoteField", "AutoLNEndSprite", false), \
-  NAME("SRC_LN_START", "NoteField", "LNBeginSprite", false), \
-  NAME("SRC_AUTO_LN_START", "NoteField", "AutoLNBeginSprite", false), \
-  NAME("SRC_LN_BODY", "NoteField", "LNBodySprite", false), \
-  NAME("SRC_AUTO_LN_BODY", "NoteField", "AutoLNBodySprite", false), \
-  NAME("SRC_MINE", "NoteField", "MineSprite", false), \
-  NAME("DST_NOTE", "NoteField", "lr2cmd", false), \
-  NAME("SRC_GROOVEGAUGE", "LifeGauge", "sprite", false), \
-  NAME("DST_GROOVEGAUGE", "LifeGauge", "lr2cmd", false), \
+  NAME("SRC_NOTE", "Note%d", "sprite", false), \
+  NAME("SRC_AUTO_NOTE", "Note%dAuto", "sprite", false), \
+  NAME("SRC_LN_END", "Note%dLNEnd", "sprite", false), \
+  NAME("SRC_AUTO_LN_END", "Note%dAutoLNEndy", "sprite", false), \
+  NAME("SRC_LN_START", "Note%dLNStart", "sprite", false), \
+  NAME("SRC_AUTO_LN_START", "Note%dAutoLNStart", "sprite", false), \
+  NAME("SRC_LN_BODY", "Note%dLNBody", "sprite", false), \
+  NAME("SRC_AUTO_LN_BODY", "Note%dAutoLNBody", "sprite", false), \
+  NAME("SRC_MINE", "Note%dMine", "sprite", false), \
+  NAME("DST_NOTE", "NoteField", "Note%dlr2cmd", false), \
+  NAME("SRC_GROOVEGAUGE", "LifeGauge%dP", "sprite", false), \
+  NAME("DST_GROOVEGAUGE", "LifeGauge%dP", "lr2cmd", false), \
   NAME("SRC_NOWJUDGE_1P", "Judge1P", "sprite", false), \
   NAME("DST_NOWJUDGE_1P", "Judge1P", "lr2cmd", false), \
   NAME("SRC_NOWJUDGE_2P", "Judge2P", "sprite", false), \
   NAME("DST_NOWJUDGE_2P", "Judge2P", "lr2cmd", false), \
-  NAME("SRC_BAR_BODY", "MusicWheel", "lr2src", false), \
-  NAME("DST_BAR_BODY_ON", "MusicWheel", "lr2cmd", false), \
-  NAME("DST_BAR_BODY_OFF", "MusicWheel", "lr2cmd", false), \
-  NAME("SRC_BAR_TITLE", "MusicWheel", "BarTitle", false), \
-  NAME("DST_BAR_TITLE", "MusicWheel", "BarTitlelr2cmd", false), \
+  NAME("SRC_BAR_BODY", "MusicWheelType%d", "lr2src", false), \
+  NAME("DST_BAR_BODY_ON", "MusicWheel", "Bar%dlr2cmd", false), \
+  NAME("DST_BAR_BODY_OFF", "MusicWheel", "Bar%dlr2cmd", false), \
+  NAME("SRC_BAR_TITLE", "MusicWheelTitle", "lr2font", false), \
+  NAME("DST_BAR_TITLE", "MusicWheelTitle", "lr2cmd", false), \
   NAME("SRC_IMAGE", "Sprite", "sprite", true), \
   NAME("DST_IMAGE", "Sprite", "lr2cmd", false), \
   NAME("SRC_TEXT", "Text", "lr2font", true), \
@@ -254,11 +254,13 @@ void Script::ExecuteLR2Script(const std::string &filepath)
     std::string lr2name = Upper(v.first.substr(1));
     std::string obj_type, obj_drawtype;
     std::string value_idx_str, value;
+    int value_idx;
     size_t nameidx = 0;
     Split(lr2name, '_', obj_drawtype, obj_type);
     if (obj_type.empty())
       obj_drawtype.swap(obj_type);
     Split(v.second, ',', value_idx_str, value);
+    value_idx = atoi(value_idx_str.c_str());
     while (_lr2names[nameidx])
     {
       if (_lr2names[nameidx] == lr2name)
@@ -268,38 +270,8 @@ void Script::ExecuteLR2Script(const std::string &filepath)
     if (_metricnames[nameidx] == nullptr)
       continue;
 
-    std::string name(_metricnames[nameidx]);
-    std::string attrname(_attrnames[nameidx]);
-
-    /* add number to attributes
-     * e.g. OnLoad --> Note1OnLoad */
-    if (lr2name == "DST_NOTE" ||
-      lr2name == "SRC_NOTE" ||
-      lr2name == "SRC_NOTE" ||
-      lr2name == "SRC_LN_END" ||
-      lr2name == "SRC_AUTO_LN_END" ||
-      lr2name == "SRC_LN_START" ||
-      lr2name == "SRC_AUTO_LN_START" ||
-      lr2name == "SRC_LN_BODY" ||
-      lr2name == "SRC_AUTO_LN_BODY")
-    {
-      attrname = "Note" + value_idx_str + attrname;
-    }
-
-    if (lr2name == "SRC_BAR_BODY")
-    {
-      attrname = "BarType" + value_idx_str + attrname;
-    }
-
-    if (lr2name == "DST_BAR_BODY_ON")
-    {
-      attrname = "Bar" + value_idx_str + attrname;
-    }
-
-    if (lr2name == "DST_BAR_BODY_OFF")
-    {
-      attrname = "BarOff" + value_idx_str + attrname;
-    }
+    std::string name(format_string(_metricnames[nameidx], value_idx));
+    std::string attrname(format_string(_attrnames[nameidx], value_idx));
 
     /* If not generic metrics(need to create one) and previously exists, update it.
      * If Thememetrics, retrieve one and update it.

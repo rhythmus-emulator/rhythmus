@@ -27,6 +27,8 @@ inline const char* GetSafeString(const char* p)
 
 Metric::Metric() {}
 
+Metric::Metric(const std::string &metric_text) { SetFromText(metric_text); }
+
 Metric::~Metric() {}
 
 bool Metric::exist(const std::string &key) const
@@ -46,30 +48,35 @@ std::string Metric::get(const std::string &key) const
 template <>
 bool Metric::get(const std::string &key) const
 {
+  const_cast<Metric*>(this)->resolve_fallback(key);
   return get<std::string>(key) == "true";
 }
 
 template <>
 int Metric::get(const std::string &key) const
 {
+  const_cast<Metric*>(this)->resolve_fallback(key);
   return atoi(get<std::string>(key).c_str());
 }
 
 template <>
 size_t Metric::get(const std::string &key) const
 {
+  const_cast<Metric*>(this)->resolve_fallback(key);
   return (size_t)get<int>(key);
 }
 
 template <>
 double Metric::get(const std::string &key) const
 {
+  const_cast<Metric*>(this)->resolve_fallback(key);
   return atof(get<std::string>(key).c_str());
 }
 
 template <>
 float Metric::get(const std::string &key) const
 {
+  const_cast<Metric*>(this)->resolve_fallback(key);
   return (float)get<double>(key);
 }
 
@@ -93,6 +100,22 @@ std::vector<int> Metric::get(const std::string &key) const
   return vtmp;
 }
 #endif
+
+void Metric::SetFromText(const std::string &metric_text)
+{
+  size_t ia = 0, ib = 0;
+  std::string cmd_type, value;
+  while (ib < metric_text.size())
+  {
+    if (metric_text[ib] == ';' || metric_text[ib] == 0)
+    {
+      Split(metric_text.substr(ia, ib - ia), ':', cmd_type, value);
+      set(cmd_type, value);
+      ia = ib = ib + 1;
+    }
+    else ++ib;
+  }
+}
 
 void Metric::set(const std::string &key, const std::string &v)
 {
@@ -119,6 +142,17 @@ Metric::const_iterator Metric::cbegin() const { return attr_.cbegin(); }
 Metric::iterator Metric::end() { return attr_.end(); }
 Metric::const_iterator Metric::cend() const { return attr_.cend(); }
 
+void Metric::resolve_fallback(const std::string &key)
+{
+  // TODO
+  auto it = attr_.find(key);
+  if (it == attr_.end()) return;
+  std::string &v = it->second;
+  if (v == "_fallback")
+  {
+    ASSERT_M(true, "NotImplemented");
+  }
+}
 
 void MetricList::ReadMetricFromFile(const std::string &filepath)
 {
