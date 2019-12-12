@@ -322,7 +322,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       std::string timer(params[15]);
 
       /* parameter to 13th string */
-      value = "lr2cmd:";
+      value.clear();
       for (size_t i = 0; i <= 13; ++i)
         value += params[i] + "|";
       value.pop_back();
