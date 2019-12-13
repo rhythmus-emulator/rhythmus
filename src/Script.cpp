@@ -134,7 +134,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   NAME("DST_NOWJUDGE_2P", "Judge2P", "OnLR", 0), \
   NAME("SRC_BAR_BODY", "MusicWheelType%d", "sprite", 0), \
   NAME("DST_BAR_BODY_ON", "MusicWheel", "Bar%dOnLR", 0), \
-  NAME("DST_BAR_BODY_OFF", "MusicWheel", "Bar%dOnLR", 0), \
+  NAME("DST_BAR_BODY_OFF", "MusicWheel", "BarOff%dOnLR", 0), \
   NAME("SRC_BAR_TITLE", "MusicWheelTitle", "lr2font", 0), \
   NAME("DST_BAR_TITLE", "MusicWheelTitle", "OnLR", 0), \
   NAME("SRC_IMAGE", "Sprite", "sprite", 2), \
@@ -327,15 +327,20 @@ void Script::ExecuteLR2Script(const std::string &filepath)
         value += params[i] + "|";
       value.pop_back();
 
-      /* Rename attrname using timer id */
-      attrname = attrname + timer;
-
-      /* if first DST command, append timer / op code attribute. */
-      prev_value_exist = curr_metrics->exist(attrname);
+      /* Retrieve previously generated event name.
+       * if not, rename attrname using timer id */
+      prev_value_exist = curr_metrics->exist("_timer" + attrname);
       if (prev_value_exist)
+      {
+        timer = curr_metrics->get<std::string>("_timer" + attrname);
+        attrname = attrname + timer;
         value = curr_metrics->get<std::string>(attrname) + "," + value;
+      }
       else
       {
+        curr_metrics->set("_timer" + attrname, timer);
+        attrname = attrname + timer;
+        /* if first DST command, append timer / op code attribute. */
         value = "lr2cmd:" +
           params[16] + "|" + params[17] + "|" + params[18] + "|" + params[14] + "," +
           value;
