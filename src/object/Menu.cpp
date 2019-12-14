@@ -57,26 +57,6 @@ Menu::Menu()
   pos_expr_param_.bar_margin = 1;
   pos_expr_param_.curve_size = 80;
   pos_expr_param_.curve_level = 5;
-
-
-  /**
-   * Preserved names:
-   * (Bar sprite for type n)    BARIMG1 ~ BARIMGn
-   * (Position for not focused) BARPOS1 ~ BARPOS30
-   * (Position for focused)     BARPOSACTIVE1 ~ BARPOSACTIVE30
-   * --> used when MenuPosMethod is Fixed.
-   */
-
-  // Add all tween_bar objects for tween updating & searching
-  for (int i = 0; i < kDefaultBarCount + 1; ++i)
-  {
-    pos_fixed_param_.tween_bar[i].set_name("BARPOS" + std::to_string(i));
-    pos_fixed_param_.tween_bar_focus[i].set_name("BARPOSACTIVE" + std::to_string(i));
-    pos_fixed_param_.tween_bar[i].Hide();
-    pos_fixed_param_.tween_bar_focus[i].Hide();
-    AddChild(&pos_fixed_param_.tween_bar[i]);
-    AddChild(&pos_fixed_param_.tween_bar_focus[i]);
-  }
 }
 
 Menu::~Menu()
@@ -384,6 +364,12 @@ void Menu::Load(const Metric &metric)
   for (int i = 0; i < display_count_; ++i)
   {
     pos_fixed_param_.tween_bar[i].set_name(format_string("Bar%d", i));
+    pos_fixed_param_.tween_bar_focus[i].set_name(format_string("BarOff%d", i));
+    pos_fixed_param_.tween_bar[i].Hide();
+    pos_fixed_param_.tween_bar_focus[i].Hide();
+    AddChild(&pos_fixed_param_.tween_bar[i]);
+    AddChild(&pos_fixed_param_.tween_bar_focus[i]);
+
     pos_fixed_param_.tween_bar[i].LoadCommandWithNamePrefix(metric);
     //pos_fixed_param_.tween_bar[i].RunCommandByName("LR0");
   }

@@ -109,9 +109,10 @@ void BaseObject::RunCommandByName(const std::string &event_name)
 
 void BaseObject::RunCommand(const std::string& command)
 {
+  if (command.empty()) return;
   size_t ia = 0, ib = 0;
   std::string cmd_type, value;
-  while (ib < command.size())
+  while (ib <= command.size())
   {
     if (command[ib] == ';' || command[ib] == 0)
     {
