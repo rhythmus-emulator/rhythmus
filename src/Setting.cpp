@@ -122,6 +122,11 @@ void Metric::set(const std::string &key, const std::string &v)
   attr_[key] = v;
 }
 
+void Metric::set(const std::string &key, const char* v)
+{
+  attr_[key] = v;
+}
+
 void Metric::set(const std::string &key, int v)
 {
   set(key, std::to_string(v));
@@ -421,6 +426,11 @@ Metric *MetricList::create_metric(const std::string &group)
 }
 
 void MetricList::set(const std::string &group, const std::string &key, const std::string &v)
+{
+  metricmap_[group].set(key, v);
+}
+
+void MetricList::set(const std::string &group, const std::string &key, const char *v)
 {
   metricmap_[group].set(key, v);
 }

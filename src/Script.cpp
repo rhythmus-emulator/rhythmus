@@ -382,7 +382,10 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       metric->set("zindex", (int)idx);
       BaseObject *obj = CreateObjectFromMetric(name, *metric);
       if (obj)
+      {
+        obj->Hide();
         scene_->RegisterChild(obj);
+      }
 
       if (is_delete)
         delete metric;

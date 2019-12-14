@@ -9,7 +9,7 @@ namespace rhythmus
 {
 
 BaseObject::BaseObject()
-  : parent_(nullptr), draw_order_(0)
+  : parent_(nullptr), draw_order_(0), rot_center_(-1)
 {
   memset(&current_prop_, 0, sizeof(DrawProperty));
   current_prop_.sw = current_prop_.sh = 1.0f;
@@ -21,7 +21,8 @@ BaseObject::BaseObject()
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
-  : name_(obj.name_), parent_(obj.parent_), draw_order_(obj.draw_order_)
+  : name_(obj.name_), parent_(obj.parent_),
+    draw_order_(obj.draw_order_), rot_center_(obj.rot_center_)
 {
   // XXX: childrens won't copy by now
   tween_ = obj.tween_;
@@ -636,7 +637,7 @@ void BaseObject::Update(float delta)
 
 void BaseObject::Render()
 {
-  if (!current_prop_.display)
+  if (!IsVisible())
     return;
 
   Graphic::PushMatrix();
@@ -793,10 +794,6 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
         la.Get<int>(0), la.Get<int>(1), la.Get<int>(2)
       );
       b->SetTweenLoopTime(la.Get<int>(3));
-    };
-    static auto fn_LR2CmdInit = [](void *o, CommandArgs &args) {
-      auto *b = static_cast<BaseObject*>(o);
-      b->SetVisibleGroup(args.Get<int>(0), args.Get<int>(1), args.Get<int>(2));
     };
     static auto fn_Show = [](void *o, CommandArgs& args) {
       static_cast<BaseObject*>(o)->Show();

@@ -53,6 +53,7 @@ public:
   T get(const std::string &key) const;
 
   void set(const std::string &key, const std::string &v);
+  void set(const std::string &key, const char *v);
   void set(const std::string &key, int v);
   void set(const std::string &key, double v);
   void set(const std::string &key, bool v);
@@ -95,6 +96,7 @@ public:
   Metric *create_metric(const std::string &group);
 
   void set(const std::string &group, const std::string &key, const std::string &v);
+  void set(const std::string &group, const std::string &key, const char *v);
   void set(const std::string &group, const std::string &key, int v);
   void set(const std::string &group, const std::string &key, double v);
   void set(const std::string &group, const std::string &key, bool v);
