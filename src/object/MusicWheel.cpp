@@ -7,13 +7,12 @@ namespace rhythmus
 
 MusicWheelItem::MusicWheelItem()
 {
-  AddChild(&title_);
-  AddChild(&level_);
-
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
     AddChild(&background_[i]);
   }
+  AddChild(&title_);
+  AddChild(&level_);
 }
 
 /* @warn use same metric that MusicWheel used. */
@@ -22,8 +21,6 @@ void MusicWheelItem::Load(const Metric &metric)
   title_.set_name("MusicWheelTitle");
   title_.LoadByName();
   title_.LoadCommandWithNamePrefix(metric);
-  title_.RunCommandByName("LR0");
-  title_.Update(1000);
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {

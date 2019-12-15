@@ -298,7 +298,7 @@ void Menu::UpdateItemPosByFixed()
   {
     /* TODO: skip if data index is over when inf_scroll is off. */
     int ii = i + kScrollPosMaxDiff + scroll_offset + 1;
-    ii %= display_count_;
+    ii %= display_count_ + kScrollPosMaxDiff * 2;
     BaseObject *obj1 = &pos_fixed_param_.tween_bar[i];
     BaseObject *obj2 = &pos_fixed_param_.tween_bar[i + 1];
     MakeTween(d,
