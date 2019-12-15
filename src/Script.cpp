@@ -133,10 +133,10 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   NAME("SRC_NOWJUDGE_2P", "Judge2P", "sprite", 0), \
   NAME("DST_NOWJUDGE_2P", "Judge2P", "OnLR", 0), \
   NAME("SRC_BAR_BODY", "MusicWheelType%d", "sprite", 0), \
-  NAME("DST_BAR_BODY_ON", "MusicWheel", "Bar%dOnLR", 0), \
-  NAME("DST_BAR_BODY_OFF", "MusicWheel", "BarOff%dOnLR", 0), \
-  NAME("SRC_BAR_TITLE", "MusicWheelTitle", "lr2font", 0), \
-  NAME("DST_BAR_TITLE", "MusicWheelTitle", "OnLR", 0), \
+  NAME("DST_BAR_BODY_ON", "MusicWheel", "BarOn%dOnLR", 0), \
+  NAME("DST_BAR_BODY_OFF", "MusicWheel", "Bar%dOnLR", 0), \
+  NAME("SRC_BAR_TITLE", "MusicWheelTitle%d", "lr2font", 0), \
+  NAME("DST_BAR_TITLE", "MusicWheelTitle%d", "OnLR", 0), \
   NAME("SRC_IMAGE", "Sprite", "sprite", 2), \
   NAME("DST_IMAGE", "Sprite", "OnLR", 1), \
   NAME("SRC_TEXT", "Text", "lr2font", 2), \
@@ -359,7 +359,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
        *
        * change filename alias.
        */
-      if (obj_type == "TEXT")
+      if (obj_type == "TEXT" || obj_type == "BAR_TITLE")
         value = "Font" + value;
       else
         value = "Image" + value;
@@ -402,6 +402,10 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       idx++;
     }
   }
+
+  /* Afterwork: rename some metrics. */
+  Setting::GetThemeMetricList().copy_metric(
+    "MusicWheelTitle0", "MusicWheelTitle");
 
   /* Hook event */
   LR2Flag::HookEvent();

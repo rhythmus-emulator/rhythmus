@@ -30,7 +30,7 @@ class MusicWheelItem : public MenuItem
 public:
   MusicWheelItem();
   virtual void Load(const Metric &metric);
-  virtual void LoadFromMenuData(MenuData *d);
+  virtual bool LoadFromMenuData(MenuData *d);
 
 private:
   Sprite background_[NUM_SELECT_BAR_TYPES];

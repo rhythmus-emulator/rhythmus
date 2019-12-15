@@ -425,6 +425,13 @@ Metric *MetricList::create_metric(const std::string &group)
   return &metricmap_[group];
 }
 
+void MetricList::copy_metric(const std::string &name_from, const std::string &name_to)
+{
+  auto it = metricmap_.find(name_from);
+  if (it == metricmap_.end()) return;
+  metricmap_[name_to] = it->second;
+}
+
 void MetricList::set(const std::string &group, const std::string &key, const std::string &v)
 {
   metricmap_[group].set(key, v);

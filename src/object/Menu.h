@@ -34,14 +34,14 @@ class MenuItem : public BaseObject
 public:
   MenuItem();
 
-  virtual void LoadFromMenuData(MenuData *d);
+  virtual bool LoadFromMenuData(MenuData *d);
+  void set_dataindex(int dataindex);
+  int get_dataindex() const;
   void set_focus(bool focused);
   MenuData* get_data();
 
 private:
-  // actual barindex (rendering index) for this item
-  // 0 indicates center index here.
-  int barindex_;
+  int dataindex_;
 
   // select item data ptr
   MenuData* data_;
@@ -121,10 +121,6 @@ protected:
   // enable for infinite scroll.
   bool inf_scroll_;
 
-  // (internal use) used for menu item shifting.
-  // This will reduce item invalidation, result in better performance.
-  int index_delta_;
-
   // type of calculating select bar position
   // If false, some extern method should update bar position manually.
   int pos_method_;
@@ -158,7 +154,6 @@ protected:
   void UpdateItemPosByExpr();
   void UpdateItemPosByFixed();
   virtual void doUpdate(float delta);
-  virtual void doRender();
   virtual MenuItem* CreateMenuItem();
 };
 

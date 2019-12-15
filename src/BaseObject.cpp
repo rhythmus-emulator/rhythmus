@@ -456,6 +456,35 @@ void BaseObject::SetLR2DST(
   QueueCommand("blend:" + std::to_string(blend));
 }
 
+void BaseObject::SetLR2DSTCommand(const std::string &lr2dst)
+{
+  CommandArgs args(lr2dst);
+  SetLR2DSTCommandInternal(args);
+}
+
+void BaseObject::SetLR2DSTCommandInternal(const CommandArgs &args)
+{
+  CommandArgs la;
+  la.set_separator('|');
+  for (size_t i = 1; i < args.size(); ++i)
+  {
+    la.Set(args.Get<std::string>(i));
+    SetLR2DST(
+      la.Get<int>(0), /* time */
+      la.Get<int>(1), la.Get<int>(2), la.Get<int>(3), la.Get<int>(4), /* xywh */
+      la.Get<int>(5), /* acc_type */
+      la.Get<int>(6), la.Get<int>(7), la.Get<int>(8), la.Get<int>(9), /* argb */
+      la.Get<int>(10), la.Get<int>(11), la.Get<int>(12), /* blend, filter, angle */
+      la.Get<int>(13) /* center */
+    );
+  }
+  la.Set(args.Get<std::string>(0));
+  SetVisibleGroup(
+    la.Get<int>(0), la.Get<int>(1), la.Get<int>(2)
+  );
+  SetTweenLoopTime(la.Get<int>(3));
+}
+
 void BaseObject::SetVisibleGroup(int group0, int group1, int group2)
 {
   visible_group_[0] = group0;
@@ -776,25 +805,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     };
     static auto fn_SetLR2DST = [](void *o, CommandArgs& args) {
       auto *b = static_cast<BaseObject*>(o);
-      CommandArgs la;
-      la.set_separator('|');
-      for (size_t i = 1; i < args.size(); ++i)
-      {
-        la.Set(args.Get<std::string>(i));
-        b->SetLR2DST(
-          la.Get<int>(0), /* time */
-          la.Get<int>(1), la.Get<int>(2), la.Get<int>(3), la.Get<int>(4), /* xywh */
-          la.Get<int>(5), /* acc_type */
-          la.Get<int>(6), la.Get<int>(7), la.Get<int>(8), la.Get<int>(9), /* argb */
-          la.Get<int>(10), la.Get<int>(11), la.Get<int>(12), /* blend, filter, angle */
-          la.Get<int>(13) /* center */
-        );
-      }
-      la.Set(args.Get<std::string>(0));
-      b->SetVisibleGroup(
-        la.Get<int>(0), la.Get<int>(1), la.Get<int>(2)
-      );
-      b->SetTweenLoopTime(la.Get<int>(3));
+      b->SetLR2DSTCommandInternal(args);
     };
     static auto fn_Show = [](void *o, CommandArgs& args) {
       static_cast<BaseObject*>(o)->Show();

@@ -20,13 +20,26 @@ inline float modf_pos(float a, float b)
 // ---------------------------- class WheelItem
 
 MenuItem::MenuItem()
-  : barindex_(0), data_(nullptr), is_focused_(false)
+  : dataindex_(0), data_(nullptr), is_focused_(false)
 {
 }
 
-void MenuItem::LoadFromMenuData(MenuData *d)
+bool MenuItem::LoadFromMenuData(MenuData *d)
 {
+  if (data_ == d)
+    return false;
   data_ = d;
+  return true;
+}
+
+void MenuItem::set_dataindex(int dataindex)
+{
+  dataindex_ = dataindex;
+}
+
+int MenuItem::get_dataindex() const
+{
+  return dataindex_;
 }
 
 void MenuItem::set_focus(bool focused)
@@ -44,7 +57,7 @@ MenuData* MenuItem::get_data()
 Menu::Menu()
   : data_index_(0),
     display_count_(16), focus_index_(8), focus_min_(4), focus_max_(12),
-    scroll_delta_(0), inf_scroll_(false), index_delta_(0),
+    scroll_delta_(0), inf_scroll_(false),
     pos_method_(MenuPosMethod::kMenuPosExpression)
 {
   memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
@@ -140,38 +153,17 @@ void Menu::set_infinite_scroll(bool inf_scroll)
 
 void Menu::RebuildItems()
 {
-  int start_data_idx = data_index_ - focus_index_ - kScrollPosMaxDiff;
-  int end_data_idx = start_data_idx + display_count_ + kScrollPosMaxDiff * 2;
-  int data_idx = start_data_idx;
-  int build_item_count = display_count_ + kScrollPosMaxDiff * 2;
-
-  /**
-   * Before reset item, shift it.
-   * (This will induce item invalidation less times)
-   */
-  // TODO
-  index_delta_ = 0;
-
-  /**
-   * Reset items
-   * @warn if not looping, then don't generate item over index, exit.
-   */
+  /* Number dataindex for all items. */
+  auto data_count = size();
+  int data_idx = data_index_ - focus_index_ - kScrollPosMaxDiff;
+  data_idx %= data_count;
+  if (data_idx < 0) data_idx += data_count;
   for (auto *item : bar_)
   {
-    int data_idx_prev = data_idx;
-    int data_idx_safe = mod_pos(data_idx, size());
-    data_idx++;
-    if (!inf_scroll_ && (data_idx_prev < 0 || data_idx_prev >= size()))
-    {
-      item->Hide();
-      continue;
-    }
-
-    MenuData* cur_data = data_[data_idx_safe];
-    if (item->get_data() == cur_data)
-      continue; // no need to invalidate
-
+    MenuData* cur_data = data_[data_idx];
+    item->set_dataindex(data_idx);
     item->LoadFromMenuData(cur_data);
+    data_idx = (data_idx + 1) % data_count;
   }
 }
 
@@ -182,23 +174,21 @@ void Menu::NavigateDown()
 
   wheel_sound_.Play();
 
+  // change data index and rotating effect
   data_index_ = (data_index_ + 1) % size();
-  if (focus_index_ < focus_max_)
-  {
-    // As only focus changed, no need to rebuild item.
-    // just change item focus and exit
-    bar_[focus_index_]->set_focus(false);
-    focus_index_++;
-    bar_[focus_index_]->set_focus(true);
-    return;
-  }
-
-  // below here will cause wheel-rotating effect
-
   scroll_delta_ -= 1.0;
   if (scroll_delta_ < -kScrollPosMaxDiff)
     scroll_delta_ = -kScrollPosMaxDiff;
 
+  // shift up item
+  /*
+  int new_dataindex = (bar_.back()->get_dataindex() + 1) % size();
+  std::rotate(bar_.begin(), std::prev(bar_.end()), bar_.end());
+  bar_.back()->set_dataindex(new_dataindex);
+  */
+  std::rotate(bar_.begin(), std::prev(bar_.end()), bar_.end());
+
+  // update items
   RebuildItems();
   UpdateItemPos();
 }
@@ -210,24 +200,22 @@ void Menu::NavigateUp()
 
   wheel_sound_.Play();
 
+  // change data index and rotating effect
   data_index_--;
   if (data_index_ < 0) data_index_ += size();
-  if (focus_index_ > focus_min_)
-  {
-    // As only focus changed, no need to rebuild item.
-    // just change item focus and exit
-    bar_[focus_index_]->set_focus(false);
-    focus_index_--;
-    bar_[focus_index_]->set_focus(true);
-    return;
-  }
-
-  // below here will cause wheel-rotating effect
-
   scroll_delta_ += 1.0;
   if (scroll_delta_ > kScrollPosMaxDiff)
     scroll_delta_ = kScrollPosMaxDiff;
 
+  // shift down item
+  /*
+  int new_dataindex = bar_.front()->get_dataindex();
+  std::rotate(bar_.begin(), std::next(bar_.begin()), bar_.end());
+  bar_.front()->set_dataindex(new_dataindex);
+  */
+  std::rotate(bar_.begin(), std::next(bar_.begin()), bar_.end());
+
+  // update items
   RebuildItems();
   UpdateItemPos();
 }
@@ -294,41 +282,31 @@ void Menu::UpdateItemPosByExpr()
 
 void Menu::UpdateItemPosByFixed()
 {
-  double ratio = scroll_delta_ - floor(scroll_delta_);
-  int display_count = (int)bar_.size();
+  int scroll_offset = floor(scroll_delta_);
+  double ratio = 1.0 - (scroll_delta_ - scroll_offset);
+  int ii = 0;
+  DrawProperty d;
 
-  // decide range of object to show
-  int start_idx_show = kScrollPosMaxDiff + floor(scroll_delta_);
-  int end_idx_show = display_count - kScrollPosMaxDiff + ceil(scroll_delta_);
-  for (int i = 0; i < display_count; ++i)
+  /* Hide all elements first. */
+  for (int i = 0; i < display_count_ + kScrollPosMaxDiff * 2; ++i)
   {
-    if (i < start_idx_show || i >= end_idx_show)
-      bar_[i]->Hide();
-    else
-    {
-      int ii = i - start_idx_show;
-      ASSERT(ii >= 0 && ii < 30);
-      BaseObject *obj1 = &pos_fixed_param_.tween_bar[ii + 1];
-      BaseObject *obj2 = &pos_fixed_param_.tween_bar[ii];
-
-      DrawProperty d;
-      MakeTween(d,
-        obj1->get_draw_property(),
-        obj2->get_draw_property(),
-        ratio, EaseTypes::kEaseLinear);
-      // TODO: apply alpha?
-      bar_[i]->SetPos(d.pi.x, d.pi.y);
-      bar_[i]->Show();
-    }
+    bar_[i]->Hide();
   }
-}
 
-void Menu::doRender()
-{
-  auto display_count = bar_.size();
-  for (auto i = 0; i < display_count; ++i)
+  /* Reset item position */
+  for (int i = 0; i < display_count_ - 1; ++i)
   {
-    bar_[i]->Render();
+    /* TODO: skip if data index is over when inf_scroll is off. */
+    int ii = i + kScrollPosMaxDiff + scroll_offset + 1;
+    ii %= display_count_;
+    BaseObject *obj1 = &pos_fixed_param_.tween_bar[i];
+    BaseObject *obj2 = &pos_fixed_param_.tween_bar[i + 1];
+    MakeTween(d,
+      obj1->get_draw_property(),
+      obj2->get_draw_property(),
+      ratio, EaseTypes::kEaseLinear);
+    bar_[ii]->SetPos(d.pi.x, d.pi.y);
+    bar_[ii]->Show();
   }
 }
 
@@ -352,11 +330,13 @@ void Menu::Load(const Metric &metric)
   display_count_ = metric.get<int>("BarCount");
 
   // Build items (bar item)
-  while (bar_.size() < display_count_)
+  while (bar_.size() < display_count_ + kScrollPosMaxDiff * 2)
   {
     auto *item = CreateMenuItem();
     item->set_parent(this);
     item->Load(metric);
+    item->Hide();
+    AddChild(item);
     bar_.push_back(item);
   }
 
@@ -364,14 +344,13 @@ void Menu::Load(const Metric &metric)
   for (int i = 0; i < display_count_; ++i)
   {
     pos_fixed_param_.tween_bar[i].set_name(format_string("Bar%d", i));
-    pos_fixed_param_.tween_bar_focus[i].set_name(format_string("BarOff%d", i));
+    pos_fixed_param_.tween_bar_focus[i].set_name(format_string("BarOn%d", i));
     pos_fixed_param_.tween_bar[i].Hide();
     pos_fixed_param_.tween_bar_focus[i].Hide();
     AddChild(&pos_fixed_param_.tween_bar[i]);
     AddChild(&pos_fixed_param_.tween_bar_focus[i]);
 
     pos_fixed_param_.tween_bar[i].LoadCommandWithNamePrefix(metric);
-    //pos_fixed_param_.tween_bar[i].RunCommandByName("LR0");
   }
 
   // Load sounds

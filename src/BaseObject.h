@@ -191,15 +191,13 @@ public:
    * refer: enum EaseTypes
    */
   void SetAcceleration(int acc);
-  void SetLR2DST(int time, int x, int y, int w, int h, int acc_type,
-    int a, int r, int g, int b, int blend, int filter, int angle,
-    int center);
   void SetVisibleGroup(int group0 = 0, int group1 = 0, int group2 = 0);
   void Hide();
   void Show();
   void SetDrawOrder(int order);
   int GetDrawOrder() const;
   void SetAllTweenPos(int x, int y);
+  void SetLR2DSTCommand(const std::string &lr2dst);
 
   bool IsTweening() const;
   bool IsVisible() const;
@@ -210,6 +208,11 @@ public:
   bool operator==(const BaseObject& o) {
     return o.get_name() == get_name();
   }
+
+private:
+  void SetLR2DST(int time, int x, int y, int w, int h, int acc_type,
+    int a, int r, int g, int b, int blend, int filter, int angle,
+    int center);
 
 protected:
   std::string name_;
@@ -249,6 +252,8 @@ protected:
   virtual void doRenderAfter();
 
   virtual const CommandFnMap& GetCommandFnMap();
+  
+  virtual void SetLR2DSTCommandInternal(const CommandArgs &args);
 };
 
 void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,

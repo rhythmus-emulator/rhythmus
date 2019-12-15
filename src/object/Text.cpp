@@ -298,4 +298,11 @@ const CommandFnMap& Text::GetCommandFnMap()
   return cmdfnmap_;
 }
 
+void Text::SetLR2DSTCommandInternal(const CommandArgs &args)
+{
+  BaseObject::SetLR2DSTCommandInternal(args);
+  /* reset visible group to default as LR2 does ... */
+  SetVisibleGroup(0, 0, 0);
+}
+
 RHYTHMUS_NAMESPACE_END

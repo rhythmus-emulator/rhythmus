@@ -73,7 +73,7 @@ void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
     eventid = InputEvents::kOnKeyPress;
 
   InputEvent msg(eventid);
-  msg.SetKeyCode(scancode);
+  msg.SetKeyCode(key);
 
   {
     std::lock_guard<std::mutex> lock(input_evt_lock);
@@ -120,7 +120,8 @@ void on_joystick_conn(int jid, int event)
 
 void InputEventManager::Flush()
 {
-  std::vector<InputEvent> events(kPreCacheEventCount);
+  std::vector<InputEvent> events;
+  events.reserve(kPreCacheEventCount);
   {
     std::lock_guard<std::mutex> lock(input_evt_lock);
     events.swap(input_evt_messages_);

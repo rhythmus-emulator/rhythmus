@@ -84,6 +84,8 @@ private:
 
   // text table index
   size_t table_index_;
+
+  virtual void SetLR2DSTCommandInternal(const CommandArgs &args);
 };
 
 RHYTHMUS_NAMESPACE_END

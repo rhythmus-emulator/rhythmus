@@ -22,6 +22,8 @@ void MusicWheelItem::Load(const Metric &metric)
   title_.set_name("MusicWheelTitle");
   title_.LoadByName();
   title_.LoadCommandWithNamePrefix(metric);
+  title_.RunCommandByName("LR0");
+  title_.Update(1000);
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
@@ -37,8 +39,11 @@ void MusicWheelItem::Load(const Metric &metric)
   // TODO: Set NumberText or NumberSprite.
 }
 
-void MusicWheelItem::LoadFromMenuData(MenuData *d)
+bool MusicWheelItem::LoadFromMenuData(MenuData *d)
 {
+  if (!MenuItem::LoadFromMenuData(d))
+    return false;
+
   MusicWheelData *data = static_cast<MusicWheelData*>(d);
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
@@ -54,6 +59,7 @@ void MusicWheelItem::LoadFromMenuData(MenuData *d)
   {
     // TODO: display proper bar type
   }
+  return true;
 }
 
 
