@@ -58,11 +58,14 @@ bool MusicWheelItem::LoadFromMenuData(MenuData *d)
       background_[i].Hide();
   }
 
-  title_->SetText(data->title);
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
     // TODO: display proper bar type
   }
+
+  title_->SetText(data->title);
+  level_->SetNumber(data->level);
+
   return true;
 }
 

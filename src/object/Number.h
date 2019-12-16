@@ -46,6 +46,7 @@ class NumberSprite : public Sprite
 {
 public:
   NumberSprite();
+  virtual ~NumberSprite();
   virtual void SetText(const std::string &num);
   virtual void SetNumber(int number);
   virtual void SetNumber(double number);
@@ -65,6 +66,7 @@ private:
   int align_;
   size_t data_index_;
   NumberFormatter formatter_;
+  TextVertexInfo *tvi_glyphs_;
   std::vector<TextVertexInfo> tvi_;
 };
 

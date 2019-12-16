@@ -78,11 +78,23 @@ const char* NumberFormatter::numstr() const
 
 // ------------------------- class NumberSprite
 
-NumberSprite::NumberSprite() : align_(0), data_index_(0) {}
+NumberSprite::NumberSprite() : align_(0), data_index_(0), tvi_glyphs_(nullptr)
+{
+}
+
+NumberSprite::~NumberSprite()
+{
+  if (tvi_glyphs_)
+    free(tvi_glyphs_);
+}
 
 void NumberSprite::SetText(const std::string &num)
 {
+  if (!tvi_glyphs_)
+    return;
+
   TextVertexInfo tvi;
+  size_t gidx;
   tvi.texid = 0; /* unused */
   tvi.vi[0].a = tvi.vi[0].r = tvi.vi[0].g = tvi.vi[0].b = 1.0f;
   tvi.vi[1].a = tvi.vi[1].r = tvi.vi[1].g = tvi.vi[1].b = 1.0f;
@@ -92,25 +104,16 @@ void NumberSprite::SetText(const std::string &num)
   tvi_.clear();
   for (size_t i = 0; i < num.size(); ++i)
   {
-    // TODO: position, cycle property
-    tvi.vi[0].x = 0;
-    tvi.vi[0].y = 0;
-    tvi.vi[0].sx = 0;
-    tvi.vi[0].sy = 0;
-    tvi.vi[1].x = 0;
-    tvi.vi[1].y = 0;
-    tvi.vi[1].sx = 0;
-    tvi.vi[1].sy = 0;
-    tvi.vi[2].x = 0;
-    tvi.vi[2].y = 0;
-    tvi.vi[2].sx = 0;
-    tvi.vi[2].sy = 0;
-    tvi.vi[3].x = 0;
-    tvi.vi[3].y = 0;
-    tvi.vi[3].sx = 0;
-    tvi.vi[3].sy = 0;
+    if (num[i] >= '0' && num[i] <= '9')
+      gidx = num[i] - '0';
+    if (num[i] == '-' || num[i] == '+')
+      gidx = 12;
+    else if (num[i] == 'O') /* transparent zero */
+      gidx = 11;
 
-    tvi_.push_back(tvi);
+    // TODO: cycle property
+
+    tvi_.push_back(tvi_glyphs_[gidx]);
   }
 }
 
@@ -141,21 +144,73 @@ void NumberSprite::SetTextTableIndex(size_t idx)
   data_index_ = idx;
 }
 
-void NumberSprite::Load(const Metric& metric)
-{
-  Sprite::Load(metric);
-}
-
 void NumberSprite::SetLR2Alignment(int type)
 {
   align_ = type;
 }
 
+void NumberSprite::Load(const Metric& metric)
+{
+  Sprite::Load(metric);
+}
+
 void NumberSprite::LoadFromLR2SRC(const std::string &cmd)
 {
+  Sprite::LoadFromLR2SRC(cmd);
+  if (!img_)
+    return;
+
   // TODO: LR2 sprite font implementation
   // (image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align)
   CommandArgs args(cmd);
+
+  /* register glyphs by divx / divy. */
+  int cycle_count = 0;
+  int dx, dy;
+  if (cnt_ % 10 == 0)
+  {
+    cycle_count = cnt_ / 10;
+    tvi_glyphs_ = (TextVertexInfo*)calloc(1, sizeof(TextVertexInfo) * 24 * cycle_count);
+    for (int i = 0; i < cycle_count; ++i)
+    {
+      for (int j = 0; j < 10; ++j)
+      {
+        const int ii = i * 24 + j;
+        dx = i % divx_;
+        dy = i / divx_;
+        tvi_glyphs_[ii].texid = img_->get_texture_ID();
+        tvi_glyphs_[ii].vi[0].a = tvi_glyphs_[i].vi[1].a
+          = tvi_glyphs_[i].vi[2].a = tvi_glyphs_[i].vi[3].a = 1.0f;
+        tvi_glyphs_[ii].vi[0].r = tvi_glyphs_[i].vi[1].r
+          = tvi_glyphs_[i].vi[2].r = tvi_glyphs_[i].vi[3].r = 1.0f;
+        tvi_glyphs_[ii].vi[0].g = tvi_glyphs_[i].vi[1].g
+          = tvi_glyphs_[i].vi[2].g = tvi_glyphs_[i].vi[3].g = 1.0f;
+        tvi_glyphs_[ii].vi[0].b = tvi_glyphs_[i].vi[1].b
+          = tvi_glyphs_[i].vi[2].b = tvi_glyphs_[i].vi[3].b = 1.0f;
+        tvi_glyphs_[ii].vi[0].sx = sx_ + sw_ * dx;
+        tvi_glyphs_[ii].vi[0].sy = sy_ + sh_ * dy;
+        tvi_glyphs_[ii].vi[1].sx = tvi_glyphs_[i].vi[0].sx + sw_;
+        tvi_glyphs_[ii].vi[1].sy = tvi_glyphs_[i].vi[0].sy;
+        tvi_glyphs_[ii].vi[2].sx = tvi_glyphs_[i].vi[1].sx;
+        tvi_glyphs_[ii].vi[2].sy = tvi_glyphs_[i].vi[1].sy + sh_;
+        tvi_glyphs_[ii].vi[3].sx = tvi_glyphs_[i].vi[0].sx;
+        tvi_glyphs_[ii].vi[3].sy = tvi_glyphs_[i].vi[0].sy + sh_;
+      }
+    }
+  }
+  else if (cnt_ % 11 == 0)
+  {
+    cycle_count = cnt_ / 11;
+    tvi_glyphs_ = (TextVertexInfo*)calloc(1, sizeof(TextVertexInfo) * 24 * cycle_count);
+    // TODO: fill glyphs
+  }
+  else if (cnt_ % 24 == 0)
+  {
+    cycle_count = cnt_ / 24;
+    tvi_glyphs_ = (TextVertexInfo*)calloc(1, sizeof(TextVertexInfo) * 24 * cycle_count);
+    // TODO: fill glyphs
+  }
+  else return;
 
   /* track change of number table */
   std::string eventname = args.Get<std::string>(9);
@@ -183,6 +238,7 @@ void NumberSprite::doRender()
   if (!img_ || !IsVisible())
     return;
 
+  /* we know what sprite to use, so just call SetTextureId once. */
   Graphic::SetTextureId(image()->get_texture_ID());
   for (const auto &tvi : tvi_)
   {
