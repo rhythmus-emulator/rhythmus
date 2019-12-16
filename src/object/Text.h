@@ -26,9 +26,9 @@ public:
   void SetSystemFont();
 
   float GetTextWidth() const;
-  void SetText(const std::string& s);
-  void SetTextTableIndex(size_t idx);
-  size_t GetTextTableIndex() const;
+  virtual void SetText(const std::string& s);
+  virtual void Refresh();
+  void SetRefreshCache(size_t idx);
   void SetAlignment(TextAlignments align);
   void SetTextPosition(int position_attr);
   void SetLineBreaking(bool enable_line_break);
@@ -41,7 +41,6 @@ public:
 
 protected:
   void SetFont(Font *font);
-  virtual void SetTextFromTable();
   virtual void SetLR2Alignment(int alignment);
   virtual void doRender();
   virtual void doUpdate(float);
@@ -81,9 +80,6 @@ private:
 
   // is line-breaking enabled?
   bool do_line_breaking_;
-
-  // text table index
-  size_t table_index_;
 
   virtual void SetLR2DSTCommandInternal(const CommandArgs &args);
 };

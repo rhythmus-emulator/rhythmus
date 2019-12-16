@@ -6,10 +6,10 @@
 namespace rhythmus
 {
 
-class NumberInterface
+class NumberFormatter
 {
 public:
-  NumberInterface();
+  NumberFormatter();
   void SetNumber(int number);
   void SetNumber(double number);
   template <typename T> T GetNumber() const;
@@ -38,15 +38,20 @@ private:
   float number_change_remain_;
   bool need_update_;
   std::string number_format_;
-  char num_str_[128];
+  char num_str_[16];
 };
 
 /* @brief Number based on Sprite object */
-class NumberSprite : public Sprite, public NumberInterface
+class NumberSprite : public Sprite
 {
 public:
   NumberSprite();
-  void SetNumberText(const char* num);
+  virtual void SetText(const std::string &num);
+  virtual void SetNumber(int number);
+  virtual void SetNumber(double number);
+  virtual void Refresh();
+  NumberFormatter &GetFormatter();
+
   void SetTextTableIndex(size_t idx);
   void SetLR2Alignment(int type);
 
@@ -54,28 +59,32 @@ public:
   virtual void LoadFromLR2SRC(const std::string &cmd);
 
 private:
-  virtual void SetTextFromTable();
-  virtual const CommandFnMap& GetCommandFnMap();
   virtual void doUpdate(float);
   virtual void doRender();
 
   int align_;
   size_t data_index_;
+  NumberFormatter formatter_;
   std::vector<TextVertexInfo> tvi_;
 };
 
 /* @brief Number based on Text object */
-class NumberText : public Text, public NumberInterface
+class NumberText : public Text
 {
 public:
   NumberText();
+  virtual void SetNumber(int number);
+  virtual void SetNumber(double number);
+  virtual void Refresh();
+  NumberFormatter &GetFormatter();
+
   virtual void Load(const Metric& metric);
   virtual void LoadFromLR2SRC(const std::string &cmd);
 
 private:
-  virtual void SetTextFromTable();
-  virtual const CommandFnMap& GetCommandFnMap();
   virtual void doUpdate(float);
+
+  NumberFormatter formatter_;
 };
 
 }

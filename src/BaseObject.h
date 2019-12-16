@@ -178,6 +178,7 @@ public:
   void SetScale(float x, float y);
   void SetRotation(float x, float y, float z);
   void SetRotationAsRadian(float x, float y, float z);
+
   /**
    * -1: Use absolute coord
    * 0: Center
@@ -197,6 +198,15 @@ public:
   void SetDrawOrder(int order);
   int GetDrawOrder() const;
   void SetAllTweenPos(int x, int y);
+  virtual void SetText(const std::string &value);
+  virtual void SetNumber(int number);
+  virtual void SetNumber(double number);
+  /* Refresh value from resource id (if it has) */
+  virtual void Refresh();
+  /* Set value automatically using Refresh() method from resource id */
+  void SetResourceId(int id);
+  /* -1: no resource */
+  int GetResourceId() const;
   void SetLR2DSTCommand(const std::string &lr2dst);
 
   bool IsTweening() const;
@@ -245,6 +255,9 @@ protected:
   // Tween
   void UpdateTween(float delta);
   void SetTweenLoopTime(uint32_t loopstart_time_msec);
+
+  // Resource id
+  int resource_id_;
 
   virtual void doUpdate(float delta);
   virtual void doRender();

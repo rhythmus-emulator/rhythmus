@@ -6,7 +6,7 @@ namespace rhythmus
 
 // ---------------------- class NumberInterface
 
-NumberInterface::NumberInterface()
+NumberFormatter::NumberFormatter()
   : number_(0), disp_number_(0),
     number_change_duration_(0), number_change_remain_(0), need_update_(true),
     number_format_("%d")
@@ -14,32 +14,32 @@ NumberInterface::NumberInterface()
   *num_str_ = 0;
 }
 
-void NumberInterface::SetNumber(int number)
+void NumberFormatter::SetNumber(int number)
 {
   number_ = (double)number;
   number_change_remain_ = number_change_duration_;
   need_update_ = true;
 }
 
-void NumberInterface::SetNumber(double number) {
+void NumberFormatter::SetNumber(double number) {
   number_ = number;
   number_change_remain_ = number_change_duration_;
   need_update_ = true;
 }
 
-template <> int NumberInterface::GetNumber() const { return (int)number_; }
-template <> double NumberInterface::GetNumber() const { return number_; }
-void NumberInterface::SetNumberChangeTime(float msec)
+template <> int NumberFormatter::GetNumber() const { return (int)number_; }
+template <> double NumberFormatter::GetNumber() const { return number_; }
+void NumberFormatter::SetNumberChangeTime(float msec)
 {
   number_change_duration_ = (float)msec;
 }
 
-void NumberInterface::SetFormat(const std::string& number_format)
+void NumberFormatter::SetFormat(const std::string& number_format)
 {
   number_format_ = number_format;
 }
 
-bool NumberInterface::UpdateNumber(float delta)
+bool NumberFormatter::UpdateNumber(float delta)
 {
   if (need_update_)
   {
@@ -70,7 +70,7 @@ bool NumberInterface::UpdateNumber(float delta)
   return false;
 }
 
-const char* NumberInterface::numstr() const
+const char* NumberFormatter::numstr() const
 {
   return num_str_;
 }
@@ -80,7 +80,7 @@ const char* NumberInterface::numstr() const
 
 NumberSprite::NumberSprite() : align_(0), data_index_(0) {}
 
-void NumberSprite::SetNumberText(const char* num)
+void NumberSprite::SetText(const std::string &num)
 {
   TextVertexInfo tvi;
   tvi.texid = 0; /* unused */
@@ -90,7 +90,7 @@ void NumberSprite::SetNumberText(const char* num)
   tvi.vi[3].a = tvi.vi[3].r = tvi.vi[3].g = tvi.vi[3].b = 1.0f;
 
   tvi_.clear();
-  while (*num)
+  for (size_t i = 0; i < num.size(); ++i)
   {
     // TODO: position, cycle property
     tvi.vi[0].x = 0;
@@ -111,8 +111,29 @@ void NumberSprite::SetNumberText(const char* num)
     tvi.vi[3].sy = 0;
 
     tvi_.push_back(tvi);
-    ++num;
   }
+}
+
+void NumberSprite::SetNumber(int number)
+{
+  formatter_.SetNumber(number);
+  SetText(formatter_.numstr());
+}
+
+void NumberSprite::SetNumber(double number)
+{
+  formatter_.SetNumber(number);
+  SetText(formatter_.numstr());
+}
+
+void NumberSprite::Refresh()
+{
+  SetNumber(Script::getInstance().GetNumber(GetResourceId()));
+}
+
+NumberFormatter &NumberSprite::GetFormatter()
+{
+  return formatter_;
 }
 
 void NumberSprite::SetTextTableIndex(size_t idx)
@@ -123,13 +144,6 @@ void NumberSprite::SetTextTableIndex(size_t idx)
 void NumberSprite::Load(const Metric& metric)
 {
   Sprite::Load(metric);
-}
-
-void NumberSprite::SetTextFromTable()
-{
-  SetNumberText(
-    Script::getInstance().GetString(data_index_).c_str()
-  );
 }
 
 void NumberSprite::SetLR2Alignment(int type)
@@ -145,36 +159,21 @@ void NumberSprite::LoadFromLR2SRC(const std::string &cmd)
 
   /* track change of number table */
   std::string eventname = args.Get<std::string>(9);
-  AddCommand(eventname, "numberupdate");
+  AddCommand(eventname, "refresh");
   SubscribeTo(eventname);
 
   /* set number value index instantly */
-  SetTextTableIndex(atoi(eventname.c_str()));
+  SetResourceId(atoi(eventname.c_str()));
+  Refresh();
 
   /* alignment */
   SetLR2Alignment(args.Get<int>(10));
 }
 
-const CommandFnMap& NumberSprite::GetCommandFnMap()
-{
-  static CommandFnMap cmdfnmap_;
-  if (cmdfnmap_.empty())
-  {
-    cmdfnmap_ = Sprite::GetCommandFnMap();
-    cmdfnmap_["number"] = [](void *o, CommandArgs& args) {
-      static_cast<NumberSprite*>(o)->SetNumber(args.Get<int>(0));
-    };
-    cmdfnmap_["numberupdate"] = [](void *o, CommandArgs& args) {
-      static_cast<NumberSprite*>(o)->SetTextFromTable();
-    };
-  }
-  return cmdfnmap_;
-}
-
 void NumberSprite::doUpdate(float delta)
 {
-  if (UpdateNumber(delta))
-    SetNumberText(numstr());
+  if (formatter_.UpdateNumber(delta))
+    SetText(formatter_.numstr());
   Sprite::doUpdate(delta);
 }
 
@@ -198,10 +197,27 @@ void NumberSprite::doRender()
 
 NumberText::NumberText() {}
 
+void NumberText::SetNumber(int number)
+{
+  formatter_.SetNumber(number);
+  SetText(formatter_.numstr());
+}
+
+void NumberText::SetNumber(double number)
+{
+  formatter_.SetNumber(number);
+  SetText(formatter_.numstr());
+}
+
+NumberFormatter &NumberText::GetFormatter()
+{
+  return formatter_;
+}
+
 void NumberText::doUpdate(float delta)
 {
-  if (UpdateNumber(delta))
-    SetText(numstr());
+  if (formatter_.UpdateNumber(delta))
+    SetText(formatter_.numstr());
   Text::doUpdate(delta);
 }
 
@@ -216,9 +232,9 @@ void NumberText::Load(const Metric& metric)
     SetText(metric.get<std::string>("number"));
 }
 
-void NumberText::SetTextFromTable()
+void NumberText::Refresh()
 {
-  SetNumber(Script::getInstance().GetNumber(GetTextTableIndex()));
+  SetNumber(Script::getInstance().GetNumber(GetResourceId()));
 }
 
 void NumberText::LoadFromLR2SRC(const std::string &cmd)
@@ -229,29 +245,14 @@ void NumberText::LoadFromLR2SRC(const std::string &cmd)
 
   /* track change of number table */
   std::string eventname = args.Get<std::string>(9);
-  AddCommand(eventname, "numberupdate");
+  AddCommand(eventname, "refresh");
   SubscribeTo(eventname);
   /* set value instantly */
-  SetTextTableIndex(atoi(eventname.c_str()));
+  SetResourceId(atoi(eventname.c_str()));
+  Refresh();
 
   /* alignment */
   SetLR2Alignment(args.Get<int>(10));
-}
-
-const CommandFnMap& NumberText::GetCommandFnMap()
-{
-  static CommandFnMap cmdfnmap_;
-  if (cmdfnmap_.empty())
-  {
-    cmdfnmap_ = Text::GetCommandFnMap();
-    cmdfnmap_["number"] = [](void *o, CommandArgs& args) {
-      static_cast<NumberText*>(o)->SetNumber(args.Get<int>(0));
-    };
-    cmdfnmap_["numberupdate"] = [](void *o, CommandArgs& args) {
-      static_cast<NumberText*>(o)->SetTextFromTable();
-    };
-  }
-  return cmdfnmap_;
 }
 
 }

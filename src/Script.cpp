@@ -137,6 +137,8 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   NAME("DST_BAR_BODY_OFF", "MusicWheel", "Bar%dOnLR", 0), \
   NAME("SRC_BAR_TITLE", "MusicWheelTitle%d", "lr2font", 0), \
   NAME("DST_BAR_TITLE", "MusicWheelTitle%d", "OnLR", 0), \
+  NAME("SRC_BAR_LEVEL", "MusicWheelLevel%d", "lr2src", 0), \
+  NAME("DST_BAR_LEVEL", "MusicWheelLevel%d", "OnLR", 0), \
   NAME("SRC_IMAGE", "Sprite", "sprite", 2), \
   NAME("DST_IMAGE", "Sprite", "OnLR", 1), \
   NAME("SRC_TEXT", "Text", "lr2font", 2), \

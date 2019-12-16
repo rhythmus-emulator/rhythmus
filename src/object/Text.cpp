@@ -9,7 +9,7 @@ RHYTHMUS_NAMESPACE_BEGIN
 
 Text::Text()
   : font_(nullptr), text_alignment_(TextAlignments::kTextAlignLeft),
-    text_position_(0), do_line_breaking_(true), table_index_(0)
+    text_position_(0), do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
@@ -69,19 +69,9 @@ void Text::SetText(const std::string& s)
   }
 }
 
-void Text::SetTextTableIndex(size_t idx)
+void Text::Refresh()
 {
-  table_index_ = idx;
-}
-
-size_t Text::GetTextTableIndex() const
-{
-  return table_index_;
-}
-
-void Text::SetTextFromTable()
-{
-  SetText(Script::getInstance().GetString(table_index_));
+  SetText(Script::getInstance().GetString(GetResourceId()));
 }
 
 // XXX: Font alignment to right won't work when text is multiline.
@@ -269,11 +259,12 @@ void Text::LoadFromLR2SRC(const std::string &cmd)
 
   /* track change of text table */
   std::string eventname = args.Get<std::string>(1);
-  AddCommand(eventname, "textupdate");
+  AddCommand(eventname, "refresh");
   SubscribeTo(eventname);
   
   /* set text index for update */
-  SetTextTableIndex(atoi(eventname.c_str()));
+  SetResourceId(atoi(eventname.c_str()));
+  Refresh();
 
   /* alignment */
   SetLR2Alignment(args.Get<int>(2));
@@ -290,9 +281,6 @@ const CommandFnMap& Text::GetCommandFnMap()
     cmdfnmap_ = BaseObject::GetCommandFnMap();
     cmdfnmap_["text"] = [](void *o, CommandArgs& args) {
       static_cast<Text*>(o)->SetText(args.Get<std::string>(0));
-    };
-    cmdfnmap_["textupdate"] = [](void *o, CommandArgs& args) {
-      static_cast<Text*>(o)->SetTextFromTable();
     };
   }
   return cmdfnmap_;

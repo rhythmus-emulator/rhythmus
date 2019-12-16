@@ -9,7 +9,7 @@ namespace rhythmus
 {
 
 BaseObject::BaseObject()
-  : parent_(nullptr), draw_order_(0), rot_center_(-1)
+  : parent_(nullptr), draw_order_(0), rot_center_(-1), resource_id_(-1)
 {
   memset(&current_prop_, 0, sizeof(DrawProperty));
   current_prop_.sw = current_prop_.sh = 1.0f;
@@ -22,7 +22,8 @@ BaseObject::BaseObject()
 
 BaseObject::BaseObject(const BaseObject& obj)
   : name_(obj.name_), parent_(obj.parent_),
-    draw_order_(obj.draw_order_), rot_center_(obj.rot_center_)
+    draw_order_(obj.draw_order_), rot_center_(obj.rot_center_),
+    resource_id_(obj.resource_id_)
 {
   // XXX: childrens won't copy by now
   tween_ = obj.tween_;
@@ -521,6 +522,18 @@ void BaseObject::SetAllTweenPos(int x, int y)
   }
 }
 
+void BaseObject::SetText(const std::string &value) {}
+
+void BaseObject::SetNumber(int number) { SetText(std::to_string(number)); }
+
+void BaseObject::SetNumber(double number) { SetText(std::to_string(number)); }
+
+void BaseObject::Refresh() {}
+
+void BaseObject::SetResourceId(int id) { resource_id_ = id; }
+
+int BaseObject::GetResourceId() const { return resource_id_; }
+
 // milisecond
 void BaseObject::UpdateTween(float delta_ms)
 {
@@ -816,11 +829,31 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     static auto fn_Loop = [](void *o, CommandArgs& args) {
       static_cast<BaseObject*>(o)->SetTweenLoopTime((uint32_t)args.Get<int>(0));
     };
+    static auto fn_Text = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetText(args.Get<std::string>(0));
+    };
+    static auto fn_Number = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetNumber(args.Get<int>(0));
+    };
+    static auto fn_NumberF = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetNumber(args.Get<double>(0));
+    };
+    static auto fn_Refresh = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->Refresh();
+    };
+    static auto fn_resid = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetResourceId(args.Get<int>(0));
+    };
     cmdfnmap_["pos"] = fn_Pos;
     cmdfnmap_["lr2cmd"] = fn_SetLR2DST;
     cmdfnmap_["show"] = fn_Show;
     cmdfnmap_["hide"] = fn_Hide;
     cmdfnmap_["loop"] = fn_Loop;
+    cmdfnmap_["text"] = fn_Loop;
+    cmdfnmap_["number"] = fn_Number;
+    cmdfnmap_["numberf"] = fn_NumberF;
+    cmdfnmap_["refresh"] = fn_Refresh;
+    cmdfnmap_["resid"] = fn_resid;
   }
 
   return cmdfnmap_;

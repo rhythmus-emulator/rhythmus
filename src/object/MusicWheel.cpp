@@ -7,20 +7,15 @@ namespace rhythmus
 
 MusicWheelItem::MusicWheelItem()
 {
-  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
-  {
-    AddChild(&background_[i]);
-  }
-  AddChild(&title_);
-  AddChild(&level_);
 }
 
 /* @warn use same metric that MusicWheel used. */
 void MusicWheelItem::Load(const Metric &metric)
 {
-  title_.set_name("MusicWheelTitle");
-  title_.LoadByName();
-  title_.LoadCommandWithNamePrefix(metric);
+  title_ = std::make_unique<Text>();
+  title_->set_name("MusicWheelTitle");
+  title_->LoadByName();
+  title_->LoadCommandWithNamePrefix(metric);
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
@@ -34,6 +29,18 @@ void MusicWheelItem::Load(const Metric &metric)
   }
 
   // TODO: Set NumberText or NumberSprite.
+  /* TODO: NumberSpriteLevel metric */
+  level_ = std::make_unique<NumberSprite>();
+  level_->set_name("MusicWheelLevel0");
+  level_->LoadByName();
+  level_->LoadCommandWithNamePrefix(metric);
+
+  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
+  {
+    AddChild(&background_[i]);
+  }
+  AddChild(&*title_);
+  AddChild(&*level_);
 }
 
 bool MusicWheelItem::LoadFromMenuData(MenuData *d)
@@ -51,7 +58,7 @@ bool MusicWheelItem::LoadFromMenuData(MenuData *d)
       background_[i].Hide();
   }
 
-  title_.SetText(data->title);
+  title_->SetText(data->title);
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
     // TODO: display proper bar type

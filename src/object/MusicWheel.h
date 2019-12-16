@@ -34,8 +34,8 @@ public:
 
 private:
   Sprite background_[NUM_SELECT_BAR_TYPES];
-  NumberText level_;
-  Text title_;
+  std::unique_ptr<BaseObject> level_;
+  std::unique_ptr<Text> title_;
 };
 
 class MusicWheel : public Menu
