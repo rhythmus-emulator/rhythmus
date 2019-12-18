@@ -61,6 +61,9 @@ protected:
   // texture coordination
   float sx_, sy_, sw_, sh_;
 
+  // source sprite size
+  int source_x, source_y, source_width, source_height;
+
   // texture attribute (TODO)
   float tex_attribute_;
 

@@ -95,6 +95,7 @@ void NumberSprite::SetText(const std::string &num)
 
   TextVertexInfo tvi;
   size_t gidx;
+  float x = 0;
   tvi.texid = 0; /* unused */
   tvi.vi[0].a = tvi.vi[0].r = tvi.vi[0].g = tvi.vi[0].b = 1.0f;
   tvi.vi[1].a = tvi.vi[1].r = tvi.vi[1].g = tvi.vi[1].b = 1.0f;
@@ -114,6 +115,12 @@ void NumberSprite::SetText(const std::string &num)
     // TODO: cycle property
 
     tvi_.push_back(tvi_glyphs_[gidx]);
+    auto *vi = tvi_.back().vi;
+    vi[0].x += x;
+    vi[1].x += x;
+    vi[2].x += x;
+    vi[3].x += x;
+    x += vi[1].x - vi[0].x;
   }
 }
 
@@ -164,9 +171,15 @@ void NumberSprite::LoadFromLR2SRC(const std::string &cmd)
   // (image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align)
   CommandArgs args(cmd);
 
+  /* TODO: create LR2SpriteFont and add Update() method to Font ? */
+
   /* register glyphs by divx / divy. */
   int cycle_count = 0;
   int dx, dy;
+  float divw = (float)source_width / divx_;
+  float divh = (float)source_height / divy_;
+  float dsw = sw_ / divx_;
+  float dsh = sh_ / divy_;
   if (cnt_ % 10 == 0)
   {
     cycle_count = cnt_ / 10;
@@ -176,8 +189,8 @@ void NumberSprite::LoadFromLR2SRC(const std::string &cmd)
       for (int j = 0; j < 10; ++j)
       {
         const int ii = i * 24 + j;
-        dx = i % divx_;
-        dy = i / divx_;
+        dx = j % divx_;
+        dy = j / divx_;
         tvi_glyphs_[ii].texid = img_->get_texture_ID();
         tvi_glyphs_[ii].vi[0].a = tvi_glyphs_[i].vi[1].a
           = tvi_glyphs_[i].vi[2].a = tvi_glyphs_[i].vi[3].a = 1.0f;
@@ -187,14 +200,22 @@ void NumberSprite::LoadFromLR2SRC(const std::string &cmd)
           = tvi_glyphs_[i].vi[2].g = tvi_glyphs_[i].vi[3].g = 1.0f;
         tvi_glyphs_[ii].vi[0].b = tvi_glyphs_[i].vi[1].b
           = tvi_glyphs_[i].vi[2].b = tvi_glyphs_[i].vi[3].b = 1.0f;
-        tvi_glyphs_[ii].vi[0].sx = sx_ + sw_ * dx;
-        tvi_glyphs_[ii].vi[0].sy = sy_ + sh_ * dy;
-        tvi_glyphs_[ii].vi[1].sx = tvi_glyphs_[i].vi[0].sx + sw_;
+        tvi_glyphs_[ii].vi[0].sx = sx_ + dsw * dx;
+        tvi_glyphs_[ii].vi[0].sy = sy_ + dsh * dy;
+        tvi_glyphs_[ii].vi[1].sx = tvi_glyphs_[i].vi[0].sx + dsw;
         tvi_glyphs_[ii].vi[1].sy = tvi_glyphs_[i].vi[0].sy;
         tvi_glyphs_[ii].vi[2].sx = tvi_glyphs_[i].vi[1].sx;
-        tvi_glyphs_[ii].vi[2].sy = tvi_glyphs_[i].vi[1].sy + sh_;
+        tvi_glyphs_[ii].vi[2].sy = tvi_glyphs_[i].vi[1].sy + dsh;
         tvi_glyphs_[ii].vi[3].sx = tvi_glyphs_[i].vi[0].sx;
-        tvi_glyphs_[ii].vi[3].sy = tvi_glyphs_[i].vi[0].sy + sh_;
+        tvi_glyphs_[ii].vi[3].sy = tvi_glyphs_[i].vi[0].sy + dsh;
+        tvi_glyphs_[ii].vi[0].x = 0;
+        tvi_glyphs_[ii].vi[0].y = 0;
+        tvi_glyphs_[ii].vi[1].x = divw;
+        tvi_glyphs_[ii].vi[1].y = 0;
+        tvi_glyphs_[ii].vi[2].x = divw;
+        tvi_glyphs_[ii].vi[2].y = divh;
+        tvi_glyphs_[ii].vi[3].x = 0;
+        tvi_glyphs_[ii].vi[3].y = divh;
       }
     }
   }

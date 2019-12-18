@@ -12,7 +12,9 @@ Sprite::Sprite()
   : img_(nullptr), img_owned_(true),
     divx_(1), divy_(1), cnt_(1), interval_(0), blending_(1),
     idx_(0), eclipsed_time_(0),
-    sx_(0), sy_(0), sw_(1.0f), sh_(1.0f), tex_attribute_(0)
+    sx_(0), sy_(0), sw_(1.0f), sh_(1.0f),
+    source_x(0), source_y(0), source_width(0), source_height(0),
+    tex_attribute_(0)
 {
 }
 
@@ -67,9 +69,9 @@ void Sprite::Load(const Metric& metric)
     blending_ = metric.get<int>("blend");
 
   if (metric.exist("sprite"))
-  {
     LoadFromLR2SRC(metric.get<std::string>("sprite"));
-  }
+  else if (metric.exist("lr2src"))
+    LoadFromLR2SRC(metric.get<std::string>("lr2src"));
 }
 
 void Sprite::doRender()
@@ -180,17 +182,17 @@ void Sprite::LoadFromLR2SRC(const std::string &cmd)
   if (!img_)
     return;
 
-  int sx = args.Get<int>(1);
-  int sy = args.Get<int>(2);
-  int sw = args.Get<int>(3);
-  int sh = args.Get<int>(4);
+  source_x = args.Get<int>(1);
+  source_y = args.Get<int>(2);
+  source_width = args.Get<int>(3);
+  source_height = args.Get<int>(4);
 
-  sx_ = sx / (float)img_->get_width();
-  sy_ = sy / (float)img_->get_height();
-  if (sw < 0) sw_ = 1.0f;
-  else sw_ = sw / (float)img_->get_width();
-  if (sh < 0) sh_ = 1.0f;
-  else sh_ = sh / (float)img_->get_height();
+  sx_ = source_x / (float)img_->get_width();
+  sy_ = source_y / (float)img_->get_height();
+  if (source_width < 0) sw_ = 1.0f;
+  else sw_ = source_width / (float)img_->get_width();
+  if (source_height < 0) sh_ = 1.0f;
+  else sh_ = source_height / (float)img_->get_height();
 
   int divx = args.Get<int>(5);
   int divy = args.Get<int>(6);
@@ -200,7 +202,7 @@ void Sprite::LoadFromLR2SRC(const std::string &cmd)
   cnt_ = divx_ * divy_;
   interval_ = args.Get<int>(7);
 
-  SetSize(sw / divx_, sh / divy_);
+  SetSize(source_width / divx_, source_height / divy_);
 
   if (args.size() > 8)
   {
