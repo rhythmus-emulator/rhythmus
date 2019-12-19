@@ -267,6 +267,7 @@ void NumberSprite::doRender()
       tvi.vi,
       sizeof(VertexInfo) * 4);
   }
+  Graphic::RenderQuad();
 }
 
 
