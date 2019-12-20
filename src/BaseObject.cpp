@@ -9,7 +9,8 @@ namespace rhythmus
 {
 
 BaseObject::BaseObject()
-  : parent_(nullptr), draw_order_(0), rot_center_(-1), resource_id_(-1)
+  : parent_(nullptr), draw_order_(0), rot_center_(-1),
+    resource_id_(-1), blending_(1)
 {
   memset(&current_prop_, 0, sizeof(DrawProperty));
   current_prop_.sw = current_prop_.sh = 1.0f;
@@ -23,7 +24,7 @@ BaseObject::BaseObject()
 BaseObject::BaseObject(const BaseObject& obj)
   : name_(obj.name_), parent_(obj.parent_),
     draw_order_(obj.draw_order_), rot_center_(obj.rot_center_),
-    resource_id_(obj.resource_id_)
+    resource_id_(obj.resource_id_), blending_(obj.blending_)
 {
   // XXX: childrens won't copy by now
   tween_ = obj.tween_;
@@ -161,9 +162,15 @@ void BaseObject::DeleteAllCommand()
 void BaseObject::QueueCommand(const std::string &command)
 {
   if (tween_.empty())
+  {
     std::cerr << "Warning: tried to queue command without tween.";
-  else
-    tween_.back().commands = command;
+    return;
+  }
+
+  // XXX: is it proper to execute command directly? refactoring necessary?
+  if (tween_.size() == 1)
+    RunCommand(command);
+  tween_.back().commands = command;
 }
 
 void BaseObject::LoadCommand(const std::string &name, const std::string &command)
@@ -454,7 +461,8 @@ void BaseObject::SetLR2DST(
   }
 
   // blend parameter should set by Sprite command.
-  QueueCommand("blend:" + std::to_string(blend));
+  if (blend != 1)
+    QueueCommand("blend:" + std::to_string(blend));
 }
 
 void BaseObject::SetLR2DSTCommand(const std::string &lr2dst)
@@ -534,6 +542,8 @@ void BaseObject::SetResourceId(int id) { resource_id_ = id; }
 
 int BaseObject::GetResourceId() const { return resource_id_; }
 
+void BaseObject::SetBlend(int blend_mode) { blending_ = blend_mode; }
+
 // milisecond
 void BaseObject::UpdateTween(float delta_ms)
 {
@@ -556,27 +566,23 @@ void BaseObject::UpdateTween(float delta_ms)
     //
     if (tween_.size() == 1)
     {
-      current_prop_ = tween_.front().draw_prop;
+      auto &t = tween_.front();
+      current_prop_ = t.draw_prop;
+      if (!t.commands.empty())
+        RunCommand(t.commands);
       tween_.clear();
       return;
     }
-
-    //
-    // actual loop condition
-    //
-    if (delta_ms <= 0)
-      break;
 
     TweenState &t = tween_.front();
     if (delta_ms + t.time_eclipsed >= t.time_duration)  // tween end
     {
       delta_ms -= t.time_duration - t.time_eclipsed;
 
-      // trigger event if exist
-      if (!t.commands.empty())
-      {
-        RunCommand(t.commands);
-      }
+      // trigger next tween event if exist
+      auto next = std::next(tween_.begin());
+      if (next != tween_.end() && next->commands.empty())
+        RunCommand(next->commands);
 
       // loop tween by push it again.
       // -> use more efficient method splice
@@ -592,6 +598,12 @@ void BaseObject::UpdateTween(float delta_ms)
       t.time_eclipsed += delta_ms;
       delta_ms = 0;  // actually same as exiting tween
     }
+
+    //
+    // actual loop condition
+    //
+    if (delta_ms <= 0)
+      break;
   }
 
   //
@@ -844,6 +856,9 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     static auto fn_resid = [](void *o, CommandArgs& args) {
       static_cast<BaseObject*>(o)->SetResourceId(args.Get<int>(0));
     };
+    static auto fn_blend = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetBlend(args.Get<int>(0));
+    };
     cmdfnmap_["pos"] = fn_Pos;
     cmdfnmap_["lr2cmd"] = fn_SetLR2DST;
     cmdfnmap_["show"] = fn_Show;
@@ -854,6 +869,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     cmdfnmap_["numberf"] = fn_NumberF;
     cmdfnmap_["refresh"] = fn_Refresh;
     cmdfnmap_["resid"] = fn_resid;
+    cmdfnmap_["blend"] = fn_blend;
   }
 
   return cmdfnmap_;

@@ -23,13 +23,6 @@ public:
    * so be aware of texture leaking. */
   void SetImage(Image *img);
   
-  /**
-   * 0: Don't use blending (always 100% alpha)
-   * 1: Use basic alpha blending (Default)
-   * 2: Use color blending instead of alpha channel
-   */
-  void SetBlend(int blend_mode);
-
   void ReplaySprite();
 
   Image *image();
@@ -54,9 +47,6 @@ protected:
 
   // eclipsed time of sprite animation
   int eclipsed_time_;
-
-  // current sprite blending
-  int blending_;
 
   // texture coordination
   float sx_, sy_, sw_, sh_;

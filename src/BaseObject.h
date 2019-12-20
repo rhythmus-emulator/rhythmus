@@ -207,6 +207,14 @@ public:
   void SetResourceId(int id);
   /* -1: no resource */
   int GetResourceId() const;
+
+  /**
+   * 0: Don't use blending (always 100% alpha)
+   * 1: Use basic alpha blending (Default)
+   * 2: Use color blending instead of alpha channel
+   */
+  void SetBlend(int blend_mode);
+
   void SetLR2DSTCommand(const std::string &lr2dst);
 
   bool IsTweening() const;
@@ -235,6 +243,7 @@ protected:
   // owned children list (released when its destruction)
   std::vector<BaseObject*> owned_children_;
 
+  // drawing order
   int draw_order_;
 
   // description of drawing motion
@@ -249,15 +258,18 @@ protected:
   // group for visibility
   int visible_group_[3];
 
+  // Resource id for text/number value
+  int resource_id_;
+
+  // blending properties for image/text.
+  int blending_;
+
   // commands to be called
   std::map<std::string, std::string> commands_;
 
   // Tween
   void UpdateTween(float delta);
   void SetTweenLoopTime(uint32_t loopstart_time_msec);
-
-  // Resource id
-  int resource_id_;
 
   virtual void doUpdate(float delta);
   virtual void doRender();

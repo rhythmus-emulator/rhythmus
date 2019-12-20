@@ -560,13 +560,22 @@ void Graphic::SetTextureId(GLuint tex_id)
   else return;
 }
 
-void Graphic::SetBlendMode(GLuint blend_mode)
+void Graphic::SetBlendMode(int blend_mode)
 {
   Graphic &g = Graphic::getInstance();
-  if (g.src_blend_mode_ != blend_mode)
+  static GLuint glBlendmodeTbl[] = {
+    GL_ZERO, GL_ONE_MINUS_SRC_ALPHA, GL_ONE
+  };
+  static constexpr int glBlendmodeSize =
+    sizeof(glBlendmodeTbl) / sizeof(GLuint);
+  GLuint glBlendmode = GL_ONE;
+  if (blend_mode >= 0 && blend_mode < glBlendmodeSize)
+    glBlendmode = glBlendmodeTbl[blend_mode];
+
+  if (g.src_blend_mode_ != glBlendmode)
   {
-    g.src_blend_mode_ = blend_mode;
-    glBlendFunc(GL_SRC_ALPHA, blend_mode);
+    g.src_blend_mode_ = glBlendmode;
+    glBlendFunc(GL_SRC_ALPHA, glBlendmode);
   }
 }
 

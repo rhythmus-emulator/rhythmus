@@ -261,6 +261,8 @@ void NumberSprite::doRender()
 
   /* we know what sprite to use, so just call SetTextureId once. */
   Graphic::SetTextureId(image()->get_texture_ID());
+  Graphic::SetBlendMode(blending_);
+
   for (const auto &tvi : tvi_)
   {
     memcpy(Graphic::get_vertex_buffer(),

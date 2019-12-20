@@ -165,6 +165,7 @@ void Text::doRender()
   // Graphic::SetTextureId(0);
   Graphic::PushMatrix();
   Graphic::SetMatrix(pi);
+  Graphic::SetBlendMode(blending_);
 
   // Draw vertex by given quad
   for (const TextVertexInfo& tvi : text_render_ctx_.textvertex)

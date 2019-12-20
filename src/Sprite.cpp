@@ -10,7 +10,7 @@ namespace rhythmus
 
 Sprite::Sprite()
   : img_(nullptr), img_owned_(true),
-    divx_(1), divy_(1), cnt_(1), interval_(0), blending_(1),
+    divx_(1), divy_(1), cnt_(1), interval_(0),
     idx_(0), eclipsed_time_(0),
     sx_(0), sy_(0), sw_(1.0f), sh_(1.0f),
     source_x(0), source_y(0), source_width(0), source_height(0),
@@ -49,11 +49,6 @@ void Sprite::SetImage(Image *img)
   img_owned_ = false;
 }
 
-void Sprite::SetBlend(int blend_mode)
-{
-  blending_ = blend_mode;
-}
-
 void Sprite::ReplaySprite()
 {
   eclipsed_time_ = 0;
@@ -81,18 +76,7 @@ void Sprite::doRender()
     return;
 
   Graphic::SetTextureId(img_->get_texture_ID());
-  switch (blending_)
-  {
-  case 0:
-    Graphic::SetBlendMode(GL_ZERO);
-    break;
-  case 1:
-    Graphic::SetBlendMode(GL_ONE_MINUS_SRC_ALPHA);
-    break;
-  case 2:
-    Graphic::SetBlendMode(GL_ONE);
-    break;
-  }
+  Graphic::SetBlendMode(blending_);
 
   const DrawProperty &ti = current_prop_;
 
@@ -217,9 +201,6 @@ const CommandFnMap& Sprite::GetCommandFnMap()
   if (cmdfnmap_.empty())
   {
     cmdfnmap_ = BaseObject::GetCommandFnMap();
-    cmdfnmap_["blend"] = [](void *o, CommandArgs& args) {
-      static_cast<Sprite*>(o)->SetBlend(args.Get<int>(0));
-    };
     cmdfnmap_["replay"] = [](void *o, CommandArgs& args) {
       static_cast<Sprite*>(o)->ReplaySprite();
     };
