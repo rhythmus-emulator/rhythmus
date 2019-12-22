@@ -7,6 +7,18 @@
 namespace rhythmus
 {
 
+/**
+ * sprite animation property
+ * divx : sprite division by x pos
+ * divy : sprite division by y pos
+ * cnt : total frame (smaller than divx * divy)
+ * interval : loop time for sprite animation (milisecond)
+ */
+struct SpriteAnimationInfo
+{
+  int divx, divy, cnt, duration;
+};
+
 /* @brief Renderable object with texture */
 class Sprite : public BaseObject
 {
@@ -24,6 +36,11 @@ public:
   void SetImage(Image *img);
   
   void ReplaySprite();
+  const Rect& GetImageCoordRect();
+  const RectF& GetTextureCoordRect();
+  const SpriteAnimationInfo& GetSpriteAnimationInfo();
+
+  void GetVertexInfoOfFrame(VertexInfo* vi, size_t frame);
 
   Image *image();
 
@@ -35,12 +52,7 @@ protected:
   Image *img_;
   bool img_owned_;
 
-  // sprite animation property
-  // divx : sprite division by x pos
-  // divy : sprite division by y pos
-  // cnt : total frame (smaller than divx * divy)
-  // interval : loop time for sprite animation (milisecond)
-  int divx_, divy_, cnt_, interval_;
+  SpriteAnimationInfo ani_info_;
 
   // current sprite animation frame
   int idx_;
@@ -48,11 +60,11 @@ protected:
   // eclipsed time of sprite animation
   int eclipsed_time_;
 
-  // texture coordination
-  float sx_, sy_, sw_, sh_;
+  // texture coordination source
+  RectF texcoord_;
 
-  // source sprite size
-  int source_x, source_y, source_width, source_height;
+  // source sprite size spec
+  Rect imgcoord_;
 
   // texture attribute (TODO)
   float tex_attribute_;

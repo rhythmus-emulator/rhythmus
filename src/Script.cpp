@@ -104,8 +104,8 @@ BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
     obj = new Sprite();
   else if (objtype == "Text")
     obj = new Text();
-  else if (objtype == "NumberSprite")
-    obj = new NumberSprite();
+  else if (objtype == "Number")
+    obj = new Number();
 
   if (!obj) return nullptr;
   obj->Load(metrics);
@@ -135,7 +135,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   NAME("SRC_BAR_BODY", "MusicWheelType%d", "sprite", 0), \
   NAME("DST_BAR_BODY_ON", "MusicWheel", "BarOn%dOnLR", 0), \
   NAME("DST_BAR_BODY_OFF", "MusicWheel", "Bar%dOnLR", 0), \
-  NAME("SRC_BAR_TITLE", "MusicWheelTitle%d", "lr2font", 0), \
+  NAME("SRC_BAR_TITLE", "MusicWheelTitle%d", "lr2src", 0), \
   NAME("DST_BAR_TITLE", "MusicWheelTitle%d", "OnLR", 0), \
   NAME("SRC_BAR_LEVEL", "MusicWheelLevel%d", "lr2src", 0), \
   NAME("DST_BAR_LEVEL", "MusicWheelLevel%d", "OnLR", 0), \
@@ -147,8 +147,8 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   NAME("DST_BARGRAPH", "Graph", "OnLR", 1), \
   NAME("SRC_SLIDER", "Slider", "sprite", 2), \
   NAME("DST_SLIDER", "Slider", "OnLR", 1), \
-  NAME("SRC_NUMBER", "NumberSprite", "sprite", 2), \
-  NAME("DST_NUMBER", "NumberSprite", "OnLR", 1), \
+  NAME("SRC_NUMBER", "Number", "sprite", 2), \
+  NAME("DST_NUMBER", "Number", "OnLR", 1), \
   NAME("SRC_JUDGELINE", "JudgeLine", "sprite", 2), \
   NAME("DST_JUDGELINE", "JudgeLine", "OnLR", 1), \
   NAME("SRC_LINE", "Line", "sprite", 2), \

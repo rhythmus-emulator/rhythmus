@@ -10,12 +10,14 @@ namespace rhythmus
 
 Sprite::Sprite()
   : img_(nullptr), img_owned_(true),
-    divx_(1), divy_(1), cnt_(1), interval_(0),
     idx_(0), eclipsed_time_(0),
-    sx_(0), sy_(0), sw_(1.0f), sh_(1.0f),
-    source_x(0), source_y(0), source_width(0), source_height(0),
     tex_attribute_(0)
 {
+  ani_info_.divx = ani_info_.divy = ani_info_.cnt = 1;
+  ani_info_.duration = 0;
+  texcoord_.x = texcoord_.y = 0.f;
+  texcoord_.w = texcoord_.h = 1.f;
+  memset(&imgcoord_, 0, sizeof(imgcoord_));
 }
 
 Sprite::~Sprite()
@@ -36,8 +38,8 @@ void Sprite::SetImageByPath(const std::string &path)
   img_owned_ = true;
 
   /* default image src set */
-  sx_ = sy_ = 0.f;
-  sw_ = sh_ = 1.f;
+  texcoord_.x = texcoord_.y = 0.f;
+  texcoord_.w = texcoord_.h = 1.f;
 }
 
 void Sprite::SetImage(Image *img)
@@ -54,6 +56,13 @@ void Sprite::ReplaySprite()
   eclipsed_time_ = 0;
 }
 
+const Rect& Sprite::GetImageCoordRect() { return imgcoord_; }
+
+const RectF& Sprite::GetTextureCoordRect() { return texcoord_; }
+
+const SpriteAnimationInfo&
+Sprite::GetSpriteAnimationInfo() { return ani_info_; }
+
 Image *Sprite::image() { return img_; }
 
 void Sprite::Load(const Metric& metric)
@@ -67,6 +76,23 @@ void Sprite::Load(const Metric& metric)
     LoadFromLR2SRC(metric.get<std::string>("sprite"));
   else if (metric.exist("lr2src"))
     LoadFromLR2SRC(metric.get<std::string>("lr2src"));
+}
+
+void Sprite::GetVertexInfoOfFrame(VertexInfo* vi, size_t frame)
+{
+  float sw = texcoord_.w / ani_info_.divx;
+  float sh = texcoord_.h / ani_info_.divy;
+  float sx = texcoord_.x + sw * (frame % ani_info_.divx);
+  float sy = texcoord_.y + sh * (frame / ani_info_.divx % ani_info_.divy);
+
+  vi[0].sx = sx;
+  vi[0].sy = sy;
+  vi[1].sx = sx + sw;
+  vi[1].sy = sy;
+  vi[2].sx = sx + sw;
+  vi[2].sy = sy + sh;
+  vi[3].sx = sx;
+  vi[3].sy = sy + sh;
 }
 
 void Sprite::doRender()
@@ -94,6 +120,7 @@ void Sprite::doRender()
 #endif
 
   VertexInfo* vi_ = Graphic::get_vertex_buffer();
+
   vi_[0].x = x1;
   vi_[0].y = y1;
   vi_[0].z = 0;
@@ -126,20 +153,7 @@ void Sprite::doRender()
   vi_[3].b = ti.b;
   vi_[3].a = ti.aTR;
 
-
-  float sw = sw_ / divx_;
-  float sh = sh_ / divy_;
-  float sx = sx_ + sw * (idx_ % divx_);
-  float sy = sy_ + sh * (idx_ / divx_ % divy_);
-
-  vi_[0].sx = sx;
-  vi_[0].sy = sy;
-  vi_[1].sx = sx + sw;
-  vi_[1].sy = sy;
-  vi_[2].sx = sx + sw;
-  vi_[2].sy = sy + sh;
-  vi_[3].sx = sx;
-  vi_[3].sy = sy + sh;
+  GetVertexInfoOfFrame(vi_, idx_);
 
   Graphic::RenderQuad();
 }
@@ -148,11 +162,11 @@ void Sprite::doRender()
 void Sprite::doUpdate(float delta)
 {
   // update sprite info
-  if (interval_ > 0)
+  if (ani_info_.duration > 0)
   {
     eclipsed_time_ += delta;
-    idx_ = eclipsed_time_ * divx_ * divy_ / interval_ % cnt_;
-    eclipsed_time_ = fmod(eclipsed_time_, interval_);
+    idx_ = eclipsed_time_ * ani_info_.divx * ani_info_.divy / ani_info_.duration % ani_info_.cnt;
+    eclipsed_time_ = eclipsed_time_ % ani_info_.duration;
   }
 }
 
@@ -166,27 +180,28 @@ void Sprite::LoadFromLR2SRC(const std::string &cmd)
   if (!img_)
     return;
 
-  source_x = args.Get<int>(1);
-  source_y = args.Get<int>(2);
-  source_width = args.Get<int>(3);
-  source_height = args.Get<int>(4);
+  imgcoord_.x = args.Get<int>(1);
+  imgcoord_.y = args.Get<int>(2);
+  imgcoord_.w = args.Get<int>(3);
+  imgcoord_.h = args.Get<int>(4);
 
-  sx_ = source_x / (float)img_->get_width();
-  sy_ = source_y / (float)img_->get_height();
-  if (source_width < 0) sw_ = 1.0f;
-  else sw_ = source_width / (float)img_->get_width();
-  if (source_height < 0) sh_ = 1.0f;
-  else sh_ = source_height / (float)img_->get_height();
+  texcoord_.x = imgcoord_.x / (float)img_->get_width();
+  texcoord_.y = imgcoord_.y / (float)img_->get_height();
+  if (imgcoord_.w < 0) imgcoord_.w = 1.0f;
+  else texcoord_.w = imgcoord_.w / (float)img_->get_width();
+  if (imgcoord_.h < 0) imgcoord_.h = 1.0f;
+  else texcoord_.h = imgcoord_.h / (float)img_->get_height();
 
   int divx = args.Get<int>(5);
   int divy = args.Get<int>(6);
 
-  divx_ = divx > 0 ? divx : 1;
-  divy_ = divy > 0 ? divy : 1;
-  cnt_ = divx_ * divy_;
-  interval_ = args.Get<int>(7);
+  ani_info_.divx = divx > 0 ? divx : 1;
+  ani_info_.divy = divy > 0 ? divy : 1;
+  ani_info_.cnt = divx * divy;
+  ani_info_.duration = args.Get<int>(7);
 
-  SetSize(source_width / divx_, source_height / divy_);
+  // set default sprite size
+  SetSize(imgcoord_.w / divx, imgcoord_.h / divy);
 
   if (args.size() > 8)
   {

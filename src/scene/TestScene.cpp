@@ -48,7 +48,7 @@ void TestScene::LoadScene()
   //text_.SetScale(0.8f, 1.0f);
   //text_.SetRotation(0, 0, 0.3);
   //text_.SetSize(200, 300);
-  text_.SetAlignment(TextAlignments::kTextAlignStretch);
+  text_.SetTextFitting(TextFitting::kTextFitStretch);
 
   spr_bg_.SetImageByPath("../test/msel.mpg");
   spr_bg_.SetPos(0, 0);

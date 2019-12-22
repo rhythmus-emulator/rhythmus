@@ -10,6 +10,14 @@
 namespace rhythmus
 {
 
+struct Rect {
+  int x, y, w, h;
+};
+
+struct RectF {
+  float x, y, w, h;
+};
+
 /* @brief Rendering vertex info. */
 struct VertexInfo {
   // vertex pos

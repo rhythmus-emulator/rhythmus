@@ -7,7 +7,7 @@ namespace rhythmus
 // ---------------------- class NumberInterface
 
 NumberFormatter::NumberFormatter()
-  : number_(0), disp_number_(0),
+  : number_(0), from_number_(0), disp_number_(0),
     number_change_duration_(0), number_change_remain_(0), need_update_(true),
     number_format_("%d")
 {
@@ -16,15 +16,19 @@ NumberFormatter::NumberFormatter()
 
 void NumberFormatter::SetNumber(int number)
 {
+  from_number_ = number_;
   number_ = (double)number;
   number_change_remain_ = number_change_duration_;
   need_update_ = true;
+  UpdateNumber(0);
 }
 
 void NumberFormatter::SetNumber(double number) {
+  from_number_ = number_;
   number_ = number;
   number_change_remain_ = number_change_duration_;
   need_update_ = true;
+  UpdateNumber(0);
 }
 
 template <> int NumberFormatter::GetNumber() const { return (int)number_; }
@@ -46,6 +50,12 @@ bool NumberFormatter::UpdateNumber(float delta)
     number_change_remain_ -= delta;
     if (number_change_remain_ <= 0)
       need_update_ = false;
+
+    if (number_change_duration_ == 0)
+      disp_number_ = number_;
+    else
+      disp_number_ = number_ +
+        (from_number_ - number_) * (number_change_remain_ / number_change_duration_);
 
     char* out_str = num_str_;
     const char* fmt_str = number_format_.c_str();
@@ -76,138 +86,169 @@ const char* NumberFormatter::numstr() const
 }
 
 
-// ------------------------- class NumberSprite
+// --------------------------- class NumberText
 
-NumberSprite::NumberSprite() : align_(0), data_index_(0), tvi_glyphs_(nullptr)
+Number::Number() : tvi_glyphs_(nullptr) {}
+
+Number::~Number() { AllocNumberGlyph(0); }
+
+void Number::SetNumber(int number)
 {
+  formatter_.SetNumber(12);
+  SetText(formatter_.numstr());
 }
 
-NumberSprite::~NumberSprite()
+void Number::SetNumber(double number)
 {
-  if (tvi_glyphs_)
-    free(tvi_glyphs_);
+  formatter_.SetNumber(number);
+  SetText(formatter_.numstr());
 }
 
-void NumberSprite::SetText(const std::string &num)
+void Number::SetText(const std::string &num)
 {
   if (!tvi_glyphs_)
     return;
+  ClearTextVertex();
+  if (num.empty())
+    return;
 
-  TextVertexInfo tvi;
-  size_t gidx;
+  size_t gidx = 0;
+  bool is_positive = (num[0] != '-');
   float x = 0;
-  tvi.texid = 0; /* unused */
-  tvi.vi[0].a = tvi.vi[0].r = tvi.vi[0].g = tvi.vi[0].b = 1.0f;
-  tvi.vi[1].a = tvi.vi[1].r = tvi.vi[1].g = tvi.vi[1].b = 1.0f;
-  tvi.vi[2].a = tvi.vi[2].r = tvi.vi[2].g = tvi.vi[2].b = 1.0f;
-  tvi.vi[3].a = tvi.vi[3].r = tvi.vi[3].g = tvi.vi[3].b = 1.0f;
 
-  tvi_.clear();
   for (size_t i = 0; i < num.size(); ++i)
   {
     if (num[i] >= '0' && num[i] <= '9')
       gidx = num[i] - '0';
-    if (num[i] == '-' || num[i] == '+')
-      gidx = 12;
-    else if (num[i] == 'O') /* transparent zero */
+    else if (num[i] == '-' || num[i] == '+')
       gidx = 11;
+    else if (num[i] == 'O') /* transparent zero */
+      gidx = 10;
+    if (!is_positive)
+      gidx += 12;
 
-    // TODO: cycle property
-
-    tvi_.push_back(tvi_glyphs_[gidx]);
-    auto *vi = tvi_.back().vi;
+    auto *vi = AddTextVertex(tvi_glyphs_[gidx]).vi;
     vi[0].x += x;
     vi[1].x += x;
     vi[2].x += x;
     vi[3].x += x;
     x += vi[1].x - vi[0].x;
   }
+
+  // TODO: cycle property, add tvi with cycles
+
+  UpdateTextRenderContext();
 }
 
-void NumberSprite::SetNumber(int number)
-{
-  formatter_.SetNumber(number);
-  SetText(formatter_.numstr());
-}
-
-void NumberSprite::SetNumber(double number)
-{
-  formatter_.SetNumber(number);
-  SetText(formatter_.numstr());
-}
-
-void NumberSprite::Refresh()
-{
-  SetNumber(Script::getInstance().GetNumber(GetResourceId()));
-}
-
-NumberFormatter &NumberSprite::GetFormatter()
+NumberFormatter &Number::GetFormatter()
 {
   return formatter_;
 }
 
-void NumberSprite::SetTextTableIndex(size_t idx)
+void Number::doUpdate(float delta)
 {
-  data_index_ = idx;
+  if (formatter_.UpdateNumber(delta))
+    SetText(formatter_.numstr());
+  Text::doUpdate(delta);
 }
 
-void NumberSprite::SetLR2Alignment(int type)
+void Number::Load(const Metric& metric)
 {
-  align_ = type;
+  Text::Load(metric);
+
+  /* Use font if loaded (by Text::Load).
+   * If not, use texture if necessary (by Number::LoadFromLR2SRC). */
+  if (font())
+  {
+    CreateTextVertexFromFont();
+  }
+  else if (numbersprite_.image())
+  {
+    CreateTextVertexFromSprite();
+  }
 }
 
-void NumberSprite::Load(const Metric& metric)
+void Number::Refresh()
 {
-  Sprite::Load(metric);
+  SetNumber(Script::getInstance().GetNumber(GetResourceId()));
 }
 
-void NumberSprite::LoadFromLR2SRC(const std::string &cmd)
+void Number::AllocNumberGlyph(size_t cycles)
 {
-  Sprite::LoadFromLR2SRC(cmd);
-  if (!img_)
+  if (tvi_glyphs_)
+  {
+    free(tvi_glyphs_);
+    tvi_glyphs_ = nullptr;
+  }
+  if (cycles == 0)
     return;
+  tvi_glyphs_ = (TextVertexInfo*)calloc(24 * cycles, sizeof(TextVertexInfo));
+}
 
-  // TODO: LR2 sprite font implementation
+void Number::LoadFromLR2SRC(const std::string &cmd)
+{
+  // This method only supports number with sprite, not font.
+  numbersprite_.LoadFromLR2SRC(cmd);
+
   // (image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align)
   CommandArgs args(cmd);
 
-  /* TODO: create LR2SpriteFont and add Update() method to Font ? */
+  /* track change of number table */
+  int eventid = args.Get<int>(9);
+  std::string eventname = "Number" + args.Get<std::string>(9);
+  AddCommand(eventname, "refresh");
+  SubscribeTo(eventname);
 
-  /* register glyphs by divx / divy. */
-  int cycle_count = 0;
-  int dx, dy;
-  float divw = (float)source_width / divx_;
-  float divh = (float)source_height / divy_;
-  float dsw = sw_ / divx_;
-  float dsh = sh_ / divy_;
-  if (cnt_ % 10 == 0)
+  /* set value instantly */
+  SetResourceId(eventid);
+  Refresh();
+
+  /* alignment (not use LR2 alignment here) */
+  switch (args.Get<int>(10))
   {
-    cycle_count = cnt_ / 10;
-    tvi_glyphs_ = (TextVertexInfo*)calloc(1, sizeof(TextVertexInfo) * 24 * cycle_count);
-    for (int i = 0; i < cycle_count; ++i)
+  case 0:
+    SetTextAlignment(TextAlignments::kTextAlignLeft);
+    break;
+  case 1:
+    SetTextAlignment(TextAlignments::kTextAlignRight);
+    break;
+  case 2:
+    SetTextAlignment(TextAlignments::kTextAlignCenter);
+    break;
+  }
+
+  /* keta processing: tween width multiply & set number formatter */
+  int keta = args.Get<int>(11);
+  SetWidthMultiply((float)keta);
+}
+
+void Number::CreateTextVertexFromSprite()
+{
+  /* register glyphs by divx / divy. */
+  int divx = numbersprite_.GetSpriteAnimationInfo().divx;
+  int divy = numbersprite_.GetSpriteAnimationInfo().divy;
+  float divw = (float)numbersprite_.GetImageCoordRect().w / divx;
+  float divh = (float)numbersprite_.GetImageCoordRect().h / divy;
+  int cycle_sprite = numbersprite_.GetSpriteAnimationInfo().cnt;
+  int cycle_number = 0;
+  if (cycle_sprite % 10 == 0)
+  {
+    cycle_number = cycle_sprite / 10;
+    AllocNumberGlyph(cycle_number);
+    for (int i = 0; i < cycle_number; ++i)
     {
       for (int j = 0; j < 10; ++j)
       {
         const int ii = i * 24 + j;
-        dx = j % divx_;
-        dy = j / divx_;
-        tvi_glyphs_[ii].texid = img_->get_texture_ID();
-        tvi_glyphs_[ii].vi[0].a = tvi_glyphs_[i].vi[1].a
-          = tvi_glyphs_[i].vi[2].a = tvi_glyphs_[i].vi[3].a = 1.0f;
-        tvi_glyphs_[ii].vi[0].r = tvi_glyphs_[i].vi[1].r
-          = tvi_glyphs_[i].vi[2].r = tvi_glyphs_[i].vi[3].r = 1.0f;
-        tvi_glyphs_[ii].vi[0].g = tvi_glyphs_[i].vi[1].g
-          = tvi_glyphs_[i].vi[2].g = tvi_glyphs_[i].vi[3].g = 1.0f;
-        tvi_glyphs_[ii].vi[0].b = tvi_glyphs_[i].vi[1].b
-          = tvi_glyphs_[i].vi[2].b = tvi_glyphs_[i].vi[3].b = 1.0f;
-        tvi_glyphs_[ii].vi[0].sx = sx_ + dsw * dx;
-        tvi_glyphs_[ii].vi[0].sy = sy_ + dsh * dy;
-        tvi_glyphs_[ii].vi[1].sx = tvi_glyphs_[i].vi[0].sx + dsw;
-        tvi_glyphs_[ii].vi[1].sy = tvi_glyphs_[i].vi[0].sy;
-        tvi_glyphs_[ii].vi[2].sx = tvi_glyphs_[i].vi[1].sx;
-        tvi_glyphs_[ii].vi[2].sy = tvi_glyphs_[i].vi[1].sy + dsh;
-        tvi_glyphs_[ii].vi[3].sx = tvi_glyphs_[i].vi[0].sx;
-        tvi_glyphs_[ii].vi[3].sy = tvi_glyphs_[i].vi[0].sy + dsh;
+        tvi_glyphs_[ii].texid = numbersprite_.image()->get_texture_ID();
+        tvi_glyphs_[ii].vi[0].a = tvi_glyphs_[ii].vi[1].a
+          = tvi_glyphs_[ii].vi[2].a = tvi_glyphs_[ii].vi[3].a = 1.0f;
+        tvi_glyphs_[ii].vi[0].r = tvi_glyphs_[ii].vi[1].r
+          = tvi_glyphs_[ii].vi[2].r = tvi_glyphs_[ii].vi[3].r = 1.0f;
+        tvi_glyphs_[ii].vi[0].g = tvi_glyphs_[ii].vi[1].g
+          = tvi_glyphs_[ii].vi[2].g = tvi_glyphs_[ii].vi[3].g = 1.0f;
+        tvi_glyphs_[ii].vi[0].b = tvi_glyphs_[ii].vi[1].b
+          = tvi_glyphs_[ii].vi[2].b = tvi_glyphs_[ii].vi[3].b = 1.0f;
         tvi_glyphs_[ii].vi[0].x = 0;
         tvi_glyphs_[ii].vi[0].y = 0;
         tvi_glyphs_[ii].vi[1].x = divw;
@@ -216,123 +257,61 @@ void NumberSprite::LoadFromLR2SRC(const std::string &cmd)
         tvi_glyphs_[ii].vi[2].y = divh;
         tvi_glyphs_[ii].vi[3].x = 0;
         tvi_glyphs_[ii].vi[3].y = divh;
+        numbersprite_.GetVertexInfoOfFrame(tvi_glyphs_[ii].vi, ii);
       }
     }
   }
-  else if (cnt_ % 11 == 0)
+  else if (cycle_sprite % 11 == 0)
   {
-    cycle_count = cnt_ / 11;
-    tvi_glyphs_ = (TextVertexInfo*)calloc(1, sizeof(TextVertexInfo) * 24 * cycle_count);
+    cycle_number = cycle_sprite / 11;
+    AllocNumberGlyph(cycle_number);
     // TODO: fill glyphs
   }
-  else if (cnt_ % 24 == 0)
+  else if (cycle_sprite % 24 == 0)
   {
-    cycle_count = cnt_ / 24;
-    tvi_glyphs_ = (TextVertexInfo*)calloc(1, sizeof(TextVertexInfo) * 24 * cycle_count);
+    cycle_number = cycle_sprite / 24;
+    AllocNumberGlyph(cycle_number);
     // TODO: fill glyphs
   }
   else return;
-
-  /* track change of number table */
-  std::string eventname = args.Get<std::string>(9);
-  AddCommand(eventname, "refresh");
-  SubscribeTo(eventname);
-
-  /* set number value index instantly */
-  SetResourceId(atoi(eventname.c_str()));
-  Refresh();
-
-  /* alignment */
-  SetLR2Alignment(args.Get<int>(10));
+  SetTextVertexCycle(cycle_number, 0);
 }
 
-void NumberSprite::doUpdate(float delta)
+void Number::CreateTextVertexFromFont()
 {
-  if (formatter_.UpdateNumber(delta))
-    SetText(formatter_.numstr());
-  Sprite::doUpdate(delta);
-}
-
-void NumberSprite::doRender()
-{
-  // If hide, then not draw
-  if (!img_ || !IsVisible())
-    return;
-
-  /* we know what sprite to use, so just call SetTextureId once. */
-  Graphic::SetTextureId(image()->get_texture_ID());
-  Graphic::SetBlendMode(blending_);
-
-  for (const auto &tvi : tvi_)
+  AllocNumberGlyph(1);
+  for (int i = 0; i < 10; ++i)
   {
-    memcpy(Graphic::get_vertex_buffer(),
-      tvi.vi,
-      sizeof(VertexInfo) * 4);
+    auto *g = font()->GetGlyph('0' + i);
+    if (!g) continue;
+
+    tvi_glyphs_[i].texid = numbersprite_.image()->get_texture_ID();
+    tvi_glyphs_[i].vi[0].a = tvi_glyphs_[i].vi[1].a
+      = tvi_glyphs_[i].vi[2].a = tvi_glyphs_[i].vi[3].a = 1.0f;
+    tvi_glyphs_[i].vi[0].r = tvi_glyphs_[i].vi[1].r
+      = tvi_glyphs_[i].vi[2].r = tvi_glyphs_[i].vi[3].r = 1.0f;
+    tvi_glyphs_[i].vi[0].g = tvi_glyphs_[i].vi[1].g
+      = tvi_glyphs_[i].vi[2].g = tvi_glyphs_[i].vi[3].g = 1.0f;
+    tvi_glyphs_[i].vi[0].b = tvi_glyphs_[i].vi[1].b
+      = tvi_glyphs_[i].vi[2].b = tvi_glyphs_[i].vi[3].b = 1.0f;
+    tvi_glyphs_[i].vi[0].x = 0;
+    tvi_glyphs_[i].vi[0].y = 0;
+    tvi_glyphs_[i].vi[1].x = g->width;
+    tvi_glyphs_[i].vi[1].y = 0;
+    tvi_glyphs_[i].vi[2].x = g->width;
+    tvi_glyphs_[i].vi[2].y = g->height;
+    tvi_glyphs_[i].vi[3].x = 0;
+    tvi_glyphs_[i].vi[3].y = g->height;
+    tvi_glyphs_[i].vi[0].sx = g->sx1;
+    tvi_glyphs_[i].vi[0].sy = g->sy1;
+    tvi_glyphs_[i].vi[1].sx = g->sx2;
+    tvi_glyphs_[i].vi[1].sy = g->sy1;
+    tvi_glyphs_[i].vi[2].sx = g->sx2;
+    tvi_glyphs_[i].vi[2].sy = g->sy2;
+    tvi_glyphs_[i].vi[3].sx = g->sx1;
+    tvi_glyphs_[i].vi[3].sy = g->sy2;
   }
-  Graphic::RenderQuad();
-}
-
-
-// --------------------------- class NumberText
-
-NumberText::NumberText() {}
-
-void NumberText::SetNumber(int number)
-{
-  formatter_.SetNumber(number);
-  SetText(formatter_.numstr());
-}
-
-void NumberText::SetNumber(double number)
-{
-  formatter_.SetNumber(number);
-  SetText(formatter_.numstr());
-}
-
-NumberFormatter &NumberText::GetFormatter()
-{
-  return formatter_;
-}
-
-void NumberText::doUpdate(float delta)
-{
-  if (formatter_.UpdateNumber(delta))
-    SetText(formatter_.numstr());
-  Text::doUpdate(delta);
-}
-
-void NumberText::Load(const Metric& metric)
-{
-  Text::Load(metric);
-  if (metric.exist("sprite"))
-  {
-    LoadFromLR2SRC(metric.get<std::string>("sprite"));
-  }
-  if (metric.exist("number"))
-    SetText(metric.get<std::string>("number"));
-}
-
-void NumberText::Refresh()
-{
-  SetNumber(Script::getInstance().GetNumber(GetResourceId()));
-}
-
-void NumberText::LoadFromLR2SRC(const std::string &cmd)
-{
-  // TODO: LR2 sprite font implementation
-  // (image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align)
-  CommandArgs args(cmd);
-
-  /* track change of number table */
-  std::string eventname = args.Get<std::string>(9);
-  AddCommand(eventname, "refresh");
-  SubscribeTo(eventname);
-  /* set value instantly */
-  SetResourceId(atoi(eventname.c_str()));
-  Refresh();
-
-  /* alignment */
-  SetLR2Alignment(args.Get<int>(10));
+  SetTextVertexCycle(1, 0);
 }
 
 }

@@ -198,6 +198,7 @@ public:
   void SetDrawOrder(int order);
   int GetDrawOrder() const;
   void SetAllTweenPos(int x, int y);
+  void SetAllTweenScale(float w, float h);
   virtual void SetText(const std::string &value);
   virtual void SetNumber(int number);
   virtual void SetNumber(double number);

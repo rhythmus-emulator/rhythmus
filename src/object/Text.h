@@ -5,15 +5,33 @@
 
 RHYTHMUS_NAMESPACE_BEGIN
 
+/**
+ * text alignment option
+ * 0 : normal
+ * 1 : left
+ * 2 : right
+ * 3 : offset -50% of text width
+ * 4 : offset -100% of text width
+ * (LR2 legacy option)
+ */
 enum TextAlignments
 {
   kTextAlignLeft,
   kTextAlignRight,
   kTextAlignCenter,
-  kTextAlignFitMaxsize,
-  kTextAlignCenterFitMaxsize,
-  kTextAlignRightFitMaxsize,
-  kTextAlignStretch,
+  kTextAlignLR2Right,
+  kTextAlignLR2Center,
+};
+
+/**
+ * Text fitting option
+ * LR2 uses Stretch to maxsize generally.
+ */
+enum TextFitting
+{
+  kTextFitNone,
+  kTextFitMaxSize,
+  kTextFitStretch,
 };
 
 class Text : public BaseObject
@@ -28,9 +46,8 @@ public:
   float GetTextWidth() const;
   virtual void SetText(const std::string& s);
   virtual void Refresh();
-  void SetRefreshCache(size_t idx);
-  void SetAlignment(TextAlignments align);
-  void SetTextPosition(int position_attr);
+  void SetTextAlignment(TextAlignments align);
+  void SetTextFitting(TextFitting fitting);
   void SetLineBreaking(bool enable_line_break);
   void Clear();
 
@@ -44,7 +61,11 @@ protected:
   virtual void SetLR2Alignment(int alignment);
   virtual void doRender();
   virtual void doUpdate(float);
-  virtual const CommandFnMap& GetCommandFnMap();
+  void UpdateTextRenderContext();
+  void ClearTextVertex();
+  TextVertexInfo& AddTextVertex(const TextVertexInfo &tvi);
+  void SetTextVertexCycle(size_t cycle, size_t duration);
+  void SetWidthMultiply(float multiply); /* special API for LR2 */
 
 private:
   // Font.
@@ -60,15 +81,14 @@ private:
 
     // calculated text width / height
     float width, height;
+
+    // cycle attributes (optional)
+    // if cycle exists, textvertex must be multiply of cycle.
+    size_t cycles, duration, time;
   } text_render_ctx_;
 
-  // text alignment(stretch) option
   TextAlignments text_alignment_;
-
-  // text position option
-  // 0 : normal / 1 : offset -50% of text width / 2 : offset -100% of text width
-  // (LR2 legacy option)
-  int text_position_;
+  TextFitting text_fitting_;
 
   // additional font attributes, which is set internally by font_alignment_ option.
   struct {
@@ -77,6 +97,8 @@ private:
     // translation x / y
     float tx, ty;
   } alignment_attrs_;
+
+  float width_multiply_;
 
   // is line-breaking enabled?
   bool do_line_breaking_;

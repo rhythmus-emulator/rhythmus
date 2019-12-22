@@ -32,7 +32,7 @@ public:
   const char* numstr() const;
 
 private:
-  double number_;
+  double number_, from_number_;
   double disp_number_;
   float number_change_duration_;
   float number_change_remain_;
@@ -41,42 +41,15 @@ private:
   char num_str_[16];
 };
 
-/* @brief Number based on Sprite object */
-class NumberSprite : public Sprite
-{
-public:
-  NumberSprite();
-  virtual ~NumberSprite();
-  virtual void SetText(const std::string &num);
-  virtual void SetNumber(int number);
-  virtual void SetNumber(double number);
-  virtual void Refresh();
-  NumberFormatter &GetFormatter();
-
-  void SetTextTableIndex(size_t idx);
-  void SetLR2Alignment(int type);
-
-  virtual void Load(const Metric& metric);
-  virtual void LoadFromLR2SRC(const std::string &cmd);
-
-private:
-  virtual void doUpdate(float);
-  virtual void doRender();
-
-  int align_;
-  size_t data_index_;
-  NumberFormatter formatter_;
-  TextVertexInfo *tvi_glyphs_;
-  std::vector<TextVertexInfo> tvi_;
-};
-
 /* @brief Number based on Text object */
-class NumberText : public Text
+class Number : public Text
 {
 public:
-  NumberText();
+  Number();
+  virtual ~Number();
   virtual void SetNumber(int number);
   virtual void SetNumber(double number);
+  virtual void SetText(const std::string &s);
   virtual void Refresh();
   NumberFormatter &GetFormatter();
 
@@ -84,9 +57,21 @@ public:
   virtual void LoadFromLR2SRC(const std::string &cmd);
 
 private:
+  void AllocNumberGlyph(size_t cycles);
+  void CreateTextVertexFromSprite();
+  void CreateTextVertexFromFont();
   virtual void doUpdate(float);
 
+  Sprite numbersprite_;
   NumberFormatter formatter_;
+
+  /* 0 ~ 9 : positive number glyphs
+   * 10 : positive zero(empty) number glyph 
+   * 11 : plus glyph
+   * 12 ~ 21 : negative number glyphs
+   * 22 : negative zero(empty) number glyph
+   * 23 : minus glyph */
+  TextVertexInfo *tvi_glyphs_;
 };
 
 }

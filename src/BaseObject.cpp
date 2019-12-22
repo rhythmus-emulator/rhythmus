@@ -530,6 +530,15 @@ void BaseObject::SetAllTweenPos(int x, int y)
   }
 }
 
+void BaseObject::SetAllTweenScale(float w, float h)
+{
+  for (auto &t : tween_)
+  {
+    t.draw_prop.w *= w;
+    t.draw_prop.h *= h;
+  }
+}
+
 void BaseObject::SetText(const std::string &value) {}
 
 void BaseObject::SetNumber(int number) { SetText(std::to_string(number)); }

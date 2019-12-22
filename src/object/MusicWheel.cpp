@@ -30,7 +30,7 @@ void MusicWheelItem::Load(const Metric &metric)
 
   // TODO: Set NumberText or NumberSprite.
   /* TODO: NumberSpriteLevel metric */
-  level_ = std::make_unique<NumberSprite>();
+  level_ = std::make_unique<Number>();
   level_->set_name("MusicWheelLevel0");
   level_->LoadByName();
   level_->LoadCommandWithNamePrefix(metric);

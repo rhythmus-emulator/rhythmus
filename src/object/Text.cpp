@@ -8,12 +8,17 @@ RHYTHMUS_NAMESPACE_BEGIN
 // --------------------------------- class Text
 
 Text::Text()
-  : font_(nullptr), text_alignment_(TextAlignments::kTextAlignLeft),
-    text_position_(0), do_line_breaking_(true)
+  : font_(nullptr),
+    text_alignment_(TextAlignments::kTextAlignLeft),
+    text_fitting_(TextFitting::kTextFitNone), width_multiply_(1.0f),
+    do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
   text_render_ctx_.width = text_render_ctx_.height = .0f;
+  text_render_ctx_.cycles = 1;
+  text_render_ctx_.duration = 0;
+  text_render_ctx_.time = 0;
 }
 
 Text::~Text()
@@ -61,12 +66,41 @@ void Text::SetText(const std::string& s)
   font_->PrepareText(s);
   font_->Commit();
   font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
+  UpdateTextRenderContext();
+}
 
+void Text::UpdateTextRenderContext()
+{
+  // XXX: breaking loop if first cycle is over should be better
   for (const auto& tvi : text_render_ctx_.textvertex)
   {
     text_render_ctx_.width = std::max(text_render_ctx_.width, (float)tvi.vi[2].x);
     text_render_ctx_.height = std::max(text_render_ctx_.height, (float)tvi.vi[2].y);
   }
+}
+
+void Text::ClearTextVertex()
+{
+  text_render_ctx_.textvertex.clear();
+}
+
+TextVertexInfo& Text::AddTextVertex(const TextVertexInfo &tvi)
+{
+  text_render_ctx_.textvertex.push_back(tvi);
+  return text_render_ctx_.textvertex.back();
+}
+
+void Text::SetTextVertexCycle(size_t cycle, size_t duration)
+{
+  ASSERT_M(cycle == 0 || text_render_ctx_.textvertex.size() % cycle == 0,
+    "TextVertexCycle is invalid; cycle number is not correct.");
+  text_render_ctx_.cycles = cycle;
+  text_render_ctx_.duration = duration;
+}
+
+void Text::SetWidthMultiply(float multiply)
+{
+  width_multiply_ = multiply;
 }
 
 void Text::Refresh()
@@ -75,14 +109,14 @@ void Text::Refresh()
 }
 
 // XXX: Font alignment to right won't work when text is multiline.
-void Text::SetAlignment(TextAlignments align)
+void Text::SetTextAlignment(TextAlignments align)
 {
   text_alignment_ = align;
 }
 
-void Text::SetTextPosition(int position_attr)
+void Text::SetTextFitting(TextFitting fitting)
 {
-  text_position_ = position_attr;
+  text_fitting_ = fitting;
 }
 
 void Text::SetLineBreaking(bool enable_line_break)
@@ -99,16 +133,30 @@ void Text::Clear()
 
 Font *Text::font() { return font_; }
 
-void Text::doUpdate(float)
+void Text::doUpdate(float delta)
 {
+  if (text_render_ctx_.duration)
+  {
+    text_render_ctx_.time += (size_t)delta;
+    text_render_ctx_.time %= text_render_ctx_.duration;
+  }
 }
 
 void Text::doRender()
 {
-  // use additional translation for text
+  // for cycle attribute of animated text(number)
+  size_t tvi_start, tvi_end, tvi_delta;
+  // use additional transition for text
   ProjectionInfo pi;
   memset(&pi, 0, sizeof(ProjectionInfo));
   pi.sx = pi.sy = 1.0f;
+
+  tvi_delta = text_render_ctx_.textvertex.size() / text_render_ctx_.cycles;
+  if (text_render_ctx_.duration == 0)
+    tvi_start = 0;
+  else
+    tvi_start = tvi_delta * text_render_ctx_.time * text_render_ctx_.cycles / text_render_ctx_.duration;
+  tvi_end = tvi_start + tvi_delta;
 
   // set alignment-related options
   if (get_draw_property().w > 0
@@ -116,49 +164,37 @@ void Text::doRender()
   {
     const float w = get_draw_property().w;
     float ratio = 1.0f;
+    switch (text_fitting_)
+    {
+    case TextFitting::kTextFitNone:
+      break;
+    case TextFitting::kTextFitStretch:
+      ratio = w / text_render_ctx_.width;
+      pi.sx = ratio;
+      break;
+    case TextFitting::kTextFitMaxSize:
+      ratio = std::min(1.0f, w / text_render_ctx_.width);
+      pi.sx = ratio;
+      break;
+    }
+
     switch (text_alignment_)
     {
     case TextAlignments::kTextAlignLeft:
       break;
-    case TextAlignments::kTextAlignFitMaxsize:
-      ratio = std::min(1.0f, w / text_render_ctx_.width);
-      pi.sx = ratio;
+    case TextAlignments::kTextAlignRight:
+      pi.x += std::max(w * width_multiply_ - text_render_ctx_.width, 0.0f);
       break;
     case TextAlignments::kTextAlignCenter:
-      if (text_render_ctx_.width < w)
-        pi.x = (text_render_ctx_.width - w) / 2;
+      pi.x += std::max(w * width_multiply_ - text_render_ctx_.width, 0.0f) / 2;
       break;
-    case TextAlignments::kTextAlignCenterFitMaxsize:
-      ratio = std::min(1.0f, w / text_render_ctx_.width);
-      pi.sx = ratio;
-      if (ratio >= 1.0f)
-        pi.x = (w - text_render_ctx_.width) / 2;
+    case TextAlignments::kTextAlignLR2Right:
+      pi.x -= std::max(w * width_multiply_ - text_render_ctx_.width, 0.0f);
       break;
-    case TextAlignments::kTextAlignRight:
-      if (text_render_ctx_.width < w)
-        pi.x = text_render_ctx_.width - w;
-      break;
-    case TextAlignments::kTextAlignRightFitMaxsize:
-      ratio = std::min(1.0f, w / text_render_ctx_.width);
-      pi.sx = ratio;
-      if (ratio >= 1.0f)
-        pi.x = w - text_render_ctx_.width;
-      break;
-    case TextAlignments::kTextAlignStretch:
-      ratio = w / text_render_ctx_.width;
-      pi.sx = ratio;
+    case TextAlignments::kTextAlignLR2Center:
+      pi.x -= std::max(w * width_multiply_ - text_render_ctx_.width, 0.0f) / 2;
       break;
     }
-  }
-
-  switch (text_position_)
-  {
-  case 1:
-    pi.x -= get_draw_property().w / 2;
-    break;
-  case 2:
-    pi.x -= get_draw_property().w;
-    break;
   }
 
   // XXX: must flush vertices before setting matrix ...
@@ -168,8 +204,10 @@ void Text::doRender()
   Graphic::SetBlendMode(blending_);
 
   // Draw vertex by given quad
-  for (const TextVertexInfo& tvi : text_render_ctx_.textvertex)
+  // TODO: alpha?
+  for (auto i = tvi_start; i < tvi_end; ++i)
   {
+    auto &tvi = text_render_ctx_.textvertex[i];
     Graphic::SetTextureId(tvi.texid);
     memcpy(Graphic::get_vertex_buffer(),
       tvi.vi,
@@ -214,6 +252,36 @@ void Text::doRender()
 #endif
 }
 
+/* do LR2 type alignment. */
+void Text::SetLR2Alignment(int alignment)
+{
+  switch (alignment)
+  {
+  case 0:
+    // left
+    SetTextFitting(TextFitting::kTextFitMaxSize);
+    SetTextAlignment(TextAlignments::kTextAlignLeft);
+    break;
+  case 1:
+    // center
+    SetTextFitting(TextFitting::kTextFitMaxSize);
+    SetTextAlignment(TextAlignments::kTextAlignLR2Center);
+    break;
+  case 2:
+    // right
+    SetTextFitting(TextFitting::kTextFitMaxSize);
+    SetTextAlignment(TextAlignments::kTextAlignLR2Right);
+    break;
+  }
+}
+
+void Text::SetLR2DSTCommandInternal(const CommandArgs &args)
+{
+  BaseObject::SetLR2DSTCommandInternal(args);
+  /* reset visible group to default as LR2 does ... */
+  SetVisibleGroup(0, 0, 0);
+}
+
 void Text::Load(const Metric& metric)
 {
   BaseObject::Load(metric);
@@ -223,34 +291,9 @@ void Text::Load(const Metric& metric)
   if (metric.exist("text"))
     SetText(metric.get<std::string>("text"));
   if (metric.exist("align"))
-  {
-    SetAlignment((TextAlignments)metric.get<int>("align"));
-  }
-  if (metric.exist("lr2font"))
-  {
-    LoadFromLR2SRC(metric.get<std::string>("lr2font"));
-  }
-}
-
-/* do LR2 type alignment. */
-void Text::SetLR2Alignment(int alignment)
-{
-  switch (alignment)
-  {
-    // left
-    SetAlignment(TextAlignments::kTextAlignFitMaxsize);
-    break;
-  case 1:
-    // center
-    SetAlignment(TextAlignments::kTextAlignCenterFitMaxsize);
-    SetTextPosition(1);
-    break;
-  case 2:
-    // right
-    SetAlignment(TextAlignments::kTextAlignRightFitMaxsize);
-    SetTextPosition(2);
-    break;
-  }
+    SetTextAlignment((TextAlignments)metric.get<int>("align"));
+  if (metric.exist("lr2src"))
+    LoadFromLR2SRC(metric.get<std::string>("lr2src"));
 }
 
 void Text::LoadFromLR2SRC(const std::string &cmd)
@@ -259,12 +302,13 @@ void Text::LoadFromLR2SRC(const std::string &cmd)
   SetFontByPath(args.Get<std::string>(0));
 
   /* track change of text table */
-  std::string eventname = args.Get<std::string>(1);
+  int eventid = args.Get<int>(1);
+  std::string eventname = "Text" + args.Get<std::string>(1);
   AddCommand(eventname, "refresh");
   SubscribeTo(eventname);
   
   /* set text index for update */
-  SetResourceId(atoi(eventname.c_str()));
+  SetResourceId(eventid);
   Refresh();
 
   /* alignment */
@@ -272,26 +316,6 @@ void Text::LoadFromLR2SRC(const std::string &cmd)
 
   /* editable */
   //args.Get<int>(2);
-}
-
-const CommandFnMap& Text::GetCommandFnMap()
-{
-  static CommandFnMap cmdfnmap_;
-  if (cmdfnmap_.empty())
-  {
-    cmdfnmap_ = BaseObject::GetCommandFnMap();
-    cmdfnmap_["text"] = [](void *o, CommandArgs& args) {
-      static_cast<Text*>(o)->SetText(args.Get<std::string>(0));
-    };
-  }
-  return cmdfnmap_;
-}
-
-void Text::SetLR2DSTCommandInternal(const CommandArgs &args)
-{
-  BaseObject::SetLR2DSTCommandInternal(args);
-  /* reset visible group to default as LR2 does ... */
-  SetVisibleGroup(0, 0, 0);
 }
 
 RHYTHMUS_NAMESPACE_END

@@ -107,7 +107,7 @@ void Graphic::InitializeInternal()
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
   glBlendFunc(GL_ONE, GL_SRC_ALPHA);
-  SetBlendMode(GL_ONE_MINUS_SRC_ALPHA);
+  SetBlendMode(1);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
@@ -564,7 +564,8 @@ void Graphic::SetBlendMode(int blend_mode)
 {
   Graphic &g = Graphic::getInstance();
   static GLuint glBlendmodeTbl[] = {
-    GL_ZERO, GL_ONE_MINUS_SRC_ALPHA, GL_ONE
+    /*GL_ZERO - actually, not allowed mode. */
+    GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE
   };
   static constexpr int glBlendmodeSize =
     sizeof(glBlendmodeTbl) / sizeof(GLuint);
