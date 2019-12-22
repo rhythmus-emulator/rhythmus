@@ -94,7 +94,7 @@ Number::~Number() { AllocNumberGlyph(0); }
 
 void Number::SetNumber(int number)
 {
-  formatter_.SetNumber(12);
+  formatter_.SetNumber(number);
   SetText(formatter_.numstr());
 }
 
