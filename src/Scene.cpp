@@ -251,9 +251,47 @@ void Scene::EnableInput(bool enable_input)
 
 void Scene::ProcessInputEvent(const InputEvent& e)
 {
-  if (e.KeyCode() == GLFW_KEY_ESCAPE)
+  if (e.type() == InputEvents::kOnKeyUp)
   {
-    FadeOutScene(false);
+    if (e.KeyCode() == GLFW_KEY_ESCAPE)
+    {
+      FadeOutScene(false);
+    }
+  }
+  else if (e.type() == InputEvents::kOnCursorMove)
+  {
+    // only single object can be focused.
+    bool is_hovered = false;
+    float x = e.GetX();
+    float y = e.GetY();
+    for (auto i = children_.rbegin(); i != children_.rend(); ++i)
+    {
+      auto *obj = *i;
+      obj->SetHovered(
+        is_hovered ? false : (is_hovered = obj->IsEntered(x, y))
+      );
+    }
+  }
+  else if (e.type() == InputEvents::kOnCursorClick)
+  {
+    // only single object can be focused.
+    bool entered = false;
+    float x = e.GetX();
+    float y = e.GetY();
+    for (auto i = children_.rbegin(); i != children_.rend(); ++i)
+    {
+      auto *obj = *i;
+      if (entered)
+        obj->SetFocused(false);
+      else
+      {
+        entered = obj->IsEntered(x, y);
+        if (entered)
+          obj->Click();
+        else
+          obj->SetFocused(false);
+      }
+    }
   }
 }
 

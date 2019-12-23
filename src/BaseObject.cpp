@@ -10,7 +10,8 @@ namespace rhythmus
 
 BaseObject::BaseObject()
   : parent_(nullptr), draw_order_(0), rot_center_(-1),
-    resource_id_(-1), blending_(1)
+    resource_id_(-1), blending_(1),
+    is_focusable_(false), is_focused_(false), is_hovered_(false)
 {
   memset(&current_prop_, 0, sizeof(DrawProperty));
   current_prop_.sw = current_prop_.sh = 1.0f;
@@ -24,7 +25,8 @@ BaseObject::BaseObject()
 BaseObject::BaseObject(const BaseObject& obj)
   : name_(obj.name_), parent_(obj.parent_),
     draw_order_(obj.draw_order_), rot_center_(obj.rot_center_),
-    resource_id_(obj.resource_id_), blending_(obj.blending_)
+    resource_id_(obj.resource_id_), blending_(obj.blending_),
+    is_focusable_(obj.is_focusable_), is_focused_(false), is_hovered_(false)
 {
   // XXX: childrens won't copy by now
   tween_ = obj.tween_;
@@ -552,6 +554,54 @@ void BaseObject::Refresh() {}
 void BaseObject::SetResourceId(int id) { resource_id_ = id; }
 
 int BaseObject::GetResourceId() const { return resource_id_; }
+
+void BaseObject::SetFocusable(bool is_focusable)
+{
+  is_focusable_ = is_focusable;
+}
+
+bool BaseObject::IsEntered(float x, float y)
+{
+  x -= current_prop_.pi.x + current_prop_.x;
+  y -= current_prop_.pi.y + current_prop_.y;
+  return (x >= 0 && x <= current_prop_.w
+       && y >= 0 && y <= current_prop_.h);
+}
+
+void BaseObject::SetHovered(bool is_hovered)
+{
+  if (is_hovered_ == is_hovered)
+    return;
+
+  if (is_hovered)
+    RunCommandByName("hover");
+  else
+    RunCommandByName("hoverout");
+  is_hovered_ = is_hovered;
+}
+
+void BaseObject::SetFocused(bool is_focused)
+{
+  if (!is_focusable_ || is_focused_ == is_focused)
+    return;
+
+  if (is_focused)
+    RunCommandByName("focus");
+  else
+    RunCommandByName("focusout");
+  is_focused_ = is_focused;
+}
+
+void BaseObject::Click()
+{
+  if (!is_focusable_)
+    return;
+
+  // XXX: same as SetFocused(true) ...?
+  SetFocused(true);
+
+  RunCommandByName("click");
+}
 
 void BaseObject::SetBlend(int blend_mode) { blending_ = blend_mode; }
 

@@ -209,6 +209,12 @@ public:
   /* -1: no resource */
   int GetResourceId() const;
 
+  void SetFocusable(bool is_focusable);
+  bool IsEntered(float x, float y);
+  void SetHovered(bool is_hovered);
+  void SetFocused(bool is_focused);
+  void Click();
+
   /**
    * 0: Don't use blending (always 100% alpha)
    * 1: Use basic alpha blending (Default)
@@ -264,6 +270,15 @@ protected:
 
   // blending properties for image/text.
   int blending_;
+
+  // is this object focusable?
+  bool is_focusable_;
+
+  // is this object currently focused?
+  bool is_focused_;
+
+  // is object is currently hovered?
+  bool is_hovered_;
 
   // commands to be called
   std::map<std::string, std::string> commands_;

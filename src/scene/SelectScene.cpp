@@ -60,6 +60,8 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
   if (!is_input_available())
     return;
 
+  Scene::ProcessInputEvent(e);
+
   if (e.type() == InputEvents::kOnKeyDown || e.type() == InputEvents::kOnKeyPress)
   {
     if (e.KeyCode() == GLFW_KEY_UP)

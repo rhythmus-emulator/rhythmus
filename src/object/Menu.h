@@ -115,8 +115,17 @@ protected:
   // focus area of the displayed item
   int focus_min_, focus_max_;
 
+  // scroll time
+  float scroll_time_;
+
+  // scroll time (remain)
+  float scroll_time_remain_;
+
   // current scroll delta
-  double scroll_delta_;
+  float scroll_delta_;
+
+  // initial scroll delta
+  float scroll_delta_init_;
 
   // enable for infinite scroll.
   bool inf_scroll_;

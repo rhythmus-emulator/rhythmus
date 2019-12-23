@@ -23,6 +23,7 @@ std::vector<InputEventReceiver*> input_evt_receivers_;
 
 std::mutex game_evt_lock;
 std::vector<EventMessage> game_evt_messages_;
+double cursor_x, cursor_y;
 
 InputEventReceiver::InputEventReceiver()
 {
@@ -96,7 +97,8 @@ void on_cursormove(GLFWwindow *w, double xpos, double ypos)
 {
   InputEvent msg(InputEvents::kOnCursorMove);
   msg.SetPosition(xpos, ypos);
-
+  cursor_x = xpos;
+  cursor_y = ypos;
   {
     std::lock_guard<std::mutex> lock(input_evt_lock);
     input_evt_messages_.push_back(msg);
@@ -106,7 +108,7 @@ void on_cursormove(GLFWwindow *w, double xpos, double ypos)
 void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
 {
   InputEvent msg(InputEvents::kOnCursorClick);
-  //msg.SetCodepoint(codepoint);
+  msg.SetPosition(cursor_x, cursor_y);
 
   {
     std::lock_guard<std::mutex> lock(input_evt_lock);

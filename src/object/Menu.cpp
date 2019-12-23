@@ -57,7 +57,8 @@ MenuData* MenuItem::get_data()
 Menu::Menu()
   : data_index_(0),
     display_count_(16), focus_index_(8), focus_min_(4), focus_max_(12),
-    scroll_delta_(0), inf_scroll_(false),
+    scroll_time_(200.0f), scroll_time_remain_(.0f),
+    scroll_delta_(.0f), scroll_delta_init_(.0f), inf_scroll_(false),
     pos_method_(MenuPosMethod::kMenuPosExpression)
 {
   memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
@@ -174,11 +175,12 @@ void Menu::NavigateDown()
 
   wheel_sound_.Play();
 
-  // change data index and rotating effect
+  // change data index and scroll effect (set time / delta)
   data_index_ = (data_index_ + 1) % size();
-  scroll_delta_ -= 1.0;
-  if (scroll_delta_ < -kScrollPosMaxDiff)
-    scroll_delta_ = -kScrollPosMaxDiff;
+  scroll_delta_init_ = scroll_delta_ - 1.0f;
+  if (scroll_delta_init_ < -kScrollPosMaxDiff)
+    scroll_delta_init_ = -kScrollPosMaxDiff;
+  scroll_time_remain_ = scroll_time_;
 
   // shift up item
   /*
@@ -200,12 +202,13 @@ void Menu::NavigateUp()
 
   wheel_sound_.Play();
 
-  // change data index and rotating effect
+  // change data index and scroll effect (set time / delta)
   data_index_--;
   if (data_index_ < 0) data_index_ += size();
-  scroll_delta_ += 1.0;
-  if (scroll_delta_ > kScrollPosMaxDiff)
-    scroll_delta_ = kScrollPosMaxDiff;
+  scroll_delta_init_ = scroll_delta_ + 1.0f;
+  if (scroll_delta_init_ > kScrollPosMaxDiff)
+    scroll_delta_init_ = kScrollPosMaxDiff;
+  scroll_time_remain_ = scroll_time_;
 
   // shift down item
   /*
@@ -227,11 +230,8 @@ void Menu::NavigateRight() {}
 void Menu::doUpdate(float delta)
 {
   // Update scroll pos
-  if ((scroll_delta_ < 0 && scroll_delta_ > -0.05) ||
-      (scroll_delta_ > 0 && scroll_delta_ < 0.05))
-    scroll_delta_ = 0;
-  else
-    scroll_delta_ -= scroll_delta_ * 0.3;
+  scroll_time_remain_ = std::max(.0f, scroll_time_remain_ - delta);
+  scroll_delta_ = scroll_delta_init_ * std::pow(scroll_time_remain_ / scroll_time_, 2);
 
   // calculate each bar position-based-index and position
   UpdateItemPos();
