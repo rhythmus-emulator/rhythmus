@@ -71,11 +71,6 @@ void Sprite::Load(const Metric& metric)
 
   if (metric.exist("blend"))
     blending_ = metric.get<int>("blend");
-
-  if (metric.exist("sprite"))
-    LoadFromLR2SRC(metric.get<std::string>("sprite"));
-  else if (metric.exist("lr2src"))
-    LoadFromLR2SRC(metric.get<std::string>("lr2src"));
 }
 
 void Sprite::GetVertexInfoOfFrame(VertexInfo* vi, size_t frame)

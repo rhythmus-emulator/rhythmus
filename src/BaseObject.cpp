@@ -235,6 +235,8 @@ void BaseObject::Load(const Metric& metric)
 {
   if (metric.exist("zindex"))
     draw_order_ = metric.get<int>("zindex");
+  if (metric.exist("lr2src"))
+    LoadFromLR2SRC(metric.get<std::string>("lr2src"));
 
   LoadCommand(metric);
 }

@@ -7,6 +7,8 @@
 #include "Sprite.h"
 #include "object/Text.h"
 #include "object/Number.h"
+#include "object/Line.h"
+#include "object/Slider.h"
 
 #include "LR2/LR2SceneLoader.h"
 #include "LR2/LR2Flag.h"
@@ -106,6 +108,10 @@ BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
     obj = new Text();
   else if (objtype == "Number")
     obj = new Number();
+  else if (objtype == "Line")
+    obj = new Line();
+  else if (objtype == "Slider")
+    obj = new Slider();
 
   if (!obj) return nullptr;
   obj->Load(metrics);
@@ -116,44 +122,44 @@ BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
 void Script::ExecuteLR2Script(const std::string &filepath)
 {
 #define NAMES \
-  NAME("SRC_NOTE", "Note%d", "sprite", 0), \
-  NAME("SRC_AUTO_NOTE", "Note%dAuto", "sprite", 0), \
-  NAME("SRC_LN_END", "Note%dLNEnd", "sprite", 0), \
-  NAME("SRC_AUTO_LN_END", "Note%dAutoLNEndy", "sprite", 0), \
-  NAME("SRC_LN_START", "Note%dLNStart", "sprite", 0), \
-  NAME("SRC_AUTO_LN_START", "Note%dAutoLNStart", "sprite", 0), \
-  NAME("SRC_LN_BODY", "Note%dLNBody", "sprite", 0), \
-  NAME("SRC_AUTO_LN_BODY", "Note%dAutoLNBody", "sprite", 0), \
-  NAME("SRC_MINE", "Note%dMine", "sprite", 0), \
+  NAME("SRC_NOTE", "Note%d", "lr2src", 0), \
+  NAME("SRC_AUTO_NOTE", "Note%dAuto", "lr2src", 0), \
+  NAME("SRC_LN_END", "Note%dLNEnd", "lr2src", 0), \
+  NAME("SRC_AUTO_LN_END", "Note%dAutoLNEndy", "lr2src", 0), \
+  NAME("SRC_LN_START", "Note%dLNStart", "lr2src", 0), \
+  NAME("SRC_AUTO_LN_START", "Note%dAutoLNStart", "lr2src", 0), \
+  NAME("SRC_LN_BODY", "Note%dLNBody", "lr2src", 0), \
+  NAME("SRC_AUTO_LN_BODY", "Note%dAutoLNBody", "lr2src", 0), \
+  NAME("SRC_MINE", "Note%dMine", "lr2src", 0), \
   NAME("DST_NOTE", "NoteField", "Note%dlr2cmd", 0), \
-  NAME("SRC_GROOVEGAUGE", "LifeGauge%dP", "sprite", 0), \
+  NAME("SRC_GROOVEGAUGE", "LifeGauge%dP", "lr2src", 0), \
   NAME("DST_GROOVEGAUGE", "LifeGauge%dP", "OnLR", 0), \
-  NAME("SRC_NOWJUDGE_1P", "Judge1P", "sprite", 0), \
+  NAME("SRC_NOWJUDGE_1P", "Judge1P", "lr2src", 0), \
   NAME("DST_NOWJUDGE_1P", "Judge1P", "OnLR", 0), \
-  NAME("SRC_NOWJUDGE_2P", "Judge2P", "sprite", 0), \
+  NAME("SRC_NOWJUDGE_2P", "Judge2P", "lr2src", 0), \
   NAME("DST_NOWJUDGE_2P", "Judge2P", "OnLR", 0), \
-  NAME("SRC_BAR_BODY", "MusicWheelType%d", "sprite", 0), \
+  NAME("SRC_BAR_BODY", "MusicWheelType%d", "lr2src", 0), \
   NAME("DST_BAR_BODY_ON", "MusicWheel", "BarOn%dOnLR", 0), \
   NAME("DST_BAR_BODY_OFF", "MusicWheel", "Bar%dOnLR", 0), \
   NAME("SRC_BAR_TITLE", "MusicWheelTitle%d", "lr2src", 0), \
   NAME("DST_BAR_TITLE", "MusicWheelTitle%d", "OnLR", 0), \
   NAME("SRC_BAR_LEVEL", "MusicWheelLevel%d", "lr2src", 0), \
   NAME("DST_BAR_LEVEL", "MusicWheelLevel%d", "OnLR", 0), \
-  NAME("SRC_IMAGE", "Sprite", "sprite", 2), \
+  NAME("SRC_IMAGE", "Sprite", "lr2src", 2), \
   NAME("DST_IMAGE", "Sprite", "OnLR", 1), \
-  NAME("SRC_TEXT", "Text", "lr2font", 2), \
+  NAME("SRC_TEXT", "Text", "lr2src", 2), \
   NAME("DST_TEXT", "Text", "OnLR", 1), \
-  NAME("SRC_BARGRAPH", "Graph", "sprite", 2), \
+  NAME("SRC_BARGRAPH", "Graph", "lr2src", 2), \
   NAME("DST_BARGRAPH", "Graph", "OnLR", 1), \
-  NAME("SRC_SLIDER", "Slider", "sprite", 2), \
+  NAME("SRC_SLIDER", "Slider", "lr2src", 2), \
   NAME("DST_SLIDER", "Slider", "OnLR", 1), \
-  NAME("SRC_NUMBER", "Number", "sprite", 2), \
+  NAME("SRC_NUMBER", "Number", "lr2src", 2), \
   NAME("DST_NUMBER", "Number", "OnLR", 1), \
-  NAME("SRC_JUDGELINE", "JudgeLine", "sprite", 2), \
+  NAME("SRC_JUDGELINE", "JudgeLine", "lr2src", 2), \
   NAME("DST_JUDGELINE", "JudgeLine", "OnLR", 1), \
-  NAME("SRC_LINE", "Line", "sprite", 2), \
+  NAME("SRC_LINE", "Line", "lr2src", 2), \
   NAME("DST_LINE", "Line", "OnLR", 1), \
-  NAME("SRC_BUTTON", "Button", "sprite", 2), \
+  NAME("SRC_BUTTON", "Button", "lr2src", 2), \
   NAME("DST_BUTTON", "Button", "OnLR", 1)
 
 #define NAME(lr2name, metricname, attr, _objtype) lr2name

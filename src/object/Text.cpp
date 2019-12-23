@@ -292,8 +292,6 @@ void Text::Load(const Metric& metric)
     SetText(metric.get<std::string>("text"));
   if (metric.exist("align"))
     SetTextAlignment((TextAlignments)metric.get<int>("align"));
-  if (metric.exist("lr2src"))
-    LoadFromLR2SRC(metric.get<std::string>("lr2src"));
 }
 
 void Text::LoadFromLR2SRC(const std::string &cmd)

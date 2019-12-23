@@ -306,7 +306,7 @@ void Scene::doRenderAfter()
     vi[0].a = vi[1].a = vi[2].a = vi[3].a = fade_alpha_;
 
     Graphic::SetTextureId(0);
-    Graphic::SetBlendMode(GL_ONE_MINUS_SRC_ALPHA);
+    Graphic::SetBlendMode(1);
     glColor3f(0, 0, 0);
     memcpy(Graphic::get_vertex_buffer(), vi, sizeof(VertexInfo) * 4);
     Graphic::RenderQuad();

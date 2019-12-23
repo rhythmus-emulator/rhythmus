@@ -41,6 +41,9 @@ set (RHYTHMUS_SOURCES
     object/OptionMenu.cpp
     object/Text.cpp
     object/Number.cpp
+    object/Slider.cpp
+    object/Quad.cpp
+    object/Line.cpp
     object/NoteField.cpp
 
     LR2/exdxa.cpp
@@ -84,6 +87,9 @@ set (RHYTHMUS_HEADERS
     object/OptionMenu.h
     object/Text.h
     object/Number.h
+    object/Slider.h
+    object/Quad.h
+    object/Line.h
     object/NoteField.h
 
     LR2/exdxa.h
