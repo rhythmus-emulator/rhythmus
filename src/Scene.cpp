@@ -261,14 +261,20 @@ void Scene::ProcessInputEvent(const InputEvent& e)
   else if (e.type() == InputEvents::kOnCursorMove)
   {
     // only single object can be focused.
-    bool is_hovered = false;
+    // bool is_hovered = false;
     float x = e.GetX();
     float y = e.GetY();
     for (auto i = children_.rbegin(); i != children_.rend(); ++i)
     {
       auto *obj = *i;
       obj->SetHovered(
-        is_hovered ? false : (is_hovered = obj->IsEntered(x, y))
+        /**
+         * Comment out hover-for-single-object,
+         * as object hovering is not working as expected for LR2.
+         *
+         * is_hovered ? false : (is_hovered = obj->IsEntered(x, y))
+         */
+        obj->IsEntered(x, y)
       );
     }
   }

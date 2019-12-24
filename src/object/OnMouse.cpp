@@ -38,8 +38,8 @@ void OnMouse::LoadFromLR2SRC(const std::string &cmd)
 
 bool OnMouse::IsEntered(float x, float y)
 {
-  x -= current_prop_.pi.x + current_prop_.x - onmouse_rect_.x;
-  y -= current_prop_.pi.y + current_prop_.y - onmouse_rect_.y;
+  x -= current_prop_.pi.x + current_prop_.x + onmouse_rect_.x;
+  y -= current_prop_.pi.y + current_prop_.y + onmouse_rect_.y;
   return (x >= 0 && x <= onmouse_rect_.w
     && y >= 0 && y <= onmouse_rect_.h);
 }

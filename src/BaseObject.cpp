@@ -477,6 +477,7 @@ void BaseObject::SetLR2DSTCommand(const std::string &lr2dst)
 
 void BaseObject::SetLR2DSTCommandInternal(const CommandArgs &args)
 {
+  tween_.clear();
   CommandArgs la;
   la.set_separator('|');
   for (size_t i = 1; i < args.size(); ++i)
