@@ -48,6 +48,9 @@ public:
   MusicWheelData &get_selected_data(int player_num);
 
   virtual void Load(const Metric &metric);
+  virtual void OnSelectChange(const MenuData *data, int direction);
+  virtual void OnSelectChanged();
+
   friend class MusicWheelItem;
 
 private:

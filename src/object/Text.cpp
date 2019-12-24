@@ -189,10 +189,10 @@ void Text::doRender()
       pi.x += std::max(w * width_multiply_ - text_render_ctx_.width, 0.0f) / 2;
       break;
     case TextAlignments::kTextAlignLR2Right:
-      pi.x -= std::max(w * width_multiply_ - text_render_ctx_.width, 0.0f);
+      pi.x -= w * width_multiply_ - std::max(w * width_multiply_ - text_render_ctx_.width, 0.0f);
       break;
     case TextAlignments::kTextAlignLR2Center:
-      pi.x -= std::max(w * width_multiply_ - text_render_ctx_.width, 0.0f) / 2;
+      pi.x -= w * width_multiply_ - std::max(w * width_multiply_ - text_render_ctx_.width, 0.0f) / 2;
       break;
     }
   }

@@ -33,6 +33,22 @@ namespace rhythmus
       if (fnmap.empty())
       {
         fnmap["Load"] = []() { EventManager::SendEvent("LR0"); };
+        fnmap["SongSelectChange"] = []() {
+          EventManager::SendEvent("LR11");
+          EventManager::SendEvent("LR14Off");
+        };
+        fnmap["SongSelectChangeUp"] = []() {
+          EventManager::SendEvent("LR12");
+        };
+        fnmap["SongSelectChangeDown"] = []() {
+          EventManager::SendEvent("LR13");
+        };
+        fnmap["SongSelectChanged"] = []() {
+          EventManager::SendEvent("LR11Off");
+          EventManager::SendEvent("LR12Off");
+          EventManager::SendEvent("LR13Off");
+          EventManager::SendEvent("LR14");
+        };
         fnmap["PlayLoading"] = []() {
           Script::getInstance().SetFlag(80, 1);   // Loading
           Script::getInstance().SetFlag(81, 0);   // Loaded

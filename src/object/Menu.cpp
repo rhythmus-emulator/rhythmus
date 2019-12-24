@@ -193,6 +193,8 @@ void Menu::NavigateDown()
   // update items
   RebuildItems();
   UpdateItemPos();
+
+  OnSelectChange(data_[data_index_], 1);
 }
 
 void Menu::NavigateUp()
@@ -221,6 +223,8 @@ void Menu::NavigateUp()
   // update items
   RebuildItems();
   UpdateItemPos();
+
+  OnSelectChange(data_[data_index_], -1);
 }
 
 void Menu::NavigateLeft() {}
@@ -232,6 +236,11 @@ void Menu::doUpdate(float delta)
   // Update scroll pos
   scroll_time_remain_ = std::max(.0f, scroll_time_remain_ - delta);
   scroll_delta_ = scroll_delta_init_ * std::pow(scroll_time_remain_ / scroll_time_, 2);
+  if (scroll_delta_init_ != 0 && scroll_delta_ == 0)
+  {
+    scroll_delta_init_ = 0;
+    OnSelectChanged();
+  }
 
   // calculate each bar position-based-index and position
   UpdateItemPos();
@@ -361,6 +370,13 @@ void Menu::Load(const Metric &metric)
   // Build item and set basic position
   RebuildItems();
   UpdateItemPos();
+
+  // selectchange for initiailize.
+  OnSelectChange(data_[data_index_], 0);
 }
+
+void Menu::OnSelectChange(const MenuData *data, int direction) {}
+
+void Menu::OnSelectChanged() {}
 
 }

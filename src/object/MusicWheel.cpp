@@ -1,5 +1,6 @@
 #include "MusicWheel.h"
 #include "SceneManager.h"
+#include "Script.h"
 #include "Setting.h"
 
 namespace rhythmus
@@ -109,6 +110,58 @@ MenuItem* MusicWheel::CreateMenuItem()
 void MusicWheel::Load(const Metric &metric)
 {
   Menu::Load(metric);
+}
+
+void MusicWheel::OnSelectChange(const MenuData *data, int direction)
+{
+  const auto *d = static_cast<const MusicWheelData*>(data);
+  /* Song stat */
+  Script::getInstance().SetString(10, d->title);
+  Script::getInstance().SetString(11, d->subtitle);
+  Script::getInstance().SetString(12, d->title + " " + d->subtitle);
+  Script::getInstance().SetString(13, d->genre);
+  Script::getInstance().SetString(14, d->artist);
+  Script::getInstance().SetNumber(160, 140);
+  Script::getInstance().SetNumber(160, 140);
+  Script::getInstance().SetNumber(70, 180000);
+  Script::getInstance().SetNumber(71, 2880);
+  Script::getInstance().SetNumber(72, 2880);
+  Script::getInstance().SetNumber(73, 100);
+  Script::getInstance().SetNumber(74, 1235);
+  Script::getInstance().SetNumber(75, 1234);
+  Script::getInstance().SetNumber(76, 9);
+  Script::getInstance().SetNumber(77, 5);
+  Script::getInstance().SetNumber(78, 3);
+  Script::getInstance().SetNumber(79, 1);
+  /* Playrecord */
+  Script::getInstance().SetNumber(80, 1000);
+  Script::getInstance().SetNumber(81, 300);
+  Script::getInstance().SetNumber(82, 100);
+  Script::getInstance().SetNumber(83, 12);
+  Script::getInstance().SetNumber(84, 9);
+  Script::getInstance().SetNumber(85, 90);
+  Script::getInstance().SetNumber(86, 10);
+  Script::getInstance().SetNumber(87, 5);
+  Script::getInstance().SetNumber(88, 3);
+  Script::getInstance().SetNumber(89, 2);
+  /* BPM */
+  Script::getInstance().SetNumber(90, 140);
+  Script::getInstance().SetNumber(91, 140);
+  /* IR */
+  Script::getInstance().SetNumber(92, 0);
+  Script::getInstance().SetNumber(93, 0);
+  Script::getInstance().SetNumber(94, 0);
+
+  EventManager::SendEvent("SongSelectChange");
+  if (direction == -1)
+    EventManager::SendEvent("SongSelectChangeUp");
+  else if (direction == 1)
+    EventManager::SendEvent("SongSelectChangeDown");
+}
+
+void MusicWheel::OnSelectChanged()
+{
+  EventManager::SendEvent("SongSelectChanged");
 }
 
 }

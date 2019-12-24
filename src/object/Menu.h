@@ -96,6 +96,9 @@ public:
 
   virtual void Load(const Metric &metric);
 
+  virtual void OnSelectChange(const MenuData *data, int direction);
+  virtual void OnSelectChanged();
+
 protected:
   // select item data
   std::vector<MenuData*> data_;

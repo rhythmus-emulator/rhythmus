@@ -68,13 +68,11 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
     {
       wheel_.NavigateUp();
       SongList::getInstance().select(wheel_.get_selected_data(0).index);
-      EventManager::SendEvent("SongSelectChanged");
     }
     else if (e.KeyCode() == GLFW_KEY_DOWN)
     {
       wheel_.NavigateDown();
       SongList::getInstance().select(wheel_.get_selected_data(0).index);
-      EventManager::SendEvent("SongSelectChanged");
     }
   }
 
