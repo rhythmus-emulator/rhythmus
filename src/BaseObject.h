@@ -210,10 +210,10 @@ public:
   int GetResourceId() const;
 
   void SetFocusable(bool is_focusable);
-  bool IsEntered(float x, float y);
+  virtual bool IsEntered(float x, float y);
   void SetHovered(bool is_hovered);
   void SetFocused(bool is_focused);
-  void Click();
+  virtual void Click();
 
   /**
    * 0: Don't use blending (always 100% alpha)

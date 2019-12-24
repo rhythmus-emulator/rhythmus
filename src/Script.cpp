@@ -9,6 +9,8 @@
 #include "object/Number.h"
 #include "object/Line.h"
 #include "object/Slider.h"
+#include "object/Button.h"
+#include "object/OnMouse.h"
 
 #include "LR2/LR2SceneLoader.h"
 #include "LR2/LR2Flag.h"
@@ -112,6 +114,10 @@ BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
     obj = new Line();
   else if (objtype == "Slider")
     obj = new Slider();
+  else if (objtype == "Button")
+    obj = new Button();
+  else if (objtype == "OnMouse")
+    obj = new OnMouse();
 
   if (!obj) return nullptr;
   obj->Load(metrics);
@@ -159,6 +165,8 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   NAME("DST_JUDGELINE", "JudgeLine", "OnLR", 1), \
   NAME("SRC_LINE", "Line", "lr2src", 2), \
   NAME("DST_LINE", "Line", "OnLR", 1), \
+  NAME("SRC_ONMOUSE", "OnMouse", "lr2src", 2), \
+  NAME("DST_ONMOUSE", "OnMouse", "OnLR", 1), \
   NAME("SRC_BUTTON", "Button", "lr2src", 2), \
   NAME("DST_BUTTON", "Button", "OnLR", 1)
 

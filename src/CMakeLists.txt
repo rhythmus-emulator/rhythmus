@@ -44,6 +44,8 @@ set (RHYTHMUS_SOURCES
     object/Slider.cpp
     object/Quad.cpp
     object/Line.cpp
+    object/Button.cpp
+    object/OnMouse.cpp
     object/NoteField.cpp
 
     LR2/exdxa.cpp
@@ -90,6 +92,8 @@ set (RHYTHMUS_HEADERS
     object/Slider.h
     object/Quad.h
     object/Line.h
+    object/Button.h
+    object/OnMouse.h
     object/NoteField.h
 
     LR2/exdxa.h

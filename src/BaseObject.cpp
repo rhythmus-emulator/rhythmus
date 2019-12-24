@@ -920,6 +920,12 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     static auto fn_blend = [](void *o, CommandArgs& args) {
       static_cast<BaseObject*>(o)->SetBlend(args.Get<int>(0));
     };
+    static auto fn_Focusable = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetFocusable(args.Get<int>(0));
+    };
+    static auto fn_SendEvent = [](void *o, CommandArgs& args) {
+      EventManager::SendEvent(args.Get<std::string>(0));
+    };
     cmdfnmap_["pos"] = fn_Pos;
     cmdfnmap_["lr2cmd"] = fn_SetLR2DST;
     cmdfnmap_["show"] = fn_Show;
@@ -931,6 +937,8 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     cmdfnmap_["refresh"] = fn_Refresh;
     cmdfnmap_["resid"] = fn_resid;
     cmdfnmap_["blend"] = fn_blend;
+    cmdfnmap_["focusable"] = fn_Focusable;
+    cmdfnmap_["sendevent"] = fn_SendEvent;
   }
 
   return cmdfnmap_;

@@ -126,6 +126,8 @@ void Number::SetText(const std::string &num)
       gidx = 10;
     if (!is_positive)
       gidx += 12;
+    if (tvi_glyphs_[gidx].texid == 0)
+      continue;
 
     auto *vi = AddTextVertex(tvi_glyphs_[gidx]).vi;
     vi[0].x += x;
