@@ -107,7 +107,9 @@ void on_cursormove(GLFWwindow *w, double xpos, double ypos)
 
 void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
 {
-  InputEvent msg(InputEvents::kOnCursorClick);
+  InputEvent msg(
+    action == GLFW_PRESS ? InputEvents::kOnCursorDown : InputEvents::kOnCursorClick
+  );
   msg.SetPosition(cursor_x, cursor_y);
 
   {

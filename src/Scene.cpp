@@ -282,12 +282,13 @@ void Scene::ProcessInputEvent(const InputEvent& e)
   {
     // only single object can be focused.
     bool entered = false;
+    bool is_focused = false;
     float x = e.GetX();
     float y = e.GetY();
     for (auto i = children_.rbegin(); i != children_.rend(); ++i)
     {
       auto *obj = *i;
-      if (entered)
+      if (is_focused)
         obj->SetFocused(false);
       else
       {
@@ -296,6 +297,7 @@ void Scene::ProcessInputEvent(const InputEvent& e)
           obj->Click();
         else
           obj->SetFocused(false);
+        is_focused = obj->IsFocused();
       }
     }
   }

@@ -593,6 +593,16 @@ void BaseObject::SetFocused(bool is_focused)
   is_focused_ = is_focused;
 }
 
+bool BaseObject::IsHovered() const
+{
+  return is_hovered_;
+}
+
+bool BaseObject::IsFocused() const
+{
+  return is_focused_;
+}
+
 void BaseObject::Click()
 {
   if (!is_focusable_)

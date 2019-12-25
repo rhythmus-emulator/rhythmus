@@ -20,6 +20,7 @@ enum InputEvents
   kOnKeyUp,
   kOnText,
   kOnCursorMove,
+  kOnCursorDown,
   kOnCursorClick,
   kOnJoystick,
 

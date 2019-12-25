@@ -213,6 +213,8 @@ public:
   virtual bool IsEntered(float x, float y);
   void SetHovered(bool is_hovered);
   void SetFocused(bool is_focused);
+  bool IsHovered() const;
+  bool IsFocused() const;
   virtual void Click();
 
   /**
