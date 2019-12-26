@@ -39,9 +39,6 @@ void Slider::Load(const Metric &metric)
 void Slider::LoadFromLR2SRC(const std::string &cmd)
 {
   Sprite::LoadFromLR2SRC(cmd);
-  
-  /* clear out OP code */
-  SetVisibleGroup();
 
   CommandArgs args(cmd);
 

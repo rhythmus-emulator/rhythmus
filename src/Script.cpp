@@ -120,6 +120,7 @@ BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
     obj = new OnMouse();
 
   if (!obj) return nullptr;
+  obj->SetIgnoreVisibleGroup(false);
   obj->Load(metrics);
 
   return obj;

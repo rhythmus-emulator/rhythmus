@@ -102,8 +102,6 @@ private:
 
   // is line-breaking enabled?
   bool do_line_breaking_;
-
-  virtual void SetLR2DSTCommandInternal(const CommandArgs &args);
 };
 
 RHYTHMUS_NAMESPACE_END

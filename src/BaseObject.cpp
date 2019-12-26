@@ -10,7 +10,7 @@ namespace rhythmus
 
 BaseObject::BaseObject()
   : parent_(nullptr), draw_order_(0), rot_center_(-1),
-    resource_id_(-1), blending_(1),
+    ignore_visible_group_(true), resource_id_(-1), blending_(1),
     is_focusable_(false), is_focused_(false), is_hovered_(false)
 {
   memset(&current_prop_, 0, sizeof(DrawProperty));
@@ -25,6 +25,7 @@ BaseObject::BaseObject()
 BaseObject::BaseObject(const BaseObject& obj)
   : name_(obj.name_), parent_(obj.parent_),
     draw_order_(obj.draw_order_), rot_center_(obj.rot_center_),
+    ignore_visible_group_(obj.ignore_visible_group_),
     resource_id_(obj.resource_id_), blending_(obj.blending_),
     is_focusable_(obj.is_focusable_), is_focused_(false), is_hovered_(false)
 {
@@ -506,6 +507,11 @@ void BaseObject::SetVisibleGroup(int group0, int group1, int group2)
   visible_group_[2] = group2;
 }
 
+void BaseObject::SetIgnoreVisibleGroup(bool ignore)
+{
+  ignore_visible_group_ = ignore;
+}
+
 void BaseObject::Hide()
 {
   current_prop_.display = false;
@@ -646,6 +652,12 @@ void BaseObject::UpdateTween(float delta_ms)
       return;
     }
 
+    //
+    // actual loop condition
+    //
+    if (delta_ms <= 0)
+      break;
+
     TweenState &t = tween_.front();
     if (delta_ms + t.time_eclipsed >= t.time_duration)  // tween end
     {
@@ -670,12 +682,6 @@ void BaseObject::UpdateTween(float delta_ms)
       t.time_eclipsed += delta_ms;
       delta_ms = 0;  // actually same as exiting tween
     }
-
-    //
-    // actual loop condition
-    //
-    if (delta_ms <= 0)
-      break;
   }
 
   //
@@ -734,9 +740,11 @@ void BaseObject::SetTweenLoopTime(uint32_t time_msec)
 
 bool BaseObject::IsVisible() const
 {
-  if (Script::getInstance().GetFlag(visible_group_[0]) == 0
+  if (!ignore_visible_group_ &&
+    (Script::getInstance().GetFlag(visible_group_[0]) == 0
     || Script::getInstance().GetFlag(visible_group_[1]) == 0
-    || Script::getInstance().GetFlag(visible_group_[2]) == 0)
+    || Script::getInstance().GetFlag(visible_group_[2]) == 0
+    || Script::getInstance().GetFlag(visible_group_[3]) == 0))
     return false;
 
   return current_prop_.display &&
@@ -908,6 +916,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
       static_cast<BaseObject*>(o)->Show();
     };
     static auto fn_Hide = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->StopTween();
       static_cast<BaseObject*>(o)->Hide();
     };
     static auto fn_Loop = [](void *o, CommandArgs& args) {

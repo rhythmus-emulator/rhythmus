@@ -288,6 +288,8 @@ void Scene::ProcessInputEvent(const InputEvent& e)
     for (auto i = children_.rbegin(); i != children_.rend(); ++i)
     {
       auto *obj = *i;
+      if (!obj->IsVisible())
+        continue;
       if (is_focused)
         obj->SetFocused(false);
       else

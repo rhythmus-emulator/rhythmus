@@ -18,6 +18,9 @@ void MusicWheelItem::Load(const Metric &metric)
   title_->LoadByName();
   title_->LoadCommandWithNamePrefix(metric);
 
+  /* title object don't affected by op code. */
+  title_->SetIgnoreVisibleGroup(true);
+
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
     background_[i].set_name("MusicWheelType" + std::to_string(i));

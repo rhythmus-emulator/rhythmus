@@ -32,7 +32,30 @@ namespace rhythmus
       static EventFnMap fnmap;
       if (fnmap.empty())
       {
-        fnmap["Load"] = []() { EventManager::SendEvent("LR0"); };
+        fnmap["Load"] = []() {
+          EventManager::SendEvent("LR0");
+
+          /* Panel state clear */
+          Script::getInstance().SetFlag(20, 1);
+          Script::getInstance().SetFlag(21, 0);
+          Script::getInstance().SetFlag(22, 0);
+          Script::getInstance().SetFlag(23, 0);
+          Script::getInstance().SetFlag(24, 0);
+          Script::getInstance().SetFlag(25, 0);
+          Script::getInstance().SetFlag(26, 0);
+          Script::getInstance().SetFlag(27, 0);
+          Script::getInstance().SetFlag(28, 0);
+          Script::getInstance().SetFlag(29, 0);
+          EventManager::SendEvent("Panel1Off");
+          EventManager::SendEvent("Panel2Off");
+          EventManager::SendEvent("Panel3Off");
+          EventManager::SendEvent("Panel4Off");
+          EventManager::SendEvent("Panel5Off");
+          EventManager::SendEvent("Panel6Off");
+          EventManager::SendEvent("Panel7Off");
+          EventManager::SendEvent("Panel8Off");
+          EventManager::SendEvent("Panel9Off");
+        };
         /* Events for SelectScene */
         fnmap["SongSelectChange"] = []() {
           EventManager::SendEvent("LR11");
@@ -45,10 +68,10 @@ namespace rhythmus
           EventManager::SendEvent("LR13");
         };
         fnmap["SongSelectChanged"] = []() {
-          EventManager::SendEvent("LR11Off");
-          EventManager::SendEvent("LR12Off");
-          EventManager::SendEvent("LR13Off");
-          EventManager::SendEvent("LR14");
+          //EventManager::SendEvent("LR11Off");
+          //EventManager::SendEvent("LR12Off");
+          //EventManager::SendEvent("LR13Off");
+          //EventManager::SendEvent("LR14");
         };
         /* Events for SelectScene Panel */
         fnmap["Click1"] = []() {
@@ -57,53 +80,62 @@ namespace rhythmus
             Script::getInstance().SetFlag(20, 0);
             Script::getInstance().SetFlag(21, 1);
             EventManager::SendEvent("LR21");
+            EventManager::SendEvent("Panel1");
             if (Script::getInstance().GetFlag(22) == 1)
             {
               Script::getInstance().SetFlag(22, 0);
               EventManager::SendEvent("LR22Off");
               EventManager::SendEvent("LR32");
+              EventManager::SendEvent("Panel2Off");
             }
             if (Script::getInstance().GetFlag(23) == 1)
             {
               Script::getInstance().SetFlag(23, 0);
               EventManager::SendEvent("LR23Off");
               EventManager::SendEvent("LR33");
+              EventManager::SendEvent("Panel3Off");
             }
             if (Script::getInstance().GetFlag(24) == 1)
             {
               Script::getInstance().SetFlag(24, 0);
               EventManager::SendEvent("LR24Off");
               EventManager::SendEvent("LR34");
+              EventManager::SendEvent("Panel4Off");
             }
             if (Script::getInstance().GetFlag(25) == 1)
             {
               Script::getInstance().SetFlag(25, 0);
               EventManager::SendEvent("LR25Off");
               EventManager::SendEvent("LR35");
+              EventManager::SendEvent("Panel5Off");
             }
             if (Script::getInstance().GetFlag(26) == 1)
             {
               Script::getInstance().SetFlag(26, 0);
               EventManager::SendEvent("LR26Off");
               EventManager::SendEvent("LR36");
+              EventManager::SendEvent("Panel6Off");
             }
             if (Script::getInstance().GetFlag(27) == 1)
             {
               Script::getInstance().SetFlag(27, 0);
               EventManager::SendEvent("LR27Off");
               EventManager::SendEvent("LR37");
+              EventManager::SendEvent("Panel7Off");
             }
             if (Script::getInstance().GetFlag(28) == 1)
             {
               Script::getInstance().SetFlag(28, 0);
               EventManager::SendEvent("LR28Off");
               EventManager::SendEvent("LR38");
+              EventManager::SendEvent("Panel8Off");
             }
             if (Script::getInstance().GetFlag(29) == 1)
             {
               Script::getInstance().SetFlag(29, 0);
               EventManager::SendEvent("LR29Off");
               EventManager::SendEvent("LR39");
+              EventManager::SendEvent("Panel9Off");
             }
           }
           else if (Script::getInstance().GetFlag(21) == 1)
@@ -112,6 +144,7 @@ namespace rhythmus
             Script::getInstance().SetFlag(21, 0);
             EventManager::SendEvent("LR21Off");
             EventManager::SendEvent("LR31");
+            EventManager::SendEvent("Panel1Off");
           }
         };
         /* Events for PlayScene */

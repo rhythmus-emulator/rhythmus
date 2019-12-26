@@ -4,7 +4,7 @@
 namespace rhythmus
 {
 
-OnMouse::OnMouse() : panel_(-1)
+OnMouse::OnMouse() : panel_(0)
 {
   memset(&onmouse_rect_, 0, sizeof(Rect));
 }
@@ -19,21 +19,24 @@ void OnMouse::Load(const Metric &metric)
 void OnMouse::LoadFromLR2SRC(const std::string &cmd)
 {
   Sprite::LoadFromLR2SRC(cmd);
-  SetVisibleGroup();  // reset op code
 
   CommandArgs args(cmd);
 
   panel_ = args.Get<int>(9);
-  if (panel_ >= 0)
+  if (panel_ > 0 || panel_ == -1)
   {
+    if (panel_ == -1) panel_ = 0;
     AddCommand("Panel" + std::to_string(panel_), "focusable:1");
     AddCommand("Panel" + std::to_string(panel_) + "Off", "focusable:0");
+    visible_group_[3] = 20 + panel_;
   }
 
   onmouse_rect_.x = args.Get<int>(10);
   onmouse_rect_.y = args.Get<int>(11);
   onmouse_rect_.w = args.Get<int>(12);
   onmouse_rect_.h = args.Get<int>(13);
+
+  debug_ += format_string("called with %d\n", panel_);
 }
 
 bool OnMouse::IsEntered(float x, float y)

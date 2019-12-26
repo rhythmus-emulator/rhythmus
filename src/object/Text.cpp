@@ -275,13 +275,6 @@ void Text::SetLR2Alignment(int alignment)
   }
 }
 
-void Text::SetLR2DSTCommandInternal(const CommandArgs &args)
-{
-  BaseObject::SetLR2DSTCommandInternal(args);
-  /* reset visible group to default as LR2 does ... */
-  SetVisibleGroup(0, 0, 0);
-}
-
 void Text::Load(const Metric& metric)
 {
   BaseObject::Load(metric);

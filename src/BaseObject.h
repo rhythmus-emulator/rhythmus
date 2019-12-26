@@ -193,6 +193,7 @@ public:
    */
   void SetAcceleration(int acc);
   void SetVisibleGroup(int group0 = 0, int group1 = 0, int group2 = 0);
+  void SetIgnoreVisibleGroup(bool ignore);
   void Hide();
   void Show();
   void SetDrawOrder(int order);
@@ -265,7 +266,11 @@ protected:
   int rot_center_;
 
   // group for visibility
-  int visible_group_[3];
+  // @warn 4th group: for special use (e.g. panel visibility of onmouse)
+  int visible_group_[4];
+
+  // ignoring visible group
+  bool ignore_visible_group_;
 
   // Resource id for text/number value
   int resource_id_;
@@ -285,6 +290,9 @@ protected:
   // commands to be called
   std::map<std::string, std::string> commands_;
 
+  // information for debugging
+  std::string debug_;
+
   // Tween
   void UpdateTween(float delta);
   void SetTweenLoopTime(uint32_t loopstart_time_msec);
@@ -296,7 +304,7 @@ protected:
 
   virtual const CommandFnMap& GetCommandFnMap();
   
-  virtual void SetLR2DSTCommandInternal(const CommandArgs &args);
+  void SetLR2DSTCommandInternal(const CommandArgs &args);
 };
 
 void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,

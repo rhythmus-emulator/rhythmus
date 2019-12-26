@@ -16,7 +16,6 @@ void Button::Load(const Metric &metric)
 void Button::LoadFromLR2SRC(const std::string &cmd)
 {
   Sprite::LoadFromLR2SRC(cmd);
-  SetVisibleGroup();  // reset op code
 
   CommandArgs args(cmd);
 
