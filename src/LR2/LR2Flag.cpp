@@ -169,8 +169,6 @@ namespace rhythmus
         if (i == fnmap.end())
           return false;
         i->second();
-        // Call redirected event instantly
-        EventManager::Flush();
         return true;
       }
     };
