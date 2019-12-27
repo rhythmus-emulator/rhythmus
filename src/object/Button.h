@@ -12,7 +12,7 @@ public:
   virtual void LoadFromLR2SRC(const std::string &cmd);
 private:
   // XXX: for debugging?
-  int panel_;
+  int panel_, button_id_;
 };
 
 }

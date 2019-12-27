@@ -1,6 +1,7 @@
 #include "Sprite.h"
 #include "Game.h"
 #include "ResourceManager.h"
+#include "Script.h"
 #include "Util.h"
 #include <iostream>
 #include <algorithm>
@@ -88,6 +89,22 @@ void Sprite::GetVertexInfoOfFrame(VertexInfo* vi, size_t frame)
   vi[2].sy = sy + sh;
   vi[3].sx = sx;
   vi[3].sy = sy + sh;
+}
+
+void Sprite::SetNumber(int number)
+{
+  if (ani_info_.duration <= 0)
+  {
+    number = std::min(std::max(number, 0), ani_info_.cnt - 1);
+    idx_ = number;
+  }
+}
+
+void Sprite::Refresh()
+{
+  auto id = GetResourceId();
+  if (id >= 0)
+    SetNumber(Script::getInstance().GetNumber(id));
 }
 
 void Sprite::doRender()

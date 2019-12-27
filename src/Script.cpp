@@ -67,6 +67,11 @@ void Script::SetNumber(size_t idx, int number)
 const std::string& Script::GetString(size_t idx) const { return strings_[idx]; }
 int Script::GetNumber(size_t idx) const { return numbers_[idx]; }
 
+void Script::SetButtonNumber(size_t idx, int number)
+{
+  SetNumber(idx + 1000, number);
+}
+
 Script &Script::getInstance()
 {
   static Script instance;

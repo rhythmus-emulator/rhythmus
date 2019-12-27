@@ -42,6 +42,12 @@ public:
 
   void GetVertexInfoOfFrame(VertexInfo* vi, size_t frame);
 
+  /* Set sprite animation frame by number manually.
+   * @warn This function won't work
+   * when sprite duration is bigger than zero. */
+  virtual void SetNumber(int number);
+  virtual void Refresh();
+
   Image *image();
 
   /* @brief Load property(resource). */

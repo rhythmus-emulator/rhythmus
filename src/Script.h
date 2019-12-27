@@ -27,6 +27,7 @@ public:
   const std::string& GetString(size_t idx) const;
   void SetNumber(size_t idx, int number);
   int GetNumber(size_t idx) const;
+  void SetButtonNumber(size_t idx, int number);
 
   static Script &getInstance();
 
@@ -36,11 +37,16 @@ private:
   /* for LR2 op code */
   int flags_[1000];
 
+  /**
+   * @brief for number cache (LR2)
+   * @detail
+   * 0~1000 : normal use of number cache
+   * 1000~1500 : button value cache
+   */
+  int numbers_[3000];
+
   /* for string cache (LR2) */
   std::string strings_[1000];
-
-  /* for number cache (LR2) */
-  int numbers_[1000];
 
   /* script context scene */
   Scene *scene_;

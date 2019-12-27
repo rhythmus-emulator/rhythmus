@@ -109,6 +109,7 @@ namespace rhythmus
             EventManager::SendEvent(paneloffop2[panelidx]);
             EventManager::SendEvent(paneloffop3[panelidx]);
             EventManager::SendEvent(paneloffevents[panelidx]);
+            Script::getInstance().SetButtonNumber(panelidx, 0);
           }
           else
           {
@@ -117,6 +118,7 @@ namespace rhythmus
             EventManager::SendEvent(panelonevents[panelidx]);
             EventManager::SendEvent(panelonop2[panelidx]);
             EventManager::SendEvent(panelonop3[panelidx]);
+            Script::getInstance().SetButtonNumber(panelidx, 1);
             for (int i = 1; i < 10; ++i)
             {
               if (panelidx != i && Script::getInstance().GetFlag(20 + i) == 1)
@@ -125,6 +127,7 @@ namespace rhythmus
                 EventManager::SendEvent(paneloffop2[i]);
                 EventManager::SendEvent(paneloffop3[i]);
                 EventManager::SendEvent(paneloffevents[i]);
+                Script::getInstance().SetButtonNumber(i, 0);
               }
             }
           }

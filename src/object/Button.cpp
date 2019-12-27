@@ -4,7 +4,7 @@
 namespace rhythmus
 {
 
-Button::Button() : panel_(-1) {}
+Button::Button() : panel_(-1), button_id_(0) {}
 
 Button::~Button() {}
 
@@ -36,11 +36,19 @@ void Button::LoadFromLR2SRC(const std::string &cmd)
    * Click10R : LR2 click event with name 10, reverse.
    */
   std::string minus;
+  button_id_ = args.Get<int>(9);
   if (args.size() > 12 && args.Get<int>(12) == -1)
     minus = "R";
   AddCommand("click",
-    format_string("sendevent:Click%d%s", args.Get<int>(9), minus.c_str())
+    format_string("sendevent:Click%d%s", button_id_, minus.c_str())
   );
+
+  /* Set resource id from button id */
+  SetResourceId(button_id_ + 1000);
+  AddCommand(format_string("Number%d", button_id_ + 1000), "refresh");
+
+  /* Set duration to zero to prevent unexpected sprite animation */
+  ani_info_.duration = 0;
 }
 
 }
