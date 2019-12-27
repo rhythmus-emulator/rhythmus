@@ -118,6 +118,47 @@ void MusicWheel::Load(const Metric &metric)
 void MusicWheel::OnSelectChange(const MenuData *data, int direction)
 {
   const auto *d = static_cast<const MusicWheelData*>(data);
+  int flag_code[6];
+  memset(flag_code, 0, sizeof(flag_code));
+
+  /* Type of item? */
+  switch (d->type)
+  {
+  case 0: /* General Song Item */
+    flag_code[2] = 1;
+    flag_code[5] = 1;
+    break;
+  case 1: /* Folder */
+    flag_code[1] = 1;
+    break;
+  case 2: /* User-Customized Folder */
+    flag_code[1] = 1;
+    break;
+  case 3: /* New song folder */
+    flag_code[1] = 1;
+    break;
+  case 4: /* Rival folder */
+    flag_code[1] = 1;
+    break;
+  case 5: /* Song (versus mode) */
+    flag_code[2] = 1;
+    flag_code[5] = 1;
+    break;
+  case 6: /* Course folder */
+    flag_code[3] = 1;
+    flag_code[5] = 1;
+    break;
+  case 8: /* Course */
+    flag_code[3] = 1;
+    flag_code[5] = 1;
+    break;
+  case 9: /* Random */
+    flag_code[5] = 1;
+    break;
+  }
+  for (size_t i = 1; i < 6; ++i)
+    Script::getInstance().SetFlag(i, flag_code[i]);
+
   /* Song stat */
   Script::getInstance().SetString(10, d->title);
   Script::getInstance().SetString(11, d->subtitle);

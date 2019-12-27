@@ -1,5 +1,6 @@
 #include "Event.h"
 #include "SceneManager.h"
+#include "Logger.h"
 #include "Graphic.h" /* Need to get GLFW handle */
 #include <mutex>
 #include <algorithm>
@@ -274,25 +275,40 @@ void EventManager::Flush()
 {
   auto& em = getInstance();
 
-  // process cached events.
+  // process cached events until no remaining event to process.
   // swap cache to prevent event lagging while ProcessEvent.
   // Pre-reserve enough space for new event cache to improve performance.
+  // @warn
+  // In some case, infinite loop of event may caused.
+  // By setting maximum event depth, infinite event loop is prevented.
+  constexpr size_t kMaxEventDepth = 50;
+  size_t event_depth = 0;
   std::vector<EventMessage> evnt(kPreCacheEventCount);
+  while (!game_evt_messages_.empty())
   {
-    std::lock_guard<std::mutex> lock(game_evt_lock);
-    game_evt_messages_.swap(evnt);
-  }
-
-  for (const auto& e : evnt)
-  {
-    auto &evtlist = getInstance().event_subscribers_[e.GetEventName()];
-    for (auto* recv : evtlist)
+    if (event_depth > kMaxEventDepth)
     {
-      if (!recv->OnEvent(e))
-        break;
+      Logger::Error("Event depth is too deep (over %d)", kMaxEventDepth);
+      break;
     }
-    // Depreciated: Send remain event to SceneManager.
-    //SceneManager::getInstance().SendEvent(e);
+    evnt.clear();
+    {
+      std::lock_guard<std::mutex> lock(game_evt_lock);
+      game_evt_messages_.swap(evnt);
+    }
+
+    for (const auto& e : evnt)
+    {
+      auto &evtlist = getInstance().event_subscribers_[e.GetEventName()];
+      for (auto* recv : evtlist)
+      {
+        if (!recv->OnEvent(e))
+          break;
+      }
+      // Depreciated: Send remain event to SceneManager.
+      //SceneManager::getInstance().SendEvent(e);
+    }
+    ++event_depth;
   }
 }
 

@@ -58,6 +58,7 @@ namespace rhythmus
         };
         /* Events for SelectScene */
         fnmap["SongSelectChange"] = []() {
+          EventManager::SendEvent("LR10");
           EventManager::SendEvent("LR11");
           EventManager::SendEvent("LR14Off");
         };
@@ -68,85 +69,75 @@ namespace rhythmus
           EventManager::SendEvent("LR13");
         };
         fnmap["SongSelectChanged"] = []() {
-          //EventManager::SendEvent("LR11Off");
-          //EventManager::SendEvent("LR12Off");
-          //EventManager::SendEvent("LR13Off");
-          //EventManager::SendEvent("LR14");
+          EventManager::SendEvent("LR10Off");
+          EventManager::SendEvent("LR12Off");
+          EventManager::SendEvent("LR13Off");
+          EventManager::SendEvent("LR14");
         };
         /* Events for SelectScene Panel */
-        fnmap["Click1"] = []() {
-          if (Script::getInstance().GetFlag(20) == 1)
-          {
-            Script::getInstance().SetFlag(20, 0);
-            Script::getInstance().SetFlag(21, 1);
-            EventManager::SendEvent("LR21");
-            EventManager::SendEvent("Panel1");
-            if (Script::getInstance().GetFlag(22) == 1)
-            {
-              Script::getInstance().SetFlag(22, 0);
-              EventManager::SendEvent("LR22Off");
-              EventManager::SendEvent("LR32");
-              EventManager::SendEvent("Panel2Off");
-            }
-            if (Script::getInstance().GetFlag(23) == 1)
-            {
-              Script::getInstance().SetFlag(23, 0);
-              EventManager::SendEvent("LR23Off");
-              EventManager::SendEvent("LR33");
-              EventManager::SendEvent("Panel3Off");
-            }
-            if (Script::getInstance().GetFlag(24) == 1)
-            {
-              Script::getInstance().SetFlag(24, 0);
-              EventManager::SendEvent("LR24Off");
-              EventManager::SendEvent("LR34");
-              EventManager::SendEvent("Panel4Off");
-            }
-            if (Script::getInstance().GetFlag(25) == 1)
-            {
-              Script::getInstance().SetFlag(25, 0);
-              EventManager::SendEvent("LR25Off");
-              EventManager::SendEvent("LR35");
-              EventManager::SendEvent("Panel5Off");
-            }
-            if (Script::getInstance().GetFlag(26) == 1)
-            {
-              Script::getInstance().SetFlag(26, 0);
-              EventManager::SendEvent("LR26Off");
-              EventManager::SendEvent("LR36");
-              EventManager::SendEvent("Panel6Off");
-            }
-            if (Script::getInstance().GetFlag(27) == 1)
-            {
-              Script::getInstance().SetFlag(27, 0);
-              EventManager::SendEvent("LR27Off");
-              EventManager::SendEvent("LR37");
-              EventManager::SendEvent("Panel7Off");
-            }
-            if (Script::getInstance().GetFlag(28) == 1)
-            {
-              Script::getInstance().SetFlag(28, 0);
-              EventManager::SendEvent("LR28Off");
-              EventManager::SendEvent("LR38");
-              EventManager::SendEvent("Panel8Off");
-            }
-            if (Script::getInstance().GetFlag(29) == 1)
-            {
-              Script::getInstance().SetFlag(29, 0);
-              EventManager::SendEvent("LR29Off");
-              EventManager::SendEvent("LR39");
-              EventManager::SendEvent("Panel9Off");
-            }
-          }
-          else if (Script::getInstance().GetFlag(21) == 1)
+        static auto fnPanel = [](int panelidx) {
+          const char* paneloffevents[] = { 0,
+            "Panel1Off","Panel2Off","Panel3Off","Panel4Off","Panel5Off",
+            "Panel6Off","Panel7Off","Panel8Off","Panel9Off",0
+          };
+          const char* panelonevents[] = { 0,
+            "Panel1","Panel2","Panel3","Panel4","Panel5",
+            "Panel6","Panel7","Panel8","Panel9",0
+          };
+          const char* panelonop2[] = { 0,
+            "LR21","LR22","LR23","LR24","LR25",
+            "LR26","LR27","LR28","LR29",0
+          };
+          const char* paneloffop2[] = { 0,
+            "LR21Off","LR22Off","LR23Off","LR24Off","LR25Off",
+            "LR26Off","LR27Off","LR28Off","LR29Off",0
+          };
+          const char* paneloffop3[] = { 0,
+            "LR31","LR32","LR33","LR34","LR35",
+            "LR36","LR37","LR38","LR39",0
+          };
+          const char* panelonop3[] = { 0,
+            "LR31Off","LR32Off","LR33Off","LR34Off","LR35Off",
+            "LR36Off","LR37Off","LR38Off","LR39Off",0
+          };
+          /* If my panel is on, then turn off my panel.
+           * else, turn on my panel and turn off remaining panels. */
+          if (Script::getInstance().GetFlag(20 + panelidx) == 1)
           {
             Script::getInstance().SetFlag(20, 1);
-            Script::getInstance().SetFlag(21, 0);
-            EventManager::SendEvent("LR21Off");
-            EventManager::SendEvent("LR31");
-            EventManager::SendEvent("Panel1Off");
+            Script::getInstance().SetFlag(20 + panelidx, 0);
+            EventManager::SendEvent(paneloffop2[panelidx]);
+            EventManager::SendEvent(paneloffop3[panelidx]);
+            EventManager::SendEvent(paneloffevents[panelidx]);
+          }
+          else
+          {
+            Script::getInstance().SetFlag(20, 0);
+            Script::getInstance().SetFlag(20 + panelidx, 1);
+            EventManager::SendEvent(panelonevents[panelidx]);
+            EventManager::SendEvent(panelonop2[panelidx]);
+            EventManager::SendEvent(panelonop3[panelidx]);
+            for (int i = 1; i < 10; ++i)
+            {
+              if (panelidx != i && Script::getInstance().GetFlag(20 + i) == 1)
+              {
+                Script::getInstance().SetFlag(20 + i, 0);
+                EventManager::SendEvent(paneloffop2[i]);
+                EventManager::SendEvent(paneloffop3[i]);
+                EventManager::SendEvent(paneloffevents[i]);
+              }
+            }
           }
         };
+        fnmap["Click1"] = []() { fnPanel(1); };
+        fnmap["Click2"] = []() { fnPanel(2); };
+        fnmap["Click3"] = []() { fnPanel(3); };
+        fnmap["Click4"] = []() { fnPanel(4); };
+        fnmap["Click5"] = []() { fnPanel(5); };
+        fnmap["Click6"] = []() { fnPanel(6); };
+        fnmap["Click7"] = []() { fnPanel(7); };
+        fnmap["Click8"] = []() { fnPanel(8); };
+        fnmap["Click9"] = []() { fnPanel(9); };
         /* Events for PlayScene */
         fnmap["PlayLoading"] = []() {
           Script::getInstance().SetFlag(80, 1);   // Loading
