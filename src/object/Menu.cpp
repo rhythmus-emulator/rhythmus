@@ -76,6 +76,12 @@ Menu::Menu()
 Menu::~Menu()
 {
   Clear();
+  for (auto* p : bar_)
+  {
+    RemoveChild(p);
+    delete p;
+  }
+  bar_.clear();
 }
 
 void Menu::AddData(MenuData* d) { data_.push_back(d); }
@@ -116,14 +122,8 @@ int Menu::index() const { return data_index_; }
 
 void Menu::Clear()
 {
-  for (auto* p : bar_)
-  {
-    RemoveChild(p);
-    delete p;
-  }
   for (auto* p : data_)
     delete p;
-  bar_.clear();
   data_.clear();
 }
 
@@ -151,6 +151,9 @@ void Menu::set_infinite_scroll(bool inf_scroll)
 {
   inf_scroll_ = inf_scroll;
 }
+
+void Menu::RebuildData()
+{}
 
 void Menu::RebuildItems()
 {
@@ -368,6 +371,7 @@ void Menu::Load(const Metric &metric)
   );
 
   // Build item and set basic position
+  RebuildData();
   RebuildItems();
   UpdateItemPos();
 

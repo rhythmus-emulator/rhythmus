@@ -58,10 +58,6 @@ public:
   Menu();
   ~Menu();
 
-  void AddData(MenuData* d);
-  template <typename T>
-  T* NewData() { T* p = new T(); AddData(p); return p; }
-
   MenuData& GetSelectedMenuData();
   MenuData& GetMenuDataByIndex(int index);
   MenuData* GetMenuDataByName(const std::string& name);
@@ -76,12 +72,16 @@ public:
 
   /* @brief Clear all list items and item data. */
   void Clear();
+  void AddData(MenuData* d);
 
   void set_display_count(int display_count);
   void set_focus_min_index(int min_index);
   void set_focus_max_index(int max_index);
   void set_focus_index(int index);
   void set_infinite_scroll(bool inf_scroll);
+
+  /* @brief Rebuild source data. */
+  virtual void RebuildData();
 
   /* @brief Build items to display which is suitable for current data_index.
    * This method must be called when data_index is changed. */

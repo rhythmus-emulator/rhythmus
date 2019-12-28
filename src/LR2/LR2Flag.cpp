@@ -4,6 +4,7 @@
 #include "Song.h"
 #include "Script.h"
 #include "SceneManager.h"
+#include "object/MusicWheel.h"
 #include "rutil.h"  /* string modification */
 #include "Error.h"
 
@@ -141,6 +142,32 @@ namespace rhythmus
         fnmap["Click7"] = []() { fnPanel(7); };
         fnmap["Click8"] = []() { fnPanel(8); };
         fnmap["Click9"] = []() { fnPanel(9); };
+        fnmap["Click10"] = []() {
+          // change difficulty filtering of MusicWheel
+          // XXX: use dynamic_cast for safety?
+          auto *wheel = static_cast<MusicWheel*>(
+            SceneManager::get_current_scene()->FindChildByName("MusicWheel")
+            );
+          if (!wheel) return;
+          EventManager::SendEvent("LR11");
+        };
+        fnmap["Click11"] = []() {
+          // change key filtering of MusicWheel
+          auto *wheel = static_cast<MusicWheel*>(
+            SceneManager::get_current_scene()->FindChildByName("MusicWheel")
+            );
+          if (!wheel) return;
+          EventManager::SendEvent("LR11");
+        };
+        fnmap["Click12"] = []() {
+          // change sort of MusicWheel
+          auto *wheel = static_cast<MusicWheel*>(
+            SceneManager::get_current_scene()->FindChildByName("MusicWheel")
+            );
+          if (!wheel) return;
+          wheel->NextSort();
+          Script::getInstance().SetButtonNumber(12, wheel->GetSort());
+        };
         /* Events for PlayScene */
         fnmap["PlayLoading"] = []() {
           Script::getInstance().SetFlag(80, 1);   // Loading

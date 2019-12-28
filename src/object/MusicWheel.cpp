@@ -80,6 +80,11 @@ MusicWheel::MusicWheel()
 {
   set_name("MusicWheel");
   set_infinite_scroll(true);
+  sort_.type = 0;
+  sort_.invalidate = false;
+  filter_.gamemode = 0;
+  filter_.difficulty = 0;
+  filter_.invalidate = false;
 #if 0
   set_display_count(24);
   set_focus_max_index(12);
@@ -206,6 +211,163 @@ void MusicWheel::OnSelectChange(const MenuData *data, int direction)
 void MusicWheel::OnSelectChanged()
 {
   EventManager::SendEvent("SongSelectChanged");
+}
+
+void MusicWheel::RebuildData()
+{
+  // filter songs
+  if (filter_.invalidate)
+  {
+    filter_.invalidate = false;
+    data_filtered_.clear();
+    size_t i = 0;
+    bool pass_filter;
+    for (auto &song : SongList::getInstance())
+    {
+      pass_filter = true;
+      switch (filter_.gamemode)
+      {
+      case Gamemode::kGamemodeNone:
+        break;
+      case Gamemode::kGamemode4Key:
+      case Gamemode::kGamemode5Key:
+      case Gamemode::kGamemode7Key:
+      case Gamemode::kGamemodeDDR:
+      case Gamemode::kGamemodeEZ2DJ:
+      case Gamemode::kGamemodeIIDXSP:
+      case Gamemode::kGamemodeIIDXDP:
+        pass_filter = (song.type == filter_.gamemode);
+      }
+      if (!pass_filter)
+        continue;
+
+      MusicWheelData data;
+      data.name = song.title;
+      data.title = song.title;
+      data.artist = song.artist;
+      data.subtitle = song.subtitle;
+      data.subartist = song.subartist;
+      data.songpath = song.songpath;
+      data.chartname = song.chartpath;
+      data.type = Songitemtype::kSongitemSong;
+      data.level = song.level;
+      data.index = i++;
+      data_filtered_.push_back(data);
+    }
+  }
+
+  // sort data object
+  if (sort_.invalidate)
+  {
+    sort_.invalidate = false;
+    switch (sort_.type)
+    {
+    case Sorttype::kNoSort:
+      break;
+    case Sorttype::kSortByLevel:
+      std::sort(data_filtered_.begin(), data_filtered_.end(),
+        [](const MusicWheelData &a, const MusicWheelData &b) {
+        return a.level < b.level;
+      });
+      break;
+    case Sorttype::kSortByName:
+      std::sort(data_filtered_.begin(), data_filtered_.end(),
+        [](const MusicWheelData &a, const MusicWheelData &b) {
+        return strcmp(a.title.c_str(), b.title.c_str());
+      });
+      break;
+    default:
+      ASSERT(0);
+    }
+  }
+
+  // clear items and store previously selected item
+  std::string previous_selection;
+  previous_selection = get_selected_data(0).name;
+  Clear();
+
+  // add songs & default sections/items
+  MusicWheelData sections[10];
+  sections[0].name = "all_songs";
+  sections[0].title = "All Songs";
+  sections[0].type = Songitemtype::kSongitemFolder;
+  sections[0].name = "new_songs";
+  sections[1].title = "New Songs";
+  sections[1].type = Songitemtype::kSongitemFolder;
+  for (size_t i = 0; i < 2; ++i)
+  {
+    if (sections[i].name == current_section_)
+    {
+      // TODO: filtering once again by section type/name
+      for (auto &d : data_filtered_)
+        data_.push_back(new MusicWheelData(d));
+    }
+  }
+  
+  // re-select previous selection
+  for (size_t i = 0; i < data_.size(); ++i)
+  {
+    if (data_[i]->name == previous_selection)
+    {
+      data_index_ = i;
+      break;
+    }
+  }
+
+  // rebuild rendering items
+  RebuildItems();
+  UpdateItemPos();
+}
+
+void MusicWheel::OpenSection(const std::string &section)
+{
+  current_section_ = section;
+}
+
+void MusicWheel::Sort(int sort)
+{
+  sort_.type = sort;
+  sort_.invalidate = true;
+}
+
+void MusicWheel::SetGamemodeFilter(int filter)
+{
+  filter_.gamemode = filter;
+  filter_.invalidate = true;
+}
+
+void MusicWheel::SetDifficultyFilter(int filter)
+{
+  filter_.difficulty = filter;
+  filter_.invalidate = true;
+}
+
+void MusicWheel::NextSort()
+{
+  sort_.type = (sort_.type + 1) % Sorttype::kSortEnd;
+  sort_.invalidate = true;
+}
+
+void MusicWheel::NextGamemodeFilter()
+{
+  filter_.gamemode = (filter_.gamemode + 1) % Gamemode::kGamemodeEnd;
+  filter_.invalidate = true;
+}
+
+void MusicWheel::NextDifficultyFilter()
+{
+  filter_.difficulty = (filter_.difficulty + 1) % Difficulty::kDifficultyEnd;
+  filter_.invalidate = true;
+}
+
+int MusicWheel::GetSort() const
+{
+  return sort_.type;
+}
+
+int MusicWheel::GetDifficultyFilter() const
+{
+  return filter_.difficulty;
 }
 
 }

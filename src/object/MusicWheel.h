@@ -9,6 +9,21 @@
 namespace rhythmus
 {
 
+enum Songitemtype
+{
+  kSongitemSong,
+  kSongitemFolder,
+  kSongitemCustomFolder,
+  kSongitemNewFolder,
+  kSongitemRivalFolder,
+  kSongitemRivalSong,
+  kSongitemCourseFolder,
+  kSongitemCourse,
+  kSongitemRandomSong,
+  kSongitemRandomCourse,
+  kSongitemEnd,
+};
+
 class MusicWheelData : public MenuData
 {
 public:
@@ -50,10 +65,33 @@ public:
   virtual void Load(const Metric &metric);
   virtual void OnSelectChange(const MenuData *data, int direction);
   virtual void OnSelectChanged();
+  virtual void RebuildData();
+
+  void OpenSection(const std::string &section);
+  void Sort(int sort);
+  void SetGamemodeFilter(int filter);
+  void SetDifficultyFilter(int filter);
+  void NextSort();
+  void NextGamemodeFilter();
+  void NextDifficultyFilter();
+  int GetSort() const;
+  int GetDifficultyFilter() const;
 
   friend class MusicWheelItem;
 
 private:
+  struct {
+    int type;
+    bool invalidate;
+  } sort_;
+  struct {
+    int gamemode;
+    int difficulty;
+    bool invalidate;
+  } filter_;
+  std::string current_section_;
+  std::vector<MusicWheelData> data_filtered_;
+
   virtual MenuItem* CreateMenuItem();
 };
 

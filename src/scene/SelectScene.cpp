@@ -31,9 +31,6 @@ void SelectScene::LoadScene()
   // (e.g. LR2 command)
   AddChild(&wheel_);
 
-  // Add select data
-  MakeSelectDataList();
-
   Scene::LoadScene();
 }
 
@@ -95,31 +92,6 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
       // Song selection - immediately change scene mode
       CloseScene(true);
     }
-  }
-}
-
-void SelectScene::MakeSelectDataList()
-{
-  int i = 0;
-  for (auto &song : SongList::getInstance())
-  {
-    auto &item = *wheel_.NewData<MusicWheelData>();
-    item.title = song.title;
-    item.artist = song.artist;
-    item.subtitle = song.subtitle;
-    item.subartist = song.subartist;
-    item.songpath = song.songpath;
-    item.chartname = song.chartpath;
-    item.type = 0;
-    item.level = song.level;
-    item.index = i++;
-  }
-
-  if (wheel_.size() == 0)
-  {
-    auto &item = *wheel_.NewData<MusicWheelData>();
-    item.title = "(No Song)";
-    item.index = -1;
   }
 }
 

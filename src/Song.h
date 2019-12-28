@@ -17,6 +17,39 @@ namespace rparser { class Song; class Chart; }
 namespace rhythmus
 {
 
+enum Gamemode
+{
+  kGamemodeNone,
+  kGamemode4Key,
+  kGamemode5Key,
+  kGamemode7Key,
+  kGamemodeIIDXSP,
+  kGamemodeIIDXDP,
+  kGamemodePopn,
+  kGamemodeEZ2DJ,
+  kGamemodeDDR,
+  kGamemodeEnd,
+};
+
+enum Difficulty
+{
+  kDifficultyNone,
+  kDifficultyBeginner,
+  kDifficultyEasy,
+  kDifficultyNormal,
+  kDifficultyHard,
+  kDifficultyInsane,
+  kDifficultyEnd,
+};
+
+enum Sorttype
+{
+  kNoSort,
+  kSortByName,
+  kSortByLevel,
+  kSortEnd,
+};
+
 struct SongListData
 {
   std::string title;
@@ -26,6 +59,7 @@ struct SongListData
   std::string genre;
   std::string songpath;
   std::string chartpath;
+  int type;
   int level;
   int judgediff;
   int modified_date;

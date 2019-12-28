@@ -84,7 +84,7 @@ void SongList::Load()
     char *errmsg;
     sqlite3_exec(db,
       "SELECT title, subtitle, artist, subartist, genre, "
-      "songpath, chartpath, level, judgediff, modified_date "
+      "songpath, chartpath, type, level, judgediff, modified_date "
       "from songs;",
       &SongList::sql_songlist_callback, this, &errmsg);
     if (rc != SQLITE_OK)
@@ -163,6 +163,7 @@ void SongList::Save()
       "genre CHAR(64),"
       "songpath CHAR(1024) NOT NULL,"
       "chartpath CHAR(512) NOT NULL,"
+      "type INT,"
       "level INT,"
       "judgediff INT,"
       "modified_date INT"
@@ -181,10 +182,10 @@ void SongList::Save()
       std::string sql = format_string(
         "INSERT INTO songs VALUES ("
         "'%s', '%s', '%s', '%s', '%s', '%s', '%s',"
-        "%d, %d, %d"
+        "%d, %d, %d, %d"
         ");",
         s.title, s.subtitle, s.artist, s.subartist, s.genre,
-        s.songpath, s.chartpath, s.level, s.judgediff, s.modified_date
+        s.songpath, s.chartpath, s.type, s.level, s.judgediff, s.modified_date
       );
       sqlite3_exec(db, sql.c_str(),
         &SongList::sql_dummy_callback, this, &errmsg);
@@ -274,8 +275,24 @@ void SongList::LoadInvalidationList()
       dat.artist = meta.artist;
       dat.subartist = meta.subartist;
       dat.genre = meta.genre;
+      switch (c->GetSongType())
+      {
+      case rparser::SONGTYPE::BMS:
+        // TODO: move it into metadata or songtype
+        if (c->GetNoteData().get_track_count() <= 8)
+          dat.type = Gamemode::kGamemodeIIDXSP;
+        else
+          dat.type = Gamemode::kGamemodeIIDXSP;
+        break;
+      case rparser::SONGTYPE::PMS:
+        dat.type = Gamemode::kGamemodePopn;
+        break;
+      default:
+        dat.type = Gamemode::kGamemodeNone;
+      }
       dat.level = meta.level;
       dat.judgediff = meta.difficulty;
+      dat.modified_date = 0; // TODO
 
       {
         std::lock_guard<std::mutex> lock(songlist_mutex_);
@@ -333,9 +350,10 @@ int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **c
     sdata.genre = argv[4];
     sdata.songpath = argv[5];
     sdata.chartpath = argv[6];
-    sdata.level = atoi(argv[7]);
-    sdata.judgediff = atoi(argv[8]);
-    sdata.modified_date = atoi(argv[9]);
+    sdata.type = atoi(argv[7]);
+    sdata.level = atoi(argv[8]);
+    sdata.judgediff = atoi(argv[9]);
+    sdata.modified_date = atoi(argv[10]);
     self->songs_.push_back(sdata);
   }
   return 0;
