@@ -46,6 +46,7 @@ void Script::SetFlag(int flag_no, int value)
 
 int Script::GetFlag(int flag_no) const
 {
+  if (flag_no >= 1000) return 0;
   if (flag_no < 0)
     return flags_[-flag_no] == 0 ? 1 : 0;
   else
@@ -405,6 +406,8 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       BaseObject *obj = CreateObjectFromMetric(name, *metric);
       if (obj)
       {
+        /* Without hide, all objects before timer activation is displayed.
+         * So set all objects hidden before registering to children. */
         obj->Hide();
         scene_->RegisterChild(obj);
       }

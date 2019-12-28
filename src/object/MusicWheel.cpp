@@ -2,9 +2,31 @@
 #include "SceneManager.h"
 #include "Script.h"
 #include "Setting.h"
+#include "rparser.h"
 
 namespace rhythmus
 {
+
+void MusicWheelData::NextChart()
+{
+  if (charts_.empty())
+    return;
+  chartidx = (chartidx + 1) % charts_.size();
+  ApplyFromSongListData(charts_[chartidx]);
+}
+
+void MusicWheelData::ApplyFromSongListData(SongListData &song)
+{
+  name = song.chartpath;
+  title = song.title;
+  artist = song.artist;
+  subtitle = song.subtitle;
+  subartist = song.subartist;
+  songpath = song.songpath;
+  chartname = song.chartpath;
+  level = song.level;
+  type = Songitemtype::kSongitemSong;
+}
 
 MusicWheelItem::MusicWheelItem()
 {
@@ -54,21 +76,53 @@ bool MusicWheelItem::LoadFromMenuData(MenuData *d)
 
   MusicWheelData *data = static_cast<MusicWheelData*>(d);
 
+  static const int type_to_baridx[] = {
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    7,
+    9
+  };
+
+  static const bool type_to_disp_level[] = {
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false,
+    false
+  };
+
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
-    if (i == data->type)
+    if (i == type_to_baridx[data->type])
       background_[i].Show();
     else
       background_[i].Hide();
   }
 
-  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
-  {
-    // TODO: display proper bar type
-  }
-
   title_->SetText(data->title);
   level_->SetNumber(data->level);
+
+  if (type_to_disp_level[data->type])
+    level_->Show();
+  else
+  {
+    level_->Hide();
+    // XXX: kind of trick
+    // LR0 event causes level in not hidden state,
+    // so make it empty string instead of hidden.
+    level_->SetText(std::string());
+  }
 
   return true;
 }
@@ -213,6 +267,32 @@ void MusicWheel::OnSelectChanged()
   EventManager::SendEvent("SongSelectChanged");
 }
 
+void MusicWheel::NavigateLeft()
+{
+  // section close only if section is opened.
+  if (!current_section_.empty())
+    CloseSection();
+}
+
+void MusicWheel::NavigateRight()
+{
+  // if selected item is folder and not opened, then go into it.
+  // if selected is folder and opened, then close it.
+  // if song, change select difficulty and rebuild item.
+  auto &sel_data = get_selected_data(0);
+  if (sel_data.type == Songitemtype::kSongitemFolder)
+  {
+    if (sel_data.name == current_section_)
+      CloseSection();
+    else
+      OpenSection(sel_data.name);
+  }
+  else if (sel_data.type == Songitemtype::kSongitemSong)
+  {
+    sel_data.NextChart();
+  }
+}
+
 void MusicWheel::RebuildData()
 {
   // filter songs
@@ -242,15 +322,9 @@ void MusicWheel::RebuildData()
         continue;
 
       MusicWheelData data;
-      data.name = song.title;
-      data.title = song.title;
-      data.artist = song.artist;
-      data.subtitle = song.subtitle;
-      data.subartist = song.subartist;
-      data.songpath = song.songpath;
-      data.chartname = song.chartpath;
+      data.ApplyFromSongListData(song);
+      // TODO: add songdata to existing data if same song path.
       data.type = Songitemtype::kSongitemSong;
-      data.level = song.level;
       data.index = i++;
       data_filtered_.push_back(data);
     }
@@ -283,7 +357,8 @@ void MusicWheel::RebuildData()
 
   // clear items and store previously selected item
   std::string previous_selection;
-  previous_selection = get_selected_data(0).name;
+  if (!data_.empty())
+    previous_selection = get_selected_data(0).name;
   Clear();
 
   // add songs & default sections/items
@@ -296,6 +371,7 @@ void MusicWheel::RebuildData()
   sections[1].type = Songitemtype::kSongitemFolder;
   for (size_t i = 0; i < 2; ++i)
   {
+    AddData(new MusicWheelData(sections[i]));
     if (sections[i].name == current_section_)
     {
       // TODO: filtering once again by section type/name
@@ -322,6 +398,11 @@ void MusicWheel::RebuildData()
 void MusicWheel::OpenSection(const std::string &section)
 {
   current_section_ = section;
+}
+
+void MusicWheel::CloseSection()
+{
+  current_section_.clear();
 }
 
 void MusicWheel::Sort(int sort)

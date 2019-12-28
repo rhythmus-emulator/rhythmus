@@ -71,6 +71,16 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
       wheel_.NavigateDown();
       SongList::getInstance().select(wheel_.get_selected_data(0).index);
     }
+    else if (e.KeyCode() == GLFW_KEY_RIGHT)
+    {
+      wheel_.NavigateRight();
+      wheel_.RebuildData();
+    }
+    else if (e.KeyCode() == GLFW_KEY_LEFT)
+    {
+      wheel_.NavigateLeft();
+      wheel_.RebuildData();
+    }
   }
 
   if (e.type() == InputEvents::kOnKeyUp)

@@ -37,6 +37,13 @@ public:
   int type;
   int level;
   int index;
+
+  void NextChart();
+  void ApplyFromSongListData(SongListData &song);
+
+private:
+  size_t chartidx;
+  std::vector<SongListData> charts_;
 };
 
 /* @brief Pure music wheel item interface */
@@ -65,9 +72,12 @@ public:
   virtual void Load(const Metric &metric);
   virtual void OnSelectChange(const MenuData *data, int direction);
   virtual void OnSelectChanged();
+  virtual void NavigateLeft();
+  virtual void NavigateRight();
   virtual void RebuildData();
 
   void OpenSection(const std::string &section);
+  void CloseSection();
   void Sort(int sort);
   void SetGamemodeFilter(int filter);
   void SetDifficultyFilter(int filter);

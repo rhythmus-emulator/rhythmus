@@ -87,10 +87,10 @@ public:
    * This method must be called when data_index is changed. */
   virtual void RebuildItems();
 
-  void NavigateDown();
-  void NavigateUp();
-  void NavigateLeft();
-  void NavigateRight();
+  virtual void NavigateDown();
+  virtual void NavigateUp();
+  virtual void NavigateLeft();
+  virtual void NavigateRight();
 
   /* TODO: curve & rot with z pos? */
 

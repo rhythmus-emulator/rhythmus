@@ -434,7 +434,8 @@ void BaseObject::SetLR2DST(
   if (tween_.empty() && time > 0)
   {
     // dummy tween should invisible
-    Hide();
+    // TODO: need extra command for this? or use delay command/property?
+    //Hide();
     SetDeltaTweenTime(time);
   }
 
@@ -442,7 +443,7 @@ void BaseObject::SetLR2DST(
   SetDeltaTweenTime(0);
 
   // Now specify current tween.
-  GetDestDrawProperty().display = true;
+  //GetDestDrawProperty().display = true;
   SetPos(x, y);
   SetSize(w, h);
   SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
@@ -478,6 +479,7 @@ void BaseObject::SetLR2DSTCommand(const std::string &lr2dst)
 
 void BaseObject::SetLR2DSTCommandInternal(const CommandArgs &args)
 {
+  Show();
   tween_.clear();
   CommandArgs la;
   la.set_separator('|');
@@ -645,7 +647,10 @@ void BaseObject::UpdateTween(float delta_ms)
     if (tween_.size() == 1)
     {
       auto &t = tween_.front();
+      // XXX: copy except display property. need to be fixed later.
+      bool _disp = current_prop_.display;
       current_prop_ = t.draw_prop;
+      current_prop_.display = _disp;
       if (!t.commands.empty())
         RunCommand(t.commands);
       tween_.clear();
@@ -691,7 +696,8 @@ void BaseObject::UpdateTween(float delta_ms)
   const TweenState &t1 = tween_.front();
   const TweenState &t2 = *std::next(tween_.begin());
 
-  ti.display = t1.draw_prop.display;
+  // XXX: is display property necessary?
+  //ti.display = t1.draw_prop.display;
 
   // If not display, we don't need to calculate further away.
   if (ti.display)
