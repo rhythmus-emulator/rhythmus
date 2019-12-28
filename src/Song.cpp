@@ -268,6 +268,7 @@ void SongList::LoadInvalidationList()
       auto &meta = c->GetMetaData();
       meta.SetMetaFromAttribute();
       meta.SetUtf8Encoding();
+      c->InvalidateCharttype();
       dat.chartpath = c->GetFilename();
       // TODO: automatically extract subtitle from title
       dat.title = meta.title;
@@ -275,16 +276,15 @@ void SongList::LoadInvalidationList()
       dat.artist = meta.artist;
       dat.subartist = meta.subartist;
       dat.genre = meta.genre;
-      switch (c->GetSongType())
+      switch (c->GetChartType())
       {
-      case rparser::SONGTYPE::BMS:
-        // TODO: move it into metadata or songtype
-        if (c->GetNoteData().get_track_count() <= 8)
-          dat.type = Gamemode::kGamemodeIIDXSP;
-        else
-          dat.type = Gamemode::kGamemodeIIDXSP;
+      case rparser::CHARTTYPE::IIDXSP:
+        dat.type = Gamemode::kGamemodeIIDXSP;
         break;
-      case rparser::SONGTYPE::PMS:
+      case rparser::CHARTTYPE::IIDXDP:
+        dat.type = Gamemode::kGamemodeIIDXDP;
+        break;
+      case rparser::CHARTTYPE::Popn:
         dat.type = Gamemode::kGamemodePopn;
         break;
       default:

@@ -45,8 +45,10 @@ enum Difficulty
 enum Sorttype
 {
   kNoSort,
-  kSortByName,
+  kSortByTitle,
   kSortByLevel,
+  kSortByClear,
+  kSortByRate,
   kSortEnd,
 };
 

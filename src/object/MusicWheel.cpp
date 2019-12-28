@@ -270,7 +270,7 @@ void MusicWheel::RebuildData()
         return a.level < b.level;
       });
       break;
-    case Sorttype::kSortByName:
+    case Sorttype::kSortByTitle:
       std::sort(data_filtered_.begin(), data_filtered_.end(),
         [](const MusicWheelData &a, const MusicWheelData &b) {
         return strcmp(a.title.c_str(), b.title.c_str());
@@ -305,6 +305,7 @@ void MusicWheel::RebuildData()
   }
   
   // re-select previous selection
+  data_index_ = 0;
   for (size_t i = 0; i < data_.size(); ++i)
   {
     if (data_[i]->name == previous_selection)
@@ -316,7 +317,6 @@ void MusicWheel::RebuildData()
 
   // rebuild rendering items
   RebuildItems();
-  UpdateItemPos();
 }
 
 void MusicWheel::OpenSection(const std::string &section)

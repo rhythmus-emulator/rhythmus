@@ -149,7 +149,20 @@ namespace rhythmus
             SceneManager::get_current_scene()->FindChildByName("MusicWheel")
             );
           if (!wheel) return;
-          EventManager::SendEvent("LR11");
+          static const int difficulty_filter[] = {
+            Difficulty::kDifficultyNone,
+            Difficulty::kDifficultyEasy,
+            Difficulty::kDifficultyNormal,
+            Difficulty::kDifficultyHard,
+            Difficulty::kDifficultyInsane,
+            Difficulty::kDifficultyInsane, /* XXX: difficulty over than insane? */
+          };
+          int val = Script::getInstance().GetNumber(1010);
+          val = (val + 1) % 6;
+          wheel->SetDifficultyFilter(difficulty_filter[val]);
+          wheel->RebuildData();
+          Script::getInstance().SetButtonNumber(10, val);
+          EventManager::SendEvent("LR11"); /* Song selection effect timer */
         };
         fnmap["Click11"] = []() {
           // change key filtering of MusicWheel
@@ -157,7 +170,20 @@ namespace rhythmus
             SceneManager::get_current_scene()->FindChildByName("MusicWheel")
             );
           if (!wheel) return;
-          EventManager::SendEvent("LR11");
+          static const int key_filter[] = {
+            Gamemode::kGamemodeNone,
+            Gamemode::kGamemode5Key,    /* XXX: 5key but IIDX */
+            Gamemode::kGamemodeIIDXSP,
+            Gamemode::kGamemodeIIDXDP,  /* XXX: 10 key */
+            Gamemode::kGamemodeIIDXDP,
+            Gamemode::kGamemodePopn,
+          };
+          int val = Script::getInstance().GetNumber(1011);
+          val = (val + 1) % 6;
+          wheel->SetDifficultyFilter(key_filter[val]);
+          wheel->RebuildData();
+          Script::getInstance().SetButtonNumber(11, val);
+          EventManager::SendEvent("LR11"); /* Song selection effect timer */
         };
         fnmap["Click12"] = []() {
           // change sort of MusicWheel
@@ -165,7 +191,17 @@ namespace rhythmus
             SceneManager::get_current_scene()->FindChildByName("MusicWheel")
             );
           if (!wheel) return;
-          wheel->NextSort();
+          static const int sort_filter[] = {
+            Sorttype::kNoSort,
+            Sorttype::kSortByLevel,
+            Sorttype::kSortByTitle,
+            Sorttype::kSortByClear,
+          };
+          int val = Script::getInstance().GetNumber(1012);
+          val = (val + 1) % 4;
+          wheel->SetDifficultyFilter(sort_filter[val]);
+          wheel->RebuildData();
+          Script::getInstance().SetButtonNumber(12, val);
           Script::getInstance().SetButtonNumber(12, wheel->GetSort());
         };
         /* Events for PlayScene */

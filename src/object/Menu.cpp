@@ -195,7 +195,6 @@ void Menu::NavigateDown()
 
   // update items
   RebuildItems();
-  UpdateItemPos();
 
   OnSelectChange(data_[data_index_], 1);
 }
@@ -225,7 +224,6 @@ void Menu::NavigateUp()
 
   // update items
   RebuildItems();
-  UpdateItemPos();
 
   OnSelectChange(data_[data_index_], -1);
 }
@@ -373,7 +371,6 @@ void Menu::Load(const Metric &metric)
   // Build item and set basic position
   RebuildData();
   RebuildItems();
-  UpdateItemPos();
 
   // selectchange for initiailize.
   OnSelectChange(data_[data_index_], 0);
