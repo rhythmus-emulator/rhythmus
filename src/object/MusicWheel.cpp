@@ -25,6 +25,7 @@ void MusicWheelData::ApplyFromSongListData(SongListData &song)
   songpath = song.songpath;
   chartname = song.chartpath;
   level = song.level;
+  difficulty = song.difficulty;
   type = Songitemtype::kSongitemSong;
 }
 
@@ -40,7 +41,7 @@ void MusicWheelItem::Load(const Metric &metric)
   title_->LoadByName();
   title_->LoadCommandWithNamePrefix(metric);
 
-  /* title object don't affected by op code. */
+  /* title object won't be affected by op code. */
   title_->SetIgnoreVisibleGroup(true);
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
@@ -54,17 +55,17 @@ void MusicWheelItem::Load(const Metric &metric)
       background_[i].SetAllTweenPos(0, 0);
   }
 
-  // TODO: Set NumberText or NumberSprite.
-  /* TODO: NumberSpriteLevel metric */
-  level_ = std::make_unique<Number>();
-  level_->set_name("MusicWheelLevel0");
-  level_->LoadByName();
-  level_->LoadCommandWithNamePrefix(metric);
+  for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
+  {
+    level_[i].set_name("MusicWheelLevel" + std::to_string(i));
+    level_[i].LoadByName();
+    level_[i].LoadCommandWithNamePrefix(metric);
+  }
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
-  {
     AddChild(&background_[i]);
-  }
+  for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
+    AddChild(&level_[i]);
   AddChild(&*title_);
   AddChild(&*level_);
 }
@@ -73,8 +74,6 @@ bool MusicWheelItem::LoadFromMenuData(MenuData *d)
 {
   if (!MenuItem::LoadFromMenuData(d))
     return false;
-
-  MusicWheelData *data = static_cast<MusicWheelData*>(d);
 
   static const int type_to_baridx[] = {
     0,
@@ -102,6 +101,10 @@ bool MusicWheelItem::LoadFromMenuData(MenuData *d)
     false
   };
 
+  MusicWheelData *data = static_cast<MusicWheelData*>(d);
+
+  title_->SetText(data->title);
+
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
     if (i == type_to_baridx[data->type])
@@ -110,18 +113,21 @@ bool MusicWheelItem::LoadFromMenuData(MenuData *d)
       background_[i].Hide();
   }
 
-  title_->SetText(data->title);
-  level_->SetNumber(data->level);
-
-  if (type_to_disp_level[data->type])
-    level_->Show();
-  else
+  for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
   {
-    level_->Hide();
-    // XXX: kind of trick
-    // LR0 event causes level in not hidden state,
-    // so make it empty string instead of hidden.
-    level_->SetText(std::string());
+    if (i == data->difficulty)
+    {
+      level_[i].Show();
+      level_[i].SetNumber(data->level);
+    }
+    else
+    {
+      level_[i].Hide();
+      // XXX: kind of trick
+      // LR0 event causes level in not hidden state,
+      // so make it empty string instead of hidden.
+      level_[i].SetText(std::string());
+    }
   }
 
   return true;
@@ -135,10 +141,10 @@ MusicWheel::MusicWheel()
   set_name("MusicWheel");
   set_infinite_scroll(true);
   sort_.type = 0;
-  sort_.invalidate = false;
+  sort_.invalidate = true;
   filter_.gamemode = 0;
   filter_.difficulty = 0;
-  filter_.invalidate = false;
+  filter_.invalidate = true;
 #if 0
   set_display_count(24);
   set_focus_max_index(12);
@@ -269,9 +275,13 @@ void MusicWheel::OnSelectChanged()
 
 void MusicWheel::NavigateLeft()
 {
-  // section close only if section is opened.
+  // Close section only if section is opened.
   if (!current_section_.empty())
+  {
     CloseSection();
+    RebuildData();
+    EventManager::SendEvent("SongSelectChange");
+  }
 }
 
 void MusicWheel::NavigateRight()
@@ -291,6 +301,8 @@ void MusicWheel::NavigateRight()
   {
     sel_data.NextChart();
   }
+  RebuildData();
+  EventManager::SendEvent("SongSelectChange");
 }
 
 void MusicWheel::RebuildData()
@@ -366,9 +378,13 @@ void MusicWheel::RebuildData()
   sections[0].name = "all_songs";
   sections[0].title = "All Songs";
   sections[0].type = Songitemtype::kSongitemFolder;
-  sections[0].name = "new_songs";
+  sections[0].difficulty = 0;
+  sections[0].level = 0;
+  sections[1].name = "new_songs";
   sections[1].title = "New Songs";
   sections[1].type = Songitemtype::kSongitemFolder;
+  sections[1].difficulty = 0;
+  sections[1].level = 0;
   for (size_t i = 0; i < 2; ++i)
   {
     AddData(new MusicWheelData(sections[i]));

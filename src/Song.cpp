@@ -290,8 +290,28 @@ void SongList::LoadInvalidationList()
       default:
         dat.type = Gamemode::kGamemodeNone;
       }
+      switch (meta.difficulty)
+      {
+      case 2:
+        dat.difficulty = Difficulty::kDifficultyNormal;
+        break;
+      case 3:
+        dat.difficulty = Difficulty::kDifficultyHard;
+        break;
+      case 4:
+        dat.difficulty = Difficulty::kDifficultyEx;
+        break;
+      case 5:
+        dat.difficulty = Difficulty::kDifficultyInsane;
+        break;
+      case 0: /* XXX: what is the exact meaning of DIFF 0? */
+      case 1:
+      default:
+        dat.difficulty = Difficulty::kDifficultyEasy;
+        break;
+      }
       dat.level = meta.level;
-      dat.judgediff = meta.difficulty;
+      dat.judgediff = meta.judgerank;
       dat.modified_date = 0; // TODO
 
       {

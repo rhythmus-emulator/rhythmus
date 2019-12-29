@@ -10,6 +10,7 @@ namespace rhythmus
 {
 
 constexpr int NUM_SELECT_BAR_TYPES = 10;
+constexpr int NUM_LEVEL_TYPES = 7;
 constexpr int kDefaultBarCount = 30;
 constexpr int kScrollPosMaxDiff = 3;
 

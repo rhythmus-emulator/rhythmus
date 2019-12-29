@@ -38,6 +38,7 @@ enum Difficulty
   kDifficultyEasy,
   kDifficultyNormal,
   kDifficultyHard,
+  kDifficultyEx,
   kDifficultyInsane,
   kDifficultyEnd,
 };
@@ -63,6 +64,7 @@ struct SongListData
   std::string chartpath;
   int type;
   int level;
+  int difficulty;
   int judgediff;
   int modified_date;
 };

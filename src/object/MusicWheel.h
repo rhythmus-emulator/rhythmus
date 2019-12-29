@@ -37,6 +37,7 @@ public:
   int type;
   int level;
   int index;
+  int difficulty;
 
   void NextChart();
   void ApplyFromSongListData(SongListData &song);
@@ -56,7 +57,7 @@ public:
 
 private:
   Sprite background_[NUM_SELECT_BAR_TYPES];
-  std::unique_ptr<BaseObject> level_;
+  Number level_[NUM_LEVEL_TYPES];
   std::unique_ptr<Text> title_;
 };
 

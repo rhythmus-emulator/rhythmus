@@ -74,12 +74,10 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
     else if (e.KeyCode() == GLFW_KEY_RIGHT)
     {
       wheel_.NavigateRight();
-      wheel_.RebuildData();
     }
     else if (e.KeyCode() == GLFW_KEY_LEFT)
     {
       wheel_.NavigateLeft();
-      wheel_.RebuildData();
     }
   }
 

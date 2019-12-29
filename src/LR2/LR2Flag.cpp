@@ -154,8 +154,8 @@ namespace rhythmus
             Difficulty::kDifficultyEasy,
             Difficulty::kDifficultyNormal,
             Difficulty::kDifficultyHard,
+            Difficulty::kDifficultyEx,
             Difficulty::kDifficultyInsane,
-            Difficulty::kDifficultyInsane, /* XXX: difficulty over than insane? */
           };
           int val = Script::getInstance().GetNumber(1010);
           val = (val + 1) % 6;

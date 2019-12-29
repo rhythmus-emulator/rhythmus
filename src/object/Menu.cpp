@@ -29,7 +29,7 @@ bool MenuItem::LoadFromMenuData(MenuData *d)
   if (data_ == d)
     return false;
   data_ = d;
-  return true;
+  return (d != 0);
 }
 
 void MenuItem::set_dataindex(int dataindex)
@@ -122,6 +122,10 @@ int Menu::index() const { return data_index_; }
 
 void Menu::Clear()
 {
+  /* unreference data from bar items. */
+  for (auto* p : bar_)
+    p->LoadFromMenuData(nullptr);
+  /* now delete all data. */
   for (auto* p : data_)
     delete p;
   data_.clear();
