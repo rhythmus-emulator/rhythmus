@@ -184,7 +184,6 @@ void Game::LoadArgument(const std::string& argv)
     // XXX: what if file load failed?
     push_song(v);
     SongList::getInstance().LoadFileIntoSongList(v);
-    SongList::getInstance().select(0);
   }
 }
 

@@ -170,6 +170,31 @@ private:
   size_t curr_process_idx_;
 };
 
+/* @brief Brief status for play status */
+struct PlayRecord
+{
+  std::string chartname;
+  int timestamp;
+  int seed;
+  int speed;
+  int speed_type;
+  int clear_type;
+  int health_type;
+  int option;
+  int option_dp;
+  int assist;
+  int total_note;
+  int miss, pr, bd, gd, gr, pg;
+  int maxcombo;
+  int score;
+  int playcount;
+  int clearcount;
+  int failcount;
+
+  double rate() const;
+  int exscore() const;
+};
+
 /* @brief context used for game playing */
 class PlayContext
 {
@@ -201,6 +226,7 @@ public:
   TrackIterator GetTrackIterator(size_t track_idx);
 
   Image* GetImage(size_t layer_idx) const;
+  PlayRecord &GetPlayRecord();
 
 private:
   Player &player_;
@@ -223,20 +249,15 @@ private:
   int is_alive_;
   int combo_;
   int last_judge_type_;
-  int total_note_;
   int passed_note_;
-  struct Judge {
-    int miss, pr, bd, gd, gr, pg;
-  };
-  Judge judge_;
+  PlayRecord playrecord_;
 
   Sound* keysounds_[2000]; // XXX: 2000?
   Image* bg_animations_[2000];
+  bool is_play_bgm_;
 
   /* unsaved playing context (for course) */
   /* TODO: should moved to player object ...? */
-
-  Judge course_judge_;
 
   /* replay context */
 
@@ -250,26 +271,8 @@ private:
 
   struct Replay
   {
-    int timestamp;
-    int seed;
-    int speed;
-    int speed_type;
-    int health_type;
-    double rate;
-    int score;
-    int total_note;
-    int option;
-    int option_dp;
-    int assist;
     std::vector<ReplayEvent> events;
   } replay_;
-
-  /* unsaved context (internal) */
-
-  bool is_save_allowed_;
-  bool is_save_record_;
-  bool is_save_replay_;
-  bool is_play_bgm_;
 
   void LoadRecord();
   void SaveRecord();
@@ -285,10 +288,12 @@ public:
   void Load();
   void Save();
 
-  void SetPlayContext(const std::string& chartname);
+  const PlayRecord *GetPlayRecord(const std::string &chartname) const;
+  void SetPlayRecord(const PlayRecord &playrecord);
+  void SetPlayContext(const std::string &chartname);
   void ClearPlayContext();
   PlayContext *GetPlayContext();
-  void AddChartnameToPlay(const std::string& chartname);
+  void AddChartnameToPlay(const std::string &chartname);
   void LoadNextChart();
 
   static Player& getMainPlayer();
@@ -339,11 +344,24 @@ private: \
   {
     int keycode_per_track_[kMaxTrackSize][4];
   } default_keysetting_;
+
+  /* Keysetting. */
   std::map<std::string, KeySetting> keysetting_per_gamemode_;
   KeySetting *curr_keysetting_;
 
+  /* PlayRecord of this player. Filled in Load() method. */
+  std::vector<PlayRecord> playrecords_;
+
+  /* context for currently playing chart */
   PlayContext *play_context_;
+
+  /* XXX: context for course play? */
+  PlayRecord courserecord_;
+  /* reserved charts to be played */
   std::list<std::string> play_chartname_;
+  bool is_courseplay_;
+  bool is_replay_;
+  bool is_save_allowed_;
 
   friend class PlayContext;
 };

@@ -35,7 +35,9 @@ namespace rhythmus
       {
         fnmap["Load"] = []() {
           EventManager::SendEvent("LR0");
-
+        };
+        /* Events for SelectScene */
+        fnmap["SelectSceneLoad"] = []() {
           /* Panel state clear */
           Script::getInstance().SetFlag(20, 1);
           Script::getInstance().SetFlag(21, 0);
@@ -56,8 +58,9 @@ namespace rhythmus
           EventManager::SendEvent("Panel7Off");
           EventManager::SendEvent("Panel8Off");
           EventManager::SendEvent("Panel9Off");
+          Script::getInstance().SetFlag(46, 0);
+          Script::getInstance().SetFlag(47, 1);
         };
-        /* Events for SelectScene */
         fnmap["SongSelectChange"] = []() {
           EventManager::SendEvent("LR10");
           EventManager::SendEvent("LR11");
@@ -159,6 +162,8 @@ namespace rhythmus
           };
           int val = Script::getInstance().GetNumber(1010);
           val = (val + 1) % 6;
+          Script::getInstance().SetFlag(46, val != 0);
+          Script::getInstance().SetFlag(47, val == 0);
           wheel->SetDifficultyFilter(difficulty_filter[val]);
           wheel->RebuildData();
           Script::getInstance().SetButtonNumber(10, val);

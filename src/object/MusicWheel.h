@@ -27,17 +27,9 @@ enum Songitemtype
 class MusicWheelData : public MenuData
 {
 public:
-  std::string title;
-  std::string subtitle;
-  std::string genre;
-  std::string artist;
-  std::string subartist;
-  std::string songpath;
-  std::string chartname;
+  MusicWheelData();
+  SongListData info;
   int type;
-  int level;
-  int index;
-  int difficulty;
 
   void NextChart();
   void ApplyFromSongListData(SongListData &song);

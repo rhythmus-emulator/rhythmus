@@ -84,7 +84,8 @@ void SongList::Load()
     char *errmsg;
     sqlite3_exec(db,
       "SELECT title, subtitle, artist, subartist, genre, "
-      "songpath, chartpath, type, level, judgediff, modified_date "
+      "songpath, chartpath, type, level, judgediff, modified_date, "
+      "notecount, length_ms, bpm_max, bpm_min, is_longnote, is_backspin "
       "from songs;",
       &SongList::sql_songlist_callback, this, &errmsg);
     if (rc != SQLITE_OK)
@@ -137,6 +138,34 @@ void SongList::Load()
   }
 }
 
+int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **colnames)
+{
+  SongList *self = static_cast<SongList*>(_self);
+  for (int i = 0; i < argc; ++i)
+  {
+    SongListData sdata;
+    sdata.title = argv[0];
+    sdata.subtitle = argv[1];
+    sdata.artist = argv[2];
+    sdata.subartist = argv[3];
+    sdata.genre = argv[4];
+    sdata.songpath = argv[5];
+    sdata.chartpath = argv[6];
+    sdata.type = atoi(argv[7]);
+    sdata.level = atoi(argv[8]);
+    sdata.judgediff = atoi(argv[9]);
+    sdata.modified_date = atoi(argv[10]);
+    sdata.notecount = atoi(argv[11]);
+    sdata.length_ms = atoi(argv[12]);
+    sdata.bpm_max = atoi(argv[13]);
+    sdata.bpm_min = atoi(argv[14]);
+    sdata.is_longnote = atoi(argv[15]);
+    sdata.is_backspin = atoi(argv[16]);
+    self->songs_.push_back(sdata);
+  }
+  return 0;
+}
+
 void SongList::Save()
 {
   sqlite3 *db = 0;
@@ -166,7 +195,13 @@ void SongList::Save()
       "type INT,"
       "level INT,"
       "judgediff INT,"
-      "modified_date INT"
+      "modified_date INT,"
+      "notecount INT,"
+      "length_ms INT,"
+      "bpm_max INT,"
+      "bpm_min INT,"
+      "is_longnote INT,"
+      "is_backspin INT"
       ");",
       &SongList::sql_dummy_callback, this, &errmsg);
     if (rc != SQLITE_OK)
@@ -182,10 +217,11 @@ void SongList::Save()
       std::string sql = format_string(
         "INSERT INTO songs VALUES ("
         "'%s', '%s', '%s', '%s', '%s', '%s', '%s',"
-        "%d, %d, %d, %d"
+        "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d"
         ");",
         s.title, s.subtitle, s.artist, s.subartist, s.genre,
-        s.songpath, s.chartpath, s.type, s.level, s.judgediff, s.modified_date
+        s.songpath, s.chartpath, s.type, s.level, s.judgediff, s.modified_date,
+        s.notecount, s.length_ms, s.bpm_max, s.bpm_min, s.is_longnote, s.is_backspin
       );
       sqlite3_exec(db, sql.c_str(),
         &SongList::sql_dummy_callback, this, &errmsg);
@@ -207,11 +243,6 @@ void SongList::Clear()
   load_count_ = 0;
   songs_.clear();
   invalidate_list_.clear();
-
-  song_selected_.level = 0;
-  song_selected_.judgediff = 0;
-  song_selected_.modified_date = 0;
-  song_selected_.title = "(no title)";
 }
 
 void SongList::LoadInvalidationList()
@@ -265,10 +296,8 @@ void SongList::LoadInvalidationList()
         if (!c) break;
         i = INT_MAX; // kind of trick to exit for loop instantly
       }
+      c->Invalidate();
       auto &meta = c->GetMetaData();
-      meta.SetMetaFromAttribute();
-      meta.SetUtf8Encoding();
-      c->InvalidateCharttype();
       dat.chartpath = c->GetFilename();
       // TODO: automatically extract subtitle from title
       dat.title = meta.title;
@@ -313,6 +342,10 @@ void SongList::LoadInvalidationList()
       dat.level = meta.level;
       dat.judgediff = meta.judgerank;
       dat.modified_date = 0; // TODO
+      dat.notecount = static_cast<int>(c->GetScoreableNoteCount());
+      dat.length_ms = static_cast<int>(c->GetSongLastObjectTime() * 1000);
+      dat.is_longnote = c->HasLongnote();
+      dat.is_backspin = 0; // TODO
 
       {
         std::lock_guard<std::mutex> lock(songlist_mutex_);
@@ -357,28 +390,6 @@ void SongList::LoadFileIntoSongList(const std::string& songpath, const std::stri
   LoadInvalidationList();
 }
 
-int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **colnames)
-{
-  SongList *self = static_cast<SongList*>(_self);
-  for (int i = 0; i < argc; ++i)
-  {
-    SongListData sdata;
-    sdata.title = argv[0];
-    sdata.subtitle = argv[1];
-    sdata.artist = argv[2];
-    sdata.subartist = argv[3];
-    sdata.genre = argv[4];
-    sdata.songpath = argv[5];
-    sdata.chartpath = argv[6];
-    sdata.type = atoi(argv[7]);
-    sdata.level = atoi(argv[8]);
-    sdata.judgediff = atoi(argv[9]);
-    sdata.modified_date = atoi(argv[10]);
-    self->songs_.push_back(sdata);
-  }
-  return 0;
-}
-
 int SongList::sql_dummy_callback(void*, int argc, char **argv, char **colnames)
 {
   return 0;
@@ -413,8 +424,6 @@ std::vector<SongListData>::iterator SongList::begin() { return songs_.begin(); }
 std::vector<SongListData>::iterator SongList::end() { return songs_.end(); }
 const SongListData& SongList::get(int i) const { return songs_[i]; }
 SongListData SongList::get(int i) { return songs_[i]; }
-SongListData* SongList::get_current_song_info() { return &song_selected_; }
-void SongList::select(int i) { if (i >= 0 && i < songs_.size()) song_selected_ = songs_[i]; }
 
 
 // ----------------- class SongResourceLoadTask

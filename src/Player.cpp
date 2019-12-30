@@ -355,14 +355,25 @@ void BackgroundDataContext::clear_stack()
   curr_process_idx_ = curr_idx_;
 }
 
+// --------------------------------- PlayRecord
+
+double PlayRecord::rate() const
+{
+  return (double)exscore() / (total_note * 2);
+}
+
+int PlayRecord::exscore() const
+{
+  return pg * 2 + gr * 1;
+}
+
 
 // -------------------------- class PlayContext
 
 PlayContext::PlayContext(Player &player, rparser::Chart &c)
   : player_(player), songtime_(0), measure_(0), beat_(0), timing_seg_data_(nullptr),
     is_alive_(0), health_(0.), combo_(0),
-    last_judge_type_(JudgeTypes::kJudgeNone),
-  is_save_allowed_(true), is_save_record_(true), is_save_replay_(true), is_play_bgm_(true)
+    last_judge_type_(JudgeTypes::kJudgeNone), is_play_bgm_(true)
 {
   timing_seg_data_ = &c.GetTimingSegmentData();
 
@@ -387,29 +398,23 @@ PlayContext::PlayContext(Player &player, rparser::Chart &c)
   for (auto &f : c.GetMetaData().GetBGAChannel()->bga)
     bg_animations_[f.first] = SongResource::getInstance().GetImage(f.second.fn);
 
-  // Set record context
+  // Set PlayRecord / Replay context
+  memset(&playrecord_, 0, sizeof(playrecord_));
+  playrecord_.timestamp = 0;  // TODO: get system timestamp from Util
+  playrecord_.seed = 0;   // TODO
+  playrecord_.speed = player_.game_speed_;
+  playrecord_.speed_type = player_.game_speed_type_;
+  playrecord_.health_type = player_.health_type_;
+  playrecord_.score = 0;
+  playrecord_.total_note = 0; // TODO: use song class?
+  playrecord_.option = player_.option_chart_;
+  playrecord_.option_dp = player_.option_chart_dp_;
+  playrecord_.assist = player_.assist_;
   replay_.events.clear();
-  replay_.timestamp = 0;  // TODO: get system timestamp from Util
-  replay_.seed = 0;   // TODO
-  replay_.speed = player_.game_speed_;
-  replay_.speed_type = player_.game_speed_type_;
-  replay_.health_type = player_.health_type_;
-  replay_.rate = 0;
-  replay_.score = 0;
-  replay_.total_note = 0; // TODO: use song class?
-  replay_.option = player_.option_chart_;
-  replay_.option_dp = player_.option_chart_dp_;
-  replay_.assist = player_.assist_;
-  memset(&course_judge_, 0, sizeof(Judge));
-
-  // initialize judgement and record
-  memset(&judge_, 0, sizeof(Judge));
   RecordPlay(ReplayEventTypes::kReplaySong, 0, 0);
 
   /* Check play record saving allowed, e.g. assist option */
-  bool check = (replay_.assist == 0);
-  is_save_record_ = check;
-  is_save_replay_ = check;
+  bool check = (playrecord_.assist == 0);
 }
 
 void PlayContext::LoadPlay()
@@ -420,15 +425,7 @@ void PlayContext::LoadPlay()
 
 void PlayContext::SavePlay()
 {
-  if (!is_save_allowed_)
-    return;
-
-  // update final result
-
-  if (is_save_record_)
-    SaveRecord();
-  if (is_save_replay_)
-    SaveReplay();
+  SaveRecord();
 }
 
 void PlayContext::LoadRecord()
@@ -475,33 +472,27 @@ void PlayContext::RecordPlay(ReplayEventTypes event_type, int time, int value1, 
   switch (event_type)
   {
   case ReplayEventTypes::kReplayMiss:
-    judge_.miss++;
-    course_judge_.miss++;
+    playrecord_.miss++;
     combo_ = 0;
     break;
   case ReplayEventTypes::kReplayPR:
-    judge_.pr++;
-    course_judge_.pr++;
+    playrecord_.pr++;
     combo_ = 0;
     break;
   case ReplayEventTypes::kReplayBD:
-    judge_.bd++;
-    course_judge_.bd++;
+    playrecord_.bd++;
     combo_ = 0;
     break;
   case ReplayEventTypes::kReplayGD:
-    judge_.gd++;
-    course_judge_.gd++;
+    playrecord_.gd++;
     combo_++;
     break;
   case ReplayEventTypes::kReplayGR:
-    judge_.gr++;
-    course_judge_.gr++;
+    playrecord_.gr++;
     combo_++;
     break;
   case ReplayEventTypes::kReplayPG:
-    judge_.pg++;
-    course_judge_.pg++;
+    playrecord_.pg++;
     combo_++;
     break;
   default:
@@ -519,12 +510,12 @@ double PlayContext::get_time() const { return songtime_; }
 
 double PlayContext::get_rate() const
 {
-  return (double)(judge_.pg * 2 + judge_.gr) / total_note_;
+  return (double)(playrecord_.pg * 2 + playrecord_.gr) / playrecord_.total_note;
 }
 
 double PlayContext::get_current_rate() const
 {
-  return (double)(judge_.pg * 2 + judge_.gr) / passed_note_;
+  return (double)(playrecord_.pg * 2 + playrecord_.gr) / passed_note_;
 }
 
 double PlayContext::get_score() const
@@ -647,6 +638,11 @@ Image* PlayContext::GetImage(size_t layer_idx) const
   return bg_animations_[obj->channel()];
 }
 
+PlayRecord &PlayContext::GetPlayRecord()
+{
+  return playrecord_;
+}
+
 
 // ------------------------------- class Player
 
@@ -657,7 +653,8 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
   game_speed_(1.0), game_constant_speed_(1.0),
   lane_cover_(0.0), hidden_(0.0),
   bms_sp_class_(0), bms_dp_class_(0),
-  play_context_(nullptr)
+  play_context_(nullptr),
+  is_courseplay_(false), is_replay_(false), is_save_allowed_(true)
 {
   if (player_type_ == PlayerTypes::kPlayerGuest)
     is_guest_ = true;
@@ -712,6 +709,8 @@ void Player::Load()
   }
 
   // TODO: load keysetting
+
+  // TODO: load playrecords
 }
 
 void Player::Save()
@@ -720,6 +719,31 @@ void Player::Save()
     return;
 
   config_.SaveToFile(config_path_);
+
+  // TODO: save playrecords
+}
+
+/* XXX: unsafe if playrecords is modified */
+const PlayRecord *Player::GetPlayRecord(const std::string &chartname) const
+{
+  for (auto &r : playrecords_)
+    if (r.chartname == chartname)
+      return &r;
+  return nullptr;
+}
+
+void Player::SetPlayRecord(const PlayRecord &playrecord)
+{
+  for (size_t i = 0; i < playrecords_.size(); ++i)
+  {
+    if (playrecords_[i].chartname == playrecord.chartname)
+    {
+      playrecords_[i] = playrecord;
+      return;
+    }
+  }
+  // TODO: use SQL insert using SQLwrapper
+  playrecords_.push_back(playrecord);
 }
 
 /* @warn: must load proper song to SongResource instance before this function. */
@@ -736,7 +760,43 @@ void Player::SetPlayContext(const std::string& chartname)
 
 void Player::ClearPlayContext()
 {
-  // TODO: bring setting & save records before removing play context
+  // 1. if not courseplay
+  // bring setting & save records before removing play context
+  //
+  // 2. if courseplay
+  // 2-1. if courseplaying
+  // append play info to courseplay context.
+  // 2-2. if course finish
+  // save course play info.
+
+  if (is_save_allowed_ && !is_replay_ && play_context_)
+  {
+    if (!is_courseplay_)
+    {
+      SetPlayRecord(play_context_->GetPlayRecord());
+      // TODO: decide to save record by 'what' policy ..?
+      play_context_->SavePlay();
+    }
+    else
+    {
+      if (!play_chartname_.empty())
+      {
+        courserecord_.pg += play_context_->GetPlayRecord().pg;
+        courserecord_.gr += play_context_->GetPlayRecord().gr;
+        courserecord_.gd += play_context_->GetPlayRecord().gd;
+        courserecord_.pr += play_context_->GetPlayRecord().pr;
+        courserecord_.bd += play_context_->GetPlayRecord().bd;
+        courserecord_.maxcombo = std::max(
+          courserecord_.maxcombo, play_context_->GetPlayRecord().maxcombo);
+        // TODO: append replay info to coursecontext
+      }
+      else
+      {
+        SetPlayRecord(courserecord_);
+      }
+    }
+  }
+
   delete play_context_;
   play_context_ = nullptr;
 }

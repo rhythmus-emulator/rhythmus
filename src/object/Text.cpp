@@ -71,6 +71,8 @@ void Text::SetText(const std::string& s)
 
 void Text::UpdateTextRenderContext()
 {
+  text_render_ctx_.width = 0;
+  text_render_ctx_.height = 0;
   // XXX: breaking loop if first cycle is over should be better
   for (const auto& tvi : text_render_ctx_.textvertex)
   {

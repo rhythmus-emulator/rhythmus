@@ -67,6 +67,12 @@ struct SongListData
   int difficulty;
   int judgediff;
   int modified_date;
+  int notecount;
+  int length_ms;
+  int bpm_max;
+  int bpm_min;
+  int is_longnote;
+  int is_backspin;
 };
 
 /* @brief A singleton class which contains currently loaded Song DB */
@@ -105,20 +111,11 @@ public:
   const SongListData& get(int i) const;
   SongListData get(int i);
 
-  /* @brief get currently selected SongInfo */
-  SongListData* get_current_song_info();
-
-  /* @brief trigger songlist selection */
-  void select(int i);
-
   static SongList& getInstance();
 
 private:
   // loaded songs
   std::vector<SongListData> songs_;
-
-  // currently selected SongListData
-  SongListData song_selected_;
 
   // songs to invalidate
   std::list<std::string> invalidate_list_;

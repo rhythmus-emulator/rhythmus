@@ -32,6 +32,7 @@ void SelectScene::LoadScene()
   AddChild(&wheel_);
 
   Scene::LoadScene();
+  EventManager::SendEvent("SelectSceneLoad");
 }
 
 void SelectScene::CloseScene(bool next)
@@ -64,12 +65,10 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
     if (e.KeyCode() == GLFW_KEY_UP)
     {
       wheel_.NavigateUp();
-      SongList::getInstance().select(wheel_.get_selected_data(0).index);
     }
     else if (e.KeyCode() == GLFW_KEY_DOWN)
     {
       wheel_.NavigateDown();
-      SongList::getInstance().select(wheel_.get_selected_data(0).index);
     }
     else if (e.KeyCode() == GLFW_KEY_RIGHT)
     {
@@ -88,12 +87,12 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
       // Register select song / course into Game / Player state.
       // XXX: can we preload selected song from here before PlayScene...?
       // XXX: what about course selection? select in gamemode?
+      auto &d = wheel_.get_selected_data(0);
+      Game::getInstance().push_song(d.info.songpath);
       FOR_EACH_PLAYER(p, i)
       {
-        auto &d = wheel_.get_selected_data(i);
-        if (i == 1) /* main player */
-          Game::getInstance().push_song(d.songpath);
-        p->AddChartnameToPlay(d.chartname);
+        // TODO: different chart selection for each player
+        p->AddChartnameToPlay(d.name);
       }
       END_EACH_PLAYER()
 
