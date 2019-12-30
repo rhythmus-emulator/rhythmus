@@ -346,6 +346,8 @@ void SongList::LoadInvalidationList()
       dat.length_ms = static_cast<int>(c->GetSongLastObjectTime() * 1000);
       dat.is_longnote = c->HasLongnote();
       dat.is_backspin = 0; // TODO
+      dat.bpm_max = c->GetTimingSegmentData().GetMaxBpm();
+      dat.bpm_min = c->GetTimingSegmentData().GetMinBpm();
 
       {
         std::lock_guard<std::mutex> lock(songlist_mutex_);

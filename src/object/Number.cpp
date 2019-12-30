@@ -172,7 +172,13 @@ void Number::Load(const Metric& metric)
 
 void Number::Refresh()
 {
-  SetNumber(Script::getInstance().GetNumber(GetResourceId()));
+  /* kind of trick to compatible with LR2:
+   * if value is UINT_MIX, then set with empty value. */
+  int v = Script::getInstance().GetNumber(GetResourceId());
+  if (v == 0xFFFFFFFF)
+    SetText(std::string());
+  else
+    SetNumber(v);
 }
 
 void Number::AllocNumberGlyph(size_t cycles)

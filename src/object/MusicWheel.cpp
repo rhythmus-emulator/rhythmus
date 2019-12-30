@@ -242,7 +242,8 @@ void MusicWheel::OnSelectChange(const MenuData *data, int direction)
   /* Song difficulty existence */
   int diff_exist[5] = { 0, 0, 0, 0, 0 };
   int diff_not_exist[5] = { 1, 1, 1, 1, 1 };
-  int exist_single = 0;
+  int levels[5] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+  int diff_type = 0;
   /* TODO: search all difficulty in songlistdata. */
   if (flag_code[2] == 1 /* if song */)
   {
@@ -251,33 +252,45 @@ void MusicWheel::OnSelectChange(const MenuData *data, int direction)
     case Difficulty::kDifficultyEasy:
       diff_exist[0] = 1;
       diff_not_exist[0] = 0;
+      levels[0] = d->info.level;
+      diff_type = 1;
       break;
     case Difficulty::kDifficultyNormal:
       diff_exist[1] = 1;
       diff_not_exist[1] = 0;
+      levels[1] = d->info.level;
+      diff_type = 2;
       break;
     case Difficulty::kDifficultyHard:
       diff_exist[2] = 1;
       diff_not_exist[2] = 0;
+      levels[2] = d->info.level;
+      diff_type = 3;
       break;
     case Difficulty::kDifficultyEx:
       diff_exist[3] = 1;
       diff_not_exist[3] = 0;
+      levels[3] = d->info.level;
+      diff_type = 4;
       break;
     case Difficulty::kDifficultyInsane:
       diff_exist[4] = 1;
       diff_not_exist[4] = 0;
+      levels[4] = d->info.level;
+      diff_type = 5;
       break;
     }
-    exist_single = 1;
   }
   for (size_t i = 0; i < 5; ++i)
   {
     Script::getInstance().SetFlag(500 + i, diff_not_exist[i]);
     Script::getInstance().SetFlag(505 + i, diff_exist[i]);
-    Script::getInstance().SetFlag(510 + i, exist_single); // TODO: single
-    Script::getInstance().SetFlag(515 + i, 0);            // TODO: multiple
+    Script::getInstance().SetFlag(510 + i, diff_type > 0);  // TODO: single
+    Script::getInstance().SetFlag(515 + i, 0);              // TODO: multiple
+    Script::getInstance().SetNumber(45 + i, levels[i]);
+    Script::getInstance().SetFlag(151 + i, diff_type - 1 == i);
   }
+  Script::getInstance().SetFlag(150, diff_type == 0);
 
   /* Load matching playrecord */
   auto *playrecord = Player::getMainPlayer().GetPlayRecord(d->name);
