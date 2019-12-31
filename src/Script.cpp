@@ -392,6 +392,10 @@ void Script::ExecuteLR2Script(const std::string &filepath)
         value = "Font" + value;
       else
         value = "Image" + value;
+      /* Debug signal for op4 string. */
+      CommandArgs args(value);
+      if (args.size() > 12 && !args.Get<std::string>(12).empty())
+        curr_metrics->set("_debug", args.Get<std::string>(12));
     }
 
     /* Set attribute */

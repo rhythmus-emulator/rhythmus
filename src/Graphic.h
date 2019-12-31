@@ -106,8 +106,11 @@ public:
   static void GetResolutions(std::vector<std::string>& out);
   void CenterWindow();
   GLFWwindow* window();
+  void SetWindowSize(int width, int height);
   float width() const;
   float height() const;
+  int window_width() const;
+  int window_height() const;
   float GetAspect() const;
 
   static void RenderQuad();

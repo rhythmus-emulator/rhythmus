@@ -173,6 +173,7 @@ private:
 /* @brief Brief status for play status */
 struct PlayRecord
 {
+  std::string id;
   std::string chartname;
   int timestamp;
   int seed;
@@ -204,9 +205,10 @@ public:
   void StartPlay();
   void StopPlay();
   void SavePlay();
-  void LoadPlay();
+  void LoadPlay(const std::string &play_id);
 
   void RecordPlay(ReplayEventTypes event_type, int time, int value1, int value2 = 0);
+  const std::string &GetPlayId() const;
 
   double get_beat() const;
   double get_measure() const;
@@ -238,8 +240,6 @@ private:
   BackgroundDataContext bgm_context_;
   TrackContext track_context_[kMaxTrackSize];
   void UpdateJudgeByRow(); /* for row-wise judgement update */
-
-  std::string play_id_;
 
   double songtime_;
   double measure_;

@@ -22,6 +22,7 @@ void VertexInfo::Clear()
 }
 
 // An global variable indicating window width / height
+// (not rendering canvas size)
 int sWidth, sHeight;
 
 static void error_callback(int error, const char* description)
@@ -29,19 +30,21 @@ static void error_callback(int error, const char* description)
   std::cerr << "Error: " << description << std::endl;
 }
 
-void on_resize(GLFWwindow* w, GLint width, GLint height)
-{
-  sWidth = width;
-  sHeight = height;
-}
-
 GLFWwindow* Graphic::window()
 {
   return window_;
 }
 
+void Graphic::SetWindowSize(int width, int height)
+{
+  sWidth = width;
+  sHeight = height;
+}
+
 float Graphic::width() const { return width_; }
 float Graphic::height() const { return height_; }
+int Graphic::window_width() const { return sWidth; }
+int Graphic::window_height() const { return sHeight; }
 float Graphic::GetAspect() const { return (float)width_ / height_; }
 
 void Graphic::Initialize()
@@ -88,9 +91,6 @@ void Graphic::InitializeInternal()
 
   // Center window
   CenterWindow();
-
-  // Callback function setting (related to graphic)
-  glfwSetWindowSizeCallback(window_, on_resize);
 
   // set rendering context
   current_proj_mode_ = -1;  // no projection mode initially.

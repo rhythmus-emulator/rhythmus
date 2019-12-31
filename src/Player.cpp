@@ -415,12 +415,26 @@ PlayContext::PlayContext(Player &player, rparser::Chart &c)
 
   /* Check play record saving allowed, e.g. assist option */
   bool check = (playrecord_.assist == 0);
+
+  /* create random play_id */
+  playrecord_.id.resize(32, '0');
+  time_t rndseed = time(0);
+  for (size_t i = 0; i < 32; ++i)
+  {
+    char c = (static_cast<int>(rndseed % 16) + rand()) % 16;
+    if (c < 10) c += '0';
+    else c += 'a';
+    rndseed = rndseed >> 1;
+    playrecord_.id[i] = c;
+  }
 }
 
-void PlayContext::LoadPlay()
+void PlayContext::LoadPlay(const std::string &play_id)
 {
   // TODO: load play record
   // XXX: integrate with LoadChart?
+
+  playrecord_.id = play_id;
 }
 
 void PlayContext::SavePlay()
@@ -502,6 +516,11 @@ void PlayContext::RecordPlay(ReplayEventTypes event_type, int time, int value1, 
   if (event_type >= ReplayEventTypes::kReplayMiss &&
     event_type <= ReplayEventTypes::kReplayPG)
     last_judge_type_ = (int)event_type;
+}
+
+const std::string &PlayContext::GetPlayId() const
+{
+  return playrecord_.id;
 }
 
 double PlayContext::get_beat() const { return beat_; }

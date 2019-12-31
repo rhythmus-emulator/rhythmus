@@ -97,9 +97,9 @@ void on_text(GLFWwindow *w, uint32_t codepoint)
 void on_cursormove(GLFWwindow *w, double xpos, double ypos)
 {
   InputEvent msg(InputEvents::kOnCursorMove);
-  msg.SetPosition(xpos, ypos);
-  cursor_x = xpos;
-  cursor_y = ypos;
+  cursor_x = xpos * Graphic::getInstance().width() / Graphic::getInstance().window_width();
+  cursor_y = ypos * Graphic::getInstance().height() / Graphic::getInstance().window_height();
+  msg.SetPosition(cursor_x, cursor_y);
   {
     std::lock_guard<std::mutex> lock(input_evt_lock);
     input_evt_messages_.push_back(msg);
@@ -121,6 +121,11 @@ void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
 
 void on_joystick_conn(int jid, int event)
 {
+}
+
+void on_window_resize(GLFWwindow *w, int width, int height)
+{
+  Graphic::getInstance().SetWindowSize(width, height);
 }
 
 void InputEventManager::Flush()
@@ -269,6 +274,7 @@ void EventManager::Initialize()
   glfwSetCursorPosCallback(window_, on_cursormove);
   glfwSetMouseButtonCallback(window_, on_cursorbutton);
   glfwSetJoystickCallback(on_joystick_conn);
+  glfwSetWindowSizeCallback(window_, on_window_resize);
 }
 
 void EventManager::Flush()

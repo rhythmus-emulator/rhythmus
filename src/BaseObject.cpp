@@ -245,6 +245,8 @@ void BaseObject::Load(const Metric& metric)
     draw_order_ = metric.get<int>("zindex");
   if (metric.exist("lr2src"))
     LoadFromLR2SRC(metric.get<std::string>("lr2src"));
+  if (metric.exist("_debug"))
+    debug_ = metric.get<std::string>("_debug");
 
   LoadCommand(metric);
 }
@@ -294,9 +296,12 @@ void BaseObject::SetTweenTime(int time_msec)
 
 void BaseObject::SetDeltaTweenTime(int time_msec)
 {
+  int easetype = EaseTypes::kEaseOut;
+  if (!tween_.empty())
+    easetype = tween_.back().ease_type;
   tween_.push_back({
     GetDestDrawProperty(),
-    (uint32_t)time_msec, 0, 0, false, EaseTypes::kEaseOut
+    (uint32_t)time_msec, 0, 0, false, easetype
     });
 }
 
@@ -658,8 +663,7 @@ void BaseObject::UpdateTween(float delta_ms)
       bool _disp = current_prop_.display;
       current_prop_ = t.draw_prop;
       current_prop_.display = _disp;
-      if (!t.commands.empty())
-        RunCommand(t.commands);
+      RunCommand(t.commands);
       tween_.clear();
       return;
     }
@@ -677,7 +681,7 @@ void BaseObject::UpdateTween(float delta_ms)
 
       // trigger next tween event if exist
       auto next = std::next(tween_.begin());
-      if (next != tween_.end() && !next->commands.empty())
+      if (next != tween_.end())
         RunCommand(next->commands);
 
       // tween might be finished early due to RunCommand.
