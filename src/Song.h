@@ -25,6 +25,8 @@ enum Gamemode
   kGamemode7Key,
   kGamemodeIIDXSP,
   kGamemodeIIDXDP,
+  kGamemodeIIDX5Key,
+  kGamemodeIIDX10Key,
   kGamemodePopn,
   kGamemodeEZ2DJ,
   kGamemodeDDR,

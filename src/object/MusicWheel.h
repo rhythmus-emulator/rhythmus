@@ -85,11 +85,14 @@ public:
 private:
   struct {
     int type;
+    int avail_type[Sorttype::kSortEnd];
     bool invalidate;
   } sort_;
   struct {
     int gamemode;
     int difficulty;
+    int avail_gamemode[Gamemode::kGamemodeEnd];
+    int avail_difficulty[Difficulty::kDifficultyEnd];
     bool invalidate;
   } filter_;
   std::string current_section_;

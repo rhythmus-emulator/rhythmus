@@ -145,6 +145,14 @@ MusicWheel::MusicWheel()
   filter_.gamemode = 0;
   filter_.difficulty = 0;
   filter_.invalidate = true;
+
+  for (size_t i = 0; i < Sorttype::kSortEnd; ++i)
+    sort_.avail_type[i] = 1;
+  for (size_t i = 0; i < Difficulty::kDifficultyEnd; ++i)
+    filter_.avail_difficulty[i] = 1;
+  for (size_t i = 0; i < Gamemode::kGamemodeEnd; ++i)
+    filter_.avail_gamemode[i] = 1;
+
 #if 0
   set_display_count(24);
   set_focus_max_index(12);
@@ -178,6 +186,13 @@ MenuItem* MusicWheel::CreateMenuItem()
 void MusicWheel::Load(const Metric &metric)
 {
   Menu::Load(metric);
+  /* load system preference */
+  /* TODO: limit gamemode and sort filter by metric */
+  filter_.gamemode = Setting::GetSystemSetting().GetOption("Gamemode")->value<int>();
+  filter_.difficulty = Setting::GetSystemSetting().GetOption("Difficultymode")->value<int>();
+  filter_.invalidate = true;
+  sort_.type = Setting::GetSystemSetting().GetOption("Sorttype")->value<int>();
+  sort_.invalidate = true;
 }
 
 void MusicWheel::OnSelectChange(const MenuData *data, int direction)
@@ -521,37 +536,55 @@ void MusicWheel::CloseSection()
 void MusicWheel::Sort(int sort)
 {
   sort_.type = sort;
+  Setting::GetSystemSetting().GetOption("Sorttype")->set_value(sort_.type);
   sort_.invalidate = true;
 }
 
 void MusicWheel::SetGamemodeFilter(int filter)
 {
   filter_.gamemode = filter;
+  Setting::GetSystemSetting().GetOption("Gamemode")->set_value(filter_.gamemode);
   filter_.invalidate = true;
 }
 
 void MusicWheel::SetDifficultyFilter(int filter)
 {
   filter_.difficulty = filter;
+  Setting::GetSystemSetting().GetOption("Difficultymode")->set_value(filter_.difficulty);
   filter_.invalidate = true;
 }
 
 void MusicWheel::NextSort()
 {
-  sort_.type = (sort_.type + 1) % Sorttype::kSortEnd;
-  sort_.invalidate = true;
+  for (size_t i = 0; i < Sorttype::kSortEnd; ++i)
+  {
+    sort_.type = (sort_.type + 1) % Sorttype::kSortEnd;
+    if (sort_.avail_type[sort_.type])
+      break;
+  }
+  Sort(sort_.type);
 }
 
 void MusicWheel::NextGamemodeFilter()
 {
-  filter_.gamemode = (filter_.gamemode + 1) % Gamemode::kGamemodeEnd;
-  filter_.invalidate = true;
+  for (size_t i = 0; i < Gamemode::kGamemodeEnd; ++i)
+  {
+    filter_.gamemode = (filter_.gamemode + 1) % Gamemode::kGamemodeEnd;
+    if (filter_.avail_gamemode[filter_.gamemode])
+      break;
+  }
+  SetGamemodeFilter(filter_.gamemode);
 }
 
 void MusicWheel::NextDifficultyFilter()
 {
-  filter_.difficulty = (filter_.difficulty + 1) % Difficulty::kDifficultyEnd;
-  filter_.invalidate = true;
+  for (size_t i = 0; i < Difficulty::kDifficultyEnd; ++i)
+  {
+    filter_.difficulty = (filter_.difficulty + 1) % Difficulty::kDifficultyEnd;
+    if (filter_.avail_difficulty[filter_.difficulty])
+      break;
+  }
+  SetDifficultyFilter(filter_.difficulty);
 }
 
 int MusicWheel::GetSort() const

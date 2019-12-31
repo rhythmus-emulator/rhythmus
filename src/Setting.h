@@ -149,13 +149,16 @@ public:
   virtual void set_value(int value);
 
   // @brief reset value
-  void reset_value();
+  Option &reset_value();
 
   // @brief whether to save with constraint if it exists
   void save_with_constraint(bool v);
 
   // @brief utility function to create option
   static Option* CreateOption(const std::string &optionstr);
+
+  Option &show();
+  Option &hide();
 
 protected:
   std::string desc_;
@@ -175,6 +178,10 @@ protected:
   // save with constraint, not only option value.
   // (just for option item but not want to save the options)
   bool save_with_constraint_;
+
+  // Is this option is visible for modifying?
+  // default: true
+  bool visible_;
 };
 
 class FileOption : public Option

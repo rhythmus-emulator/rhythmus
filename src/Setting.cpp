@@ -462,7 +462,7 @@ void MetricList::set(const std::string &group, const std::string &key, bool v)
 
 Option::Option()
   : type_("option"), curr_sel_idx_(0),
-    save_with_constraint_(false) {}
+    save_with_constraint_(false), visible_(false) {}
 
 template <> const std::string& Option::value() const
 { return value_; }
@@ -557,9 +557,10 @@ void Option::set_value(int value)
   set_value(std::to_string(value));
 }
 
-void Option::reset_value()
+Option &Option::reset_value()
 {
   set_value(default_);
+  return *this;
 }
 
 void Option::save_with_constraint(bool v)
@@ -571,7 +572,7 @@ Option* Option::CreateOption(const std::string &optionstr)
 {
   Option *option = nullptr;
   std::string optionvalue;
-  if (optionstr.size() > 2 && optionstr[0] == '!')
+  if (optionstr.size() >= 2 && optionstr[0] == '!')
   {
     if (optionstr[1] == 'F')
     {
@@ -597,6 +598,9 @@ Option* Option::CreateOption(const std::string &optionstr)
 
   return option;
 }
+
+Option &Option::show() { visible_ = true; return *this; }
+Option &Option::hide() { visible_ = false; return *this; }
 
 FileOption::FileOption() {}
 
@@ -899,62 +903,66 @@ OptionList &Setting::GetSystemSetting()
 
     /* Initialize game settings */
     sysoptions.SetOption("Resolution", "640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200")
-      .SetDefault("640x480")
+      .show().SetDefault("640x480")
       .set_description("Game resolution")
       .reset_value();
 
     sysoptions.SetOption("SoundDevice", "Default")
-      .SetDefault("Default")
+      .show().SetDefault("Default")
       .set_description("Set default sound device.")
       .reset_value();
 
     sysoptions.SetOption("SoundBufferSize", "1024,2048,3072,4096,8192,16384")
-      .SetDefault("2048")
+      .show().SetDefault("2048")
       .set_description("Sound latency increases if sound buffer is big. If sound flickers, use large buffer size.")
       .reset_value();
 
     sysoptions.SetOption("Volume", "0,10,20,30,40,50,60,70,80,90,100")
-      .SetDefault("70")
+      .show().SetDefault("70")
       .set_description("Set game volume.")
       .reset_value();
 
     sysoptions.SetOption("GameMode", "Home,Arcade,LR2")
-      .SetDefault("LR2")
+      .show().SetDefault("LR2")
       .set_description("Set game mode, whether to run as arcade or home.")
       .reset_value();
 
     sysoptions.SetOption("Logging", "Off,On")
-      .SetDefault("On")
+      .show().SetDefault("On")
       .set_description("For development.")
       .reset_value();
 
     sysoptions.SetOption("SoundSet", "!F../sound/*.lr2ss")
-      .set_description("Soundset file.")
+      .show().set_description("Soundset file.")
       .reset_value();
 
     sysoptions.SetOption("Theme", "")
-      .set_description("Theme path.")
+      .show().set_description("Theme path.")
       .reset_value();
 
     sysoptions.SetOption("SelectScene", "!F../themes/*/select/*.lr2skin")
-      .set_description("Theme path of select scene.")
+      .show().set_description("Theme path of select scene.")
       .reset_value();
 
     sysoptions.SetOption("DecideScene", "!F../themes/*/decide/*.lr2skin")
-      .set_description("Theme path of decide scene.")
+      .show().set_description("Theme path of decide scene.")
       .reset_value();
 
     sysoptions.SetOption("PlayScene", "!F../themes/*/play/*.lr2skin")
-      .set_description("Theme path of play scene.")
+      .show().set_description("Theme path of play scene.")
       .reset_value();
 
     sysoptions.SetOption("ResultScene", "!F../themes/*/result/*.lr2skin")
-      .set_description("Theme path of result scene.")
+      .show().set_description("Theme path of result scene.")
       .reset_value();
 
     sysoptions.SetOption("CourseResultScene", "!F../themes/*/courseresult/*.lr2skin")
-      .set_description("Theme path of courseresult scene.")
+      .show().set_description("Theme path of courseresult scene.")
       .reset_value();
+
+    sysoptions.SetOption("Sorttype", "!N");
+    sysoptions.SetOption("Gamemode", "!N");
+    sysoptions.SetOption("Difficultymode", "!N");
   }
 
   return sysoptions;
