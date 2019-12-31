@@ -73,6 +73,11 @@ void Script::SetButtonNumber(size_t idx, int number)
   SetNumber(idx + 1000, number);
 }
 
+void Script::SetSliderNumber(size_t idx, int number)
+{
+  SetNumber(idx + 1500, number);
+}
+
 Script &Script::getInstance()
 {
   static Script instance;
@@ -343,6 +348,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
 
       MakeParamCountSafe(value, params, 19);
       std::string timer(params[15]);
+      std::string loop(params[14]);
 
       /* parameter to 13th string */
       value.clear();
@@ -365,7 +371,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
         attrname = attrname + timer;
         /* if first DST command, append timer / op code attribute. */
         value = "lr2cmd:" +
-          params[16] + "|" + params[17] + "|" + params[18] + "|" + params[14] + "," +
+          params[16] + "|" + params[17] + "|" + params[18] + "|" + loop + "," +
           value;
         /* set Off event in first time */
         curr_metrics->set(attrname + "Off", "hide");

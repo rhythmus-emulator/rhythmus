@@ -28,6 +28,7 @@ public:
   void SetNumber(size_t idx, int number);
   int GetNumber(size_t idx) const;
   void SetButtonNumber(size_t idx, int number);
+  void SetSliderNumber(size_t idx, int number);
 
   static Script &getInstance();
 
@@ -42,6 +43,8 @@ private:
    * @detail
    * 0~1000 : normal use of number cache
    * 1000~1500 : button value cache
+   * 1500~1600 : slider value cache (0 ~ 100)
+   * 1600~1700 : bargraph value cache (0 ~ 100)
    */
   int numbers_[3000];
 

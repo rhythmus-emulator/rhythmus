@@ -112,8 +112,13 @@ void BaseObject::RunCommandByName(const std::string &event_name)
     RunCommand(it->second);
 }
 
-void BaseObject::RunCommand(const std::string& command)
+void BaseObject::RunCommand(std::string command)
 {
+  // @warn
+  // RunCommand parameter must be passed by value, not by reference
+  // since original command string might be destroyed while processing command
+  // e.g. command 'flush' clears event early and it destroys original command.
+
   if (command.empty()) return;
   size_t ia = 0, ib = 0;
   std::string cmd_type, value;
@@ -429,27 +434,16 @@ void BaseObject::SetLR2DST(
     tween_.back().time_duration = time - cur_motion_length;
   }
 
-  // If first tween and starting time is not zero,
-  // then add dummy tween (invisible).
-  if (tween_.empty() && time > 0)
-  {
-    // dummy tween should invisible
-    // TODO: need extra command for this? or use delay command/property?
-    //Hide();
-    SetDeltaTweenTime(time);
-  }
-
   // make current tween
   SetDeltaTweenTime(0);
 
-  // Now specify current tween.
-  //GetDestDrawProperty().display = true;
   SetPos(x, y);
   SetSize(w, h);
   SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
   SetAlpha((unsigned)a);
   SetRotationAsRadian(0, 0, -angle);
   SetRotationCenter(center);
+
   switch (acc_type)
   {
   case 0:
@@ -464,6 +458,18 @@ void BaseObject::SetLR2DST(
   case 3:
     SetAcceleration(EaseTypes::kEaseInOut);
     break;
+  }
+
+  // If first tween and starting time is not zero,
+  // then add dummy tween (invisible).
+  if (tween_.size() == 1 && time > 0)
+  {
+    SetDeltaTweenTime(0);
+    // dummy tween should invisible
+    // XXX: tween don't support hide/show, so kind of trick - set alpha as zero
+    //SetAlpha(.0f);
+    tween_.front().ease_type = EaseTypes::kEaseNone;
+    tween_.front().time_duration = time;
   }
 
   // blend parameter should set by Sprite command.
@@ -625,13 +631,14 @@ void BaseObject::Click()
 void BaseObject::SetBlend(int blend_mode) { blending_ = blend_mode; }
 
 // milisecond
+// XXX: whole logic is quite nasty, need to rebuild it?
 void BaseObject::UpdateTween(float delta_ms)
 {
   if (!IsTweening())
     return;
 
   // time process
-  while (1)
+  while (!tween_.empty())
   {
     //
     // kind of trick: if single tween with loop,
@@ -670,8 +677,12 @@ void BaseObject::UpdateTween(float delta_ms)
 
       // trigger next tween event if exist
       auto next = std::next(tween_.begin());
-      if (next != tween_.end() && next->commands.empty())
+      if (next != tween_.end() && !next->commands.empty())
         RunCommand(next->commands);
+
+      // tween might be finished early due to RunCommand.
+      if (tween_.empty())
+        return;
 
       // loop tween by push it again.
       // -> use more efficient method splice
@@ -688,6 +699,9 @@ void BaseObject::UpdateTween(float delta_ms)
       delta_ms = 0;  // actually same as exiting tween
     }
   }
+
+  if (tween_.empty())
+    return;
 
   //
   // Now calculate DrawState
@@ -722,24 +736,34 @@ void BaseObject::UpdateTween(float delta_ms)
 }
 
 /* This method should be called just after all fixed tween is appended. */
-void BaseObject::SetTweenLoopTime(uint32_t time_msec)
+void BaseObject::SetTweenLoopTime(int time_msec)
 {
-  // all tweens should loop after a tween is marked to be looped.
-  bool loopstart = false;
-
-  for (auto& t : tween_)
+  // positive or zero : loop tween since specified time
+  // -1: tween and hide
+  // otherwise: do not loop
+  if (time_msec == -1)
   {
-    if (loopstart || time_msec < t.time_duration)
+    QueueCommand("hide");
+  }
+  else if (time_msec >= 0)
+  {
+    // all tweens should loop after a tween is marked to be looped.
+    bool loopstart = false;
+
+    for (auto& t : tween_)
     {
-      t.time_loopstart = time_msec;
-      t.loop = true;
-      time_msec = 0;
-      loopstart = true;
-    }
-    else {
-      t.time_loopstart = 0;
-      t.loop = false;
-      time_msec -= t.time_duration;
+      if (loopstart || time_msec < t.time_duration)
+      {
+        t.time_loopstart = time_msec;
+        t.loop = true;
+        time_msec = 0;
+        loopstart = true;
+      }
+      else {
+        t.time_loopstart = 0;
+        t.loop = false;
+        time_msec -= t.time_duration;
+      }
     }
   }
 }
@@ -753,11 +777,11 @@ bool BaseObject::IsVisible() const
     || Script::getInstance().GetFlag(visible_group_[3]) == 0))
     return false;
 
-  return current_prop_.display &&
+  return current_prop_.display/* &&
     current_prop_.aBL > 0 &&
     current_prop_.aBR > 0 &&
     current_prop_.aTL > 0 &&
-    current_prop_.aTR > 0;
+    current_prop_.aTR > 0*/;
 }
 
 bool BaseObject::IsTweening() const

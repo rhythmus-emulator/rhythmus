@@ -12,7 +12,7 @@ Slider::~Slider() { }
 
 void Slider::SetNumber(int number)
 {
-  value_ = number * ratio_;
+  value_ = (number / 100.0) * ratio_;
 }
 
 void Slider::SetNumber(double number)
@@ -46,8 +46,8 @@ void Slider::LoadFromLR2SRC(const std::string &cmd)
   range_ = args.Get<int>(10);
 
   /* track change of text table */
-  int eventid = args.Get<int>(11);
-  std::string eventname = "Slider" + args.Get<std::string>(1);
+  int eventid = args.Get<int>(11) + 1500;
+  std::string eventname = "Number" + std::to_string(eventid);
   AddCommand(eventname, "refresh");
   SubscribeTo(eventname);
 

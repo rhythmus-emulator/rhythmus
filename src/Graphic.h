@@ -68,6 +68,19 @@ struct ShaderInfo {
   GLuint VAO_id, buffer_id;
 };
 
+enum BlendMode {
+  kBlendNone,
+  kBlendAlpha,
+  kBlendAdd,
+  kBlendSub,
+  kBlendMul,
+  kBlendXOR,
+  kBlendMulInv,
+  kBlendInv,
+  kBlendMulAlpha,
+  kBlendEnd,
+};
+
 /**
  * @brief
  * Contains graphic context of game.
@@ -125,7 +138,7 @@ private:
   VertexInfo *vi_;
   int vi_idx_;
   GLuint tex_id_;
-  GLuint src_blend_mode_;
+  int blendmode_;
 
   void InitializeInternal();
   void RenderInternal();

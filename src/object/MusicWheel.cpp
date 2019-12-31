@@ -357,6 +357,8 @@ void MusicWheel::OnSelectChange(const MenuData *data, int direction)
     }
   }
 
+  Script::getInstance().SetSliderNumber(1, data_index_ * 100.0 / size());
+
   EventManager::SendEvent("SongSelectChange");
   if (direction == -1)
     EventManager::SendEvent("SongSelectChangeUp");

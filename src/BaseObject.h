@@ -124,7 +124,7 @@ public:
   BaseObject* GetLastChild();
 
   void RunCommandByName(const std::string &name);
-  void RunCommand(const std::string &command);
+  void RunCommand(std::string command);
   void ClearCommand(const std::string &name);
   void DeleteAllCommand();
   void QueueCommand(const std::string &command);
@@ -295,7 +295,7 @@ protected:
 
   // Tween
   void UpdateTween(float delta);
-  void SetTweenLoopTime(uint32_t loopstart_time_msec);
+  void SetTweenLoopTime(int loopstart_time_msec);
 
   virtual void doUpdate(float delta);
   virtual void doRender();

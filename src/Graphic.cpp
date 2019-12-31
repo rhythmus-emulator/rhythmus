@@ -95,7 +95,7 @@ void Graphic::InitializeInternal()
   // set rendering context
   current_proj_mode_ = -1;  // no projection mode initially.
   tex_id_ = 0;
-  src_blend_mode_ = 0;
+  blendmode_ = -1;
   vi_idx_ = 0;
   vi_ = (VertexInfo*)malloc(sizeof(VertexInfo) * kVertexMaxSize);
   ASSERT(vi_);
@@ -472,6 +472,14 @@ void Graphic::RenderQuad()
   Graphic& g = Graphic::getInstance();
   if (g.vi_idx_ <= 0) return;
 
+  // pre-process for special blendmode
+  // - See SetBlendMode() function for detail.
+  if (g.blendmode_ == 0)
+  {
+    for (int i = 0; i < 4 * g.vi_idx_; ++i)
+      g.vi_[i].a = 1.0f;
+  }
+
   // write buffer
   glBindBuffer(GL_ARRAY_BUFFER, g.quad_shader_.buffer_id);
   glBufferData(GL_ARRAY_BUFFER, sizeof(VertexInfo) * 4 * g.vi_idx_, nullptr, GL_STREAM_DRAW);
@@ -562,20 +570,30 @@ void Graphic::SetTextureId(GLuint tex_id)
 
 void Graphic::SetBlendMode(int blend_mode)
 {
+  // @warn
+  // BlendNone is actually NOT GL_NONE.
+  // It just ignores alpha value of vertex,
+  // and it is processed in RenderQuad() function.
+
   Graphic &g = Graphic::getInstance();
   static GLuint glBlendmodeTbl[] = {
-    /*GL_ZERO - actually, not allowed mode. */
-    GL_ONE_MINUS_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_ONE,
+    GL_MINUS_NV,
+    GL_MULTIPLY_NV,
+    GL_XOR,
+    GL_MULTIPLY_NV,
+    GL_MULTIPLY_NV,
+    0
   };
-  static constexpr int glBlendmodeSize =
-    sizeof(glBlendmodeTbl) / sizeof(GLuint);
   GLuint glBlendmode = GL_ONE;
-  if (blend_mode >= 0 && blend_mode < glBlendmodeSize)
+  if (blend_mode >= 0 && blend_mode < BlendMode::kBlendEnd)
     glBlendmode = glBlendmodeTbl[blend_mode];
 
-  if (g.src_blend_mode_ != glBlendmode)
+  if (g.blendmode_ != blend_mode)
   {
-    g.src_blend_mode_ = glBlendmode;
+    g.blendmode_ = blend_mode;
     glBlendFunc(GL_SRC_ALPHA, glBlendmode);
   }
 }
