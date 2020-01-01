@@ -22,7 +22,7 @@ void MusicWheelData::NextChart()
   if (charts_.empty())
     return;
   chartidx = (chartidx + 1) % charts_.size();
-  ApplyFromSongListData(charts_[chartidx]);
+  ApplyFromSongListData(*charts_[chartidx]);
 }
 
 void MusicWheelData::ApplyFromSongListData(SongListData &song)
@@ -30,6 +30,7 @@ void MusicWheelData::ApplyFromSongListData(SongListData &song)
   name = song.id;
   info = song;
   type = Songitemtype::kSongitemSong;
+  SetPlayRecord();
 }
 
 void MusicWheelData::SetSection(const std::string &sectionname, const std::string &title)
@@ -42,7 +43,10 @@ void MusicWheelData::SetSection(const std::string &sectionname, const std::strin
 void MusicWheelData::SetPlayRecord()
 {
   auto &player = Player::getMainPlayer();
-  record = player.GetPlayRecord(info.id);
+  record = nullptr;
+  if (type == Songitemtype::kSongitemSong
+   || type == Songitemtype::kSongitemCourse)
+    record = player.GetPlayRecord(info.id);
   if (!record)
   {
     clear = ClearTypes::kClearNone;
@@ -53,6 +57,11 @@ void MusicWheelData::SetPlayRecord()
     clear = record->clear_type;
     rate = record->rate();
   }
+}
+
+void MusicWheelData::AddChart(SongListData *d)
+{
+  charts_.push_back(d);
 }
 
 // ----------------------------- MusicWheelItem
@@ -500,9 +509,12 @@ void MusicWheel::RebuildData()
   if (filter_.invalidate)
   {
     filter_.invalidate = false;
+    charts_.clear();
     data_filtered_.clear();
     size_t i = 0;
     bool pass_filter;
+
+    // gamemode filtering
     for (auto &song : SongList::getInstance())
     {
       pass_filter = true;
@@ -523,12 +535,33 @@ void MusicWheel::RebuildData()
       }
       if (!pass_filter)
         continue;
+      charts_.push_back(&song);
+    }
+
+    // difficulty filtering
+    for (auto *c : charts_)
+    {
+      auto &sdata = *static_cast<SongListData*>(c);
+      if (filter_.difficulty != Difficulty::kDifficultyNone
+       && sdata.difficulty != filter_.difficulty)
+        continue;
 
       MusicWheelData data;
-      data.ApplyFromSongListData(song);
-      // TODO: add songdata to existing data if same song path.
+      data.ApplyFromSongListData(sdata);
       data.type = Songitemtype::kSongitemSong;
       data_filtered_.push_back(data);
+    }
+
+    // add difficulty info into chartlist.
+    // TODO: need to set chartidx
+    for (auto &d : data_filtered_)
+    {
+      for (auto *c : charts_)
+      {
+        auto &sdata = *static_cast<SongListData*>(c);
+        if (sdata.songpath == d.info.songpath)
+          d.AddChart(&sdata);
+      }
     }
   }
 

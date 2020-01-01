@@ -41,10 +41,11 @@ public:
   void ApplyFromSongListData(SongListData &song);
   void SetSection(const std::string &sectionname, const std::string &title);
   void SetPlayRecord();
+  void AddChart(SongListData *d);
 
 private:
   size_t chartidx;
-  std::vector<SongListData> charts_;
+  std::vector<SongListData*> charts_;
 };
 
 /* @brief Pure music wheel item interface */
@@ -105,7 +106,12 @@ private:
     bool invalidate;
   } filter_;
   std::string current_section_;
+
+  /* source charts (only filtered by gamemode) */
+  std::vector<void*> charts_;
+  /* filtered items */
   std::vector<MusicWheelData> data_filtered_;
+  /* section items (created in Load procedure) */
   std::vector<MusicWheelData> data_sections_;
 
   virtual MenuItem* CreateMenuItem();
