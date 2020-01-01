@@ -753,6 +753,26 @@ void SongResource::Clear()
   is_loaded_ = 0;
 }
 
+void SongResource::AddSongtoPlaylist(const std::string &songpath, const std::string &chartpath)
+{
+  SongPlayinfo playinfo;
+  playinfo.songpath = songpath;
+  playinfo.chartpaths[0] = chartpath;
+  playlist_.push_back(playinfo);
+}
+
+const SongPlayinfo *SongResource::GetSongPlayinfo() const
+{
+  if (!playlist_.empty())
+    return &playlist_.front();
+  return nullptr;
+}
+
+void SongResource::PopSongFromPlaylist()
+{
+  playlist_.pop_front();
+}
+
 rparser::Song* SongResource::get_song()
 {
   return song_;

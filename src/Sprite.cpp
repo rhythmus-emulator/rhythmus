@@ -209,7 +209,7 @@ void Sprite::LoadFromLR2SRC(const std::string &cmd)
 
   ani_info_.divx = divx > 0 ? divx : 1;
   ani_info_.divy = divy > 0 ? divy : 1;
-  ani_info_.cnt = divx * divy;
+  ani_info_.cnt = ani_info_.divx *  ani_info_.divy;
   ani_info_.duration = args.Get<int>(7);
 
   // set default sprite size

@@ -1,5 +1,7 @@
 #include "DecideScene.h"
 #include "Song.h"
+#include "Event.h"
+#include "Script.h"
 
 namespace rhythmus
 {

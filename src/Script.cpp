@@ -367,6 +367,8 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       }
       else
       {
+        if (timer.empty())
+          timer = "0";
         curr_metrics->set("_timer" + attrname, timer);
         attrname = attrname + timer;
         /* if first DST command, append timer / op code attribute. */

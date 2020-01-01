@@ -63,6 +63,7 @@ enum Sorttype
 const char* SorttypeToString(int gamemode);
 int StringToSorttype(const char* s);
 
+/* @brief Brief song data for caching in database */
 struct SongListData
 {
   std::string id;
@@ -84,6 +85,13 @@ struct SongListData
   int bpm_min;
   int is_longnote;
   int is_backspin;
+};
+
+/* @brief song, charts (per player) to play */
+struct SongPlayinfo
+{
+  std::string songpath;
+  std::string chartpaths[10];
 };
 
 /* @brief A singleton class which contains currently loaded Song DB */
@@ -155,6 +163,14 @@ public:
   void CancelLoad();
   void Clear();
 
+  /* @brief Add song to play. */
+  void AddSongtoPlaylist(const std::string &songpath, const std::string &chartpath);
+
+  /* @brief returns currently playing or going to be played song play info. */
+  const SongPlayinfo *GetSongPlayinfo() const;
+
+  void PopSongFromPlaylist();
+
   rparser::Song* get_song();
   rparser::Chart* get_chart(const std::string& chartname);
   void set_load_bga(bool use_bga);
@@ -186,6 +202,9 @@ private:
    * Tasks (for cancel-waiting)
    */
   std::list<TaskAuto> tasks_;
+
+  /* @brief list of songs to play */
+  std::list<SongPlayinfo> playlist_;
 
   /*
    * @brief files to load

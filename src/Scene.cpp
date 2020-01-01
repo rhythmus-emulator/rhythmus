@@ -200,6 +200,14 @@ void Scene::Load(const Metric& metric)
 {
   if (metric.exist("sort"))
     do_sort_objects_ = metric.get<bool>("sort");
+  if (metric.exist("Timeout"))
+    next_scene_time_ = metric.get<int>("Timeout");
+  if (metric.exist("InputStart"))
+    begin_input_time_ = metric.get<int>("InputStart");
+  if (metric.exist("FadeOut"))
+    fade_out_time_ = metric.get<int>("FadeOut");
+  if (metric.exist("FadeIn"))
+    fade_in_time_ = metric.get<int>("FadeIn");
 }
 
 void Scene::FadeOutScene(bool next)

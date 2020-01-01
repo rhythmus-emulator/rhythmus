@@ -13,7 +13,7 @@ namespace rhythmus
 SelectScene::SelectScene()
 {
   set_name("SelectScene");
-  next_scene_ = "PlayScene";
+  next_scene_ = "DecideScene";
   prev_scene_ = "Exit";
 }
 
@@ -88,6 +88,7 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
       // XXX: can we preload selected song from here before PlayScene...?
       // XXX: what about course selection? select in gamemode?
       auto &d = wheel_.get_selected_data(0);
+#if 0
       Game::getInstance().push_song(d.info.songpath);
       FOR_EACH_PLAYER(p, i)
       {
@@ -95,6 +96,10 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
         p->AddChartnameToPlay(d.name);
       }
       END_EACH_PLAYER()
+#endif
+      SongResource::getInstance().AddSongtoPlaylist(
+        d.info.songpath, d.info.chartpath
+      );
 
       // Song selection - immediately change scene mode
       CloseScene(true);
