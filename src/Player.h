@@ -44,6 +44,19 @@ enum JudgeEventTypes
   kJudgeEventMove
 };
 
+enum ClearTypes
+{
+  kClearNone,
+  kClearFailed,
+  kClearAssist,
+  kClearEasy,
+  kClearNormal,
+  kClearHard,
+  kClearExHard,
+  kClearFullcombo,
+  kClearPerfect,
+};
+
 enum JudgeTypes
 {
   kJudgeNone,

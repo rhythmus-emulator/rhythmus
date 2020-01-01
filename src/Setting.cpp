@@ -289,6 +289,10 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
       m->set("CenterIndex", GetFirstParam(value));
       m->set("PositionType", 1);  /* use bar position */
       m->set("BarCount", 20);     /* XXX: default 20? */
+      /* below is filter setting for LR2. */
+      m->set("GamemodeFilter", "none,IIDXSP,IIDXDP,popn");
+      m->set("DifficultyFilter", "none,easy,normal,hard,ex,insane");
+      m->set("SortType", "none,title,level,clear");
     }
     else if (lr2name == "TRANSCLOLR")
     {

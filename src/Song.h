@@ -22,7 +22,9 @@ enum Gamemode
   kGamemodeNone,
   kGamemode4Key,
   kGamemode5Key,
+  kGamemode6Key,
   kGamemode7Key,
+  kGamemode8Key,
   kGamemodeIIDXSP,
   kGamemodeIIDXDP,
   kGamemodeIIDX5Key,
@@ -32,6 +34,8 @@ enum Gamemode
   kGamemodeDDR,
   kGamemodeEnd,
 };
+const char* GamemodeToString(int gamemode);
+int StringToGamemode(const char* s);
 
 enum Difficulty
 {
@@ -44,6 +48,8 @@ enum Difficulty
   kDifficultyInsane,
   kDifficultyEnd,
 };
+const char* DifficultyToString(int gamemode);
+int StringToDifficulty(const char* s);
 
 enum Sorttype
 {
@@ -54,9 +60,12 @@ enum Sorttype
   kSortByRate,
   kSortEnd,
 };
+const char* SorttypeToString(int gamemode);
+int StringToSorttype(const char* s);
 
 struct SongListData
 {
+  std::string id;
   std::string title;
   std::string subtitle;
   std::string artist;

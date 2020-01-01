@@ -9,6 +9,8 @@
 namespace rhythmus
 {
 
+class PlayRecord;
+
 enum Songitemtype
 {
   kSongitemSong,
@@ -29,10 +31,16 @@ class MusicWheelData : public MenuData
 public:
   MusicWheelData();
   SongListData info;
+  std::string sectionname;
   int type;
+  const PlayRecord *record;
+  int clear;
+  double rate;
 
   void NextChart();
   void ApplyFromSongListData(SongListData &song);
+  void SetSection(const std::string &sectionname, const std::string &title);
+  void SetPlayRecord();
 
 private:
   size_t chartidx;
@@ -78,6 +86,7 @@ public:
   void NextGamemodeFilter();
   void NextDifficultyFilter();
   int GetSort() const;
+  int GetGamemode() const;
   int GetDifficultyFilter() const;
 
   friend class MusicWheelItem;
@@ -97,6 +106,7 @@ private:
   } filter_;
   std::string current_section_;
   std::vector<MusicWheelData> data_filtered_;
+  std::vector<MusicWheelData> data_sections_;
 
   virtual MenuItem* CreateMenuItem();
 };

@@ -163,6 +163,7 @@ void Menu::RebuildItems()
 {
   /* Number dataindex for all items. */
   auto data_count = size();
+  ASSERT(data_count > 0);
   int data_idx = data_index_ - focus_index_ - kScrollPosMaxDiff;
   data_idx %= data_count;
   if (data_idx < 0) data_idx += data_count;
@@ -372,9 +373,8 @@ void Menu::Load(const Metric &metric)
     Setting::GetThemeMetricList().get<std::string>("Sound", "SongSelectChange")
   );
 
-  // Build item and set basic position
+  // Build data & item
   RebuildData();
-  RebuildItems();
 
   // selectchange for initiailize.
   OnSelectChange(data_[data_index_], 0);

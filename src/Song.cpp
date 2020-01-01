@@ -20,6 +20,100 @@ struct SongInvalidateData
   int hit_count;
 };
 
+const char* const sGamemode[] = {
+  "none",
+  "4key",
+  "5key",
+  "6key",
+  "7key",
+  "8key",
+  "IIDXSP",
+  "IIDXDP",
+  "IIDX5key",
+  "IIDX10key",
+  "popn",
+  "ez2dj",
+  "ddr",
+  0
+};
+
+const char* const sDifficulty[] = {
+  "none",
+  "beginner",
+  "easy",
+  "normal",
+  "hard",
+  "ex",
+  "insane",
+  0
+};
+
+const char* const sSorttype[] = {
+  "none",
+  "title",
+  "level",
+  "clear",
+  "rate",
+  0
+};
+
+const char* GamemodeToString(int v)
+{
+  if (v >= Gamemode::kGamemodeEnd)
+    return nullptr;
+  return sGamemode[v];
+}
+
+int StringToGamemode(const char* s)
+{
+  auto ss = sGamemode;
+  while (*ss)
+  {
+    if (stricmp(s, *ss) == 0)
+      return ss - sGamemode;
+    ++ss;
+  }
+  return Gamemode::kGamemodeNone;
+}
+
+const char* DifficultyToString(int v)
+{
+  if (v >= Difficulty::kDifficultyEnd)
+    return nullptr;
+  return sDifficulty[v];
+}
+
+int StringToDifficulty(const char* s)
+{
+  auto ss = sDifficulty;
+  while (*ss)
+  {
+    if (stricmp(s, *ss) == 0)
+      return ss - sDifficulty;
+    ++ss;
+  }
+  return Difficulty::kDifficultyNone;
+}
+
+const char* SorttypeToString(int v)
+{
+  if (v >= Sorttype::kSortEnd)
+    return nullptr;
+  return sSorttype[v];
+}
+
+int StringToSorttype(const char* s)
+{
+  auto ss = sSorttype;
+  while (*ss)
+  {
+    if (stricmp(s, *ss) == 0)
+      return ss - sSorttype;
+    ++ss;
+  }
+  return Sorttype::kNoSort;
+}
+
 // ------------------- class SongListUpdateTask
 
 class SongListUpdateTask : public Task
@@ -83,7 +177,7 @@ void SongList::Load()
     // Load all previously loaded songs
     char *errmsg;
     sqlite3_exec(db,
-      "SELECT title, subtitle, artist, subartist, genre, "
+      "SELECT id, title, subtitle, artist, subartist, genre, "
       "songpath, chartpath, type, level, judgediff, modified_date, "
       "notecount, length_ms, bpm_max, bpm_min, is_longnote, is_backspin "
       "from songs;",
@@ -144,23 +238,24 @@ int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **c
   for (int i = 0; i < argc; ++i)
   {
     SongListData sdata;
-    sdata.title = argv[0];
-    sdata.subtitle = argv[1];
-    sdata.artist = argv[2];
-    sdata.subartist = argv[3];
-    sdata.genre = argv[4];
-    sdata.songpath = argv[5];
-    sdata.chartpath = argv[6];
-    sdata.type = atoi(argv[7]);
-    sdata.level = atoi(argv[8]);
-    sdata.judgediff = atoi(argv[9]);
-    sdata.modified_date = atoi(argv[10]);
-    sdata.notecount = atoi(argv[11]);
-    sdata.length_ms = atoi(argv[12]);
-    sdata.bpm_max = atoi(argv[13]);
-    sdata.bpm_min = atoi(argv[14]);
-    sdata.is_longnote = atoi(argv[15]);
-    sdata.is_backspin = atoi(argv[16]);
+    sdata.id = argv[0];
+    sdata.title = argv[1];
+    sdata.subtitle = argv[2];
+    sdata.artist = argv[3];
+    sdata.subartist = argv[4];
+    sdata.genre = argv[5];
+    sdata.songpath = argv[6];
+    sdata.chartpath = argv[7];
+    sdata.type = atoi(argv[8]);
+    sdata.level = atoi(argv[9]);
+    sdata.judgediff = atoi(argv[10]);
+    sdata.modified_date = atoi(argv[11]);
+    sdata.notecount = atoi(argv[12]);
+    sdata.length_ms = atoi(argv[13]);
+    sdata.bpm_max = atoi(argv[14]);
+    sdata.bpm_min = atoi(argv[15]);
+    sdata.is_longnote = atoi(argv[16]);
+    sdata.is_backspin = atoi(argv[17]);
     self->songs_.push_back(sdata);
   }
   return 0;
@@ -185,6 +280,7 @@ void SongList::Save()
       sqlite3_free(errmsg);
     }
     sqlite3_exec(db, "CREATE TABLE songs("
+      "id CHAR(128) PRIMARY KEY,"
       "title CHAR(128),"
       "subtitle CHAR(128),"
       "artist CHAR(128),"
@@ -216,10 +312,10 @@ void SongList::Save()
     {
       std::string sql = format_string(
         "INSERT INTO songs VALUES ("
-        "'%s', '%s', '%s', '%s', '%s', '%s', '%s',"
+        "'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s',"
         "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d"
         ");",
-        s.title, s.subtitle, s.artist, s.subartist, s.genre,
+        s.id, s.title, s.subtitle, s.artist, s.subartist, s.genre,
         s.songpath, s.chartpath, s.type, s.level, s.judgediff, s.modified_date,
         s.notecount, s.length_ms, s.bpm_max, s.bpm_min, s.is_longnote, s.is_backspin
       );
@@ -299,6 +395,7 @@ void SongList::LoadInvalidationList()
       c->Invalidate();
       auto &meta = c->GetMetaData();
       dat.chartpath = c->GetFilename();
+      dat.id = c->GetHash();
       // TODO: automatically extract subtitle from title
       dat.title = meta.title;
       dat.subtitle = meta.subtitle;

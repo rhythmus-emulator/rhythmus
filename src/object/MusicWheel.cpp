@@ -8,7 +8,10 @@
 namespace rhythmus
 {
 
-MusicWheelData::MusicWheelData() : type(Songitemtype::kSongitemSong)
+// ----------------------------- MusicWheelData
+
+MusicWheelData::MusicWheelData()
+  : type(Songitemtype::kSongitemSong), record(nullptr), clear(0), rate(.0)
 {
   info.difficulty = 0;
   info.level = 0;
@@ -24,9 +27,35 @@ void MusicWheelData::NextChart()
 
 void MusicWheelData::ApplyFromSongListData(SongListData &song)
 {
+  name = song.id;
   info = song;
   type = Songitemtype::kSongitemSong;
 }
+
+void MusicWheelData::SetSection(const std::string &sectionname, const std::string &title)
+{
+  name = sectionname;
+  info.title = title;
+  type = Songitemtype::kSongitemFolder;
+}
+
+void MusicWheelData::SetPlayRecord()
+{
+  auto &player = Player::getMainPlayer();
+  record = player.GetPlayRecord(info.id);
+  if (!record)
+  {
+    clear = ClearTypes::kClearNone;
+    rate = .0;
+  }
+  else
+  {
+    clear = record->clear_type;
+    rate = record->rate();
+  }
+}
+
+// ----------------------------- MusicWheelItem
 
 MusicWheelItem::MusicWheelItem()
 {
@@ -185,14 +214,62 @@ MenuItem* MusicWheel::CreateMenuItem()
 
 void MusicWheel::Load(const Metric &metric)
 {
-  Menu::Load(metric);
+  /* create section datas */
+  MusicWheelData section;
+  section.SetSection("all_songs", "All Songs");
+  data_sections_.push_back(section);
+  section.SetSection("new_songs", "New Songs");
+  data_sections_.push_back(section);
+
   /* load system preference */
-  /* TODO: limit gamemode and sort filter by metric */
   filter_.gamemode = Setting::GetSystemSetting().GetOption("Gamemode")->value<int>();
   filter_.difficulty = Setting::GetSystemSetting().GetOption("Difficultymode")->value<int>();
   filter_.invalidate = true;
   sort_.type = Setting::GetSystemSetting().GetOption("Sorttype")->value<int>();
   sort_.invalidate = true;
+
+  /* limit gamemode and sort filter types by metric */
+  if (metric.exist("GamemodeFilter"))
+  {
+    for (size_t i = 0; i < Gamemode::kGamemodeEnd; ++i)
+      filter_.avail_gamemode[i] = 0;
+    CommandArgs filters(metric.get<std::string>("GamemodeFilter"));
+    for (size_t i = 0; i < filters.size(); ++i)
+    {
+      filter_.avail_gamemode[
+        StringToGamemode(filters.Get<std::string>(i).c_str())] = 1;
+    }
+    if (filter_.avail_gamemode[filter_.gamemode] == 0)
+      filter_.gamemode = Gamemode::kGamemodeNone;
+  }
+  if (metric.exist("DifficultyFilter"))
+  {
+    for (size_t i = 0; i < Difficulty::kDifficultyEnd; ++i)
+      filter_.avail_difficulty[i] = 0;
+    CommandArgs diffs(metric.get<std::string>("DifficultyFilter"));
+    for (size_t i = 0; i < diffs.size(); ++i)
+    {
+      filter_.avail_difficulty[
+        StringToDifficulty(diffs.Get<std::string>(i).c_str())] = 1;
+    }
+    if (filter_.avail_difficulty[filter_.difficulty] == 0)
+      filter_.difficulty = Difficulty::kDifficultyNone;
+  }
+  if (metric.exist("SortType"))
+  {
+    for (size_t i = 0; i < Sorttype::kSortEnd; ++i)
+      sort_.avail_type[i] = 0;
+    CommandArgs sorts(metric.get<std::string>("SortType"));
+    for (size_t i = 0; i < sorts.size(); ++i)
+    {
+      sort_.avail_type[
+        StringToSorttype(sorts.Get<std::string>(i).c_str())] = 1;
+    }
+    if (sort_.avail_type[sort_.type] == 0)
+      sort_.type = Sorttype::kNoSort;
+  }
+
+  Menu::Load(metric);
 }
 
 void MusicWheel::OnSelectChange(const MenuData *data, int direction)
@@ -392,7 +469,6 @@ void MusicWheel::NavigateLeft()
   if (!current_section_.empty())
   {
     CloseSection();
-    RebuildData();
     OnSelectChange(&get_selected_data(0), 0);
   }
 }
@@ -413,8 +489,8 @@ void MusicWheel::NavigateRight()
   else if (sel_data.type == Songitemtype::kSongitemSong)
   {
     sel_data.NextChart();
+    RebuildData();
   }
-  RebuildData();
   OnSelectChange(&get_selected_data(0), 0);
 }
 
@@ -441,6 +517,8 @@ void MusicWheel::RebuildData()
       case Gamemode::kGamemodeEZ2DJ:
       case Gamemode::kGamemodeIIDXSP:
       case Gamemode::kGamemodeIIDXDP:
+      case Gamemode::kGamemodeIIDX5Key:
+      case Gamemode::kGamemodeIIDX10Key:
         pass_filter = (song.type == filter_.gamemode);
       }
       if (!pass_filter)
@@ -471,7 +549,19 @@ void MusicWheel::RebuildData()
     case Sorttype::kSortByTitle:
       std::sort(data_filtered_.begin(), data_filtered_.end(),
         [](const MusicWheelData &a, const MusicWheelData &b) {
-        return strcmp(a.info.title.c_str(), b.info.title.c_str());
+        return a.info.title < b.info.title;
+      });
+      break;
+    case Sorttype::kSortByClear:
+      std::sort(data_filtered_.begin(), data_filtered_.end(),
+        [](const MusicWheelData &a, const MusicWheelData &b) {
+        return a.clear < b.clear;
+      });
+      break;
+    case Sorttype::kSortByRate:
+      std::sort(data_filtered_.begin(), data_filtered_.end(),
+        [](const MusicWheelData &a, const MusicWheelData &b) {
+        return a.rate < b.rate;
       });
       break;
     default:
@@ -490,17 +580,10 @@ void MusicWheel::RebuildData()
   Clear();
 
   // add songs & default sections/items
-  MusicWheelData sections[10];
-  sections[0].name = "all_songs";
-  sections[0].info.title = "All Songs";
-  sections[0].type = Songitemtype::kSongitemFolder;
-  sections[1].name = "new_songs";
-  sections[1].info.title = "New Songs";
-  sections[1].type = Songitemtype::kSongitemFolder;
-  for (size_t i = 0; i < 2; ++i)
+  for (size_t i = 0; i < data_sections_.size(); ++i)
   {
-    AddData(new MusicWheelData(sections[i]));
-    if (sections[i].name == current_section_)
+    AddData(new MusicWheelData(data_sections_[i]));
+    if (data_sections_[i].name == current_section_)
     {
       // TODO: filtering once again by section type/name
       for (auto &d : data_filtered_)
@@ -526,11 +609,22 @@ void MusicWheel::RebuildData()
 void MusicWheel::OpenSection(const std::string &section)
 {
   current_section_ = section;
+  RebuildData();
 }
 
 void MusicWheel::CloseSection()
 {
+  // restore selected index from section index
+  for (size_t i = 0; i < data_sections_.size(); ++i)
+  {
+    if (data_sections_[i].name == current_section_)
+    {
+      data_index_ = i;
+      break;
+    }
+  }
   current_section_.clear();
+  RebuildData();
 }
 
 void MusicWheel::Sort(int sort)
@@ -590,6 +684,11 @@ void MusicWheel::NextDifficultyFilter()
 int MusicWheel::GetSort() const
 {
   return sort_.type;
+}
+
+int MusicWheel::GetGamemode() const
+{
+  return filter_.gamemode;
 }
 
 int MusicWheel::GetDifficultyFilter() const
