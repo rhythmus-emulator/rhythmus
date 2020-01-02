@@ -673,6 +673,14 @@ void SongPlayer::Update(float delta)
   /* update movie */
   for (auto &bg : bg_animations_) if (bg.second->is_loaded())
     bg.second->Update(delta);
+
+  /* Update all players */
+  FOR_EACH_PLAYER(p, i)
+  {
+    if (p->GetPlayContext())
+      p->GetPlayContext()->Update(delta);
+  }
+  END_EACH_PLAYER()
 }
 
 void SongPlayer::SetCoursetoPlay(const std::string &coursepath)
@@ -688,8 +696,14 @@ void SongPlayer::SetSongtoPlay(const std::string &songpath, const std::string &c
   // TODO: if songpath contains chartpath, then automatically fill chartpath.
   if (chartpath.empty() && IsChartPath(songpath))
   {
-    std::string chartpath_new;
-    AddSongtoPlaylist(songpath, chartpath_new);
+    std::string songpath_new, chartpath_new;
+    auto p = songpath.find_last_of('/');
+    if (p != std::string::npos)
+    {
+      songpath_new = songpath.substr(0, p);
+      chartpath_new = songpath.substr(p + 1);
+    }
+    AddSongtoPlaylist(songpath_new, chartpath_new);
   }
   else AddSongtoPlaylist(songpath, chartpath);
 }

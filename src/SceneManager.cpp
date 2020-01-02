@@ -39,6 +39,11 @@ void SceneManager::Initialize()
   case GameBootMode::kBootTest:
     SceneManager::ChangeScene("TestScene");
     break;
+  case GameBootMode::kBootPlay:
+    SceneManager::ChangeScene("PlayScene");
+    break;
+  default:
+    ASSERT(0);
   }
 }
 

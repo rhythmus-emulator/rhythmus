@@ -157,14 +157,6 @@ void PlayScene::doUpdate(float delta)
   {
     SongPlayer::getInstance().Update(delta);
   }
-
-  // Update all players
-  FOR_EACH_PLAYER(p, i)
-  {
-    if (p->GetPlayContext())
-      p->GetPlayContext()->Update(delta);
-  }
-  END_EACH_PLAYER()
 }
 
 }
