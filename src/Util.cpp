@@ -138,6 +138,11 @@ std::string Upper(const std::string &s)
   return rutil::upper(s);
 }
 
+std::string Lower(const std::string &s)
+{
+  return rutil::lower(s);
+}
+
 std::string Substitute(const std::string& path_, const std::string& startswith, const std::string& relplacewith)
 {
   std::string path = path_;
@@ -171,6 +176,18 @@ std::string Replace(const std::string& org, const std::string& target, const std
     s.push_back(org[i]);
   }
   return s;
+}
+
+bool startsWith(const std::string &s, const std::string &pattern)
+{
+  return s.size() >= pattern.size()
+    && std::equal(pattern.begin(), pattern.end(), s.begin());
+}
+
+bool endsWith(const std::string &s, const std::string &pattern)
+{
+  return s.size() >= pattern.size()
+    && std::equal(pattern.rbegin(), pattern.rend(), s.rbegin());
 }
 
 void Split(const std::string& str, char sep, std::vector<std::string>& vsOut)

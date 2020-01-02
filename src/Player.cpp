@@ -394,9 +394,9 @@ PlayContext::PlayContext(Player &player, rparser::Chart &c)
   memset(keysounds_, 0, sizeof(keysounds_));
   memset(bg_animations_, 0, sizeof(bg_animations_));
   for (auto &f : c.GetMetaData().GetSoundChannel()->fn)
-    keysounds_[f.first] = SongResource::getInstance().GetSound(f.second, f.first);
+    keysounds_[f.first] = SongPlayer::getInstance().GetSound(f.second, f.first);
   for (auto &f : c.GetMetaData().GetBGAChannel()->bga)
-    bg_animations_[f.first] = SongResource::getInstance().GetImage(f.second.fn);
+    bg_animations_[f.first] = SongPlayer::getInstance().GetImage(f.second.fn);
 
   // Set PlayRecord / Replay context
   memset(&playrecord_, 0, sizeof(playrecord_));
@@ -765,19 +765,14 @@ void Player::SetPlayRecord(const PlayRecord &playrecord)
   playrecords_.push_back(playrecord);
 }
 
-/* @warn: must load proper song to SongResource instance before this function. */
-void Player::SetPlayContext(const std::string& chartname)
+void Player::StartPlay(rparser::Chart &chart)
 {
   ASSERT(play_context_ == nullptr);
-  auto *chart = SongResource::getInstance().get_chart(chartname);
-  if (!chart)
-    return;
-
-  chart->Invalidate();
-  play_context_ = new PlayContext(*this, *chart);
+  chart.Invalidate();
+  play_context_ = new PlayContext(*this, chart);
 }
 
-void Player::ClearPlayContext()
+void Player::FinishPlay()
 {
   // 1. if not courseplay
   // bring setting & save records before removing play context
@@ -788,7 +783,7 @@ void Player::ClearPlayContext()
   // 2-2. if course finish
   // save course play info.
 
-  if (is_save_allowed_ && !is_replay_ && play_context_)
+  if (play_context_ && is_save_allowed_ && !is_replay_)
   {
     if (!is_courseplay_)
     {
@@ -798,21 +793,17 @@ void Player::ClearPlayContext()
     }
     else
     {
-      if (!play_chartname_.empty())
-      {
-        courserecord_.pg += play_context_->GetPlayRecord().pg;
-        courserecord_.gr += play_context_->GetPlayRecord().gr;
-        courserecord_.gd += play_context_->GetPlayRecord().gd;
-        courserecord_.pr += play_context_->GetPlayRecord().pr;
-        courserecord_.bd += play_context_->GetPlayRecord().bd;
-        courserecord_.maxcombo = std::max(
-          courserecord_.maxcombo, play_context_->GetPlayRecord().maxcombo);
-        // TODO: append replay info to coursecontext
-      }
-      else
-      {
-        SetPlayRecord(courserecord_);
-      }
+      courserecord_.pg += play_context_->GetPlayRecord().pg;
+      courserecord_.gr += play_context_->GetPlayRecord().gr;
+      courserecord_.gd += play_context_->GetPlayRecord().gd;
+      courserecord_.pr += play_context_->GetPlayRecord().pr;
+      courserecord_.bd += play_context_->GetPlayRecord().bd;
+      courserecord_.maxcombo = std::max(
+        courserecord_.maxcombo, play_context_->GetPlayRecord().maxcombo);
+
+      // XXX: only flush result to 
+      // XXX: need to specify is_last_course_chart ?
+      SetPlayRecord(courserecord_);
     }
   }
 
@@ -823,21 +814,6 @@ void Player::ClearPlayContext()
 PlayContext *Player::GetPlayContext()
 {
   return play_context_;
-}
-
-void Player::AddChartnameToPlay(const std::string& chartname)
-{
-  play_chartname_.push_back(chartname);
-}
-
-void Player::LoadNextChart()
-{
-  ClearPlayContext();
-  if (play_chartname_.empty())
-    return;
-  std::string chartname = play_chartname_.front();
-  play_chartname_.pop_front();
-  SetPlayContext(chartname);
 }
 
 

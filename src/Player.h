@@ -184,8 +184,9 @@ private:
 };
 
 /* @brief Brief status for play status */
-struct PlayRecord
+class PlayRecord
 {
+public:
   std::string id;
   std::string chartname;
   int timestamp;
@@ -303,11 +304,17 @@ public:
 
   const PlayRecord *GetPlayRecord(const std::string &chartname) const;
   void SetPlayRecord(const PlayRecord &playrecord);
-  void SetPlayContext(const std::string &chartname);
-  void ClearPlayContext();
+
+  /* @brief Create PlayContext from chart data.
+   * @warn  Automatically called by Song::Play()
+   * \todo  Autoplay flag, where it is set? by Player? */
+  void StartPlay(rparser::Chart &chart);
+
+  /* @brief Save and destroy PlayContext.
+   * @warn  Automatically called by Song::Stop() */
+  void FinishPlay();
+
   PlayContext *GetPlayContext();
-  void AddChartnameToPlay(const std::string &chartname);
-  void LoadNextChart();
 
   static Player& getMainPlayer();
   static void CreatePlayer(PlayerTypes playertype, const std::string& player_name);
@@ -370,8 +377,6 @@ private: \
 
   /* XXX: context for course play? */
   PlayRecord courserecord_;
-  /* reserved charts to be played */
-  std::list<std::string> play_chartname_;
   bool is_courseplay_;
   bool is_replay_;
   bool is_save_allowed_;

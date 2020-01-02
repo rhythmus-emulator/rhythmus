@@ -38,22 +38,10 @@ void PlayScene::LoadScene()
     notefield_[i].Load(*metric);
   }
 
-  // TODO: enqueue event: song loading
-  // TODO: If course, enqueue charts to player.
-
-  // attempt to call song load (if not loaded)
-  // exit scene if no chart remain to play
-  if (SongResource::getInstance().is_loaded() == 0)
+  if (!SongPlayer::getInstance().Load())
   {
-    std::string song_path;
-    if (!Game::getInstance().pop_song(song_path))
-    {
-      CloseScene(false);
-      return;
-    }
-    SongResource::getInstance().LoadSong(song_path);
-
-    SongResource::getInstance().LoadResourcesAsync();
+    // exit scene instantly if no chart to play
+    CloseScene(false);
   }
 }
 
@@ -72,22 +60,12 @@ void PlayScene::StartScene()
   // enqueue event: after song resource loading
   {
     SceneTask *task = new SceneTask("songreadytask", [this] {
-      // need to upload bitmap here
-      SongResource::getInstance().UploadBitmaps();
-
-      // fetch chart / resource for each player
-      FOR_EACH_PLAYER(p, i)
-      {
-        p->LoadNextChart();
-      }
-      END_EACH_PLAYER()
-
       // trigger song ready event
       EventManager::SendEvent("PlayReady");
     });
     task->wait_for(theme_play_param_.load_wait_time);
     task->wait_cond([this] {
-      return SongResource::getInstance().is_loaded() >= 2;
+      return SongPlayer::getInstance().is_loaded() >= 2;
     });
     playscenetask_.Enqueue(task);
   }
@@ -97,13 +75,7 @@ void PlayScene::StartScene()
     SceneTask *task = new SceneTask("songplaytask", [this] {
       // trigger song play event
       EventManager::SendEvent("PlayStart");
-
-      // Play song & trigger players to start
-      FOR_EACH_PLAYER(p, i)
-      {
-        p->GetPlayContext()->StartPlay();
-      }
-      END_EACH_PLAYER()
+      SongPlayer::getInstance().Play();
       this->play_status_ = 1;
     });
     task->wait_for(theme_play_param_.ready_time);
@@ -128,6 +100,12 @@ void PlayScene::StartScene()
 
 void PlayScene::CloseScene(bool next)
 {
+#if 0
+  /**
+   * If we need to do early-playrecord saving, then enable this logic.
+   * But SongPlayer::Stop() will automatically do that.
+   * So, necessary?
+   */
   if (next)
   {
     // Save record & replay for all players
@@ -138,6 +116,7 @@ void PlayScene::CloseScene(bool next)
     }
     END_EACH_PLAYER()
   }
+#endif
 
   Scene::CloseScene(next);
 }
@@ -152,7 +131,7 @@ void PlayScene::ProcessInputEvent(const InputEvent& e)
         p->GetPlayContext()->StopPlay();
     }
     END_EACH_PLAYER()
-    SongResource::getInstance().CancelLoad();
+      SongPlayer::getInstance().Stop();
     FadeOutScene(false);
     return;
   }
@@ -176,7 +155,7 @@ void PlayScene::doUpdate(float delta)
   // Play BGM while playing.
   if (play_status_ == 1)
   {
-    SongResource::getInstance().Update(delta);
+    SongPlayer::getInstance().Update(delta);
   }
 
   // Update all players

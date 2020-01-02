@@ -85,10 +85,10 @@ void Game::Loop()
 /* @warn do not call this method directly! call Exit() instead. */
 void Game::Cleanup()
 {
+  SongPlayer::getInstance().Stop();
   Player::Cleanup();
   TaskPool::getInstance().ClearTaskPool();
   SceneManager::getInstance().Cleanup();
-  SongResource::getInstance().Clear();
   Graphic::getInstance().Cleanup();
   SoundDriver::getInstance().Destroy();
   Setting::SaveAll();
@@ -179,11 +179,7 @@ void Game::LoadArgument(const std::string& argv)
   else if (cmd == "-play")
   {
     game_boot_mode_ = GameBootMode::kBootPlay;
-
-    // XXX: check whether a file is course or not?
-    // XXX: what if file load failed?
-    push_song(v);
-    SongList::getInstance().LoadFileIntoSongList(v);
+    SongPlayer::getInstance().SetSongtoPlay(v, "");
   }
 }
 
@@ -196,20 +192,6 @@ const std::string &Game::get_window_title()
 GameBootMode Game::get_boot_mode() const
 {
   return game_boot_mode_;
-}
-
-void Game::push_song(const std::string& songpath)
-{
-  song_queue_.push_back(songpath);
-}
-
-bool Game::pop_song(std::string& songpath)
-{
-  if (song_queue_.empty())
-    return false;
-  songpath = song_queue_.front();
-  song_queue_.pop_front();
-  return true;
 }
 
 }

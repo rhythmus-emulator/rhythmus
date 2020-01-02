@@ -1,6 +1,7 @@
 #include "Song.h"
-#include "Timer.h"
+#include "Player.h"
 #include "Event.h"
+#include "Logger.h"
 #include "Util.h"
 #include "rparser.h"
 #include <map>
@@ -530,72 +531,196 @@ SongListData SongList::get(int i) { return songs_[i]; }
 class SongResourceLoadTask : public Task
 {
 public:
-  SongResourceLoadTask
-  (SongResource *res, const std::string& song_path)
-    : res_(res), song_path_(song_path)
-  {}
-
-  virtual void run()
-  {
-    res_->LoadSong(song_path_);
-  }
-
-  virtual void abort()
-  {
-  }
-
+  SongResourceLoadTask(SongPlayer *res) : res_(res) {}
+  virtual void run() { res_->Load(); }
+  virtual void abort() {}
 private:
-  SongResource *res_;
-  std::string song_path_;
+  SongPlayer *res_;
 };
 
 class SongResourceLoadResourceTask : public Task
 {
 public:
-  SongResourceLoadResourceTask(SongResource *res)
-    : res_(res) {}
-
-  virtual void run()
-  {
-    res_->LoadResources();
-  }
-
-  virtual void abort()
-  {
-    res_->CancelLoad();
-  }
-
+  SongResourceLoadResourceTask(SongPlayer *res) : res_(res) {}
+  virtual void run() { res_->LoadResources(); }
+  virtual void abort() { res_->Stop(); }
 private:
-  SongResource *res_;
+  SongPlayer *res_;
 };
 
 // ------------------------- class SongResource
 
-SongResource::SongResource()
-  : song_(nullptr), is_loaded_(0), load_bga_(true)
+SongPlayer::SongPlayer()
+  : song_(nullptr), is_loaded_(0), load_async_(true), load_bga_(true)
 {
 }
 
-bool SongResource::LoadSong(const std::string& path)
+bool SongPlayer::Load()
 {
-  // already loaded?
-  if (is_loaded_ > 0) return false;
-  bool load_result = true;
+  bool r;
 
-  song_ = new rparser::Song();
-  load_result = song_->Open(path);
+  /* if started loading, then do nothing. */
+  if (is_loaded_ != 0)
+    return true;
 
-  if (!load_result)
+  /* load song (sync) */
+  auto *pctx = GetSongPlayinfo();
+  if (!pctx)
   {
+    Logger::Error("Attempt to play song but no song queued for playing.");
+    return false;
+  }
+  std::string path = pctx->songpath;
+  song_ = new rparser::Song();
+  r = song_->Open(path);
+  if (!r)
+  {
+    Logger::Error("Song loading failed: %s", path.c_str());
     delete song_;
-    is_loaded_ = 0;
+    return false;
+  }
+  is_loaded_ = 1;
+
+  /* prepare resource list to load */
+  PrepareResourceListFromSong();
+
+  /* load image & audio */
+  if (load_async_)
+  {
+    LoadResourcesAsync();
+  }
+  else
+  {
+    LoadResources();
+    is_loaded_ = 2;
   }
 
-  return load_result;
+  return true;
+}
+
+void SongPlayer::Play()
+{
+  /* if not loaded, then do loading first. */
+  if (is_loaded_ == 0)
+    Load();
+  else if (is_loaded_ != 2)
+    return;
+
+  ASSERT(song_);
+  auto *pctx = GetSongPlayinfo();
+  rparser::Chart *c = song_->GetChart(pctx->chartpaths[0]);
+  if (!c)
+  {
+    Logger::Error("Attempt to play chart %s but not existing.",
+      pctx->chartpaths[0].c_str());
+    return;
+  }
+
+  /* Push charts into players */
+  FOR_EACH_PLAYER(p, i)
+  {
+    p->StartPlay(*c);
+  }
+  END_EACH_PLAYER()
+}
+
+void SongPlayer::Stop()
+{
+  if (is_loaded_ == 0)
+    return;
+
+  /* stop loading thread */
+  CancelLoad();
+
+  /* Release player chart. */
+  FOR_EACH_PLAYER(p, i)
+  {
+    p->FinishPlay();
+  }
+  END_EACH_PLAYER()
+
+  /* lock and clear all resources. */
+  std::lock_guard<std::mutex> lock(loading_mutex_);
+  files_to_load_.clear();
+
+  for (auto &bg : bg_animations_)
+    delete bg.second;
+  for (auto &sound : sounds_)
+    delete sound.second;
+  bg_animations_.clear();
+  sounds_.clear();
+  if (song_)
+  {
+    song_->Close();
+    delete song_;
+    song_ = nullptr;
+  }
+  is_loaded_ = 0;
+
+  /* Pop current song info. */
+  PopSongFromPlaylist();
+}
+
+void SongPlayer::Update(float delta)
+{
+  /* upload bitmap if not uploaded
+   * XXX: heavy? */
+  {
+    std::lock_guard<std::mutex> lock(res_mutex_);
+    UploadBitmaps();
+  }
+
+  /* update movie */
+  for (auto &bg : bg_animations_) if (bg.second->is_loaded())
+    bg.second->Update(delta);
+}
+
+void SongPlayer::SetCoursetoPlay(const std::string &coursepath)
+{
+  // TODO
+  ASSERT(0);
+}
+
+void SongPlayer::SetSongtoPlay(const std::string &songpath, const std::string &chartpath)
+{
+  ClearPlaylist();
+  // TODO: if songpath is course, then call SetCoursetoPlay()
+  // TODO: if songpath contains chartpath, then automatically fill chartpath.
+  if (chartpath.empty() && IsChartPath(songpath))
+  {
+    std::string chartpath_new;
+    AddSongtoPlaylist(songpath, chartpath_new);
+  }
+  else AddSongtoPlaylist(songpath, chartpath);
+}
+
+void SongPlayer::AddSongtoPlaylist(const std::string &songpath, const std::string &chartpath)
+{
+  SongPlayinfo playinfo;
+  playinfo.songpath = songpath;
+  playinfo.chartpaths[0] = chartpath;
+  playlist_.push_back(playinfo);
+}
+
+const SongPlayinfo *SongPlayer::GetSongPlayinfo() const
+{
+  if (!playlist_.empty())
+    return &playlist_.front();
+  return nullptr;
+}
+
+void SongPlayer::PopSongFromPlaylist()
+{
+  playlist_.pop_front();
+}
+
+void SongPlayer::ClearPlaylist()
+{
+  playlist_.clear();
 }
 
 #if 0
-void SongResource::LoadSongAsync(const std::string& path)
+void SongPlayer::LoadSongAsync(const std::string& path)
 {
   TaskAuto t = std::make_shared<SongResourceLoadTask>(this, path);
   tasks_.push_back(t);
@@ -603,7 +728,7 @@ void SongResource::LoadSongAsync(const std::string& path)
 }
 #endif
 
-void SongResource::PrepareResourceListFromSong()
+void SongPlayer::PrepareResourceListFromSong()
 {
   auto *dir = song_->GetDirectory();
   if (!dir)
@@ -633,7 +758,7 @@ void SongResource::PrepareResourceListFromSong()
 }
 
 /* internally called from Load() and LoadAsync() */
-void SongResource::LoadResources()
+void SongPlayer::LoadResources()
 {
   if (!song_) return;
 
@@ -697,7 +822,7 @@ void SongResource::LoadResources()
   is_loaded_ = 2;
 }
 
-void SongResource::LoadResourcesAsync()
+void SongPlayer::LoadResourcesAsync()
 {
   loadfile_count_total_ = files_to_load_.size();
   loaded_file_count_ = 0;
@@ -711,20 +836,13 @@ void SongResource::LoadResourcesAsync()
 }
 
 /* This function should be called after all song resources are loaded */
-void SongResource::UploadBitmaps()
+void SongPlayer::UploadBitmaps()
 {
   for (auto &bg : bg_animations_) if (bg.second->is_loaded())
     bg.second->CommitImage();
 }
 
-/* For updating image */
-void SongResource::Update(float delta)
-{
-  for (auto &bg : bg_animations_) if (bg.second->is_loaded())
-    bg.second->Update(delta);
-}
-
-void SongResource::CancelLoad()
+void SongPlayer::CancelLoad()
 {
   {
     std::lock_guard<std::mutex> lock(loading_mutex_);
@@ -735,73 +853,46 @@ void SongResource::CancelLoad()
   tasks_.clear();
 }
 
-void SongResource::Clear()
+bool SongPlayer::IsChartPath(const std::string &path)
 {
-  CancelLoad();
-  for (auto &bg : bg_animations_)
-    delete bg.second;
-  for (auto &sound : sounds_)
-    delete sound.second;
-  bg_animations_.clear();
-  sounds_.clear();
-  if (song_)
-  {
-    song_->Close();
-    delete song_;
-    song_ = nullptr;
-  }
-  is_loaded_ = 0;
+  // TODO: use rparser library later.
+  std::string path_lower = Lower(path);
+  return (endsWith(path_lower, ".bms")
+    || endsWith(path_lower, ".bme")
+    || endsWith(path_lower, ".bml")
+    || endsWith(path_lower, ".osu")
+    || endsWith(path_lower, ".sm"));
 }
 
-void SongResource::AddSongtoPlaylist(const std::string &songpath, const std::string &chartpath)
-{
-  SongPlayinfo playinfo;
-  playinfo.songpath = songpath;
-  playinfo.chartpaths[0] = chartpath;
-  playlist_.push_back(playinfo);
-}
-
-const SongPlayinfo *SongResource::GetSongPlayinfo() const
-{
-  if (!playlist_.empty())
-    return &playlist_.front();
-  return nullptr;
-}
-
-void SongResource::PopSongFromPlaylist()
-{
-  playlist_.pop_front();
-}
-
-rparser::Song* SongResource::get_song()
+rparser::Song* SongPlayer::get_song()
 {
   return song_;
 }
 
-rparser::Chart* SongResource::get_chart(const std::string& chartname)
+rparser::Chart* SongPlayer::get_chart(const std::string& chartname)
 {
   if (!song_)
     return nullptr;
   return song_->GetChart(chartname);
 }
 
-void SongResource::set_load_bga(bool use_bga)
+void SongPlayer::set_load_bga(bool use_bga)
 {
   load_bga_ = use_bga;
 }
 
-int SongResource::is_loaded() const
+int SongPlayer::is_loaded() const
 {
   return is_loaded_;
 }
 
-double SongResource::get_progress() const
+double SongPlayer::get_progress() const
 {
   if (loadfile_count_total_ == 0) return .0;
   return (double)loaded_file_count_ / loadfile_count_total_;
 }
 
-Sound* SongResource::GetSound(const std::string& filename, int channel)
+Sound* SongPlayer::GetSound(const std::string& filename, int channel)
 {
   Sound *sound_found = nullptr;
   Sound *new_sound = nullptr;
@@ -838,16 +929,16 @@ Sound* SongResource::GetSound(const std::string& filename, int channel)
   return new_sound;
 }
 
-Image* SongResource::GetImage(const std::string& filename)
+Image* SongPlayer::GetImage(const std::string& filename)
 {
   for (auto &bg : bg_animations_)
     if (bg.first.name == filename) return bg.second;
   return nullptr;
 }
 
-SongResource& SongResource::getInstance()
+SongPlayer& SongPlayer::getInstance()
 {
-  static SongResource r;
+  static SongPlayer r;
   return r;
 }
 

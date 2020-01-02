@@ -33,11 +33,17 @@ std::string format_string(const std::string& format, Args ... args)
 
 std::string GetExtension(const std::string& path);
 
+std::string Lower(const std::string &s);
+
 std::string Upper(const std::string &s);
 
 std::string Substitute(const std::string& org, const std::string& startswith, const std::string& relplacewith);
 
 std::string Replace(const std::string& org, const std::string& target, const std::string& replaceto);
+
+bool startsWith(const std::string &s, const std::string &pattern);
+
+bool endsWith(const std::string &s, const std::string &pattern);
 
 void Split(const std::string& str, char sep, std::vector<std::string>& vsOut);
 

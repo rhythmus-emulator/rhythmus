@@ -151,17 +151,20 @@ private:
 };
 
 /* @brief A singleton class. Contains song and resources. */
-class SongResource
+class SongPlayer
 {
 public:
-  SongResource();
-  bool LoadSong(const std::string& path);
-  void LoadResources();
-  void LoadResourcesAsync();
-  void UploadBitmaps();
+  SongPlayer();
+  bool Load();
+  void Play();
+  void Stop();
   void Update(float delta);
-  void CancelLoad();
-  void Clear();
+
+  /* @brief Set course for play. */
+  void SetCoursetoPlay(const std::string &coursepath);
+
+  /* @brief Set single song for playing. */
+  void SetSongtoPlay(const std::string &songpath, const std::string &chartpath);
 
   /* @brief Add song to play. */
   void AddSongtoPlaylist(const std::string &songpath, const std::string &chartpath);
@@ -170,6 +173,7 @@ public:
   const SongPlayinfo *GetSongPlayinfo() const;
 
   void PopSongFromPlaylist();
+  void ClearPlaylist();
 
   rparser::Song* get_song();
   rparser::Chart* get_chart(const std::string& chartname);
@@ -180,7 +184,9 @@ public:
   Sound* GetSound(const std::string& filename, int channel = -1);
   Image* GetImage(const std::string& filename);
 
-  static SongResource& getInstance();
+  static SongPlayer& getInstance();
+  friend class SongResourceLoadTask;
+  friend class SongResourceLoadResourceTask;
 
 private:
   rparser::Song* song_;
@@ -226,9 +232,17 @@ private:
    */
   int is_loaded_;
 
+  /* load(play) as async */
+  bool load_async_;
+
   bool load_bga_;
 
+  void CancelLoad();
+  void LoadResources();
+  void LoadResourcesAsync();
+  void UploadBitmaps();
   void PrepareResourceListFromSong();
+  bool IsChartPath(const std::string &path);
 };
 
 }

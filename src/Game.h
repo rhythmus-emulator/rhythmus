@@ -42,8 +42,6 @@ public:
   void LoadArgument(const std::string& argv);
 
   GameBootMode get_boot_mode() const;
-  void push_song(const std::string& songpath);
-  bool pop_song(std::string& songpath);
 
   static const std::string &get_window_title();
 
@@ -58,9 +56,6 @@ private:
 
   // current game boot mode.
   GameBootMode game_boot_mode_;
-
-  // song path list to play
-  std::list<std::string> song_queue_;
 };
 
 }

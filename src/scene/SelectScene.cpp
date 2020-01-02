@@ -20,12 +20,7 @@ SelectScene::SelectScene()
 void SelectScene::LoadScene()
 {
   // Before starting, unload song.
-  FOR_EACH_PLAYER(p, i)
-  {
-    p->ClearPlayContext();
-  }
-  END_EACH_PLAYER()
-  SongResource::getInstance().Clear();
+  SongPlayer::getInstance().Stop();
 
   // Add wheel children first, as scene parameter may need it.
   // (e.g. LR2 command)
@@ -97,7 +92,7 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
       }
       END_EACH_PLAYER()
 #endif
-      SongResource::getInstance().AddSongtoPlaylist(
+      SongPlayer::getInstance().AddSongtoPlaylist(
         d.info.songpath, d.info.chartpath
       );
 
