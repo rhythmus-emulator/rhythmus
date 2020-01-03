@@ -693,7 +693,13 @@ void SongPlayer::SetSongtoPlay(const std::string &songpath, const std::string &c
 {
   ClearPlaylist();
   // TODO: if songpath is course, then call SetCoursetoPlay()
-  // TODO: if songpath contains chartpath, then automatically fill chartpath.
+  AddSongtoPlaylist(songpath, chartpath);
+}
+
+void SongPlayer::AddSongtoPlaylist(const std::string &songpath, const std::string &chartpath)
+{
+  // if songpath contains chartpath, then automatically fill chartpath.
+  SongPlayinfo playinfo;
   if (chartpath.empty() && IsChartPath(songpath))
   {
     std::string songpath_new, chartpath_new;
@@ -703,16 +709,14 @@ void SongPlayer::SetSongtoPlay(const std::string &songpath, const std::string &c
       songpath_new = songpath.substr(0, p);
       chartpath_new = songpath.substr(p + 1);
     }
-    AddSongtoPlaylist(songpath_new, chartpath_new);
+    playinfo.songpath = songpath_new;
+    playinfo.chartpaths[0] = chartpath_new;
   }
-  else AddSongtoPlaylist(songpath, chartpath);
-}
-
-void SongPlayer::AddSongtoPlaylist(const std::string &songpath, const std::string &chartpath)
-{
-  SongPlayinfo playinfo;
-  playinfo.songpath = songpath;
-  playinfo.chartpaths[0] = chartpath;
+  else
+  {
+    playinfo.songpath = songpath;
+    playinfo.chartpaths[0] = chartpath;
+  }
   playlist_.push_back(playinfo);
 }
 

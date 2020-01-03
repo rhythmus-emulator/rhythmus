@@ -770,6 +770,7 @@ void Player::StartPlay(rparser::Chart &chart)
   ASSERT(play_context_ == nullptr);
   chart.Invalidate();
   play_context_ = new PlayContext(*this, chart);
+  play_context_->StartPlay();
 }
 
 void Player::FinishPlay()

@@ -339,6 +339,8 @@ std::string ResourceManager::PrefixReplace(const std::string &path) const
   std::string newpath = path;
   for (size_t i = 0; i < newpath.size(); ++i)
     if (newpath[i] == '\\') newpath[i] = '/';
+  if (startsWith(newpath, "./"))
+    newpath = newpath.substr(2);
   if (path_prefix_replace_from_.empty()) return newpath;
   if (strnicmp(
     path_prefix_replace_from_.c_str(),

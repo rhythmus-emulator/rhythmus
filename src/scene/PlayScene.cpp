@@ -85,8 +85,8 @@ void PlayScene::StartScene()
   // enqueue event: song finished
   {
     SceneTask *task = new SceneTask("songfinishedtask", [this] {
-      this->CloseScene(true);
-      this->play_status_ = 3;
+      //this->CloseScene(true);
+      //this->play_status_ = 3;
     });
     task->wait_cond([this] {
       return this->play_status_ == 1 && Player::IsAllPlayerFinished();
