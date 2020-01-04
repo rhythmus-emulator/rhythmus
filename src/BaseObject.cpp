@@ -465,6 +465,10 @@ void BaseObject::SetLR2DST(
     break;
   }
 
+  // blend parameter should set by Sprite command.
+  if (blend != 1)
+    QueueCommand("blend:" + std::to_string(blend));
+
   // If first tween and starting time is not zero,
   // then add dummy tween (invisible).
   if (tween_.size() == 1 && time > 0)
@@ -476,10 +480,6 @@ void BaseObject::SetLR2DST(
     tween_.front().ease_type = EaseTypes::kEaseNone;
     tween_.front().time_duration = time;
   }
-
-  // blend parameter should set by Sprite command.
-  if (blend != 1)
-    QueueCommand("blend:" + std::to_string(blend));
 }
 
 void BaseObject::SetLR2DSTCommand(const std::string &lr2dst)

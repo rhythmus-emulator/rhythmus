@@ -256,13 +256,15 @@ void Script::ExecuteLR2Script(const std::string &filepath)
       }
       else if (lr2name == "IMAGE")
       {
-        // TODO: value with "continue" ?
-        ResourceManager::SetAlias("Image" + std::to_string(image_idx++), args.Get<std::string>(0));
+        std::string path = args.Get<std::string>(0);
+        if (path != "CONTINUE")
+          ResourceManager::SetAlias("Image" + std::to_string(image_idx++), path);
       }
       else if (lr2name == "LR2FONT")
       {
-        // TODO: value with "continue" ?
-        ResourceManager::SetAlias("Font" + std::to_string(font_idx++), args.Get<std::string>(0));
+        std::string path = args.Get<std::string>(0);
+        if (path != "CONTINUE")
+          ResourceManager::SetAlias("Font" + std::to_string(font_idx++), path);
       }
 
     }

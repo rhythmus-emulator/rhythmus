@@ -109,8 +109,8 @@ void Sprite::Refresh()
 
 void Sprite::doRender()
 {
-  // If hide, then not draw
-  if (!img_ || !IsVisible())
+  // If not loaded or hide, then not draw
+  if (!img_ || !img_->is_loaded() || !IsVisible())
     return;
 
   Graphic::SetTextureId(img_->get_texture_ID());
@@ -189,7 +189,7 @@ void Sprite::LoadFromLR2SRC(const std::string &cmd)
 
   SetImageByPath(args.Get<std::string>(0));
 
-  if (!img_)
+  if (!img_ || !img_->is_loaded())
     return;
 
   imgcoord_.x = args.Get<int>(1);
