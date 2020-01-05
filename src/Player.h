@@ -239,6 +239,7 @@ public:
 
   void Update(float delta);
 
+  size_t GetTrackCount() const;
   TrackIterator GetTrackIterator(size_t track_idx);
 
   Image* GetImage(size_t layer_idx) const;
@@ -247,6 +248,7 @@ public:
 private:
   Player &player_;
   rparser::TimingSegmentData *timing_seg_data_;
+  size_t track_count_;
 
   /* unsaved playing context (for single stage) */
 
@@ -308,7 +310,10 @@ public:
   /* @brief Create PlayContext from chart data.
    * @warn  Automatically called by Song::Play()
    * \todo  Autoplay flag, where it is set? by Player? */
-  void StartPlay(rparser::Chart &chart);
+  void SetChart(rparser::Chart &chart);
+
+  /* @brief Set Playcontext to start game. */
+  void StartPlay();
 
   /* @brief Save and destroy PlayContext.
    * @warn  Automatically called by Song::Stop() */
@@ -386,9 +391,11 @@ private: \
 
 #define FOR_EACH_PLAYER(p, i) \
 { Player *p; int i; \
-for (p = nullptr, i = 0; i < kMaxPlayerSlot; p = Player::getPlayer(i), ++i) if (!p) continue; else
+for (p = nullptr, i = 0; i < kMaxPlayerSlot; ++i) { \
+p = Player::getPlayer(i); \
+if (!p) continue; else
 
 #define END_EACH_PLAYER() \
-}
+} }
 
 }

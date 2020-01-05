@@ -153,9 +153,6 @@ public:
   /* @brief Load from LR2SRC (for LR2) */
   virtual void LoadFromLR2SRC(const std::string &cmd);
 
-  /* @brief Initialize object from metric information. */
-  virtual void Initialize();
-
   /* @brief Inherited from EventReceiver */
   virtual bool OnEvent(const EventMessage& msg);
 

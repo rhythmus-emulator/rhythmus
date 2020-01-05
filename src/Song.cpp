@@ -581,6 +581,21 @@ bool SongPlayer::Load()
   }
   is_loaded_ = 1;
 
+  /* Initialize each player for chart */
+  FOR_EACH_PLAYER(p, i)
+  {
+    rparser::Chart *c = song_->GetChart(pctx->chartpaths[0]);
+    if (!c)
+    {
+      Logger::Error("Attempt to play chart %s but not existing.",
+        pctx->chartpaths[0].c_str());
+      continue;
+    }
+    c->Invalidate();
+    p->SetChart(*c);
+  }
+  END_EACH_PLAYER()
+
   /* prepare resource list to load */
   PrepareResourceListFromSong();
 
@@ -606,20 +621,10 @@ void SongPlayer::Play()
   else if (is_loaded_ != 2)
     return;
 
-  ASSERT(song_);
-  auto *pctx = GetSongPlayinfo();
-  rparser::Chart *c = song_->GetChart(pctx->chartpaths[0]);
-  if (!c)
-  {
-    Logger::Error("Attempt to play chart %s but not existing.",
-      pctx->chartpaths[0].c_str());
-    return;
-  }
-
   /* Push charts into players */
   FOR_EACH_PLAYER(p, i)
   {
-    p->StartPlay(*c);
+    p->StartPlay();
   }
   END_EACH_PLAYER()
 }

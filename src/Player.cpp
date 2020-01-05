@@ -371,7 +371,8 @@ int PlayRecord::exscore() const
 // -------------------------- class PlayContext
 
 PlayContext::PlayContext(Player &player, rparser::Chart &c)
-  : player_(player), songtime_(0), measure_(0), beat_(0), timing_seg_data_(nullptr),
+  : player_(player), track_count_(0),
+    songtime_(0), measure_(0), beat_(0), timing_seg_data_(nullptr),
     is_alive_(0), health_(0.), combo_(0),
     last_judge_type_(JudgeTypes::kJudgeNone), is_play_bgm_(true)
 {
@@ -379,8 +380,9 @@ PlayContext::PlayContext(Player &player, rparser::Chart &c)
 
   // set note / track data from notedata
   auto &nd = c.GetNoteData();
+  track_count_ = nd.get_track_count();
   size_t i = 0;
-  for (; i < nd.get_track_count(); ++i)
+  for (; i < track_count_; ++i)
     track_context_[i].Initialize(nd.get_track(i));
   for (; i < kMaxTrackSize; ++i)
     track_context_[i].Clear();
@@ -630,6 +632,7 @@ void PlayContext::Update(float delta)
       auto *obj = static_cast<rparser::BgmObject*>(bgm_context_.get_stack());
       bgm_context_.pop_stack();
       if (!obj) continue;
+      /* TODO: access keysound of SongPlayer. */
       auto *s = keysounds_[obj->channel()];
       if (s) s->Play();
     }
@@ -641,6 +644,11 @@ void PlayContext::Update(float delta)
 void PlayContext::UpdateJudgeByRow()
 {
   // TODO
+}
+
+size_t PlayContext::GetTrackCount() const
+{
+  return track_count_;
 }
 
 TrackIterator PlayContext::GetTrackIterator(size_t track_idx)
@@ -765,11 +773,16 @@ void Player::SetPlayRecord(const PlayRecord &playrecord)
   playrecords_.push_back(playrecord);
 }
 
-void Player::StartPlay(rparser::Chart &chart)
+void Player::SetChart(rparser::Chart &chart)
 {
+  FinishPlay();
   ASSERT(play_context_ == nullptr);
-  chart.Invalidate();
   play_context_ = new PlayContext(*this, chart);
+}
+
+void Player::StartPlay()
+{
+  if (!play_context_) return;
   play_context_->StartPlay();
 }
 

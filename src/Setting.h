@@ -58,12 +58,6 @@ public:
   void set(const std::string &key, double v);
   void set(const std::string &key, bool v);
 
-  template <typename T>
-  void set_fallback(const std::string &key, T v)
-  {
-    if (!exist(key)) set(key, v);
-  }
-
   typedef std::map<std::string, std::string>::iterator iterator;
   typedef std::map<std::string, std::string>::const_iterator const_iterator;
   iterator begin();
@@ -84,17 +78,19 @@ public:
 
   bool exist(const std::string &group, const std::string &key) const;
 
-  template <typename T>
-  T get(const std::string &group, const std::string &key) const
-  {
-    auto it = metricmap_.find(group);
-    ASSERT_M(it != metricmap_.end(), "Metric group '" + group + "' is not found.");
-    return it->second.get<T>(key);
-  }
-
+  /* get metric considering fallback. */
+  const Metric *get_metric(const std::string &group) const;
   Metric *get_metric(const std::string &group);
   Metric *create_metric(const std::string &group);
   void copy_metric(const std::string &name_from, const std::string &name_to);
+
+  template <typename T>
+  T get(const std::string &group, const std::string &key) const
+  {
+    auto *m = get_metric(group);
+    ASSERT_M(m, "Metric group '" + group + "' is not found.");
+    return m->get<T>(key);
+  }
 
   void set(const std::string &group, const std::string &key, const std::string &v);
   void set(const std::string &group, const std::string &key, const char *v);

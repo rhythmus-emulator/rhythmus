@@ -266,14 +266,6 @@ void BaseObject::LoadByName()
   Load(*m);
 }
 
-void BaseObject::Initialize()
-{
-  if (get_name().empty()) return;
-  auto *m = Setting::GetThemeMetricList().get_metric(get_name());
-  if (m)
-    Load(*m);
-}
-
 bool BaseObject::OnEvent(const EventMessage& msg)
 {
   RunCommandByName(msg.GetEventName());

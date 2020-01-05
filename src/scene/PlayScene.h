@@ -36,8 +36,10 @@ private:
     int ready_time;
   } theme_play_param_;
 
-  /* @brief Note per lane TODO: note for each player? */
-  NoteField notefield_[20];
+  /* @brief
+   * NoteField per player
+   * (currently only up to 4 player?) */
+  NoteField notefield_[4];
 };
 
 }

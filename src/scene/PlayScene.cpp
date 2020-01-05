@@ -11,49 +11,43 @@ PlayScene::PlayScene()
 {
   set_name("PlayScene");
 
-  // TODO: check for bootmode
   next_scene_ = "ResultScene";
   prev_scene_ = "SelectScene";
+
+  if (Game::getInstance().get_boot_mode() == GameBootMode::kBootPlay)
+  {
+    next_scene_ = "Exit";
+    prev_scene_ = "Exit";
+  }
 }
 
 void PlayScene::LoadScene()
 {
-  Scene::LoadScene();
+  if (!SongPlayer::getInstance().Load())
+  {
+    // exit scene instantly if no chart to play
+    CloseScene(false);
+  }
 
   Metric *metric = Setting::GetThemeMetricList().get_metric(get_name());
   ASSERT(metric);
   theme_play_param_.load_wait_time = metric->get<int>("LoadingDelay");
   theme_play_param_.ready_time = metric->get<int>("ReadyDelay");
 
-  // TODO
-  size_t lanecount = 7;
-  for (size_t i = 0; i < lanecount; ++i)
+  // Create notefield object per player.
+  FOR_EACH_PLAYER(p, i)
   {
+    notefield_[i].set_name(format_string("NoteField%dP", i + 1));
+    notefield_[i].set_player(i);
     AddChild(&notefield_[i]);
-    notefield_[i].set_player_id(0);
-    notefield_[i].set_track_idx(i);
-
-    // TODO: create new metric for notefield?
-    // Lane1OnLoad --> OnLoad
-    notefield_[i].Load(*metric);
   }
+  END_EACH_PLAYER()
 
-  if (!SongPlayer::getInstance().Load())
-  {
-    // exit scene instantly if no chart to play
-    CloseScene(false);
-  }
+  Scene::LoadScene();
 }
 
 void PlayScene::StartScene()
 {
-  // In case of Play-only boot mode:
-  // trigger event force to trigger some related events.
-  if (Game::getInstance().get_boot_mode() == GameBootMode::kBootPlay)
-  {
-    EventManager::SendEvent("SongSelectChanged");
-  }
-
   // send loading event
   EventManager::SendEvent("PlayLoading");
 
@@ -85,8 +79,8 @@ void PlayScene::StartScene()
   // enqueue event: song finished
   {
     SceneTask *task = new SceneTask("songfinishedtask", [this] {
-      //this->CloseScene(true);
-      //this->play_status_ = 3;
+      this->CloseScene(true);
+      this->play_status_ = 3;
     });
     task->wait_cond([this] {
       return this->play_status_ == 1 && Player::IsAllPlayerFinished();
@@ -125,13 +119,7 @@ void PlayScene::ProcessInputEvent(const InputEvent& e)
 {
   if (e.type() == InputEvents::kOnKeyDown && e.KeyCode() == GLFW_KEY_ESCAPE)
   {
-    FOR_EACH_PLAYER(p, i)
-    {
-      if (p->GetPlayContext())
-        p->GetPlayContext()->StopPlay();
-    }
-    END_EACH_PLAYER()
-      SongPlayer::getInstance().Stop();
+    SongPlayer::getInstance().Stop();
     FadeOutScene(false);
     return;
   }

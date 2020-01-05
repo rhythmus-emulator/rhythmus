@@ -141,15 +141,15 @@ void Script::ExecuteLR2Script(const std::string &filepath)
 {
 #define NAMES \
   NAME("SRC_NOTE", "Note%d", "lr2src", 0), \
-  NAME("SRC_AUTO_NOTE", "Note%dAuto", "lr2src", 0), \
-  NAME("SRC_LN_END", "Note%dLNEnd", "lr2src", 0), \
-  NAME("SRC_AUTO_LN_END", "Note%dAutoLNEndy", "lr2src", 0), \
-  NAME("SRC_LN_START", "Note%dLNStart", "lr2src", 0), \
-  NAME("SRC_AUTO_LN_START", "Note%dAutoLNStart", "lr2src", 0), \
-  NAME("SRC_LN_BODY", "Note%dLNBody", "lr2src", 0), \
-  NAME("SRC_AUTO_LN_BODY", "Note%dAutoLNBody", "lr2src", 0), \
-  NAME("SRC_MINE", "Note%dMine", "lr2src", 0), \
-  NAME("DST_NOTE", "NoteField", "Note%dlr2cmd", 0), \
+  NAME("SRC_AUTO_NOTE", "ANote%d", "lr2src", 0), \
+  NAME("SRC_LN_END", "NoteLnTail%d", "lr2src", 0), \
+  NAME("SRC_AUTO_LN_END", "ANoteLnTail%d", "lr2src", 0), \
+  NAME("SRC_LN_START", "NoteLnHead%d", "lr2src", 0), \
+  NAME("SRC_AUTO_LN_START", "ANoteLnHead%d", "lr2src", 0), \
+  NAME("SRC_LN_BODY", "NoteLnBody%d", "lr2src", 0), \
+  NAME("SRC_AUTO_LN_BODY", "ANoteLnBody%d", "lr2src", 0), \
+  NAME("SRC_MINE", "NoteMine%d", "lr2src", 0), \
+  NAME("DST_NOTE", "NoteField", "Lane%dOnLR", 0), \
   NAME("SRC_GROOVEGAUGE", "LifeGauge%dP", "lr2src", 0), \
   NAME("DST_GROOVEGAUGE", "LifeGauge%dP", "OnLR", 0), \
   NAME("SRC_NOWJUDGE_1P", "Judge1P", "lr2src", 0), \

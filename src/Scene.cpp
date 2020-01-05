@@ -142,7 +142,7 @@ void Scene::LoadScene()
 
   // Initialize objects.
   for (auto *obj : children_)
-    obj->Initialize();
+    obj->LoadByName();
 
   // sort object if necessary.
   if (do_sort_objects_)

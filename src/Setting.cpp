@@ -206,22 +206,49 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
    * (kind of trick; no group information is given at file) */
   std::string group;
   if (filepath.find("select") != std::string::npos)
+  {
     group = "SelectScene";
+    auto *m = Setting::GetThemeMetricList().create_metric("MusicWheel");
+    m->set("CenterIndex", 10);
+    m->set("PositionType", 1);  /* use bar position */
+    m->set("BarCount", 20);     /* XXX: default 20? */
+    /* below is filter setting for LR2. */
+    m->set("GamemodeFilter", "none,IIDXSP,IIDXDP,popn");
+    m->set("DifficultyFilter", "none,easy,normal,hard,ex,insane");
+    m->set("SortType", "none,title,level,clear");
+  }
   else if (filepath.find("decide") != std::string::npos)
+  {
     group = "DecideScene";
+  }
   else if (filepath.find("play") != std::string::npos)
+  {
     group = "PlayScene";
+    curr_metrics = Setting::GetThemeMetricList().create_metric(group);
+    auto *m = Setting::GetThemeMetricList().create_metric("NoteField");
+    m->set("LR2TypeLane", true);
+    /* XXX: move it to _default.xml later */
+    auto *m1 = Setting::GetThemeMetricList().create_metric("NoteField1P");
+    m1->set("_fallback", "NoteField");
+    auto *m2 = Setting::GetThemeMetricList().create_metric("NoteField2P");
+    m2->set("_fallback", "NoteField");
+  }
   else if (filepath.find("courseresult") != std::string::npos) /* must courseresult first */
+  {
     group = "CourseResultScene";
+  }
   else if (filepath.find("result") != std::string::npos)
+  {
     group = "ResultScene";
+  }
 
   if (group.empty())
   {
     std::cerr << "Unknown type of LR2 metric file: " << filepath << std::endl;
     return;
   }
-  curr_metrics = Setting::GetThemeMetricList().create_metric(group);
+  if (!curr_metrics)
+    curr_metrics = Setting::GetThemeMetricList().create_metric(group);
 
   // default settings
   // use itself as script file.
@@ -287,12 +314,6 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
     {
       auto *m = Setting::GetThemeMetricList().create_metric("MusicWheel");
       m->set("CenterIndex", GetFirstParam(value));
-      m->set("PositionType", 1);  /* use bar position */
-      m->set("BarCount", 20);     /* XXX: default 20? */
-      /* below is filter setting for LR2. */
-      m->set("GamemodeFilter", "none,IIDXSP,IIDXDP,popn");
-      m->set("DifficultyFilter", "none,easy,normal,hard,ex,insane");
-      m->set("SortType", "none,title,level,clear");
     }
     else if (lr2name == "TRANSCLOLR")
     {
@@ -417,11 +438,23 @@ bool MetricList::exist(const std::string &group, const std::string &key) const
   return it->second.exist(key);
 }
 
+const Metric *MetricList::get_metric(const std::string &group) const
+{
+  return const_cast<MetricList*>(this)->get_metric(group);
+}
+
 Metric *MetricList::get_metric(const std::string &group)
 {
   auto it = metricmap_.find(group);
   if (it == metricmap_.end()) return nullptr;
-  else return &it->second;
+  /* if fallback, then return fallback metric. */
+  if (it->second.exist("_fallback"))
+  {
+    std::string fallback_group = it->second.get<std::string>("_fallback");
+    if (!fallback_group.empty())
+      return get_metric(fallback_group);
+  }
+  return &it->second;
 }
 
 Metric *MetricList::create_metric(const std::string &group)
