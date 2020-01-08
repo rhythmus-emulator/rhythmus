@@ -4,6 +4,7 @@
 #include "Logger.h"
 #include "Util.h"
 #include "Song.h"
+#include "SongPlayer.h"
 #include "SceneManager.h"
 #include "Sound.h"
 #include "Player.h"

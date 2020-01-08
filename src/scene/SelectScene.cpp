@@ -3,6 +3,7 @@
 #include "SceneManager.h"
 #include "Player.h"
 #include "Song.h"
+#include "SongPlayer.h"
 
 namespace rhythmus
 {

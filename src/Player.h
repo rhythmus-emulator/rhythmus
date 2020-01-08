@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Song.h"
 #include "Setting.h"
 #include "Event.h"
+#include "Sound.h"
+#include "Image.h"
 #include <string>
 #include <list>
 

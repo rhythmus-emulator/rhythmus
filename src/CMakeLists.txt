@@ -23,6 +23,7 @@ set (RHYTHMUS_SOURCES
 	Script.cpp
 	Event.cpp
 	Song.cpp
+	SongPlayer.cpp
 	Sound.cpp
 	Setting.cpp
 	TaskPool.cpp
@@ -71,6 +72,7 @@ set (RHYTHMUS_HEADERS
 	Script.h
 	Event.h
 	Song.h
+	SongPlayer.h
 	Sound.h
 	Setting.h
 	TaskPool.h

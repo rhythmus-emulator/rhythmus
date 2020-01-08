@@ -1,4 +1,5 @@
 #include "Player.h"
+#include "SongPlayer.h"
 #include "Timer.h"
 #include "Util.h"
 #include "Error.h"
