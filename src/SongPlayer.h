@@ -3,6 +3,8 @@
 #include "Image.h"
 #include "Sound.h"
 #include "TaskPool.h"
+#include "Event.h"
+#include "Setting.h"  /* for kMaxLaneCount */
 #include "rparser.h"
 #include <list>
 #include <mutex>
@@ -11,6 +13,9 @@ namespace rhythmus
 {
 
 class SongPlayinfo;
+class PlayContext;
+class Player;
+class NoteRenderData;
 
 /* @brief A singleton class. Contains song and resources. */
 class SongPlayer
@@ -19,7 +24,7 @@ public:
   SongPlayer();
   bool Load();
   void Play();
-  void Stop();
+  void Stop(bool interrupted = true);
   void Update(float delta);
 
   /* @brief Set course for play. */
@@ -34,22 +39,19 @@ public:
   /* @brief returns currently playing or going to be played song play info. */
   const SongPlayinfo *GetSongPlayinfo() const;
 
+  void ProcessInputEvent(const InputEvent& e);
   void PopSongFromPlaylist();
   void ClearPlaylist();
 
-  /* @brief   Assign a song session to a player.
-   * @detail  with this method,
-   * * Indicated chart of the song session became invalid
-   *   and don't autoplay anymore.
-   * * Player owns chart info and need to call play() method
-   *   of the session. */
-  void AssignSessionToPlayer(int session_id, int player_id);
+  /* @brief Get background image of the BGA layer */
+  Image *GetBackground(int session, int channel, int bgatype = 0);
 
-  /* @brief play keysound of the channel of the session. */
-  void PlaySound(int session, int channel);
+  /* @brief Get notes to display
+   * @param lane lane for filtering (-1 for all lanes) */
+  //void GetNoteForRendering(int session, int lane, std::vector<NoteRenderData> &out);
 
-  /* @brief stop keysound of the channel of the session */
-  void StopSound(int session, int channel);
+  /* @brief get PlayContext */
+  PlayContext* GetPlayContext(int session);
 
   rparser::Song* get_song();
   rparser::Chart* get_chart(const std::string& chartname);
@@ -65,7 +67,13 @@ public:
   friend class SongResourceLoadResourceTask;
 
 private:
-  rparser::Song* song_;
+  rparser::Song *song_;
+
+  /* for each session playing */
+  PlayContext *sessions_[kMaxPlaySession];
+
+  /* for combo (retaining previous playing combo) */
+  int prev_playcombo_[kMaxPlaySession];
 
   struct SoundInfo
   {
@@ -87,6 +95,10 @@ private:
 
   /* @brief list of songs to play */
   std::list<SongPlayinfo> playlist_;
+
+  /* @brief is currently playing as course mode
+   * (multiple songs in playlist) */
+  bool is_courseplay_;
 
   /*
    * @brief files to load
@@ -120,5 +132,283 @@ private:
   void PrepareResourceListFromSong();
   bool IsChartPath(const std::string &path);
 };
+
+enum ReplayEventTypes
+{
+  kReplayNone,
+  kReplayMiss,
+  kReplayPR,
+  kReplayBD,
+  kReplayGD,
+  kReplayGR,
+  kReplayPG,
+  kReplayMine,
+  kReplaySong, /* Need in course mode: song change trigger */
+};
+
+enum JudgeEventTypes
+{
+  kJudgeEventDown,
+  kJudgeEventUp,
+  kJudgeEventMove
+};
+
+enum ClearTypes
+{
+  kClearNone,
+  kClearFailed,
+  kClearAssist,
+  kClearEasy,
+  kClearNormal,
+  kClearHard,
+  kClearExHard,
+  kClearFullcombo,
+  kClearPerfect,
+};
+
+enum JudgeTypes
+{
+  kJudgeNone,
+  kJudgeMiss,
+  kJudgePR,
+  kJudgeBD,
+  kJudgeGD,
+  kJudgeGR,
+  kJudgePG,
+  kJudgeOK, /* mine, LN */
+};
+
+enum GameSpeedTypes
+{
+  kSpeedNormal,
+  kSpeedConstant,
+};
+
+/* @brief judge context */
+class JudgementContext
+{
+public:
+  JudgementContext();
+  JudgementContext(int pg, int gr, int gd, int bd, int pr);
+  int get_pr_time() const;
+  void setJudgementRatio(double r);
+  int judge(int delta_time);
+  static JudgementContext& getDefaultJudgementContext();
+
+private:
+  int judge_time_[6];
+};
+
+/* @brief Note object with judge context
+ * TODO: what about chain note?
+ * TODO: what about guitarfreaks type note? (insert invisible mine note?) */
+class NoteWithJudging : public rparser::Note
+{
+public:
+  NoteWithJudging(rparser::Note *note);
+  virtual ~NoteWithJudging() = default;
+  int judge(uint32_t songtime, int event_type);
+  int judge_with_pos(uint32_t songtime, int event_type, int x, int y, int z);
+  int judge_check_miss(uint32_t songtime);
+  bool is_judge_finished() const;
+  bool is_judgable() const;
+
+private:
+  /* current chain index of judgement */
+  size_t chain_index_;
+
+  /**
+   * 0: not judged
+   * 1: judging
+   * 2: judge finished
+   */
+  int judge_status_;
+
+  /* value of JudgeTypes */
+  int judgement_;
+
+  /* for invisible note object */
+  bool invisible_;
+
+  rparser::NoteDesc *get_curr_notedesc();
+  JudgementContext *get_judge_ctx();
+  int judge_only_timing(uint32_t songtime);
+  JudgementContext *judge_ctx_;
+};
+
+class Player;
+class TrackIterator;
+
+/* @brief Contains current keysound, note with judgement of a track */
+class TrackContext
+{
+public:
+  void Initialize(rparser::Track &track);
+  void SetInvisibleMineNote(double beat, uint32_t time); /* used for guitarfreaks */
+  void Clear();
+  void Update(uint32_t songtime);
+  NoteWithJudging *get_curr_judged_note();
+  NoteWithJudging *get_curr_sound_note();
+  bool is_all_judged() const;
+  friend class TrackIterator;
+
+private:
+  std::vector<NoteWithJudging> objects_;
+  size_t curr_keysound_idx_;
+  size_t curr_judge_idx_;
+};
+
+class TrackIterator
+{
+public:
+  TrackIterator(TrackContext& track);
+  bool is_end() const;
+  void next();
+  NoteWithJudging& operator*();
+private:
+  std::vector<NoteWithJudging*> notes_;
+  size_t curr_idx_;
+};
+
+/* @brief Track for background objects (automatic, without judgement) */
+class BackgroundDataContext
+{
+public:
+  BackgroundDataContext();
+  void Initialize(rparser::TrackData &data);
+  void Initialize(rparser::Track &track);
+  void Clear();
+  void Update(uint32_t songtime);
+  rparser::NotePos* get_current();
+  const rparser::NotePos* get_current() const;
+  rparser::NotePos* get_stack();
+  const rparser::NotePos* get_stack() const;
+  void pop_stack();
+  void clear_stack();
+
+private:
+  std::vector<rparser::NotePos*> objects_;
+  size_t curr_idx_;
+  size_t curr_process_idx_;
+};
+
+/* @brief Brief status for play status */
+class PlayRecord
+{
+public:
+  std::string id;
+  std::string chartname;
+  int timestamp;
+  int seed;
+  int speed;
+  int speed_type;
+  int clear_type;
+  int health_type;
+  int option;
+  int option_dp;
+  int assist;
+  int total_note;
+  int miss, pr, bd, gd, gr, pg;
+  int maxcombo;
+  int score;
+  int playcount;
+  int clearcount;
+  int failcount;
+
+  double rate() const;
+  int exscore() const;
+};
+
+class ReplayData
+{
+public:
+  struct ReplayEvent
+  {
+    int event_type;
+    int time;
+    int value1;
+    int value2;
+  };
+
+  std::vector<ReplayEvent> events;
+};
+
+/* @brief context used for playing song */
+class PlayContext
+{
+public:
+  PlayContext(Player *player, rparser::Chart &chart);
+
+  void StartPlay();
+  void StopPlay();
+  void FinishPlay();
+  void SavePlay();
+  void LoadPlay(const std::string &play_id);
+
+  void RecordPlay(ReplayEventTypes event_type, int time, int value1, int value2 = 0);
+  const std::string &GetPlayId() const;
+
+  double get_beat() const;
+  double get_measure() const;
+  double get_time() const;
+
+  double get_rate() const;
+  double get_current_rate() const;
+  double get_score() const;
+  double get_health() const;
+  bool is_alive() const;
+  bool is_finished() const;
+
+  void ProcessInputEvent(const InputEvent& e);
+
+  void Update(float delta);
+
+  size_t GetTrackCount() const;
+  TrackIterator GetTrackIterator(size_t track_idx);
+
+  Image* GetImage(size_t layer_idx) const;
+  PlayRecord &GetPlayRecord();
+
+private:
+  /* Player for current session. (may be null if autoplay) */
+  Player *player_;
+
+  rparser::TimingSegmentData *timing_seg_data_;
+  size_t track_count_;
+
+  /* unsaved playing context (for single stage) */
+
+  BackgroundDataContext bga_context_[4]; /* up to 4 layers */
+  BackgroundDataContext bgm_context_;
+  TrackContext track_context_[kMaxLaneCount];
+  void UpdateJudgeByRow(); /* for row-wise judgement update */
+
+  double songtime_;
+  double measure_;
+  double beat_;
+
+  double health_;
+  int is_alive_;
+  int combo_;         // combo in this chart
+  int running_combo_; // currently displaying combo
+  int passed_note_;
+  int last_judge_type_;
+  bool is_autoplay_;
+  int course_index_;
+  PlayRecord playrecord_;
+
+  Sound* keysounds_[2000]; // XXX: 2000?
+  Image* bg_animations_[2000];
+  bool is_play_bgm_;
+
+  /* unsaved playing context (for course) */
+  /* TODO: should moved to player object ...? */
+
+  /* replay context */
+  ReplayData replaydata_;
+
+  void LoadReplay(const std::string &replay_id);
+};
+
 
 }

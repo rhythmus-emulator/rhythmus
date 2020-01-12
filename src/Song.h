@@ -110,7 +110,7 @@ public:
 
   /**
    * @brief
-   * Load a song file into song list if file not exist in songlist.\
+   * Load a song file into song list if file not exist in songlist.
    */
   void LoadFileIntoSongList(
     const std::string& songpath,

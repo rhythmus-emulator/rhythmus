@@ -127,12 +127,7 @@ void PlayScene::ProcessInputEvent(const InputEvent& e)
   if (!is_input_available())
     return;
 
-  FOR_EACH_PLAYER(p, i)
-  {
-    if (p->GetPlayContext())
-      p->GetPlayContext()->ProcessInputEvent(e);
-  }
-  END_EACH_PLAYER()
+  SongPlayer::getInstance().ProcessInputEvent(e);
 }
 
 void PlayScene::doUpdate(float delta)

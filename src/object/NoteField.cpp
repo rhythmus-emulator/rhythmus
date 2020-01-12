@@ -1,5 +1,5 @@
 #include "NoteField.h"
-#include "Player.h"
+#include "SongPlayer.h"
 #include "Util.h"
 
 namespace rhythmus
@@ -7,7 +7,7 @@ namespace rhythmus
 
 /* ---------------------------- class NoteField */
 
-NoteField::NoteField() : player_idx_(0), player_(nullptr) {}
+NoteField::NoteField() : player_idx_(0) {}
 
 NoteField::~NoteField() {}
 
@@ -21,9 +21,7 @@ void NoteField::Load(const Metric &metric)
   if (metric.exist("player"))
     player_idx_ = metric.get<int>("player");
 
-  player_ = Player::getPlayer(player_idx_);
-  if (!player_) return;
-  auto *pctx = player_->GetPlayContext();
+  auto *pctx = SongPlayer::getInstance().GetPlayContext(player_idx_);
   if (!pctx) return;
 
   for (size_t i = 0; i < pctx->GetTrackCount(); ++i)
@@ -50,12 +48,10 @@ void NoteField::doUpdate(float delta)
     FillNoteRenderContext(player_idx_);
   }
   else {
-    Player *player = nullptr;
-    FOR_EACH_PLAYER(player, i)
+    for (size_t i = 0; i < kMaxPlaySession; ++i)
     {
       FillNoteRenderContext(i);
     }
-    END_EACH_PLAYER()
   }
 
   /* post nctx to each lane */
@@ -65,12 +61,9 @@ void NoteField::doUpdate(float delta)
 
 void NoteField::FillNoteRenderContext(int player_idx)
 {
-  Player *player = nullptr;
   PlayContext *pctx = nullptr;
   size_t track_cnt = 0;
-  player = Player::getPlayer(player_idx);
-  if (!player) return;
-  pctx = player->GetPlayContext();
+  pctx = SongPlayer::getInstance().GetPlayContext(player_idx);
   if (!pctx) return;
 
   NoteRenderContext nctx;

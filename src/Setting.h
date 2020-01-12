@@ -270,4 +270,15 @@ private:
   Setting();
 };
 
+/* TODO: move these constants to game module? */
+
+constexpr size_t kMaxPlaySession = 4;
+constexpr size_t kMaxLaneCount = 16;
+
+/* @brief Input setting for play. */
+struct KeySetting
+{
+  int keycode_per_track_[kMaxLaneCount][4];
+};
+
 }

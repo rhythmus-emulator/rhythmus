@@ -15,7 +15,6 @@ struct NoteRenderContext {
 };
 
 class NoteLane;
-class Player;
 
 class NoteField : public BaseObject
 {
@@ -29,7 +28,6 @@ public:
 
 private:
   int player_idx_;
-  Player *player_;
   std::vector<NoteLane*> lanes_;
   std::vector<NoteRenderContext> nctxs_;
 
