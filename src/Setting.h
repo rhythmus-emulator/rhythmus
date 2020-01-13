@@ -247,6 +247,14 @@ public:
   void DeleteOption(const std::string &key);
   void Clear();
 
+  template <typename T>
+  T GetValue(const std::string &key) const
+  {
+    Option *option = GetOption(key);
+    ASSERT(option);
+    return option->value<T>();
+  }
+
 private:
   std::map<std::string, Option*> options_;
 };

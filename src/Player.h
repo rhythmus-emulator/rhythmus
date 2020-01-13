@@ -10,6 +10,8 @@
 
 #include "rparser.h"
 
+struct sqlite3;
+
 namespace rhythmus
 {
 
@@ -63,12 +65,12 @@ public: \
 private: \
   type varname##_; \
 
-  USER_PROP(bool, use_lane_cover);
+  USER_PROP(bool, use_lanecover);
   USER_PROP(bool, use_hidden);
   USER_PROP(int, game_speed_type);
   USER_PROP(double, game_speed);
   USER_PROP(double, game_constant_speed);
-  USER_PROP(double, lane_cover);
+  USER_PROP(double, lanecover);
   USER_PROP(double, hidden);
   USER_PROP(int, option_chart);
   USER_PROP(int, option_chart_dp); /* only for BMS DP */
@@ -89,6 +91,9 @@ private: \
   /* PlayRecord of this player. Filled in Load() method. */
   std::vector<PlayRecord> playrecords_;
 
+  /* PlayRecord DB */
+  sqlite3 *pr_db_;
+
   /* Accumulated PlayRecord. Updated in SavePlayRecord() method.
    * Used for courseplay recording. */
   PlayRecord playrecord_;
@@ -103,7 +108,11 @@ private: \
 
   friend class PlayContext;
   void LoadPlayRecords();
-  void SavePlayRecords();
+  void UpdatePlayRecord(const PlayRecord &pr);
+  void ClosePlayRecords();
+  static int CreateSchemaCallbackFunc(void*, int argc, char **argv, char **colnames);
+  static int PRQueryCallbackFunc(void*, int argc, char **argv, char **colnames);
+  static int PRUpdateCallbackFunc(void*, int argc, char **argv, char **colnames);
 };
 
 class PlayerManager

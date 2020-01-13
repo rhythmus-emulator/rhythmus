@@ -5,6 +5,8 @@
 #include "Error.h"
 #include <iostream>
 
+#include "sqlite3.h"
+
 namespace rhythmus
 {
 
@@ -16,15 +18,17 @@ static int player_count;
 
 Player::Player(PlayerTypes player_type, const std::string& player_name)
   : player_type_(player_type), player_name_(player_name), is_guest_(false),
-  use_lane_cover_(false), use_hidden_(false),
+  use_lanecover_(false), use_hidden_(false),
   game_speed_type_(GameSpeedTypes::kSpeedConstant),
   game_speed_(1.0), game_constant_speed_(1.0),
-  lane_cover_(0.0), hidden_(0.0),
+  lanecover_(0.0), hidden_(0.0),
   bms_sp_class_(0), bms_dp_class_(0),
-  is_courseplay_(false)
+  pr_db_(nullptr), is_network_(false), running_combo_(0), is_courseplay_(false)
 {
   if (player_type_ == PlayerTypes::kPlayerGuest)
     is_guest_ = true;
+
+  // TODO: make properties for each game mode.
 
   // XXX: default keysetting should be here?
   memset(default_keysetting_.keycode_per_track_, 0, sizeof(KeySetting));
@@ -39,24 +43,25 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
   default_keysetting_.keycode_per_track_[7][1] = GLFW_KEY_SEMICOLON;
   curr_keysetting_ = &default_keysetting_;
 
-  // TODO: use preset options like game setting does
-#if 0
-  setting_.Load<double>("speed", game_speed_);
-  setting_.Load<bool>("use_hidden", use_hidden_);
-  setting_.Load<bool>("use_lane_cover", use_lane_cover_);
-  setting_.Load<double>("hidden", hidden_);
-  setting_.Load<double>("lanecover", lane_cover_);
-  setting_.Load<double>("game_speed", game_speed_);
-  setting_.Load<double>("game_constant_speed", game_constant_speed_);
-  setting_.Load<int>("option_chart", option_chart_);
-  setting_.Load<int>("option_chart_dp", option_chart_dp_);
-  setting_.Load<int>("health_type", health_type_);
-  setting_.Load<int>("assist", assist_);
-  setting_.Load<int>("pacemaker", pacemaker_);
-  setting_.Load<std::string>("pacemaker_target", pacemaker_target_);
-  setting_.Load<int>("bms_sp_class", bms_sp_class_);
-  setting_.Load<int>("bms_dp_class", bms_dp_class_);
-#endif
+  for (size_t i = 0; i < kMaxLaneCount; ++i)
+  {
+    // TODO: make keysetting option more solid
+    config_.SetOption(format_string("Key%d", i), "!N");
+  }
+  config_.SetOption("use_hidden", "!N,0");
+  config_.SetOption("use_lanecover", "!N,0");
+  config_.SetOption("hidden", "!N,0");
+  config_.SetOption("lanecover", "!N,0");
+  config_.SetOption("speed", "!N,300");
+  config_.SetOption("speed_option", "!N,0");
+  config_.SetOption("chart_option", "!N,0");
+  config_.SetOption("chart_option_2P", "!N,0");
+  config_.SetOption("health_type", "!N,0");
+  config_.SetOption("assist", "!N,0");
+  config_.SetOption("pacemaker", "!N,0");
+  config_.SetOption("pacemaker_target", "");
+  config_.SetOption("sp_class", "!N,0");
+  config_.SetOption("dp_class", "!N,0");
 
   config_path_ = format_string("../player/%s.xml", player_name_.c_str());
 }
@@ -75,7 +80,32 @@ void Player::Load()
     return;
   }
 
-  // TODO: load keysetting
+  // load keysetting
+  for (size_t i = 0; i < kMaxLaneCount; ++i)
+  {
+    std::string keyname(format_string("Key%d", i));
+    auto *opt = config_.GetOption(keyname);
+    if (!opt) break;
+    CommandArgs args(opt->value<std::string>(), 4);
+    default_keysetting_.keycode_per_track_[i][0] = args.Get<int>(0);
+    default_keysetting_.keycode_per_track_[i][1] = args.Get<int>(1);
+    default_keysetting_.keycode_per_track_[i][2] = args.Get<int>(2);
+    default_keysetting_.keycode_per_track_[i][3] = args.Get<int>(3);
+  }
+  use_hidden_ = config_.GetValue<int>("use_hidden");
+  use_lanecover_ = config_.GetValue<int>("use_lanecover");
+  hidden_ = config_.GetValue<int>("hidden");
+  lanecover_ = config_.GetValue<int>("lanecover");
+  game_speed_ = config_.GetValue<int>("speed");
+  game_speed_type_ = config_.GetValue<int>("speed_option");
+  option_chart_ = config_.GetValue<int>("chart_option");
+  option_chart_dp_ = config_.GetValue<int>("chart_option_2P");
+  health_type_ = config_.GetValue<int>("health_type");
+  assist_ = config_.GetValue<int>("assist");
+  pacemaker_ = config_.GetValue<int>("pacemaker");
+  pacemaker_target_ = config_.GetValue<std::string>("pacemaker_target");
+  bms_sp_class_ = config_.GetValue<int>("sp_class");
+  bms_dp_class_ = config_.GetValue<int>("dp_class");
 
   // load playrecords
   LoadPlayRecords();
@@ -83,6 +113,90 @@ void Player::Load()
 
 void Player::LoadPlayRecords()
 {
+  int rc = sqlite3_open("../system/song.db", &pr_db_);
+  if (rc) {
+    std::cout << "Cannot save song database." << std::endl;
+    ClosePlayRecords();
+  }
+  else
+  {
+    char *errmsg;
+
+    // create player record schema if not exists
+    // TODO: schema check logic
+
+    sqlite3_exec(pr_db_, "CREATE TABLE record("
+      "id CHAR(128) PRIMARY KEY,"
+      "name CHAR(512) NOT NULL,"
+      "gamemode INT,"
+      "timestamp INT,"
+      "seed INT,"
+      "speed INT,"
+      "speed_type INT,"
+      "clear_type INT,"
+      "health_type INT,"
+      "option INT,"
+      "assist INT,"
+      "total_note INT,"
+      "miss INT, pr INT, bd INT, gd INT, gr INT, pg INT,"
+      "maxcombo INT, score INT,"
+      "playcount INT, clearcount INT, failcount INT"
+      ");",
+      &Player::CreateSchemaCallbackFunc, this, &errmsg);
+
+    // load all records
+    rc = sqlite3_exec(pr_db_,
+      "SELECT id, name, gamemode, timestamp, seed, speed, speed_type, "
+      "clear_type, health_type, option, assist, total_note, "
+      "miss, pr, bd, gd, gr, pg, playcount, clearcount, failcount "
+      "from songs;",
+      &Player::PRQueryCallbackFunc, this, &errmsg);
+    if (rc != SQLITE_OK)
+    {
+      std::cerr << "Failed to query song database, maybe corrupted? (" << errmsg << ")" << std::endl;
+      ClosePlayRecords();
+      return;
+    }
+  }
+}
+
+int Player::CreateSchemaCallbackFunc(void*, int argc, char **argv, char **colnames)
+{
+  return 0;
+}
+
+int Player::PRQueryCallbackFunc(void* _self, int argc, char **argv, char **colnames)
+{
+  Player *p = static_cast<Player*>(_self);
+  PlayRecord pr;
+  for (int i = 0; i < argc; ++i)
+  {
+    pr.id = argv[0];
+    pr.chartname = argv[1];
+    pr.gamemode = atoi(argv[2]);
+    pr.timestamp = atoi(argv[2]);
+    pr.seed = atoi(argv[2]);
+    pr.speed= atoi(argv[2]);
+    pr.speed_type = atoi(argv[2]);
+    pr.clear_type = atoi(argv[2]);
+    pr.health_type = atoi(argv[2]);
+    pr.option = atoi(argv[2]);
+    pr.assist = atoi(argv[2]);
+    pr.total_note = atoi(argv[2]);
+    pr.miss = atoi(argv[2]);
+    pr.pr = atoi(argv[2]);
+    pr.bd = atoi(argv[2]);
+    pr.gd = atoi(argv[2]);
+    pr.gr = atoi(argv[2]);
+    pr.pg = atoi(argv[2]);
+    pr.maxcombo = atoi(argv[2]);
+    pr.score = atoi(argv[2]);
+    pr.playcount = atoi(argv[2]);
+    pr.clearcount = atoi(argv[2]);
+    pr.failcount = atoi(argv[2]);
+    p->playrecords_.push_back(pr);
+  }
+  return 0;
 }
 
 void Player::Save()
@@ -90,15 +204,41 @@ void Player::Save()
   if (is_guest_)
     return;
 
+  for (size_t i = 0; i < kMaxLaneCount; ++i)
+  {
+  }
+
   config_.SaveToFile(config_path_);
 
-  // save playrecords
-  SavePlayRecords();
+  // save(close) playrecords
+  ClosePlayRecords();
 }
 
-void Player::SavePlayRecords()
+void Player::UpdatePlayRecord(const PlayRecord &pr)
 {
+  if (!pr_db_)
+    return;
 
+  char *errmsg;
+
+  /* TODO: select query first, then check whether to update or insert. */
+
+  sqlite3_exec(pr_db_, "",
+    &Player::PRUpdateCallbackFunc, this, &errmsg);
+}
+
+int Player::PRUpdateCallbackFunc(void*, int argc, char **argv, char **colnames)
+{
+  return 0;
+}
+
+void Player::ClosePlayRecords()
+{
+  if (!pr_db_)
+    return;
+
+  sqlite3_close(pr_db_);
+  pr_db_ = nullptr;
 }
 
 void Player::Sync()

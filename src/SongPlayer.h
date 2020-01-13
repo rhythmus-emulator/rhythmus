@@ -298,6 +298,7 @@ class PlayRecord
 public:
   std::string id;
   std::string chartname;
+  int gamemode;
   int timestamp;
   int seed;
   int speed;

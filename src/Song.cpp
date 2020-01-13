@@ -177,7 +177,7 @@ void SongList::Load()
   {
     // Load all previously loaded songs
     char *errmsg;
-    sqlite3_exec(db,
+    rc = sqlite3_exec(db,
       "SELECT id, title, subtitle, artist, subartist, genre, "
       "songpath, chartpath, type, level, judgediff, modified_date, "
       "notecount, length_ms, bpm_max, bpm_min, is_longnote, is_backspin "
@@ -186,7 +186,7 @@ void SongList::Load()
     if (rc != SQLITE_OK)
     {
       std::cerr << "Failed to query song database, maybe corrupted? (" << errmsg << ")" << std::endl;
-      sqlite3_free(errmsg);
+      sqlite3_free(db);
     }
     sqlite3_close(db);
 
