@@ -33,7 +33,9 @@ private:
 // ------------------------- class SongResource
 
 SongPlayer::SongPlayer()
-  : song_(nullptr), is_courseplay_(false), is_loaded_(0), load_async_(true), load_bga_(true)
+  : song_(nullptr), is_courseplay_(false),
+  loadfile_count_total_(0), wthr_count_(0), loaded_file_count_(0),
+  is_loaded_(0), load_async_(true), load_bga_(true)
 {
   memset(sessions_, 0, sizeof(sessions_));
   memset(prev_playcombo_, 0, sizeof(prev_playcombo_));
@@ -90,6 +92,7 @@ bool SongPlayer::Load()
   }
   else
   {
+    wthr_count_ = 1;
     LoadResources();
     is_loaded_ = 2;
   }
@@ -348,6 +351,14 @@ void SongPlayer::LoadResources()
     }
   }
 
+  ASSERT(wthr_count_ > 0);
+  if (--wthr_count_ == 0)
+  {
+    /* last loading thread does after-loading tasks. */
+    for (size_t i = 0; i < kMaxPlaySession; ++i)
+      if (sessions_[i]) sessions_[i]->UpdateResource();
+  }
+
   is_loaded_ = 2;
 }
 
@@ -355,7 +366,9 @@ void SongPlayer::LoadResourcesAsync()
 {
   loadfile_count_total_ = files_to_load_.size();
   loaded_file_count_ = 0;
-  size_t load_thread_count = TaskPool::getInstance().GetPoolSize();
+  size_t load_thread_count
+    = wthr_count_
+    = TaskPool::getInstance().GetPoolSize();
   for (int i = 0; i < load_thread_count; ++i)
   {
     TaskAuto t = std::make_shared<SongResourceLoadResourceTask>(this);
@@ -419,6 +432,17 @@ double SongPlayer::get_progress() const
 {
   if (loadfile_count_total_ == 0) return .0;
   return (double)loaded_file_count_ / loadfile_count_total_;
+}
+
+bool SongPlayer::IsFinished() const
+{
+  for (int i = 0; i < kMaxPlaySession; ++i)
+  {
+    if (!sessions_[i]) continue;
+    if (!sessions_[i]->is_finished())
+      return false;
+  }
+  return true;
 }
 
 Sound* SongPlayer::GetSound(const std::string& filename, int channel)
@@ -836,11 +860,12 @@ int PlayRecord::exscore() const
 
 PlayContext::PlayContext(Player *player, rparser::Chart &c)
   : player_(player), track_count_(0),
-  songtime_(0), measure_(0), beat_(0), timing_seg_data_(nullptr),
+  songtime_(0), measure_(0), beat_(0), timing_seg_data_(nullptr), metadata_(nullptr),
   is_alive_(0), health_(0.), combo_(0), running_combo_(0), passed_note_(0),
   last_judge_type_(JudgeTypes::kJudgeNone), is_autoplay_(true), is_play_bgm_(true)
 {
   timing_seg_data_ = &c.GetTimingSegmentData();
+  metadata_ = &c.GetMetaData();
 
   // set note / track data from notedata
   auto &nd = c.GetNoteData();
@@ -853,16 +878,6 @@ PlayContext::PlayContext(Player *player, rparser::Chart &c)
   bgm_context_.Initialize(c.GetBgmData());
   for (size_t i = 0; i < 4; ++i)
     bga_context_[i].Initialize(c.GetBgaData().get_track(i));
-
-  // Fetch sound/bg data from SongResource.
-  // These resources are managed by SongResource instance,
-  // so do not release them here.
-  memset(keysounds_, 0, sizeof(keysounds_));
-  memset(bg_animations_, 0, sizeof(bg_animations_));
-  for (auto &f : c.GetMetaData().GetSoundChannel()->fn)
-    keysounds_[f.first] = SongPlayer::getInstance().GetSound(f.second, f.first);
-  for (auto &f : c.GetMetaData().GetBGAChannel()->bga)
-    bg_animations_[f.first] = SongPlayer::getInstance().GetImage(f.second.fn);
 
   // Set PlayRecord / Replay context
   memset(&playrecord_, 0, sizeof(playrecord_));
@@ -1130,6 +1145,18 @@ size_t PlayContext::GetTrackCount() const
 TrackIterator PlayContext::GetTrackIterator(size_t track_idx)
 {
   return TrackIterator(track_context_[track_idx]);
+}
+
+void PlayContext::UpdateResource()
+{
+  // This method is manually called by SongPlayer
+  // when resource loading is over.
+  memset(keysounds_, 0, sizeof(keysounds_));
+  memset(bg_animations_, 0, sizeof(bg_animations_));
+  for (auto &f : metadata_->GetSoundChannel()->fn)
+    keysounds_[f.first] = SongPlayer::getInstance().GetSound(f.second, f.first);
+  for (auto &f : metadata_->GetBGAChannel()->bga)
+    bg_animations_[f.first] = SongPlayer::getInstance().GetImage(f.second.fn);
 }
 
 Image* PlayContext::GetImage(size_t layer_idx) const

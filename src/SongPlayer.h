@@ -16,6 +16,7 @@ class SongPlayinfo;
 class PlayContext;
 class Player;
 class NoteRenderData;
+constexpr size_t kMaxChannelCount = 2048;
 
 /* @brief A singleton class. Contains song and resources. */
 class SongPlayer
@@ -43,9 +44,6 @@ public:
   void PopSongFromPlaylist();
   void ClearPlaylist();
 
-  /* @brief Get background image of the BGA layer */
-  Image *GetBackground(int session, int channel, int bgatype = 0);
-
   /* @brief Get notes to display
    * @param lane lane for filtering (-1 for all lanes) */
   //void GetNoteForRendering(int session, int lane, std::vector<NoteRenderData> &out);
@@ -58,6 +56,7 @@ public:
   void set_load_bga(bool use_bga);
   int is_loaded() const;
   double get_progress() const;
+  bool IsFinished() const;
 
   Sound* GetSound(const std::string& filename, int channel = -1);
   Image* GetImage(const std::string& filename);
@@ -110,6 +109,7 @@ private:
   };
   std::list<FileToLoad> files_to_load_;
   size_t loadfile_count_total_;
+  size_t wthr_count_;
   size_t loaded_file_count_;
   std::mutex loading_mutex_, res_mutex_;
 
@@ -366,6 +366,7 @@ public:
   size_t GetTrackCount() const;
   TrackIterator GetTrackIterator(size_t track_idx);
 
+  void UpdateResource();
   Image* GetImage(size_t layer_idx) const;
   PlayRecord &GetPlayRecord();
 
@@ -374,6 +375,7 @@ private:
   Player *player_;
 
   rparser::TimingSegmentData *timing_seg_data_;
+  rparser::MetaData *metadata_;
   size_t track_count_;
 
   /* unsaved playing context (for single stage) */
@@ -397,8 +399,8 @@ private:
   int course_index_;
   PlayRecord playrecord_;
 
-  Sound* keysounds_[2000]; // XXX: 2000?
-  Image* bg_animations_[2000];
+  Sound* keysounds_[kMaxChannelCount];
+  Image* bg_animations_[kMaxChannelCount];
   bool is_play_bgm_;
 
   /* unsaved playing context (for course) */

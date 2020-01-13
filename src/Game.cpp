@@ -54,7 +54,7 @@ void Game::Initialize()
   // initialize all other elements ...
   EventManager::Initialize();
   Timer::Initialize();
-  Player::Initialize();
+  PlayerManager::Initialize();
   SceneManager::getInstance().Initialize();
 
   getInstance().is_running_ = true;
@@ -87,7 +87,7 @@ void Game::Loop()
 void Game::Cleanup()
 {
   SongPlayer::getInstance().Stop();
-  Player::Cleanup();
+  PlayerManager::Cleanup();
   TaskPool::getInstance().ClearTaskPool();
   SceneManager::getInstance().Cleanup();
   Graphic::getInstance().Cleanup();

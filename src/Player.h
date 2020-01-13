@@ -33,6 +33,7 @@ public:
   virtual ~Player();
   void Load();
   void Save();
+  void Sync();
 
   const PlayRecord *GetPlayRecord(const std::string &chartname) const;
   void GetReplayList(const std::vector<std::string> &replay_names);
@@ -47,18 +48,6 @@ public:
 
   /* @brief clear out current play record / replay data. */
   void ClearCurrentPlay();
-
-  static Player& getMainPlayer();
-  static void CreatePlayer(PlayerTypes playertype, const std::string& player_name);
-  static void CreatePlayer(PlayerTypes playertype, const std::string& player_name, int player_slot);
-  static Player* getPlayer(int player_slot);
-  static void UnloadPlayer(int player_slot);
-  static bool IsPlayerLoaded(int player_slot);
-  static int GetLoadedPlayerCount();
-  static bool IsAllPlayerFinished();
-
-  static void Initialize();
-  static void Cleanup();
 
 private:
   std::string player_name_;
@@ -104,23 +93,60 @@ private: \
    * Used for courseplay recording. */
   PlayRecord playrecord_;
 
-  /* context for currently playing chart */
-  PlayContext *play_context_;
+  /* context for current play */
+  bool is_network_;
+  int running_combo_;
 
   /* XXX: context for course play? */
   PlayRecord courserecord_;
   bool is_courseplay_;
-  bool is_replay_;
-  bool is_save_allowed_;
-  int running_combo_;
 
   friend class PlayContext;
+  void LoadPlayRecords();
+  void SavePlayRecords();
+};
+
+class PlayerManager
+{
+public:
+  /* @brief Get any available player (must not be null) */
+  static Player* GetPlayer();
+
+  /* @brief Get player at the slot. */
+  static Player* GetPlayer(int player_slot);
+
+  /* @brief Create Player object.
+   * the player is automatically Sync & Loaded.
+   * @param playertype  player type (GUEST, LOCAL, NETWORK)
+   * @param player_name the id of the player.
+   * @param passwd      hashed password of the player.
+   * @param slot_no     Create player at the slot (optional).
+   *                    Set to any left slot if empty.
+   */
+  static void CreatePlayer(PlayerTypes playertype, const std::string& player_name, const std::string &passwd);
+  static void CreatePlayer(PlayerTypes playertype, const std::string& player_name, const std::string &passwd, int slot_no);
+
+  /* @brief Create guest player if no player loaded.
+   * used for safe logic of SelectScreen() */
+  static void CreateGuestPlayerIfEmpty();
+
+  /* @brief Create guest player if no player loaded.
+   * used for safe logic of PlayScreen() */
+  static void CreateNonePlayerIfEmpty();
+
+  /* @brief Unload Player object, automatically saved. */
+  static void UnloadPlayer(int player_slot);
+
+  static bool IsAvailable(int player_slot);
+  static int GetLoadedPlayerCount();
+  static void Initialize();
+  static void Cleanup();
 };
 
 #define FOR_EACH_PLAYER(p, i) \
 { Player *p; int i; \
 for (p = nullptr, i = 0; i < kMaxPlaySession; ++i) { \
-p = Player::getPlayer(i); \
+p = PlayerManager::GetPlayer(i); \
 if (!p) continue; else
 
 #define END_EACH_PLAYER() \

@@ -22,6 +22,7 @@ void SelectScene::LoadScene()
 {
   // Before starting, unload song.
   SongPlayer::getInstance().Stop();
+  PlayerManager::CreateGuestPlayerIfEmpty();
 
   // Add wheel children first, as scene parameter may need it.
   // (e.g. LR2 command)

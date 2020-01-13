@@ -21,8 +21,7 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
   game_speed_(1.0), game_constant_speed_(1.0),
   lane_cover_(0.0), hidden_(0.0),
   bms_sp_class_(0), bms_dp_class_(0),
-  play_context_(nullptr),
-  is_courseplay_(false), is_replay_(false), is_save_allowed_(true)
+  is_courseplay_(false)
 {
   if (player_type_ == PlayerTypes::kPlayerGuest)
     is_guest_ = true;
@@ -78,7 +77,12 @@ void Player::Load()
 
   // TODO: load keysetting
 
-  // TODO: load playrecords
+  // load playrecords
+  LoadPlayRecords();
+}
+
+void Player::LoadPlayRecords()
+{
 }
 
 void Player::Save()
@@ -88,7 +92,18 @@ void Player::Save()
 
   config_.SaveToFile(config_path_);
 
-  // TODO: save playrecords
+  // save playrecords
+  SavePlayRecords();
+}
+
+void Player::SavePlayRecords()
+{
+
+}
+
+void Player::Sync()
+{
+  // TODO: sync data from network
 }
 
 /* XXX: unsafe if playrecords is modified */
@@ -136,106 +151,111 @@ void Player::ClearCurrentPlay()
     playrecord_.pr = 0;
 }
 
+void Player::SetRunningCombo(int combo) { running_combo_ = combo; }
+int Player::GetRunningCombo() const { return running_combo_; }
+
 // ------- static methods --------
 
-Player& Player::getMainPlayer()
+Player* PlayerManager::GetPlayer()
 {
-  for (int i = 0; i < kMaxPlaySession; ++i)
-    if (players_[i])
-      return *players_[i];
-
-  /* This shouldn't happened */
-  ASSERT(false);
-  return *players_[0];
+  Player *r = nullptr;
+  for (size_t i = 0; !r && i < kMaxPlaySession; ++i) r = players_[i];
+  ASSERT(r);
+  return r;
 }
 
-void Player::CreatePlayer(PlayerTypes playertype, const std::string& player_name)
-{
-  for (int i = 0; i < kMaxPlaySession; ++i)
-  {
-    if (!players_[i])
-    {
-      CreatePlayer(playertype, player_name, i);
-      return;
-    }
-  }
-  std::cerr << "Failed to add new player: Player slot is full" << std::endl;
-}
-
-void Player::CreatePlayer(PlayerTypes playertype, const std::string& player_name, int player_slot)
-{
-  ASSERT(player_slot < kMaxPlaySession);
-  if (players_[player_slot])
-  {
-    // already player created at the slot - skip
-    return;
-  }
-
-  // TODO: need switch ~ case later
-
-  players_[player_slot] = new Player(playertype, player_name);
-  player_count++;
-}
-
-Player* Player::getPlayer(int player_slot)
+Player* PlayerManager::GetPlayer(int player_slot)
 {
   ASSERT(player_slot < kMaxPlaySession);
 
   return players_[player_slot];
 }
 
-void Player::UnloadPlayer(int player_slot)
+void PlayerManager::CreatePlayer(PlayerTypes playertype,
+  const std::string &player_name,
+  const std::string &passwd)
+{
+  for (int i = 0; i < kMaxPlaySession; ++i)
+  {
+    if (!players_[i])
+    {
+      CreatePlayer(playertype, player_name, passwd, i);
+      return;
+    }
+  }
+  std::cerr << "Failed to add new player: Player slot is full" << std::endl;
+}
+
+void PlayerManager::CreatePlayer(PlayerTypes playertype,
+  const std::string &player_name,
+  const std::string &passwd,
+  int slot_no)
+{
+  ASSERT(slot_no < kMaxPlaySession);
+  if (IsAvailable(slot_no))
+    return;
+
+  // TODO: need switch ~ case later
+  players_[slot_no] = new Player(playertype, player_name);
+
+  // TODO: use wthr for sync ~ load player.
+  players_[slot_no]->Sync();
+  players_[slot_no]->Load();
+  player_count++;
+}
+
+void PlayerManager::CreateGuestPlayerIfEmpty()
+{
+  if (GetLoadedPlayerCount() == 0)
+  {
+    CreatePlayer(PlayerTypes::kPlayerGuest, "GUEST", "");
+  }
+}
+
+void PlayerManager::CreateNonePlayerIfEmpty()
+{
+  if (GetLoadedPlayerCount() == 0)
+  {
+    CreatePlayer(PlayerTypes::kPlayerNone, "NONE", "");
+  }
+}
+
+void PlayerManager::UnloadPlayer(int player_slot)
 {
   ASSERT(player_slot < kMaxPlaySession);
   if (players_[player_slot])
   {
+    players_[player_slot]->Save();
     delete players_[player_slot];
     players_[player_slot] = nullptr;
     --player_count;
   }
-  ASSERT(player_count >= 0);
 }
 
-bool Player::IsPlayerLoaded(int player_slot)
+bool PlayerManager::IsAvailable(int player_slot)
 {
   ASSERT(player_slot < kMaxPlaySession);
-  return getPlayer(player_slot) != nullptr;
+
+  // @warn if player is guest, then it
+
+  return GetPlayer(player_slot) != nullptr;
 }
 
-int Player::GetLoadedPlayerCount()
+int PlayerManager::GetLoadedPlayerCount()
 {
   return player_count;
 }
 
-bool Player::IsAllPlayerFinished()
+void PlayerManager::Initialize()
 {
-  for (int i = 0; i < kMaxPlaySession; ++i) if (players_[i])
-  {
-    auto *pctx = players_[i]->play_context_;
-    if (!pctx) continue;
-    if (!pctx->is_finished())
-      return false;
-  }
-  return true;
 }
 
-void Player::Initialize()
+void PlayerManager::Cleanup()
 {
-  /* Set Guest player in first slot by default */
-  players_[0] = new Player(PlayerTypes::kPlayerGuest, "GUEST");
-}
-
-void Player::Cleanup()
-{
-  /* Clear all player */
-  for (int i = 0; i < kMaxPlaySession; ++i) if (players_[i])
+  for (int i = 0; i < kMaxPlaySession; ++i)
   {
-    delete players_[i];
-    players_[i] = nullptr;
+    UnloadPlayer(i);
   }
 }
-
-void Player::SetRunningCombo(int combo) { running_combo_ = combo; }
-int Player::GetRunningCombo() const { return running_combo_; }
 
 }

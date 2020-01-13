@@ -42,7 +42,7 @@ void MusicWheelData::SetSection(const std::string &sectionname, const std::strin
 
 void MusicWheelData::SetPlayRecord()
 {
-  auto &player = Player::getMainPlayer();
+  auto &player = *PlayerManager::GetPlayer();
   record = nullptr;
   if (type == Songitemtype::kSongitemSong
    || type == Songitemtype::kSongitemCourse)
@@ -394,7 +394,7 @@ void MusicWheel::OnSelectChange(const MenuData *data, int direction)
   Script::getInstance().SetFlag(150, diff_type == 0);
 
   /* Load matching playrecord */
-  auto *playrecord = Player::getMainPlayer().GetPlayRecord(d->name);
+  auto *playrecord = PlayerManager::GetPlayer()->GetPlayRecord(d->name);
   if (!playrecord)
   {
     static PlayRecord playrecord_empty;

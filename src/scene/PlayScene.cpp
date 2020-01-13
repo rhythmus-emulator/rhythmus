@@ -29,6 +29,8 @@ void PlayScene::LoadScene()
     CloseScene(false);
   }
 
+  PlayerManager::CreateNonePlayerIfEmpty();
+
   Metric *metric = Setting::GetThemeMetricList().get_metric(get_name());
   ASSERT(metric);
   theme_play_param_.load_wait_time = metric->get<int>("LoadingDelay");
@@ -83,7 +85,7 @@ void PlayScene::StartScene()
       this->play_status_ = 3;
     });
     task->wait_cond([this] {
-      return this->play_status_ == 1 && Player::IsAllPlayerFinished();
+      return this->play_status_ == 1 && SongPlayer::getInstance().IsFinished();
     });
     playscenetask_.Enqueue(task);
   }
