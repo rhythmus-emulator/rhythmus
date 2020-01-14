@@ -255,6 +255,14 @@ public:
     return option->value<T>();
   }
 
+  template <typename T>
+  void SetValue(const std::string &key, T val) const
+  {
+    Option *option = GetOption(key);
+    ASSERT(option);
+    return option->set_value(val);
+  }
+
 private:
   std::map<std::string, Option*> options_;
 };

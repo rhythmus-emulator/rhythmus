@@ -14,54 +14,76 @@ static Player *players_[kMaxPlaySession];
 static int player_count;
 
 
+// --------------------------- class PlayOption
+
+PlayOption::PlayOption()
+  : use_lanecover_(false), use_hidden_(false),
+  speed_(1.0), speed_type_(GameSpeedTypes::kSpeedConstant),
+  lanecover_(0.0), hidden_(0.0), class_(0)
+{
+  memset(keysetting_.keycode_per_track_, 0, sizeof(KeySetting));
+}
+
+KeySetting &PlayOption::GetKeysetting()
+{
+  return keysetting_;
+}
+
+void PlayOption::SetDefault(int gamemode)
+{
+  memset(keysetting_.keycode_per_track_, 0, sizeof(KeySetting));
+
+  // TODO: provide different properties for each game mode.
+  keysetting_.keycode_per_track_[0][0] = GLFW_KEY_A;
+  keysetting_.keycode_per_track_[1][0] = GLFW_KEY_S;
+  keysetting_.keycode_per_track_[2][0] = GLFW_KEY_D;
+  keysetting_.keycode_per_track_[3][0] = GLFW_KEY_SPACE;
+  keysetting_.keycode_per_track_[4][0] = GLFW_KEY_J;
+  keysetting_.keycode_per_track_[5][0] = GLFW_KEY_K;
+  keysetting_.keycode_per_track_[6][0] = GLFW_KEY_L;
+  keysetting_.keycode_per_track_[7][0] = GLFW_KEY_LEFT_SHIFT;
+  keysetting_.keycode_per_track_[7][1] = GLFW_KEY_SEMICOLON;
+}
+
 // ------------------------------- class Player
 
 Player::Player(PlayerTypes player_type, const std::string& player_name)
-  : player_type_(player_type), player_name_(player_name), is_guest_(false),
-  use_lanecover_(false), use_hidden_(false),
-  game_speed_type_(GameSpeedTypes::kSpeedConstant),
-  game_speed_(1.0), game_constant_speed_(1.0),
-  lanecover_(0.0), hidden_(0.0),
-  bms_sp_class_(0), bms_dp_class_(0),
-  pr_db_(nullptr), is_network_(false), running_combo_(0), is_courseplay_(false)
+  : player_type_(player_type), player_name_(player_name),
+  is_guest_(false), is_network_(false), is_courseplay_(false),
+  gamemode_(0), running_combo_(0), pr_db_(nullptr)
 {
   if (player_type_ == PlayerTypes::kPlayerGuest)
     is_guest_ = true;
 
-  // TODO: make properties for each game mode.
+  // TODO: set current gamemode from current gamemode ?
+  current_playoption_ = &playoptions_[gamemode_];
 
-  // XXX: default keysetting should be here?
-  memset(default_keysetting_.keycode_per_track_, 0, sizeof(KeySetting));
-  default_keysetting_.keycode_per_track_[0][0] = GLFW_KEY_A;
-  default_keysetting_.keycode_per_track_[1][0] = GLFW_KEY_S;
-  default_keysetting_.keycode_per_track_[2][0] = GLFW_KEY_D;
-  default_keysetting_.keycode_per_track_[3][0] = GLFW_KEY_SPACE;
-  default_keysetting_.keycode_per_track_[4][0] = GLFW_KEY_J;
-  default_keysetting_.keycode_per_track_[5][0] = GLFW_KEY_K;
-  default_keysetting_.keycode_per_track_[6][0] = GLFW_KEY_L;
-  default_keysetting_.keycode_per_track_[7][0] = GLFW_KEY_LEFT_SHIFT;
-  default_keysetting_.keycode_per_track_[7][1] = GLFW_KEY_SEMICOLON;
-  curr_keysetting_ = &default_keysetting_;
+  // make properties for player common.
+  config_.SetOption("running_combo", "0");
 
-  for (size_t i = 0; i < kMaxLaneCount; ++i)
+  // make properties for each gamemode.
+  for (size_t i = 0; i < Gamemode::kGamemodeEnd; ++i)
   {
-    // TODO: make keysetting option more solid
-    config_.SetOption(format_string("Key%d", i), "!N");
+    std::string ns = GamemodeToString(i);
+    ns.push_back('_');
+    for (size_t i = 0; i < kMaxLaneCount; ++i)
+    {
+      config_.SetOption(ns + format_string("Key%d", i), "0");
+    }
+    config_.SetOption(ns + "use_hidden", "0");
+    config_.SetOption(ns + "use_lanecover", "0");
+    config_.SetOption(ns + "hidden", "0");
+    config_.SetOption(ns + "lanecover", "0");
+    config_.SetOption(ns + "speed", "300");
+    config_.SetOption(ns + "speed_option", "0");
+    config_.SetOption(ns + "chart_option", "0");
+    config_.SetOption(ns + "chart_option_2P", "0");
+    config_.SetOption(ns + "health_type", "0");
+    config_.SetOption(ns + "assist", "0");
+    config_.SetOption(ns + "pacemaker", "0");
+    config_.SetOption(ns + "pacemaker_target", "0");
+    config_.SetOption(ns + "class", "0");
   }
-  config_.SetOption("use_hidden", "!N,0");
-  config_.SetOption("use_lanecover", "!N,0");
-  config_.SetOption("hidden", "!N,0");
-  config_.SetOption("lanecover", "!N,0");
-  config_.SetOption("speed", "!N,300");
-  config_.SetOption("speed_option", "!N,0");
-  config_.SetOption("chart_option", "!N,0");
-  config_.SetOption("chart_option_2P", "!N,0");
-  config_.SetOption("health_type", "!N,0");
-  config_.SetOption("assist", "!N,0");
-  config_.SetOption("pacemaker", "!N,0");
-  config_.SetOption("pacemaker_target", "");
-  config_.SetOption("sp_class", "!N,0");
-  config_.SetOption("dp_class", "!N,0");
 
   config_path_ = format_string("../player/%s.xml", player_name_.c_str());
 }
@@ -69,10 +91,14 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
 Player::~Player()
 {
   Save();
+  ClosePlayRecords();
 }
 
 void Player::Load()
 {
+  // Unload if property already loaded
+  ClosePlayRecords();
+
   if (!config_.ReadFromFile(config_path_))
   {
     std::cerr << "Cannot load player preference (maybe default setting will used)"
@@ -80,32 +106,37 @@ void Player::Load()
     return;
   }
 
-  // load keysetting
-  for (size_t i = 0; i < kMaxLaneCount; ++i)
+  running_combo_ = config_.GetValue<int>("running_combo");
+
+  for (size_t i = 0; i < Gamemode::kGamemodeEnd; ++i)
   {
-    std::string keyname(format_string("Key%d", i));
-    auto *opt = config_.GetOption(keyname);
-    if (!opt) break;
-    CommandArgs args(opt->value<std::string>(), 4);
-    default_keysetting_.keycode_per_track_[i][0] = args.Get<int>(0);
-    default_keysetting_.keycode_per_track_[i][1] = args.Get<int>(1);
-    default_keysetting_.keycode_per_track_[i][2] = args.Get<int>(2);
-    default_keysetting_.keycode_per_track_[i][3] = args.Get<int>(3);
+    std::string ns = GamemodeToString(i);
+    ns.push_back('_');
+    for (size_t k = 0; k < kMaxLaneCount; ++k)
+    {
+      std::string keyname(format_string(ns + "Key%d", i));
+      auto *opt = config_.GetOption(keyname);
+      if (!opt) break;
+      CommandArgs args(opt->value<std::string>(), 4);
+      playoptions_[i].GetKeysetting().keycode_per_track_[k][0] = args.Get<int>(0);
+      playoptions_[i].GetKeysetting().keycode_per_track_[k][1] = args.Get<int>(1);
+      playoptions_[i].GetKeysetting().keycode_per_track_[k][2] = args.Get<int>(2);
+      playoptions_[i].GetKeysetting().keycode_per_track_[k][3] = args.Get<int>(3);
+    }
+    playoptions_[i].set_use_hidden(config_.GetValue<int>("use_hidden"));
+    playoptions_[i].set_use_lanecover(config_.GetValue<int>("use_lanecover"));
+    playoptions_[i].set_hidden(config_.GetValue<int>("hidden"));
+    playoptions_[i].set_lanecover(config_.GetValue<int>("lanecover"));
+    playoptions_[i].set_speed(config_.GetValue<int>("speed"));
+    playoptions_[i].set_speed_type(config_.GetValue<int>("speed_option"));
+    playoptions_[i].set_option_chart(config_.GetValue<int>("chart_option"));
+    playoptions_[i].set_option_chart_dp(config_.GetValue<int>("chart_option_2P"));
+    playoptions_[i].set_health_type(config_.GetValue<int>("health_type"));
+    playoptions_[i].set_assist(config_.GetValue<int>("assist"));
+    playoptions_[i].set_pacemaker(config_.GetValue<int>("pacemaker"));
+    playoptions_[i].set_pacemaker_target(config_.GetValue<std::string>("pacemaker_target"));
+    playoptions_[i].set_class(config_.GetValue<int>("class"));
   }
-  use_hidden_ = config_.GetValue<int>("use_hidden");
-  use_lanecover_ = config_.GetValue<int>("use_lanecover");
-  hidden_ = config_.GetValue<int>("hidden");
-  lanecover_ = config_.GetValue<int>("lanecover");
-  game_speed_ = config_.GetValue<int>("speed");
-  game_speed_type_ = config_.GetValue<int>("speed_option");
-  option_chart_ = config_.GetValue<int>("chart_option");
-  option_chart_dp_ = config_.GetValue<int>("chart_option_2P");
-  health_type_ = config_.GetValue<int>("health_type");
-  assist_ = config_.GetValue<int>("assist");
-  pacemaker_ = config_.GetValue<int>("pacemaker");
-  pacemaker_target_ = config_.GetValue<std::string>("pacemaker_target");
-  bms_sp_class_ = config_.GetValue<int>("sp_class");
-  bms_dp_class_ = config_.GetValue<int>("dp_class");
 
   // load playrecords
   LoadPlayRecords();
@@ -122,10 +153,9 @@ void Player::LoadPlayRecords()
   {
     char *errmsg;
 
-    // create player record schema if not exists
-    // TODO: schema check logic
-
-    sqlite3_exec(pr_db_, "CREATE TABLE record("
+    // create player record schema
+    sqlite3_exec(pr_db_,
+      "CREATE TABLE IF NOT EXISTS record("
       "id CHAR(128) PRIMARY KEY,"
       "name CHAR(512) NOT NULL,"
       "gamemode INT,"
@@ -151,6 +181,7 @@ void Player::LoadPlayRecords()
       "miss, pr, bd, gd, gr, pg, playcount, clearcount, failcount "
       "from songs;",
       &Player::PRQueryCallbackFunc, this, &errmsg);
+
     if (rc != SQLITE_OK)
     {
       std::cerr << "Failed to query song database, maybe corrupted? (" << errmsg << ")" << std::endl;
@@ -174,26 +205,26 @@ int Player::PRQueryCallbackFunc(void* _self, int argc, char **argv, char **colna
     pr.id = argv[0];
     pr.chartname = argv[1];
     pr.gamemode = atoi(argv[2]);
-    pr.timestamp = atoi(argv[2]);
-    pr.seed = atoi(argv[2]);
-    pr.speed= atoi(argv[2]);
-    pr.speed_type = atoi(argv[2]);
-    pr.clear_type = atoi(argv[2]);
-    pr.health_type = atoi(argv[2]);
-    pr.option = atoi(argv[2]);
-    pr.assist = atoi(argv[2]);
-    pr.total_note = atoi(argv[2]);
-    pr.miss = atoi(argv[2]);
-    pr.pr = atoi(argv[2]);
-    pr.bd = atoi(argv[2]);
-    pr.gd = atoi(argv[2]);
-    pr.gr = atoi(argv[2]);
-    pr.pg = atoi(argv[2]);
-    pr.maxcombo = atoi(argv[2]);
-    pr.score = atoi(argv[2]);
-    pr.playcount = atoi(argv[2]);
-    pr.clearcount = atoi(argv[2]);
-    pr.failcount = atoi(argv[2]);
+    pr.timestamp = atoi(argv[3]);
+    pr.seed = atoi(argv[4]);
+    pr.speed = atoi(argv[5]);
+    pr.speed_type = atoi(argv[6]);
+    pr.clear_type = atoi(argv[7]);
+    pr.health_type = atoi(argv[8]);
+    pr.option = atoi(argv[9]);
+    pr.assist = atoi(argv[10]);
+    pr.total_note = atoi(argv[11]);
+    pr.miss = atoi(argv[12]);
+    pr.pr = atoi(argv[13]);
+    pr.bd = atoi(argv[14]);
+    pr.gd = atoi(argv[15]);
+    pr.gr = atoi(argv[16]);
+    pr.pg = atoi(argv[17]);
+    pr.maxcombo = atoi(argv[18]);
+    pr.score = atoi(argv[19]);
+    pr.playcount = atoi(argv[20]);
+    pr.clearcount = atoi(argv[21]);
+    pr.failcount = atoi(argv[22]);
     p->playrecords_.push_back(pr);
   }
   return 0;
@@ -204,14 +235,39 @@ void Player::Save()
   if (is_guest_)
     return;
 
-  for (size_t i = 0; i < kMaxLaneCount; ++i)
+  for (size_t i = 0; i < Gamemode::kGamemodeEnd; ++i)
   {
+    std::string ns = GamemodeToString(i);
+    ns.push_back('_');
+    for (size_t k = 0; k < kMaxLaneCount; ++k)
+    {
+      std::string keyname(format_string(ns + "Key%d", i));
+      std::string v(format_string("%d,%d,%d,%d",
+        playoptions_[i].GetKeysetting().keycode_per_track_[k][0],
+        playoptions_[i].GetKeysetting().keycode_per_track_[k][1],
+        playoptions_[i].GetKeysetting().keycode_per_track_[k][2],
+        playoptions_[i].GetKeysetting().keycode_per_track_[k][3]));
+      config_.SetOption(keyname, v);
+    }
+    config_.SetValue("use_hidden", playoptions_[i].get_use_hidden());
+    config_.SetValue("use_lanecover", playoptions_[i].get_use_lanecover());
+    config_.SetValue("hidden", playoptions_[i].get_hidden());
+    config_.SetValue("lanecover", playoptions_[i].get_lanecover());
+    config_.SetValue("speed", playoptions_[i].get_speed());
+    config_.SetValue("speed_option", playoptions_[i].get_speed_type());
+    config_.SetValue("chart_option", playoptions_[i].get_option_chart());
+    config_.SetValue("chart_option_2P", playoptions_[i].get_option_chart_dp());
+    config_.SetValue("health_type", playoptions_[i].get_health_type());
+    config_.SetValue("assist", playoptions_[i].get_assist());
+    config_.SetValue("pacemaker", playoptions_[i].get_pacemaker());
+    config_.SetValue("pacemaker_target", playoptions_[i].get_pacemaker_target());
+    config_.SetValue("class", playoptions_[i].get_class());
   }
 
   config_.SaveToFile(config_path_);
 
   // save(close) playrecords
-  ClosePlayRecords();
+  //ClosePlayRecords();
 }
 
 void Player::UpdatePlayRecord(const PlayRecord &pr)
@@ -219,12 +275,28 @@ void Player::UpdatePlayRecord(const PlayRecord &pr)
   if (!pr_db_)
     return;
 
+  int rc;
   char *errmsg;
+  std::string sql;
+  sql = format_string(
+    "INSERT OR REPLACE INTO record VALUES ("
+    "'%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, "
+    "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, "
+    "%d, %d, %d"
+    ");", pr.id, pr.chartname, pr.gamemode, pr.timestamp, pr.seed,
+    pr.speed, pr.speed_type, pr.clear_type, pr.health_type, pr.option,
+    pr.assist, pr.total_note, pr.miss, pr.pr, pr.bd,
+    pr.gd, pr.gr, pr.pg, pr.maxcombo, pr.score,
+    pr.playcount, pr.clearcount, pr.failcount);
 
-  /* TODO: select query first, then check whether to update or insert. */
-
-  sqlite3_exec(pr_db_, "",
+  rc = sqlite3_exec(pr_db_, sql.c_str(),
     &Player::PRUpdateCallbackFunc, this, &errmsg);
+
+  if (rc != SQLITE_OK)
+  {
+    std::cerr << "Error while saving playrecord " << pr.id << " (" << errmsg << ")" << std::endl;
+    return;
+  }
 }
 
 int Player::PRUpdateCallbackFunc(void*, int argc, char **argv, char **colnames)

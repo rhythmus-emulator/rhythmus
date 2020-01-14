@@ -21,6 +21,26 @@ enum GameBootMode
   kBootTest, /* hidden boot mode - only for test purpose */
 };
 
+enum Gamemode
+{
+  kGamemodeNone,
+  kGamemode4Key,
+  kGamemode5Key,
+  kGamemode6Key,
+  kGamemode7Key,
+  kGamemode8Key,
+  kGamemodeIIDXSP,
+  kGamemodeIIDXDP,
+  kGamemodeIIDX5Key,
+  kGamemodeIIDX10Key,
+  kGamemodePopn,
+  kGamemodeEZ2DJ,
+  kGamemodeDDR,
+  kGamemodeEnd,
+};
+const char* GamemodeToString(int gamemode);
+int StringToGamemode(const char* s);
+
 /**
  * @brief
  * Contains running status of game, including settings.

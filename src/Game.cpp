@@ -19,6 +19,45 @@
 namespace rhythmus
 {
 
+const char* const sGamemode[] = {
+  "none",
+  "4key",
+  "5key",
+  "6key",
+  "7key",
+  "8key",
+  "IIDXSP",
+  "IIDXDP",
+  "IIDX5key",
+  "IIDX10key",
+  "popn",
+  "ez2dj",
+  "ddr",
+  0
+};
+
+const char* GamemodeToString(int v)
+{
+  if (v >= Gamemode::kGamemodeEnd)
+    return nullptr;
+  return sGamemode[v];
+}
+
+int StringToGamemode(const char* s)
+{
+  auto ss = sGamemode;
+  while (*ss)
+  {
+    if (stricmp(s, *ss) == 0)
+      return ss - sGamemode;
+    ++ss;
+  }
+  return Gamemode::kGamemodeNone;
+}
+
+
+/* --------------------------------- class Game */
+
 Game Game::game_;
 
 Game& Game::getInstance()

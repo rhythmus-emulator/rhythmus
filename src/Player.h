@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SongPlayer.h" /* PlayRecord */
+#include "Game.h"
 #include "Setting.h"
 #include "Event.h"
 #include "Sound.h"
@@ -28,6 +29,39 @@ enum PlayerTypes
   kPlayerNetwork,
 };
 
+/* @brief Play properties for each gamemode */
+class PlayOption
+{
+#define USER_PROP(type, varname) \
+public: \
+  type get_##varname() const { return varname##_; } \
+  void set_##varname(type v) { varname##_ = v; } \
+private: \
+  type varname##_; \
+
+  USER_PROP(bool, use_lanecover);
+  USER_PROP(bool, use_hidden);
+  USER_PROP(int, speed_type);
+  USER_PROP(double, speed);
+  USER_PROP(double, lanecover);
+  USER_PROP(double, hidden);
+  USER_PROP(int, option_chart);
+  USER_PROP(int, option_chart_dp); /* only for BMS DP */
+  USER_PROP(int, health_type);
+  USER_PROP(int, assist);
+  USER_PROP(int, pacemaker);
+  USER_PROP(std::string, pacemaker_target);
+  USER_PROP(int, class);
+
+#undef USER_PROP
+public:
+  PlayOption();
+  KeySetting &GetKeysetting();
+  void SetDefault(int gamemode);
+private:
+  KeySetting keysetting_;
+};
+
 class Player
 {
 public:
@@ -41,6 +75,12 @@ public:
   void GetReplayList(const std::vector<std::string> &replay_names);
   void SetRunningCombo(int combo);
   int GetRunningCombo() const;
+
+  /* @brief Set gamemode for player config */
+  void SetGamemode(int gamemode);
+
+  /* @brief Get Playoption for current gamemode */
+  PlayOption &GetPlayOption();
 
   /* @brief set current playdata for saving (not actually saved) */
   void SetCurrentPlay(const PlayRecord &playrecord, const ReplayData &replaydata);
@@ -56,37 +96,17 @@ private:
   PlayerTypes player_type_;
   OptionList config_;
   std::string config_path_;
+
+  /* context for current play */
   bool is_guest_;
+  bool is_network_;
+  bool is_courseplay_;
+  int gamemode_;
+  int running_combo_;
 
-#define USER_PROP(type, varname) \
-public: \
-  type get_##varname() const { return varname##_; } \
-  void set_##varname(type v) { varname##_ = v; } \
-private: \
-  type varname##_; \
-
-  USER_PROP(bool, use_lanecover);
-  USER_PROP(bool, use_hidden);
-  USER_PROP(int, game_speed_type);
-  USER_PROP(double, game_speed);
-  USER_PROP(double, game_constant_speed);
-  USER_PROP(double, lanecover);
-  USER_PROP(double, hidden);
-  USER_PROP(int, option_chart);
-  USER_PROP(int, option_chart_dp); /* only for BMS DP */
-  USER_PROP(int, health_type);
-  USER_PROP(int, assist);
-  USER_PROP(int, pacemaker);
-  USER_PROP(std::string, pacemaker_target);
-  USER_PROP(int, bms_sp_class);
-  USER_PROP(int, bms_dp_class);
-
-#undef USER_PROP
-
-  /* Keysetting. */
-  KeySetting default_keysetting_;
-  std::map<std::string, KeySetting> keysetting_per_gamemode_;
-  KeySetting *curr_keysetting_;
+  /* PlayOption for various gamemode & current gamemode. */
+  PlayOption playoptions_[Gamemode::kGamemodeEnd];
+  PlayOption *current_playoption_;
 
   /* PlayRecord of this player. Filled in Load() method. */
   std::vector<PlayRecord> playrecords_;
@@ -97,14 +117,6 @@ private: \
   /* Accumulated PlayRecord. Updated in SavePlayRecord() method.
    * Used for courseplay recording. */
   PlayRecord playrecord_;
-
-  /* context for current play */
-  bool is_network_;
-  int running_combo_;
-
-  /* XXX: context for course play? */
-  PlayRecord courserecord_;
-  bool is_courseplay_;
 
   friend class PlayContext;
   void LoadPlayRecords();
