@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Song.h"
+#include "Game.h"
 #include "Menu.h"
 #include "Text.h"
 #include "Number.h"

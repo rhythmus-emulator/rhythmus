@@ -251,7 +251,7 @@ void Player::Save()
     }
     config_.SetValue("use_hidden", playoptions_[i].get_use_hidden());
     config_.SetValue("use_lanecover", playoptions_[i].get_use_lanecover());
-    config_.SetValue("hidden", playoptions_[i].get_hidden());
+    config_.SetValue("hidden", playoptions_[i].get_hidden()); /* TODO: set_option in case of double */
     config_.SetValue("lanecover", playoptions_[i].get_lanecover());
     config_.SetValue("speed", playoptions_[i].get_speed());
     config_.SetValue("speed_option", playoptions_[i].get_speed_type());
@@ -330,6 +330,11 @@ const PlayRecord *Player::GetPlayRecord(const std::string &chartname) const
 void Player::GetReplayList(const std::vector<std::string> &replay_names)
 {
   // TODO
+}
+
+PlayOption &Player::GetPlayOption()
+{
+  return *current_playoption_;
 }
 
 void Player::SetCurrentPlay(const PlayRecord &playrecord, const ReplayData &replaydata)

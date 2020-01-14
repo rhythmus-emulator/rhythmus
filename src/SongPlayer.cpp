@@ -885,14 +885,14 @@ PlayContext::PlayContext(Player *player, rparser::Chart &c)
   {
     playrecord_.timestamp = 0;  // TODO: get system timestamp from Util
     playrecord_.seed = 0;   // TODO
-    playrecord_.speed = player_->game_speed_;
-    playrecord_.speed_type = player_->game_speed_type_;
-    playrecord_.health_type = player_->health_type_;
+    playrecord_.speed = player_->GetPlayOption().get_speed();
+    playrecord_.speed_type = player_->GetPlayOption().get_speed_type();
+    playrecord_.health_type = player_->GetPlayOption().get_health_type();
     playrecord_.score = 0;
     playrecord_.total_note = 0; // TODO: use song class?
-    playrecord_.option = player_->option_chart_;
-    playrecord_.option_dp = player_->option_chart_dp_;
-    playrecord_.assist = player_->assist_;
+    playrecord_.option = player_->GetPlayOption().get_option_chart();
+    playrecord_.option_dp = player_->GetPlayOption().get_option_chart_dp();
+    playrecord_.assist = player_->GetPlayOption().get_assist();
     running_combo_ = player_->GetRunningCombo();
   }
   replaydata_.events.clear();
@@ -1063,9 +1063,9 @@ void PlayContext::ProcessInputEvent(const InputEvent& e)
   {
     for (size_t j = 0; j < 4; ++j)
     {
-      if (player_->curr_keysetting_->keycode_per_track_[i][j] == 0)
+      if (player_->GetPlayOption().GetKeysetting().keycode_per_track_[i][j] == 0)
         break;
-      if (player_->curr_keysetting_->keycode_per_track_[i][j] == e.KeyCode())
+      if (player_->GetPlayOption().GetKeysetting().keycode_per_track_[i][j] == e.KeyCode())
       {
         track_no = i;
         break;
