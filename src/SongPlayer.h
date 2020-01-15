@@ -374,6 +374,7 @@ public:
 private:
   /* Player for current session. (may be null if autoplay) */
   Player *player_;
+  KeySetting *keysetting_;
 
   rparser::TimingSegmentData *timing_seg_data_;
   rparser::MetaData *metadata_;

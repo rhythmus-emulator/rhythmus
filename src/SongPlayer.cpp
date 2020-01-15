@@ -859,11 +859,13 @@ int PlayRecord::exscore() const
 // -------------------------- class PlayContext
 
 PlayContext::PlayContext(Player *player, rparser::Chart &c)
-  : player_(player), track_count_(0),
+  : player_(player), keysetting_(nullptr), track_count_(0),
   songtime_(0), measure_(0), beat_(0), timing_seg_data_(nullptr), metadata_(nullptr),
   is_alive_(0), health_(0.), combo_(0), running_combo_(0), passed_note_(0),
   last_judge_type_(JudgeTypes::kJudgeNone), is_autoplay_(true), is_play_bgm_(true)
 {
+  if (player_)
+    keysetting_ = &player->GetPlayOption().GetKeysetting();
   timing_seg_data_ = &c.GetTimingSegmentData();
   metadata_ = &c.GetMetaData();
 
@@ -1054,7 +1056,7 @@ bool PlayContext::is_finished() const
 
 void PlayContext::ProcessInputEvent(const InputEvent& e)
 {
-  if (is_autoplay_ || !player_)
+  if (is_autoplay_ || !keysetting_)
     return;
 
   // get track from keycode setting
@@ -1063,9 +1065,9 @@ void PlayContext::ProcessInputEvent(const InputEvent& e)
   {
     for (size_t j = 0; j < 4; ++j)
     {
-      if (player_->GetPlayOption().GetKeysetting().keycode_per_track_[i][j] == 0)
+      if (keysetting_->keycode_per_track_[i][j] == 0)
         break;
-      if (player_->GetPlayOption().GetKeysetting().keycode_per_track_[i][j] == e.KeyCode())
+      if (keysetting_->keycode_per_track_[i][j] == e.KeyCode())
       {
         track_no = i;
         break;
