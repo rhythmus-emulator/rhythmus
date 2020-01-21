@@ -103,7 +103,6 @@ void Player::Load()
   {
     std::cerr << "Cannot load player preference (maybe default setting will used)"
       << std::endl;
-    return;
   }
 
   running_combo_ = config_.GetValue<int>("running_combo");
@@ -123,19 +122,19 @@ void Player::Load()
       playoptions_[i].GetKeysetting().keycode_per_track_[k][2] = args.Get<int>(2);
       playoptions_[i].GetKeysetting().keycode_per_track_[k][3] = args.Get<int>(3);
     }
-    playoptions_[i].set_use_hidden(config_.GetValue<int>("use_hidden"));
-    playoptions_[i].set_use_lanecover(config_.GetValue<int>("use_lanecover"));
-    playoptions_[i].set_hidden(config_.GetValue<int>("hidden"));
-    playoptions_[i].set_lanecover(config_.GetValue<int>("lanecover"));
-    playoptions_[i].set_speed(config_.GetValue<int>("speed"));
-    playoptions_[i].set_speed_type(config_.GetValue<int>("speed_option"));
-    playoptions_[i].set_option_chart(config_.GetValue<int>("chart_option"));
-    playoptions_[i].set_option_chart_dp(config_.GetValue<int>("chart_option_2P"));
-    playoptions_[i].set_health_type(config_.GetValue<int>("health_type"));
-    playoptions_[i].set_assist(config_.GetValue<int>("assist"));
-    playoptions_[i].set_pacemaker(config_.GetValue<int>("pacemaker"));
-    playoptions_[i].set_pacemaker_target(config_.GetValue<std::string>("pacemaker_target"));
-    playoptions_[i].set_class(config_.GetValue<int>("class"));
+    playoptions_[i].set_use_hidden(config_.GetValue<int>(ns + "use_hidden"));
+    playoptions_[i].set_use_lanecover(config_.GetValue<int>(ns + "use_lanecover"));
+    playoptions_[i].set_hidden(config_.GetValue<int>(ns + "hidden"));
+    playoptions_[i].set_lanecover(config_.GetValue<int>(ns + "lanecover"));
+    playoptions_[i].set_speed(config_.GetValue<int>(ns + "speed"));
+    playoptions_[i].set_speed_type(config_.GetValue<int>(ns + "speed_option"));
+    playoptions_[i].set_option_chart(config_.GetValue<int>(ns + "chart_option"));
+    playoptions_[i].set_option_chart_dp(config_.GetValue<int>(ns + "chart_option_2P"));
+    playoptions_[i].set_health_type(config_.GetValue<int>(ns + "health_type"));
+    playoptions_[i].set_assist(config_.GetValue<int>(ns + "assist"));
+    playoptions_[i].set_pacemaker(config_.GetValue<int>(ns + "pacemaker"));
+    playoptions_[i].set_pacemaker_target(config_.GetValue<std::string>(ns + "pacemaker_target"));
+    playoptions_[i].set_class(config_.GetValue<int>(ns + "class"));
   }
 
   // load playrecords
