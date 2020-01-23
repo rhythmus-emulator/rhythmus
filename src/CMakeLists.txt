@@ -15,6 +15,7 @@ set (RHYTHMUS_SOURCES
     Game.cpp
     Player.cpp
     Graphic.cpp
+	Error.cpp
     Logger.cpp
     Timer.cpp
     main.cpp

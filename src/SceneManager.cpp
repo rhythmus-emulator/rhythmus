@@ -16,7 +16,8 @@ namespace rhythmus
 // ------------------------- class SceneManager
 
 SceneManager::SceneManager()
-  : current_scene_(nullptr), next_scene_(nullptr)
+  : current_scene_(nullptr), background_scene_(nullptr), next_scene_(nullptr),
+    is_scene_paused_(false)
 {
 }
 
@@ -75,8 +76,30 @@ void SceneManager::Update()
     Timer::SystemTimer().ClearDelta();
   }
 
-  if (current_scene_)
-    current_scene_->Update(Timer::SystemTimer().GetDeltaTime() * 1000);
+  // update main scene
+  float delta = static_cast<float>(Timer::SystemTimer().GetDeltaTime() * 1000);
+  try
+  {
+    if (current_scene_ && !is_scene_paused_)
+      current_scene_->Update(delta);
+  }
+  catch (const RetryException& e)
+  {
+    /* TODO: create retryexception dialog */
+    ASSERT(0);
+  }
+  catch (const RuntimeException& e)
+  {
+    /* TODO: create alert dialog */
+    ASSERT(0);
+  }
+
+  // update foreground / background scene
+  // these scenes should be always updated regardless of dialogs
+  for (auto* s : overlay_scenes_)
+    s->Update(delta);
+  if (background_scene_)
+    background_scene_->Update(delta);
 }
 
 void SceneManager::Render()
@@ -146,6 +169,11 @@ void SceneManager::ChangeScene(const std::string &scene_name)
   // (time-consuming loading is done which is not time critical
   //  e.g. Texture loading)
   inst.next_scene_->LoadScene();
+}
+
+void SceneManager::PauseScene(bool pause)
+{
+  getInstance().is_scene_paused_ = pause;
 }
 
 }

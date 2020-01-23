@@ -103,6 +103,7 @@ private:
 
   void ReadLR2Metric(const std::string &filepath);
   void ReadLR2SS(const std::string &filepath);
+  void ReadXml(const std::string &filepath);
 };
 
 class Option

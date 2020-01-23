@@ -12,7 +12,7 @@
 namespace rhythmus
 {
 
-class SongPlayinfo;
+struct SongPlayinfo;
 class PlayContext;
 class Player;
 class NoteRenderData;

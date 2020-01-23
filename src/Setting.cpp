@@ -166,7 +166,11 @@ void MetricList::ReadMetricFromFile(const std::string &filepath)
   if (ext == "INI")
   {
     // TODO: Stepmania metrics info
-    std::cerr << "Warning: Stepmania skin is not supported yet" << std::endl;
+    throw UnimplementedException("Stepmania skin is not supported yet.");
+  }
+  else if (ext == "XML")
+  {
+    ReadXml(filepath);
   }
   else if (ext == "LR2SKIN")
   {
@@ -428,6 +432,38 @@ void MetricList::ReadLR2SS(const std::string &filepath)
       continue;
     metricname = _metricnames[metric_idx];
     metric.set(metricname, vv);
+  }
+}
+
+void MetricList::ReadXml(const std::string& filepath)
+{
+  tinyxml2::XMLDocument doc;
+  if (doc.LoadFile(filepath.c_str()) != XML_SUCCESS)
+  {
+    throw FileNotFoundException(filepath);
+  }
+
+  XMLElement* root = doc.RootElement();
+  XMLElement* ele = root->FirstChildElement();
+#if 0
+  /* Is name necessary? I don't think so */
+  const char *name = root->Attribute("name");
+  R_ASSERT(name, "name attribute missing on root xml node of metric file.");
+#endif
+
+  while (ele)
+  {
+    const char* elename = ele->Name();
+    Metric& metric = metricmap_[elename];
+    const XMLAttribute* attr = ele->FirstAttribute();
+    while (attr)
+    {
+      const char* v = attr->Value();
+      R_ASSERT(v, "No value given on xml attribute.");
+      metric.set(attr->Name(), attr->Value());
+      attr = attr->Next();
+    }
+    ele = ele->NextSiblingElement();
   }
 }
 
@@ -881,7 +917,7 @@ void OptionList::Clear()
 
 void Setting::ReadAll()
 {
-  static char *metric_option_attrs[] = {
+  static const char *metric_option_attrs[] = {
     "SoundSet",
     "Theme",
     "SelectScene",
@@ -891,10 +927,12 @@ void Setting::ReadAll()
     "CourseResultScene",
     0
   };
+  static const char* fallback_metric_path = "../themes/_fallback/theme.xml";
 
   // read global setting first, then read metric.
   // after that, read user setting, as it may depends on metrics.
   GetSystemSetting().ReadFromFile(kSettingPath);
+  GetThemeMetricList().ReadMetricFromFile(fallback_metric_path);
   {
     std::string filepath;
     for (size_t i = 0; metric_option_attrs[i]; ++i)
