@@ -623,6 +623,13 @@ Option* Option::CreateOption(const std::string &optionstr)
       option = new NumberOption();
       optionvalue = optionstr.substr(2);
     }
+    else if (optionstr[1] == 'T')
+    {
+      // create as number option & return it directly
+      option = new TextOption();
+      option->set_value(optionstr.substr(2));
+      return option;
+    }
   }
   else
   {

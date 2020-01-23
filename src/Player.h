@@ -95,7 +95,7 @@ private:
   std::string player_name_;
   PlayerTypes player_type_;
   OptionList config_;
-  std::string config_path_;
+  std::string config_name_;
 
   /* context for current play */
   bool is_guest_;

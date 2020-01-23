@@ -59,7 +59,7 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
   current_playoption_ = &playoptions_[gamemode_];
 
   // make properties for player common.
-  config_.SetOption("running_combo", "0");
+  config_.SetOption("running_combo", "!T0");
 
   // make properties for each gamemode.
   for (size_t i = 0; i < Gamemode::kGamemodeEnd; ++i)
@@ -68,24 +68,24 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
     ns.push_back('_');
     for (size_t i = 0; i < kMaxLaneCount; ++i)
     {
-      config_.SetOption(ns + format_string("Key%d", i), "0");
+      config_.SetOption(ns + format_string("Key%d", i), "!T0");
     }
-    config_.SetOption(ns + "use_hidden", "0");
-    config_.SetOption(ns + "use_lanecover", "0");
-    config_.SetOption(ns + "hidden", "0");
-    config_.SetOption(ns + "lanecover", "0");
-    config_.SetOption(ns + "speed", "300");
-    config_.SetOption(ns + "speed_option", "0");
-    config_.SetOption(ns + "chart_option", "0");
-    config_.SetOption(ns + "chart_option_2P", "0");
-    config_.SetOption(ns + "health_type", "0");
-    config_.SetOption(ns + "assist", "0");
-    config_.SetOption(ns + "pacemaker", "0");
-    config_.SetOption(ns + "pacemaker_target", "0");
-    config_.SetOption(ns + "class", "0");
+    config_.SetOption(ns + "use_hidden", "!T0");
+    config_.SetOption(ns + "use_lanecover", "!T0");
+    config_.SetOption(ns + "hidden", "!T0");
+    config_.SetOption(ns + "lanecover", "!T0");
+    config_.SetOption(ns + "speed", "!T300");
+    config_.SetOption(ns + "speed_option", "!T0");
+    config_.SetOption(ns + "chart_option", "!T0");
+    config_.SetOption(ns + "chart_option_2P", "!T0");
+    config_.SetOption(ns + "health_type", "!T0");
+    config_.SetOption(ns + "assist", "!T0");
+    config_.SetOption(ns + "pacemaker", "!T0");
+    config_.SetOption(ns + "pacemaker_target", "!T0");
+    config_.SetOption(ns + "class", "!T0");
   }
 
-  config_path_ = format_string("../player/%s.xml", player_name_.c_str());
+  config_name_ = format_string("../player/%s", player_name_.c_str());
 }
 
 Player::~Player()
@@ -99,7 +99,8 @@ void Player::Load()
   // Unload if property already loaded
   ClosePlayRecords();
 
-  if (!config_.ReadFromFile(config_path_))
+  std::string filepath = config_name_ + ".xml";
+  if (!config_.ReadFromFile(filepath))
   {
     std::cerr << "Cannot load player preference (maybe default setting will used)"
       << std::endl;
@@ -113,7 +114,7 @@ void Player::Load()
     ns.push_back('_');
     for (size_t k = 0; k < kMaxLaneCount; ++k)
     {
-      std::string keyname(format_string(ns + "Key%d", i));
+      std::string keyname(format_string(ns + "Key%d", k));
       auto *opt = config_.GetOption(keyname);
       if (!opt) break;
       CommandArgs args(opt->value<std::string>(), 4);
@@ -143,7 +144,8 @@ void Player::Load()
 
 void Player::LoadPlayRecords()
 {
-  int rc = sqlite3_open("../system/song.db", &pr_db_);
+  std::string filepath = config_name_ + ".db";
+  int rc = sqlite3_open(filepath.c_str(), &pr_db_);
   if (rc) {
     std::cout << "Cannot save song database." << std::endl;
     ClosePlayRecords();
@@ -240,30 +242,31 @@ void Player::Save()
     ns.push_back('_');
     for (size_t k = 0; k < kMaxLaneCount; ++k)
     {
-      std::string keyname(format_string(ns + "Key%d", i));
+      std::string keyname(format_string(ns + "Key%d", k));
       std::string v(format_string("%d,%d,%d,%d",
         playoptions_[i].GetKeysetting().keycode_per_track_[k][0],
         playoptions_[i].GetKeysetting().keycode_per_track_[k][1],
         playoptions_[i].GetKeysetting().keycode_per_track_[k][2],
         playoptions_[i].GetKeysetting().keycode_per_track_[k][3]));
-      config_.SetOption(keyname, v);
+      config_.SetValue(keyname, v);
     }
-    config_.SetValue("use_hidden", playoptions_[i].get_use_hidden());
-    config_.SetValue("use_lanecover", playoptions_[i].get_use_lanecover());
-    config_.SetValue("hidden", playoptions_[i].get_hidden()); /* TODO: set_option in case of double */
-    config_.SetValue("lanecover", playoptions_[i].get_lanecover());
-    config_.SetValue("speed", playoptions_[i].get_speed());
-    config_.SetValue("speed_option", playoptions_[i].get_speed_type());
-    config_.SetValue("chart_option", playoptions_[i].get_option_chart());
-    config_.SetValue("chart_option_2P", playoptions_[i].get_option_chart_dp());
-    config_.SetValue("health_type", playoptions_[i].get_health_type());
-    config_.SetValue("assist", playoptions_[i].get_assist());
-    config_.SetValue("pacemaker", playoptions_[i].get_pacemaker());
-    config_.SetValue("pacemaker_target", playoptions_[i].get_pacemaker_target());
-    config_.SetValue("class", playoptions_[i].get_class());
+    config_.SetValue(ns + "use_hidden", playoptions_[i].get_use_hidden());
+    config_.SetValue(ns + "use_lanecover", playoptions_[i].get_use_lanecover());
+    config_.SetValue(ns + "hidden", playoptions_[i].get_hidden()); /* TODO: set_option in case of double */
+    config_.SetValue(ns + "lanecover", playoptions_[i].get_lanecover());
+    config_.SetValue(ns + "speed", playoptions_[i].get_speed());
+    config_.SetValue(ns + "speed_option", playoptions_[i].get_speed_type());
+    config_.SetValue(ns + "chart_option", playoptions_[i].get_option_chart());
+    config_.SetValue(ns + "chart_option_2P", playoptions_[i].get_option_chart_dp());
+    config_.SetValue(ns + "health_type", playoptions_[i].get_health_type());
+    config_.SetValue(ns + "assist", playoptions_[i].get_assist());
+    config_.SetValue(ns + "pacemaker", playoptions_[i].get_pacemaker());
+    config_.SetValue(ns + "pacemaker_target", playoptions_[i].get_pacemaker_target());
+    config_.SetValue(ns + "class", playoptions_[i].get_class());
   }
 
-  config_.SaveToFile(config_path_);
+  std::string filepath = config_name_ + ".xml";
+  config_.SaveToFile(filepath);
 
   // save(close) playrecords
   //ClosePlayRecords();
