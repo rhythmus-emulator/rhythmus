@@ -5,6 +5,7 @@
 #include "scene/DecideScene.h"
 #include "scene/PlayScene.h"
 #include "scene/ResultScene.h"
+#include "scene/OverlayScene.h"
 #include "LR2/LR2Flag.h"
 #include "Util.h"
 #include "Setting.h"
@@ -28,6 +29,11 @@ SceneManager::~SceneManager()
 
 void SceneManager::Initialize()
 {
+  // create system-default overlay scene.
+  Scene *s = new OverlayScene();
+  overlay_scenes_.push_back(s);
+  s->LoadScene();
+
   // create starting scene.
   switch (Game::getInstance().get_boot_mode())
   {
@@ -55,6 +61,9 @@ void SceneManager::Cleanup()
     delete current_scene_;
     current_scene_ = 0;
   }
+  for (auto *s : overlay_scenes_)
+    delete s;
+  overlay_scenes_.clear();
 }
 
 void SceneManager::Update()

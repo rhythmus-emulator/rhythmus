@@ -36,6 +36,8 @@ public:
   void SetImage(Image *img);
   
   void ReplaySprite();
+  void SetImageCoordRect(const Rect &r);
+  void SetTextureCoordRect(const RectF &r);
   const Rect& GetImageCoordRect();
   const RectF& GetTextureCoordRect();
   const SpriteAnimationInfo& GetSpriteAnimationInfo();

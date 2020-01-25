@@ -37,6 +37,7 @@ set (RHYTHMUS_SOURCES
     scene/PlayScene.cpp
     scene/ResultScene.cpp
     scene/OptionScene.cpp
+    scene/OverlayScene.cpp
 	
 	object/Menu.cpp
 	object/MusicWheel.cpp
@@ -49,6 +50,7 @@ set (RHYTHMUS_SOURCES
     object/Button.cpp
     object/OnMouse.cpp
     object/NoteField.cpp
+	object/Dialog.cpp
 
     LR2/exdxa.cpp
     LR2/LR2Font.cpp
@@ -86,6 +88,7 @@ set (RHYTHMUS_HEADERS
     scene/PlayScene.h
     scene/ResultScene.h
     scene/OptionScene.h
+	scene/OverlayScene.h
 
 	object/Menu.h
 	object/MusicWheel.h
@@ -98,6 +101,7 @@ set (RHYTHMUS_HEADERS
     object/Button.h
     object/OnMouse.h
     object/NoteField.h
+	object/Dialog.h
 
     LR2/exdxa.h
     LR2/LR2Font.h

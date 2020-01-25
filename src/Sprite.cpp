@@ -57,6 +57,26 @@ void Sprite::ReplaySprite()
   eclipsed_time_ = 0;
 }
 
+void Sprite::SetImageCoordRect(const Rect &r)
+{
+  imgcoord_ = r;
+  texcoord_.x = imgcoord_.x / (float)img_->get_width();
+  texcoord_.y = imgcoord_.y / (float)img_->get_height();
+  if (imgcoord_.w < 0) imgcoord_.w = 1.0f;
+  else texcoord_.w = imgcoord_.w / (float)img_->get_width();
+  if (imgcoord_.h < 0) imgcoord_.h = 1.0f;
+  else texcoord_.h = imgcoord_.h / (float)img_->get_height();
+}
+
+void Sprite::SetTextureCoordRect(const RectF &r)
+{
+  texcoord_ = r;
+  imgcoord_.x = texcoord_.x * (float)img_->get_width();
+  imgcoord_.y = texcoord_.y * (float)img_->get_height();
+  imgcoord_.w = texcoord_.w * (float)img_->get_width();
+  imgcoord_.h = texcoord_.h * (float)img_->get_height();
+}
+
 const Rect& Sprite::GetImageCoordRect() { return imgcoord_; }
 
 const RectF& Sprite::GetTextureCoordRect() { return texcoord_; }
@@ -192,17 +212,12 @@ void Sprite::LoadFromLR2SRC(const std::string &cmd)
   if (!img_ || !img_->is_loaded())
     return;
 
-  imgcoord_.x = args.Get<int>(1);
-  imgcoord_.y = args.Get<int>(2);
-  imgcoord_.w = args.Get<int>(3);
-  imgcoord_.h = args.Get<int>(4);
-
-  texcoord_.x = imgcoord_.x / (float)img_->get_width();
-  texcoord_.y = imgcoord_.y / (float)img_->get_height();
-  if (imgcoord_.w < 0) imgcoord_.w = 1.0f;
-  else texcoord_.w = imgcoord_.w / (float)img_->get_width();
-  if (imgcoord_.h < 0) imgcoord_.h = 1.0f;
-  else texcoord_.h = imgcoord_.h / (float)img_->get_height();
+  Rect r;
+  r.x = args.Get<int>(1);
+  r.y = args.Get<int>(2);
+  r.w = args.Get<int>(3);
+  r.h = args.Get<int>(4);
+  SetImageCoordRect(r);
 
   int divx = args.Get<int>(5);
   int divy = args.Get<int>(6);
