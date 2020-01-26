@@ -7,6 +7,7 @@ namespace rhythmus
 
 OverlayScene::OverlayScene() : alert_dialog_(nullptr), log_dialog_(nullptr)
 {
+  set_name("OverlayScene");
 }
 
 void OverlayScene::LoadScene()
@@ -17,6 +18,8 @@ void OverlayScene::LoadScene()
   log_dialog_->set_name("log_dialog");
   RegisterChild(alert_dialog_);
   RegisterChild(log_dialog_);
+  alert_dialog_->Hide();
+  log_dialog_->Hide();
 
   // invoke LoadByName() internally
   Scene::LoadScene();

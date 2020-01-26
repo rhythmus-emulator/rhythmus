@@ -68,7 +68,7 @@ void Dialog::doUpdate(float delta)
   for (int i = 0; i < 3; ++i)
   {
     xpos = 0;
-    for (int j = 0; j < 3; ++i)
+    for (int j = 0; j < 3; ++j)
     {
       const int idx = i * 3 + j;
       const Rect &_r = src_rect_[idx];
