@@ -42,9 +42,9 @@ private: \
   USER_PROP(bool, use_lanecover);
   USER_PROP(bool, use_hidden);
   USER_PROP(int, speed_type);
-  USER_PROP(double, speed);
-  USER_PROP(double, lanecover);
-  USER_PROP(double, hidden);
+  USER_PROP(int, speed);
+  USER_PROP(int, lanecover);
+  USER_PROP(int, hidden);
   USER_PROP(int, option_chart);
   USER_PROP(int, option_chart_dp); /* only for BMS DP */
   USER_PROP(int, health_type);

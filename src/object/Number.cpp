@@ -265,7 +265,7 @@ void Number::CreateTextVertexFromSprite()
         tvi_glyphs_[ii].vi[2].y = divh;
         tvi_glyphs_[ii].vi[3].x = 0;
         tvi_glyphs_[ii].vi[3].y = divh;
-        numbersprite_.GetVertexInfoOfFrame(tvi_glyphs_[ii].vi, ii);
+        numbersprite_.FillTextureCoordToVertexInfo(tvi_glyphs_[ii].vi, ii);
       }
     }
   }

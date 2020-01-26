@@ -1,4 +1,5 @@
 #include "OverlayScene.h"
+#include "SceneManager.h"
 #include "object/Dialog.h"
 
 namespace rhythmus
@@ -53,17 +54,25 @@ void OverlayScene::doUpdate(float delta)
   Scene::doUpdate(delta);
 
   // if dialog is hidden and message exists, then display it
-  if (!alert_dialog_->IsVisible() && !dialog_msg_.empty())
+  if (!alert_dialog_->IsVisible())
   {
+    if (!dialog_msg_.empty())
     {
-      DialogMessages &m = dialog_msg_.front();
-      alert_dialog_->SetTitle(m.title);
-      alert_dialog_->SetTitle(m.message);
-      dialog_msg_.pop_front();
+      {
+        DialogMessages &m = dialog_msg_.front();
+        alert_dialog_->SetTitle(m.title);
+        alert_dialog_->SetTitle(m.message);
+        dialog_msg_.pop_front();
+      }
+      alert_dialog_->RunCommandByName("Open");
+      alert_dialog_->Show();
+    } else
+    {
+      SceneManager::getInstance().PauseScene(false);
     }
-    alert_dialog_->RunCommandByName("Message");
-    alert_dialog_->Show();
   }
+  else
+    SceneManager::getInstance().PauseScene(true);
 }
 
 }

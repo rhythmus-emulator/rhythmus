@@ -29,6 +29,18 @@ private:
   bool is_ignorable_;
 };
 
+/*
+ * @brief
+ * Used for fatal exception, which program needs to be closed instantly.
+ * Mainly used for rendering / sound engine error.
+ */
+class FatalException : public RuntimeException
+{
+public:
+  FatalException(const std::string &msg);
+  virtual const char* exception_name() const;
+};
+
 /* @brief Used for unimplemented feature (fatal exception) */
 class UnimplementedException : public RuntimeException
 {
@@ -60,5 +72,7 @@ void R_ASSERT(bool v);
 /* @brief ASSERT with message */
 void R_ASSERT(bool v, const char *msg);
 void R_ASSERT(bool v, const std::string &msg);
+void R_ASSERT_FATAL(bool v, const char *msg);
+void R_ASSERT_FATAL(bool v, const std::string &msg);
 
 }

@@ -101,24 +101,39 @@ void Game::Initialize()
 
 void Game::Loop()
 {
-  while (getInstance().is_running_ && !Graphic::IsWindowShouldClose())
+  try
   {
-    /* Update main timer in graphic(main) thread. */
-    Timer::Update();
+    while (getInstance().is_running_ && !Graphic::IsWindowShouldClose())
+    {
+      /* Update main timer in graphic(main) thread. */
+      Timer::Update();
 
-    /* TODO: Update Logger to log fps information. */
+      /* TODO: Update Logger to log fps information. */
 
-    /**
-     * Process cached events in main thread.
-     * COMMENT: Event must be processed before Update() method
-     * (e.g. Wheel flickering when items Rebuild after Event flush)
-     */
-    InputEventManager::Flush();
-    EventManager::Flush();
+      /**
+       * Process cached events in main thread.
+       * COMMENT: Event must be processed before Update() method
+       * (e.g. Wheel flickering when items Rebuild after Event flush)
+       */
+      InputEventManager::Flush();
+      EventManager::Flush();
 
-    ResourceManager::UpdateMovie();
+      ResourceManager::UpdateMovie();
 
-    Graphic::Render();
+      Graphic::Render();
+    }
+  }
+  catch (const RuntimeException &e)
+  {
+    /* log for unexcepted runtime exception (mostly fatal) and exit */
+    Logger::Error("Fatal error (%s) : %s", e.exception_name(), e.what());
+    Exit();
+  }
+  catch (const std::exception &e)
+  {
+    /* log for unknown exception and exit */
+    Logger::Error("Fatal error (unknown) : %s", e.what());
+    Exit();
   }
 }
 

@@ -11,7 +11,7 @@ namespace rhythmus
 BaseObject::BaseObject()
   : parent_(nullptr), draw_order_(0), rot_center_(-1),
     ignore_visible_group_(true), resource_id_(-1), blending_(1),
-    is_focusable_(false), is_focused_(false), is_hovered_(false)
+    is_focusable_(false), is_focused_(false), is_hovered_(false), do_clipping_(false)
 {
   memset(&current_prop_, 0, sizeof(DrawProperty));
   current_prop_.sw = current_prop_.sh = 1.0f;
@@ -27,9 +27,9 @@ BaseObject::BaseObject(const BaseObject& obj)
     draw_order_(obj.draw_order_), rot_center_(obj.rot_center_),
     ignore_visible_group_(obj.ignore_visible_group_),
     resource_id_(obj.resource_id_), blending_(obj.blending_),
-    is_focusable_(obj.is_focusable_), is_focused_(false), is_hovered_(false)
+    is_focusable_(obj.is_focusable_), is_focused_(false), is_hovered_(false), do_clipping_(false)
 {
-  // XXX: childrens won't copy by now
+  // XXX: childrens won't copied by now
   tween_ = obj.tween_;
   current_prop_ = obj.current_prop_;
   memcpy(visible_group_, obj.visible_group_, sizeof(visible_group_));
@@ -321,6 +321,39 @@ DrawProperty& BaseObject::GetDestDrawProperty()
 DrawProperty& BaseObject::get_draw_property()
 {
   return current_prop_;
+}
+
+void BaseObject::SetX(int x)
+{
+  GetDestDrawProperty().pi.x = x;
+}
+
+void BaseObject::SetY(int y)
+{
+  GetDestDrawProperty().pi.y = y;
+}
+
+void BaseObject::SetWidth(int w)
+{
+  GetDestDrawProperty().w = w;
+}
+
+void BaseObject::SetHeight(int h)
+{
+  GetDestDrawProperty().h = h;
+}
+
+void BaseObject::SetOpacity(float opa)
+{
+  GetDestDrawProperty().aTL =
+    GetDestDrawProperty().aTR =
+    GetDestDrawProperty().aBL =
+    GetDestDrawProperty().aBR = opa;
+}
+
+void BaseObject::SetClip(bool clip)
+{
+  do_clipping_ = clip;
 }
 
 void BaseObject::SetPos(int x, int y)
@@ -806,6 +839,13 @@ void BaseObject::Render()
   // set matrix
   Graphic::getInstance().SetMatrix(get_draw_property().pi);
 
+  // clip implementation (prevent content overflowing)
+  // - render to texture first, and render the texture to onscreen.
+  if (do_clipping_)
+  {
+    Graphic::SetRenderToTexture();
+  }
+
   // render vertices
   doRender();
 
@@ -814,7 +854,64 @@ void BaseObject::Render()
 
   doRenderAfter();
 
+  R_ASSERT_FATAL(!Graphic::is_vertex_buffer_remains(),
+    "Vertex buffer should be flushed all after BaseObject::doRenderAfter()");
+
+  // clip implementation (rendering texture)
+  if (do_clipping_)
+  {
+    Rect r{ current_prop_.x, current_prop_.y, current_prop_.w, current_prop_.h };
+    Graphic::SetOffscreenTextureId();
+    Graphic::SetRenderToScreen();
+    FillVertexInfo(Graphic::get_vertex_buffer());
+    Graphic::RenderQuad();
+  }
+
   Graphic::PopMatrix();
+}
+
+void BaseObject::FillVertexInfo(VertexInfo *vi_)
+{
+  const DrawProperty &ti = current_prop_;
+
+  float x1, y1, x2, y2;
+
+  x1 = ti.x;
+  y1 = ti.y;
+  x2 = x1 + ti.w;
+  y2 = y1 + ti.h;
+
+  vi_[0].x = x1;
+  vi_[0].y = y1;
+  vi_[0].z = 0;
+  vi_[0].r = ti.r;
+  vi_[0].g = ti.g;
+  vi_[0].b = ti.b;
+  vi_[0].a = ti.aTL;
+
+  vi_[1].x = x2;
+  vi_[1].y = y1;
+  vi_[1].z = 0;
+  vi_[1].r = ti.r;
+  vi_[1].g = ti.g;
+  vi_[1].b = ti.b;
+  vi_[1].a = ti.aBL;
+
+  vi_[2].x = x2;
+  vi_[2].y = y2;
+  vi_[2].z = 0;
+  vi_[2].r = ti.r;
+  vi_[2].g = ti.g;
+  vi_[2].b = ti.b;
+  vi_[2].a = ti.aBR;
+
+  vi_[3].x = x1;
+  vi_[3].y = y2;
+  vi_[3].z = 0;
+  vi_[3].r = ti.r;
+  vi_[3].g = ti.g;
+  vi_[3].b = ti.b;
+  vi_[3].a = ti.aTR;
 }
 
 void BaseObject::doUpdate(float delta) {}
@@ -931,8 +1028,68 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
   static CommandFnMap cmdfnmap_;
   if (cmdfnmap_.empty())
   {
+    static auto fn_X = [](void *o, CommandArgs& args) {
+      std::string v = args.Get<std::string>(0);
+      auto *obj = static_cast<BaseObject*>(o);
+      int vi = 0;
+      // TODO: change it to lua
+      if (v == "CENTER_OBJECT")
+        vi = (Graphic::getInstance().width() - obj->get_draw_property().w) / 2;
+      obj->SetX(vi);
+    };
+    static auto fn_Y = [](void *o, CommandArgs& args) {
+      std::string v = args.Get<std::string>(0);
+      auto *obj = static_cast<BaseObject*>(o);
+      int vi = 0;
+      // TODO: change it to lua
+      if (v == "CENTER_OBJECT")
+        vi = (Graphic::getInstance().height() - obj->get_draw_property().h) / 2;
+      obj->SetY(vi);
+    };
+    static auto fn_W = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetWidth(args.Get<int>(0));
+    };
+    static auto fn_H = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetHeight(args.Get<int>(0));
+    };
     static auto fn_Pos = [](void *o, CommandArgs& args) {
       static_cast<BaseObject*>(o)->SetPos(args.Get<int>(0), args.Get<int>(1));
+    };
+    static auto fn_Scale = [](void *o, CommandArgs& args) {
+      if (args.size() == 1)
+        static_cast<BaseObject*>(o)->SetScale(args.Get<float>(0), args.Get<float>(0));
+      else
+        static_cast<BaseObject*>(o)->SetScale(args.Get<float>(0), args.Get<float>(1));
+    };
+    static auto fn_Opacity = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetOpacity(args.Get<float>(0));
+    };
+    static auto fn_acc = [](void *o, CommandArgs& args) {
+      if (args.size() == 0)
+        return;
+      std::string v = args.Get<std::string>(0);
+      if (v[0] >= '0' && v[0] <= '9')
+        static_cast<BaseObject*>(o)->SetAcceleration(args.Get<int>(0));
+      else
+      {
+        const char *ease_names[] = {
+          "none", "linear", "easein", "easeout", "easeinout", "easeinoutback", 0
+        };
+        for (int i = 0; ease_names[i]; ++i)
+        {
+          if (stricmp(v.c_str(), ease_names[i]) == 0)
+          {
+            static_cast<BaseObject*>(o)->SetAcceleration(i);
+            return;
+          }
+        }
+      }
+    };
+    static auto fn_time = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->SetDeltaTweenTime(args.Get<int>(0));
+    };
+    static auto fn_stop = [](void *o, CommandArgs& args) {
+      static_cast<BaseObject*>(o)->StopTween();
     };
     static auto fn_SetLR2DST = [](void *o, CommandArgs& args) {
       auto *b = static_cast<BaseObject*>(o);
@@ -972,6 +1129,15 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     static auto fn_SendEvent = [](void *o, CommandArgs& args) {
       EventManager::SendEvent(args.Get<std::string>(0));
     };
+    cmdfnmap_["x"] = fn_X;
+    cmdfnmap_["y"] = fn_Y;
+    cmdfnmap_["w"] = fn_W;
+    cmdfnmap_["h"] = fn_H;
+    cmdfnmap_["scale"] = fn_Scale;
+    cmdfnmap_["opacity"] = fn_Opacity;
+    cmdfnmap_["acc"] = fn_acc;
+    cmdfnmap_["time"] = fn_time;
+    cmdfnmap_["stop"] = fn_stop;
     cmdfnmap_["pos"] = fn_Pos;
     cmdfnmap_["lr2cmd"] = fn_SetLR2DST;
     cmdfnmap_["show"] = fn_Show;

@@ -28,6 +28,7 @@ private:
   ~SceneManager();
 
   // overlay-displayed scene
+  // first element MUST be OverlayScene object.
   std::vector<Scene*> overlay_scenes_;
 
   // currently displaying scene
@@ -41,6 +42,7 @@ private:
 
   // is scene updating should be stopped
   // (due to dialog or something)
+  // changed by OverlayScene object by invoking dialog message.
   bool is_scene_paused_;
 };
 

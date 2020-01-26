@@ -9,8 +9,8 @@
         b="70,459,100,65"
         br="904,459,70,65"
         body="70,65,100,100"
-        OnLoad="w:400;h:300;x:CENTER_WIDTH;y:CENTER_HEIGHT;scale:0.8;opacity:0;acc:easein;time:500;scale:1.0"
-        OnClose="time:500;scale:0.8;opacity:0" />
+        OnOpen="w:400;h:300;x:CENTER_OBJECT;y:CENTER_OBJECT;scale:0.8;opacity:0;acc:easein;time:500;scale:1.0"
+        OnClose="time:500;scale:0.8;opacity:0;hide" />
     <dialog-title font="SystemBold" align="center" />
     <dialog-text font="System" align="center" />
         <!--

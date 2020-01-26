@@ -26,6 +26,13 @@ bool RuntimeException::is_ignorable() const
   return is_ignorable_;
 }
 
+FatalException::FatalException(const std::string &msg) : RuntimeException(msg) {}
+
+const char* FatalException::exception_name() const
+{
+  return "FatalException";
+}
+
 UnimplementedException::UnimplementedException(const std::string& msg)
   : RuntimeException(msg) {}
 
@@ -64,6 +71,16 @@ void R_ASSERT(bool v, const char* msg)
 void R_ASSERT(bool v, const std::string& msg)
 {
   if (!v) throw RuntimeException(msg);
+}
+
+void R_ASSERT_FATAL(bool v, const char* msg)
+{
+  if (!v) throw FatalException(msg ? msg : "");
+}
+
+void R_ASSERT_FATAL(bool v, const std::string& msg)
+{
+  if (!v) throw FatalException(msg);
 }
 
 }

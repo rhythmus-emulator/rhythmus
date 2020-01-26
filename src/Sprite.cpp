@@ -94,7 +94,7 @@ void Sprite::Load(const Metric& metric)
     blending_ = metric.get<int>("blend");
 }
 
-void Sprite::GetVertexInfoOfFrame(VertexInfo* vi, size_t frame)
+void Sprite::FillTextureCoordToVertexInfo(VertexInfo* vi, size_t frame)
 {
   float sw = texcoord_.w / ani_info_.divx;
   float sh = texcoord_.h / ani_info_.divy;
@@ -136,56 +136,15 @@ void Sprite::doRender()
   Graphic::SetTextureId(img_->get_texture_ID());
   Graphic::SetBlendMode(blending_);
 
-  const DrawProperty &ti = current_prop_;
-
-  float x1, y1, x2, y2;
-
-  x1 = ti.x;
-  y1 = ti.y;
-  x2 = x1 + ti.w;
-  y2 = y1 + ti.h;
-
 #if 0
   // for predefined src width / height (-1 means use whole texture)
   if (ti.sw == -1) sx1 = 0.0, sx2 = 1.0;
   if (ti.sh == -1) sy1 = 0.0, sy2 = 1.0;
 #endif
 
-  VertexInfo* vi_ = Graphic::get_vertex_buffer();
-
-  vi_[0].x = x1;
-  vi_[0].y = y1;
-  vi_[0].z = 0;
-  vi_[0].r = ti.r;
-  vi_[0].g = ti.g;
-  vi_[0].b = ti.b;
-  vi_[0].a = ti.aTL;
-
-  vi_[1].x = x2;
-  vi_[1].y = y1;
-  vi_[1].z = 0;
-  vi_[1].r = ti.r;
-  vi_[1].g = ti.g;
-  vi_[1].b = ti.b;
-  vi_[1].a = ti.aBL;
-
-  vi_[2].x = x2;
-  vi_[2].y = y2;
-  vi_[2].z = 0;
-  vi_[2].r = ti.r;
-  vi_[2].g = ti.g;
-  vi_[2].b = ti.b;
-  vi_[2].a = ti.aBR;
-
-  vi_[3].x = x1;
-  vi_[3].y = y2;
-  vi_[3].z = 0;
-  vi_[3].r = ti.r;
-  vi_[3].g = ti.g;
-  vi_[3].b = ti.b;
-  vi_[3].a = ti.aTR;
-
-  GetVertexInfoOfFrame(vi_, idx_);
+  VertexInfo* vi = Graphic::get_vertex_buffer();
+  FillVertexInfo(vi);
+  FillTextureCoordToVertexInfo(vi, idx_);
 
   Graphic::RenderQuad();
 }

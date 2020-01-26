@@ -112,6 +112,7 @@ public:
   int window_width() const;
   int window_height() const;
   float GetAspect() const;
+  void CreateFBO(int w, int h);
 
   static void RenderQuad();
   static void SetMatrix(const ProjectionInfo& pi);
@@ -119,8 +120,12 @@ public:
   static void PopMatrix();
   static VertexInfo* get_vertex_buffer();
   static VertexInfo* get_vertex_buffer(int size);
+  static bool is_vertex_buffer_remains();
   static void SetTextureId(GLuint tex_id);
   static void SetBlendMode(int blend_mode);
+  static void SetRenderToTexture();
+  static void SetRenderToScreen();
+  static void SetOffscreenTextureId();
   static void Flush();
 
 private:
@@ -142,6 +147,7 @@ private:
   int vi_idx_;
   GLuint tex_id_;
   int blendmode_;
+  GLuint fbo_id_, fbo_tex_id_, rbo_id_;
 
   void InitializeInternal();
   void RenderInternal();

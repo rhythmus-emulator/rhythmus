@@ -47,6 +47,30 @@ int Graphic::window_width() const { return sWidth; }
 int Graphic::window_height() const { return sHeight; }
 float Graphic::GetAspect() const { return (float)width_ / height_; }
 
+void Graphic::CreateFBO(int w, int h)
+{
+  fbo_id_ = fbo_tex_id_ = rbo_id_ = 0;
+
+  glGenFramebuffers(1, &fbo_id_);
+  glBindFramebuffer(GL_FRAMEBUFFER, fbo_id_);
+
+  glGenTextures(1, &fbo_tex_id_);
+  glBindTexture(GL_TEXTURE_2D, fbo_tex_id_);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo_tex_id_, 0);
+
+  glGenRenderbuffers(1, &rbo_id_);
+  glBindRenderbuffer(GL_RENDERBUFFER, rbo_id_);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, w, h);
+  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo_id_);
+
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
 void Graphic::Initialize()
 {
   getInstance().InitializeInternal();
@@ -88,6 +112,9 @@ void Graphic::InitializeInternal()
     std::cerr << "Failed glewInit()." << std::endl;
     exit(EXIT_FAILURE);
   }
+
+  // Create FBO
+  CreateFBO(width_, height_);
 
   // Center window
   CenterWindow();
@@ -554,6 +581,11 @@ VertexInfo* Graphic::get_vertex_buffer(int size)
   return g.vi_ + _ * 4;
 }
 
+bool Graphic::is_vertex_buffer_remains()
+{
+  return getInstance().vi_idx_ > 0;
+}
+
 /* @warn MUST call texture first before setting vertices */
 void Graphic::SetTextureId(GLuint tex_id)
 {
@@ -652,6 +684,26 @@ void Graphic::RenderQuad(const VertexInfo* vi)
   glEnd();
 }
 #endif
+
+void Graphic::SetRenderToTexture()
+{
+  /* change frame / render buffer to our own FBOs and clear it */
+  glBindFramebuffer(GL_FRAMEBUFFER, getInstance().fbo_id_);
+  glBindRenderbuffer(GL_RENDERBUFFER, getInstance().rbo_id_);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+}
+
+void Graphic::SetRenderToScreen()
+{
+  /* change frame / render buffer to system default */
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindRenderbuffer(GL_RENDERBUFFER, 0);
+}
+
+void Graphic::SetOffscreenTextureId()
+{
+  glBindTexture(GL_TEXTURE_2D, getInstance().fbo_tex_id_);
+}
 
 Graphic::Graphic()
 {

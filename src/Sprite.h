@@ -42,7 +42,7 @@ public:
   const RectF& GetTextureCoordRect();
   const SpriteAnimationInfo& GetSpriteAnimationInfo();
 
-  void GetVertexInfoOfFrame(VertexInfo* vi, size_t frame);
+  void FillTextureCoordToVertexInfo(VertexInfo* vi, size_t frame);
 
   /* Set sprite animation frame by number manually.
    * @warn This function won't work

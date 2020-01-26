@@ -85,8 +85,16 @@ void SceneManager::Update()
     Timer::SystemTimer().ClearDelta();
   }
 
-  // update main scene
   float delta = static_cast<float>(Timer::SystemTimer().GetDeltaTime() * 1000);
+
+  // update foreground / background scene first.
+  // these scenes should be always updated regardless of dialogs
+  for (auto* s : overlay_scenes_)
+    s->Update(delta);
+  if (background_scene_)
+    background_scene_->Update(delta);
+
+  // update main scene
   try
   {
     if (current_scene_ && !is_scene_paused_)
@@ -95,20 +103,16 @@ void SceneManager::Update()
   catch (const RetryException& e)
   {
     /* TODO: create retryexception dialog */
+    static_cast<OverlayScene*>(overlay_scenes_[0])
+      ->AlertMessageBox(e.exception_name(), e.what());
     ASSERT(0);
   }
   catch (const RuntimeException& e)
   {
-    /* TODO: create alert dialog */
+    static_cast<OverlayScene*>(overlay_scenes_[0])
+      ->AlertMessageBox(e.exception_name(), e.what());
     ASSERT(0);
   }
-
-  // update foreground / background scene
-  // these scenes should be always updated regardless of dialogs
-  for (auto* s : overlay_scenes_)
-    s->Update(delta);
-  if (background_scene_)
-    background_scene_->Update(delta);
 }
 
 void SceneManager::Render()

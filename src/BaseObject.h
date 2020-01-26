@@ -165,6 +165,12 @@ public:
 
   DrawProperty& GetDestDrawProperty();
   DrawProperty& get_draw_property();
+  void SetX(int x);
+  void SetY(int y);
+  void SetWidth(int w);
+  void SetHeight(int h);
+  void SetOpacity(float opa);
+  void SetClip(bool clip);
   void SetPos(int x, int y);
   void MovePos(int x, int y);
   void SetSize(int w, int h);
@@ -284,6 +290,9 @@ protected:
   // is object is currently hovered?
   bool is_hovered_;
 
+  // do clipping when rendering object, including children?
+  bool do_clipping_;
+
   // commands to be called
   std::map<std::string, std::string> commands_;
 
@@ -294,6 +303,7 @@ protected:
   void UpdateTween(float delta);
   void SetTweenLoopTime(int loopstart_time_msec);
 
+  void FillVertexInfo(VertexInfo *vi);
   virtual void doUpdate(float delta);
   virtual void doRender();
   virtual void doUpdateAfter(float delta);
