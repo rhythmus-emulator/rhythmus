@@ -17,8 +17,7 @@ namespace rhythmus
 // ------------------------- class SceneManager
 
 SceneManager::SceneManager()
-  : current_scene_(nullptr), background_scene_(nullptr), next_scene_(nullptr),
-    is_scene_paused_(false)
+  : current_scene_(nullptr), background_scene_(nullptr), next_scene_(nullptr)
 {
 }
 
@@ -97,21 +96,17 @@ void SceneManager::Update()
   // update main scene
   try
   {
-    if (current_scene_ && !is_scene_paused_)
+    if (current_scene_ && !Game::IsPaused())
       current_scene_->Update(delta);
   }
   catch (const RetryException& e)
   {
     /* TODO: create retryexception dialog */
-    static_cast<OverlayScene*>(overlay_scenes_[0])
-      ->AlertMessageBox(e.exception_name(), e.what());
-    ASSERT(0);
+    Game::AlertMessageBox(e.exception_name(), e.what());
   }
   catch (const RuntimeException& e)
   {
-    static_cast<OverlayScene*>(overlay_scenes_[0])
-      ->AlertMessageBox(e.exception_name(), e.what());
-    ASSERT(0);
+    Game::AlertMessageBox(e.exception_name(), e.what());
   }
 }
 
@@ -182,11 +177,6 @@ void SceneManager::ChangeScene(const std::string &scene_name)
   // (time-consuming loading is done which is not time critical
   //  e.g. Texture loading)
   inst.next_scene_->LoadScene();
-}
-
-void SceneManager::PauseScene(bool pause)
-{
-  getInstance().is_scene_paused_ = pause;
 }
 
 }

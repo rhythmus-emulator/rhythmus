@@ -70,6 +70,7 @@ public:
   void Load();
   void Save();
   void Sync();
+  int player_type() const;
 
   const PlayRecord *GetPlayRecord(const std::string &chartname) const;
   void GetReplayList(const std::vector<std::string> &replay_names);
@@ -154,6 +155,7 @@ public:
   /* @brief Create guest player if no player loaded.
    * used for safe logic of PlayScreen() */
   static void CreateNonePlayerIfEmpty();
+  static void UnloadNonePlayer();
 
   /* @brief Unload Player object, automatically saved. */
   static void UnloadPlayer(int player_slot);

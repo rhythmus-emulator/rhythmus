@@ -318,6 +318,12 @@ void Player::ClosePlayRecords()
 void Player::Sync()
 {
   // TODO: sync data from network
+  //R_ASSERT(0, "Player::Sync() is not implemented.");
+}
+
+int Player::player_type() const
+{
+  return player_type_;
 }
 
 /* XXX: unsafe if playrecords is modified */
@@ -436,6 +442,14 @@ void PlayerManager::CreateNonePlayerIfEmpty()
   if (GetLoadedPlayerCount() == 0)
   {
     CreatePlayer(PlayerTypes::kPlayerNone, "NONE", "");
+  }
+}
+
+void PlayerManager::UnloadNonePlayer()
+{
+  if (players_[0] && players_[0]->player_type() == PlayerTypes::kPlayerNone)
+  {
+    UnloadPlayer(0);
   }
 }
 

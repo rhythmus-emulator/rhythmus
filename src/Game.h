@@ -61,6 +61,13 @@ public:
   /* Load execute argument */
   void LoadArgument(const std::string& argv);
 
+  static void MessageBox(const std::string &title, const std::string &text);
+  static void AlertMessageBox(const std::string &title, const std::string &text);
+  static void WarningMessageBox(const std::string &title, const std::string &text);
+  static void CriticalMessageBox(const std::string &title, const std::string &text);
+  static void Pause(bool pause);
+  static bool IsPaused();
+
   GameBootMode get_boot_mode() const;
 
   static const std::string &get_window_title();
@@ -73,6 +80,9 @@ private:
 
   // is game loop running?
   bool is_running_;
+
+  // is game paused? (due to dialog or something)
+  bool is_paused_;
 
   // current game boot mode.
   GameBootMode game_boot_mode_;

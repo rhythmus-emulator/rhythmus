@@ -18,7 +18,6 @@ public:
   static SceneManager& getInstance();
 
   static void ChangeScene(const std::string &scene_name);
-  static void PauseScene(bool pause);
 
   /* from InputEventReceiver */
   virtual void OnInputEvent(const InputEvent& e);
@@ -39,11 +38,6 @@ private:
 
   // next scene cached
   Scene *next_scene_;
-
-  // is scene updating should be stopped
-  // (due to dialog or something)
-  // changed by OverlayScene object by invoking dialog message.
-  bool is_scene_paused_;
 };
 
 /* singleton object. */

@@ -2,6 +2,7 @@
 #include "SongPlayer.h"
 #include "Util.h"
 #include "Player.h"
+#include "SceneManager.h"
 
 namespace rhythmus
 {
@@ -28,8 +29,6 @@ void PlayScene::LoadScene()
     // exit scene instantly if no chart to play
     CloseScene(false);
   }
-
-  PlayerManager::CreateNonePlayerIfEmpty();
 
   Metric *metric = Setting::GetThemeMetricList().get_metric(get_name());
   ASSERT(metric);
@@ -119,11 +118,17 @@ void PlayScene::CloseScene(bool next)
 
 void PlayScene::ProcessInputEvent(const InputEvent& e)
 {
-  if (e.type() == InputEvents::kOnKeyDown && e.KeyCode() == GLFW_KEY_ESCAPE)
+  if (e.type() == InputEvents::kOnKeyDown)
   {
-    SongPlayer::getInstance().Stop();
-    FadeOutScene(false);
-    return;
+    if (e.KeyCode() == GLFW_KEY_ESCAPE)
+    {
+      SongPlayer::getInstance().Stop();
+      FadeOutScene(false);
+      return;
+    }
+    else if (e.KeyCode() == GLFW_KEY_TAB)
+    {
+    }
   }
 
   if (!is_input_available())
@@ -136,12 +141,6 @@ void PlayScene::doUpdate(float delta)
 {
   Scene::doUpdate(delta);
   playscenetask_.Update(delta);
-
-  // Play BGM while playing.
-  if (play_status_ == 1)
-  {
-    SongPlayer::getInstance().Update(delta);
-  }
 }
 
 }

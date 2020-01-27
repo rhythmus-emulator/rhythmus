@@ -47,11 +47,6 @@ void OverlayScene::ProcessInputEvent(const InputEvent& e)
     alert_dialog_->RunCommandByName("Close");
 }
 
-void OverlayScene::AlertMessageBox(const std::string &title, const std::string &text)
-{
-  dialog_msg_.push_back({ title, text });
-}
-
 void OverlayScene::doUpdate(float delta)
 {
   Scene::doUpdate(delta);
@@ -59,23 +54,47 @@ void OverlayScene::doUpdate(float delta)
   // if dialog is hidden and message exists, then display it
   if (!alert_dialog_->IsVisible())
   {
-    if (!dialog_msg_.empty())
+    auto *msg = MessageBoxData::Peek();
+    if (msg)
     {
-      {
-        DialogMessages &m = dialog_msg_.front();
-        alert_dialog_->SetTitle(m.title);
-        alert_dialog_->SetTitle(m.message);
-        dialog_msg_.pop_front();
-      }
+      alert_dialog_->SetTitle(msg->title);
+      alert_dialog_->SetText(msg->text);
+      MessageBoxData::Pop();
       alert_dialog_->RunCommandByName("Open");
       alert_dialog_->Show();
     } else
     {
-      SceneManager::getInstance().PauseScene(false);
+      Game::Pause(false);
     }
   }
   else
-    SceneManager::getInstance().PauseScene(true);
+    Game::Pause(true);
+}
+
+
+void MessageBoxData::Add(int type, const std::string &title, const std::string &text)
+{
+  getInstance().data_.push_back({ type, title, text });
+}
+
+const MessageBoxData::Data *MessageBoxData::Peek()
+{
+  const auto &i = getInstance();
+  if (i.data_.empty()) return nullptr;
+  return &i.data_.front();
+}
+
+void MessageBoxData::Pop()
+{
+  auto &i = getInstance();
+  if (!i.data_.empty())
+    i.data_.pop_front();
+}
+
+MessageBoxData &MessageBoxData::getInstance()
+{
+  static MessageBoxData d;
+  return d;
 }
 
 }

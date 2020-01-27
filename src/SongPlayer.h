@@ -26,7 +26,7 @@ public:
   bool Load();
   void Play();
   void Stop(bool interrupted = true);
-  void Update(float delta);
+  void Update();
 
   /* @brief Set course for play. */
   void SetCoursetoPlay(const std::string &coursepath);

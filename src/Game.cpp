@@ -10,7 +10,8 @@
 #include "Player.h"
 #include "ResourceManager.h"
 #include "SceneManager.h"
-#include "LR2/LR2Flag.h"  // For updating LR2 flag
+#include "LR2/LR2Flag.h"        // for updating LR2 flag
+#include "scene/OverlayScene.h" // for invoke MessageBox
 
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -66,7 +67,7 @@ Game& Game::getInstance()
 }
 
 Game::Game()
-  : is_running_(false), game_boot_mode_(GameBootMode::kBootNormal)
+  : is_running_(false), is_paused_(false), game_boot_mode_(GameBootMode::kBootNormal)
 {
 }
 
@@ -101,9 +102,9 @@ void Game::Initialize()
 
 void Game::Loop()
 {
-  try
+  while (getInstance().is_running_ && !Graphic::IsWindowShouldClose())
   {
-    while (getInstance().is_running_ && !Graphic::IsWindowShouldClose())
+    try
     {
       /* Update main timer in graphic(main) thread. */
       Timer::Update();
@@ -111,29 +112,34 @@ void Game::Loop()
       /* TODO: Update Logger to log fps information. */
 
       /**
-       * Process cached events in main thread.
-       * COMMENT: Event must be processed before Update() method
-       * (e.g. Wheel flickering when items Rebuild after Event flush)
-       */
+        * Process cached events in main thread.
+        * COMMENT: Event must be processed before Update() method
+        * (e.g. Wheel flickering when items Rebuild after Event flush)
+        */
       InputEventManager::Flush();
       EventManager::Flush();
 
-      ResourceManager::UpdateMovie();
+      /* Song and movie won't be updated if paused. */
+      if (!Game::IsPaused())
+      {
+        SongPlayer::getInstance().Update();
+        ResourceManager::UpdateMovie();
+      }
 
       Graphic::Render();
     }
-  }
-  catch (const RuntimeException &e)
-  {
-    /* log for unexcepted runtime exception (mostly fatal) and exit */
-    Logger::Error("Fatal error (%s) : %s", e.exception_name(), e.what());
-    Exit();
-  }
-  catch (const std::exception &e)
-  {
-    /* log for unknown exception and exit */
-    Logger::Error("Fatal error (unknown) : %s", e.what());
-    Exit();
+    catch (const RuntimeException &e)
+    {
+      /* log for unexcepted runtime exception (mostly fatal) and exit */
+      Logger::Error("Fatal error (%s) : %s", e.exception_name(), e.what());
+      Exit();
+    }
+    catch (const std::exception &e)
+    {
+      /* log for unknown exception and exit */
+      Logger::Error("Fatal error (unknown) : %s", e.what());
+      Exit();
+    }
   }
 }
 
@@ -236,6 +242,36 @@ void Game::LoadArgument(const std::string& argv)
     game_boot_mode_ = GameBootMode::kBootPlay;
     SongPlayer::getInstance().SetSongtoPlay(v, "");
   }
+}
+
+void Game::MessageBox(const std::string &title, const std::string &text)
+{
+  MessageBoxData::Add(MessageBoxTypes::kMbNone, title, text);
+}
+
+void Game::AlertMessageBox(const std::string &title, const std::string &text)
+{
+  MessageBoxData::Add(MessageBoxTypes::kMbInformation, title, text);
+}
+
+void Game::WarningMessageBox(const std::string &title, const std::string &text)
+{
+  MessageBoxData::Add(MessageBoxTypes::kMbWarning, title, text);
+}
+
+void Game::CriticalMessageBox(const std::string &title, const std::string &text)
+{
+  MessageBoxData::Add(MessageBoxTypes::kMbCritical, title, text);
+}
+
+void Game::Pause(bool pause)
+{
+  getInstance().is_paused_ = pause;
+}
+
+bool Game::IsPaused()
+{
+  return getInstance().is_paused_;
 }
 
 const std::string &Game::get_window_title()

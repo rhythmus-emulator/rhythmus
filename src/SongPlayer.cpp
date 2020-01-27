@@ -67,6 +67,10 @@ bool SongPlayer::Load()
   }
   is_loaded_ = 1;
 
+  /* Create empty player if none exists
+   * XXX: should delete when play is over? */
+  PlayerManager::CreateNonePlayerIfEmpty();
+
   /* Initialize each player for chart */
   FOR_EACH_PLAYER(p, i)
   {
@@ -158,10 +162,15 @@ void SongPlayer::Stop(bool interrupted)
 
   /* Pop current song info. */
   PopSongFromPlaylist();
+
+  /* Unload all NONE player (only for SongPlayer use) */
+  PlayerManager::UnloadNonePlayer();
 }
 
-void SongPlayer::Update(float delta)
+void SongPlayer::Update()
 {
+  float delta = Timer::SystemTimer().GetDeltaTime() * 1000;
+
   /* upload bitmap if not uploaded
    * XXX: heavy? */
   {
@@ -184,7 +193,7 @@ void SongPlayer::Update(float delta)
 void SongPlayer::SetCoursetoPlay(const std::string &coursepath)
 {
   // TODO
-  ASSERT(0);
+  R_ASSERT(0, "CoursePlayNotImplemented");
   is_courseplay_ = true;
 }
 
@@ -593,7 +602,6 @@ int NoteWithJudging::judge_with_pos(uint32_t songtime, int event_type, int x, in
 
   auto *notedesc = get_curr_notedesc();
   int ax, ay, az;
-  int judgement;
   notedesc->get_pos(ax, ay, az);
 
   /* TODO: need range of position check? */
@@ -1102,12 +1110,15 @@ void PlayContext::ProcessInputEvent(const InputEvent& e)
 
 void PlayContext::Update(float delta)
 {
+  if (!is_alive_)
+    return;
+
   songtime_ += delta;
   measure_ = timing_seg_data_->GetMeasureFromTime(songtime_);
   beat_ = timing_seg_data_->GetBeatFromMeasure(measure_);
 
   // 1. update each track for missed / mine note
-  for (size_t i = 0; i < 128 /* XXX: get & set lane count? */; ++i)
+  for (size_t i = 0; i < kMaxLaneCount /* XXX: get & set lane count? */; ++i)
   {
     track_context_[i].Update(songtime_);
   }
