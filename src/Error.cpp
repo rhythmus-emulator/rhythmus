@@ -1,5 +1,6 @@
 #include "Error.h"
 #include "Logger.h"       /* For logging when error occurs */
+#include "common.h"
 
 namespace rhythmus
 {
@@ -7,12 +8,12 @@ namespace rhythmus
 RuntimeException::RuntimeException(const std::string& msg)
   : msg_(msg), is_ignorable_(false) {}
 
-const char* RuntimeException::exception_name() const
+const char* RuntimeException::exception_name() const noexcept
 {
   return "RuntimeException";
 }
 
-const char* RuntimeException::what() const
+const char* RuntimeException::what() const noexcept
 {
   return msg_.c_str();
 }
@@ -28,7 +29,7 @@ bool RuntimeException::is_ignorable() const
 
 FatalException::FatalException(const std::string &msg) : RuntimeException(msg) {}
 
-const char* FatalException::exception_name() const
+const char* FatalException::exception_name() const noexcept
 {
   return "FatalException";
 }
@@ -36,7 +37,7 @@ const char* FatalException::exception_name() const
 UnimplementedException::UnimplementedException(const std::string& msg)
   : RuntimeException(msg) {}
 
-const char* UnimplementedException::exception_name() const
+const char* UnimplementedException::exception_name() const noexcept
 {
   return "UnimplementedException";
 }
@@ -44,7 +45,7 @@ const char* UnimplementedException::exception_name() const
 RetryException::RetryException(const std::string& msg)
   : RuntimeException(msg) {}
 
-const char* RetryException::exception_name() const
+const char* RetryException::exception_name() const noexcept
 {
   return "RetryException";
 }
@@ -52,7 +53,7 @@ const char* RetryException::exception_name() const
 FileNotFoundException::FileNotFoundException(const std::string& filename)
   : RuntimeException("File not found: " + filename) {}
 
-const char* FileNotFoundException::exception_name() const
+const char* FileNotFoundException::exception_name() const noexcept
 {
   return "FileNotFoundException";
 }

@@ -1,4 +1,5 @@
 #include "Quad.h"
+#include "common.h"
 
 namespace rhythmus
 {

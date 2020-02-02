@@ -1,13 +1,14 @@
 #include "Util.h"
-#include "rutil.h"
-#include <stack>
+#include "rparser.h"
+#include "common.h"
 
-#ifdef WIN32
-# include <Windows.h>
 # include <sys/types.h>
 # include <sys/stat.h>
+#ifdef WIN32
+# include <Windows.h>
 # define stat _wstat
 #else
+# include <dirent.h>
 # include <unistd.h>
 #endif
 
@@ -115,7 +116,7 @@ bool GetDirectoryItems(const std::string& path, std::vector<DirItem>& out)
         is_file = 1;
       }
       std::string fn = curr_dir_name + std::string(dirp->d_name);
-      struct _stat result;
+      struct stat result;
       stat(fn.c_str(), &result);
       out.push_back({
         fn, is_file, result.st_mtime
@@ -415,5 +416,42 @@ std::string CommandArgs::Get(size_t arg_index) const
 }
 
 size_t CommandArgs::size() const { return args_.size(); }
+
+void Sleep(size_t milisecond)
+{
+#ifdef _MSC_VER
+  _sleep(milisecond);
+#else
+  usleep(milisecond * 1000);
+#endif
+}
+
+#ifndef WIN32
+int stricmp(const char *a, const char *b)
+{
+  int ca, cb;
+  do {
+    ca = (unsigned char) *a++;
+    cb = (unsigned char) *b++;
+    ca = tolower(toupper(ca));
+    cb = tolower(toupper(cb));
+  } while (ca == cb && ca != '\0');
+  return ca - cb;
+}
+
+int strnicmp(const char *a, const char *b, size_t len)
+{
+  if (len == 0) return 0;
+  int ca, cb;
+  do {
+    len--;
+    ca = (unsigned char) *a++;
+    cb = (unsigned char) *b++;
+    ca = tolower(toupper(ca));
+    cb = tolower(toupper(cb));
+  } while (ca == cb && ca != '\0' && len > 0);
+  return ca - cb;
+}
+#endif
 
 }

@@ -1,7 +1,7 @@
 #include "Text.h"
 #include "ResourceManager.h"
 #include "Script.h"
-#include <algorithm>
+#include "common.h"
 
 RHYTHMUS_NAMESPACE_BEGIN
 

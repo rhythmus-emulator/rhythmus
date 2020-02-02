@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <memory>
 
 /* To prevent indentation */
 #define RHYTHMUS_NAMESPACE_BEGIN namespace rhythmus {
@@ -104,5 +105,13 @@ private:
   std::vector<std::string> args_;
   char sep_;
 };
+
+void Sleep(size_t milisecond);
+
+/* we need these functions as it's not C99 standard */
+#ifndef _MSC_VER
+int stricmp(const char *a, const char *b);
+int strnicmp(const char *a, const char *b, size_t len);
+#endif
 
 RHYTHMUS_NAMESPACE_END

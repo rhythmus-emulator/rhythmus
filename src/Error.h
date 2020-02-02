@@ -20,8 +20,8 @@ class RuntimeException : public std::exception
 {
 public:
   RuntimeException(const std::string& msg);
-  virtual const char* exception_name() const;
-  virtual const char* what() const;
+  virtual const char* exception_name() const noexcept;
+  virtual const char* what() const noexcept;
   void set_ignorable(bool ignorable);
   bool is_ignorable() const;
 private:
@@ -38,7 +38,7 @@ class FatalException : public RuntimeException
 {
 public:
   FatalException(const std::string &msg);
-  virtual const char* exception_name() const;
+  virtual const char* exception_name() const noexcept;
 };
 
 /* @brief Used for unimplemented feature (fatal exception) */
@@ -46,7 +46,7 @@ class UnimplementedException : public RuntimeException
 {
 public:
   UnimplementedException(const std::string& msg);
-  virtual const char* exception_name() const;
+  virtual const char* exception_name() const noexcept;
 };
 
 /* @brief Used when this exception can be retryable or fatal. */
@@ -54,7 +54,7 @@ class RetryException : public RuntimeException
 {
 public:
   RetryException(const std::string& msg);
-  virtual const char* exception_name() const;
+  virtual const char* exception_name() const noexcept;
 };
 
 /* @brief Used when required file is not found. */
@@ -62,7 +62,7 @@ class FileNotFoundException : public RuntimeException
 {
 public:
   FileNotFoundException(const std::string& filename);
-  virtual const char* exception_name() const;
+  virtual const char* exception_name() const noexcept;
 };
 
 /* @brief ASSERT for rhythmus solution.

@@ -10,6 +10,7 @@
 // This tool extracts *.dxa archives.
 
 #include "exdxa.h"
+#include "common.h"
 #include <stdio.h>
 #include <string>
 using namespace std;
@@ -344,7 +345,7 @@ void process_dir_vec
 
 // ------------------------- class DXAExtractor
 
-#include "rutil.h"  // to use utf-8 filename
+#include "rparser.h"  // to use utf-8 filename (rutil)
 
 DXAExtractor::DXAExtractor()
 {

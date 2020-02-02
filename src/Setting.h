@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include "Error.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -20,8 +21,8 @@ namespace rhythmus
 
 class Setting;
 class BaseObject;
-constexpr char* kSettingOptionTagName = "option";
-constexpr char* kSettingKeyValueTagName = "value";
+constexpr const char* kSettingOptionTagName = "option";
+constexpr const char* kSettingKeyValueTagName = "value";
 
 template <typename T>
 void ConvertFromString(const std::string& src, T& dst);
@@ -88,7 +89,7 @@ public:
   T get(const std::string &group, const std::string &key) const
   {
     auto *m = get_metric(group);
-    ASSERT_M(m, "Metric group '" + group + "' is not found.");
+    R_ASSERT(m, "Metric group '" + group + "' is not found.");
     return m->get<T>(key);
   }
 
@@ -252,7 +253,7 @@ public:
   T GetValue(const std::string &key) const
   {
     Option *option = GetOption(key);
-    ASSERT(option);
+    R_ASSERT(option);
     return option->value<T>();
   }
 
@@ -260,7 +261,7 @@ public:
   void SetValue(const std::string &key, T val) const
   {
     Option *option = GetOption(key);
-    ASSERT(option);
+    R_ASSERT(option);
     return option->set_value(val);
   }
 

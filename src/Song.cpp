@@ -4,8 +4,8 @@
 #include "Event.h"
 #include "Logger.h"
 #include "Util.h"
+#include "common.h"
 #include "rparser.h"
-#include <map>
 
 #include <sqlite3.h>
 

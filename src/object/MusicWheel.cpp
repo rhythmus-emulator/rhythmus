@@ -4,6 +4,7 @@
 #include "Player.h"
 #include "Setting.h"
 #include "rparser.h"
+#include "common.h"
 
 namespace rhythmus
 {
@@ -343,7 +344,7 @@ void MusicWheel::OnSelectChange(const MenuData *data, int direction)
   /* Song difficulty existence */
   int diff_exist[5] = { 0, 0, 0, 0, 0 };
   int diff_not_exist[5] = { 1, 1, 1, 1, 1 };
-  int levels[5] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
+  uint32_t levels[5] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
   int diff_type = 0;
   /* TODO: search all difficulty in songlistdata. */
   if (flag_code[2] == 1 /* if song */)

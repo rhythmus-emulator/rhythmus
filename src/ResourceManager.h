@@ -105,7 +105,7 @@ public:
     : obj_(obj) {};
   ResourceObject(const std::string &name)
     : obj_(ResourceManager::LoadObject<T>(name)) {};
-  ~ResourceObject() { ResourceManager::UnloadObject<T>(obj); }
+  ~ResourceObject() { ResourceManager::UnloadObject<T>(obj_); }
   T &get() const { return *obj_; }
   T &operator*() const { return *obj_; }
 private:

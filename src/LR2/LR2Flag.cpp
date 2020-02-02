@@ -5,8 +5,8 @@
 #include "Script.h"
 #include "SceneManager.h"
 #include "object/MusicWheel.h"
-#include "rutil.h"  /* string modification */
 #include "Error.h"
+#include "common.h"
 
 namespace rhythmus
 {
@@ -245,7 +245,7 @@ namespace rhythmus
       virtual bool OnEvent(const EventMessage &e)
       {
         auto &fnmap = GetEventFnMap();
-        auto &i = fnmap.find(e.GetEventName());
+        auto i = fnmap.find(e.GetEventName());
         if (i == fnmap.end())
           return false;
         i->second();

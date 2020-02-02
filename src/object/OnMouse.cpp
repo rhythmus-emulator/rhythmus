@@ -1,5 +1,6 @@
 #include "OnMouse.h"
 #include "Util.h"
+#include "common.h"
 
 namespace rhythmus
 {

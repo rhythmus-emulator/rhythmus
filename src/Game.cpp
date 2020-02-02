@@ -12,10 +12,9 @@
 #include "SceneManager.h"
 #include "LR2/LR2Flag.h"        // for updating LR2 flag
 #include "scene/OverlayScene.h" // for invoke MessageBox
+#include "common.h"
 
 #include <GLFW/glfw3.h>
-#include <iostream>
-#include <algorithm>
 
 namespace rhythmus
 {

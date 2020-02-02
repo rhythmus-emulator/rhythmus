@@ -3,8 +3,7 @@
 #include "Setting.h"
 #include "Script.h"
 #include "Util.h"
-#include <algorithm>
-#include <iostream>
+#include "common.h"
 
 namespace rhythmus
 {

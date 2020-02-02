@@ -1,9 +1,9 @@
 #include "Sound.h"
 #include "Game.h"
-#include <iostream>
-#include <algorithm>
 #include "Error.h"
 #include "SceneManager.h" /* GameSound::Load() */
+#include "Util.h"
+#include "common.h"
 
 /* OpenAL */
 #include <AL/al.h>
@@ -94,7 +94,7 @@ void SoundDriver::sound_thread_body()
     }
 #endif
 
-    _sleep(1);
+    Sleep(1);
   }
   free(pData);
 }

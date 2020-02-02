@@ -1,4 +1,5 @@
 #include "TaskPool.h"
+#include "common.h"
 
 namespace rhythmus
 {

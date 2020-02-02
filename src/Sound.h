@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <vector>
 #include "rmixer.h"
-#include "rutil.h"
 
 namespace rhythmus
 {

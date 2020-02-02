@@ -3,7 +3,7 @@
 #include "Setting.h"
 #include "Util.h"
 #include "Script.h"
-#include <iostream>
+#include "common.h"
 
 namespace rhythmus
 {
@@ -144,7 +144,8 @@ void BaseObject::RunCommand(const std::string &command, const std::string& value
   {
     try
     {
-      it->second(this, CommandArgs(value));
+      CommandArgs args(value);
+      it->second(this, args);
     }
     catch (std::out_of_range& e)
     {

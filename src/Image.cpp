@@ -2,7 +2,7 @@
 #include "Image.h"
 #include "Timer.h"
 #include <FreeImage.h>
-#include <iostream>
+#include "common.h"
 
 /* ffmpeg */
 extern "C"
@@ -13,7 +13,7 @@ extern "C"
 }
 
 /* rutil for some string functions */
-#include "rutil.h"
+#include "rparser.h"
 
 namespace rhythmus
 {

@@ -9,7 +9,7 @@
 #include "LR2/LR2Flag.h"
 #include "Util.h"
 #include "Setting.h"
-#include <iostream>
+#include "common.h"
 
 namespace rhythmus
 {

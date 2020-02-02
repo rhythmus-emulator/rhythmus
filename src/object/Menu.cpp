@@ -2,6 +2,7 @@
 #include "Game.h"
 #include "SceneManager.h"
 #include "Util.h"
+#include "common.h"
 
 namespace rhythmus
 {

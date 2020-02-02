@@ -1,5 +1,6 @@
 #include "Animation.h"
 #include "Timer.h"
+#include "common.h"
 
 namespace rhythmus
 {

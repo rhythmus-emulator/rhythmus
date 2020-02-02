@@ -1,8 +1,8 @@
 #include "LR2SceneLoader.h"
 #include "LR2Flag.h"
-#include "Script.h" /* flag_no */
+#include "Script.h"   /* flag_no */
 #include "Util.h"
-#include "rutil.h"  /* utf-8 file load */
+#include "rparser.h"  /* rutil: utf-8 file load */
 #include <iostream>
 
 namespace rhythmus

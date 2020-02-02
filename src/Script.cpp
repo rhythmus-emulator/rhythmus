@@ -15,7 +15,7 @@
 #include "LR2/LR2SceneLoader.h"
 #include "LR2/LR2Flag.h"
 #include "Util.h"
-#include <iostream>
+#include "common.h"
 
 namespace rhythmus
 {
@@ -108,8 +108,8 @@ void Script::ExecuteFromPath(const std::string &path)
   }
 }
 
-constexpr char* kLR2SubstitutePath = "LR2files/Theme";
-constexpr char* kSubstitutePath = "../themes";
+constexpr const char* kLR2SubstitutePath = "LR2files/Theme";
+constexpr const char* kSubstitutePath = "../themes";
 
 BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
 {

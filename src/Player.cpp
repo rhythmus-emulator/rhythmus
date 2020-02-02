@@ -3,7 +3,7 @@
 #include "Timer.h"
 #include "Util.h"
 #include "Error.h"
-#include <iostream>
+#include "common.h"
 
 #include "sqlite3.h"
 

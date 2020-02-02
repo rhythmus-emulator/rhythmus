@@ -1,4 +1,5 @@
 #include "Dialog.h"
+#include "common.h"
 
 namespace rhythmus
 {

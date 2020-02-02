@@ -1,12 +1,11 @@
 #include "Font.h"
 #include "SceneManager.h"
 #include "Util.h"
-#include "rutil.h"  /* Text encoding to UTF32 */
+#include "rparser.h"  /* rutil Text encoding to UTF32 */
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_STROKER_H
-#include <iostream>
-#include <algorithm>
+#include "common.h"
 
 namespace rhythmus
 {

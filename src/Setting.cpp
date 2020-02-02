@@ -2,11 +2,8 @@
 #include "Util.h"
 #include "ResourceManager.h"
 #include "LR2/LR2SceneLoader.h"
-#include <iostream>
+#include "common.h"
 #include <sstream>
-#include <algorithm>
-#include <vector>
-#include <map>
 #include "tinyxml2.h"
 
 using namespace tinyxml2;
@@ -16,7 +13,7 @@ namespace rhythmus
   
 constexpr const char* kSettingPath = "../config/system.xml";
 constexpr const char* kThemeSettingPath = "../config/theme.xml";
-constexpr char* kDefaultRootTagName = "setting";
+constexpr const char* kDefaultRootTagName = "setting";
 
 inline const char* GetSafeString(const char* p)
 {
@@ -192,8 +189,8 @@ void MetricList::Clear()
   metricmap_.clear();
 }
 
-constexpr char* kLR2SubstitutePath = "LR2files/Theme";
-constexpr char* kSubstitutePath = "../themes";
+constexpr const char* kLR2SubstitutePath = "LR2files/Theme";
+constexpr const char* kSubstitutePath = "../themes";
 
 /* @brief compatible layer from LR2 to metric-based */
 void MetricList::ReadLR2Metric(const std::string &filepath)
@@ -869,7 +866,7 @@ Option &OptionList::SetOption(const std::string &key, const std::string &options
 
 Option &OptionList::SetOption(const std::string &key, Option *option)
 {
-  auto &it = options_.find(key);
+  auto it = options_.find(key);
   if (it == options_.end())
   {
     options_[key] = option;

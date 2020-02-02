@@ -6,7 +6,7 @@
 #include "Game.h"
 #include "Timer.h"
 #include "Setting.h"
-#include <iostream>
+#include "common.h"
 
 namespace rhythmus
 {

@@ -51,10 +51,11 @@ find_package(OpenAL)
 find_package(GLFW)
 find_package(GLEW)
 find_package(FreeImage)
-find_package(FreeType)
-find_package(FFmpeg)
+find_package(Freetype)
+find_package(FFMPEG COMPONENTS avcodec avformat avutil swscale)
 find_package(OGG)
 find_package(Vorbis)
+find_package(VorbisEnc QUIET)   # Not necessary for Windows cmake
 find_package(FLAC)
 
 if (ZLIB_FOUND AND ZIP_FOUND)
@@ -86,7 +87,7 @@ set (SQLITE_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/../rhythmus-lib/src/sqlite")
 add_subdirectory("${CMAKE_SOURCE_DIR}/../rparser/src"
                  "${CMAKE_SOURCE_DIR}/build/rparser"
                  EXCLUDE_FROM_ALL)
-set (RPARSER_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../rparser/src")
+set (RPARSER_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/../rparser/include")
 
 # #######################
 # Add rencoder          #

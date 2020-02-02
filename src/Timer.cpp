@@ -1,4 +1,5 @@
 #include "Timer.h"
+#include "common.h"
 #include <GLFW/glfw3.h>
 
 namespace rhythmus

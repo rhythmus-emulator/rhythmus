@@ -4,8 +4,8 @@
 #include "Timer.h"
 #include "Logger.h"
 #include "LR2/LR2Font.h"
+#include "common.h"
 #include <FreeImage.h>
-#include <iostream>
 #include <mutex>
 
 namespace rhythmus

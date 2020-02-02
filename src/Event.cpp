@@ -2,8 +2,8 @@
 #include "SceneManager.h"
 #include "Logger.h"
 #include "Graphic.h" /* Need to get GLFW handle */
+#include "common.h"
 #include <mutex>
-#include <algorithm>
 #include <GLFW/glfw3.h>
 
 namespace rhythmus

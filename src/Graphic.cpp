@@ -7,6 +7,8 @@
 #include "Logger.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include <algorithm>
+#include <memory.h>
 
 #define RENDER_WITH_HLSL 1
 int errorcode_;

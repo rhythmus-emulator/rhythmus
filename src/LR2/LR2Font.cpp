@@ -1,11 +1,9 @@
 #include "LR2Font.h"
 #include "exdxa.h"
-#include <iostream>
-#include <string>
-#include <map>
+#include "Util.h"
+#include "common.h"
 #include <FreeImage.h>
 #include "LR2JIS.h"   // customized SHIFTJIS table for ease of use.
-#include "rutil.h"    // string modification function
 #include "LR2Flag.h"
 
 namespace rhythmus
@@ -45,8 +43,8 @@ void LR2Font::ReadLR2Font(const char* path)
     std::string fn = f.filename;
     if (fn.size() > 2 && fn[0] == '.' && fn[1] == '/')
       fn = fn.substr(2);
-    dxa_file_mapper[rutil::upper(fn)] = &f;
-    if (rutil::upper(rutil::GetExtension(fn)) == "LR2FONT")
+    dxa_file_mapper[Upper(fn)] = &f;
+    if (Upper(GetExtension(fn)) == "LR2FONT")
       dxa_file_lr2font = &f;
   }
 
@@ -72,7 +70,7 @@ void LR2Font::ReadLR2Font(const char* path)
 
     if (cmd.size() <= 2) continue;
     if (cmd[0] == '/' && cmd[1] == '/') continue;
-    rutil::split(cmd, ',', col);
+    Split(cmd, ',', col);
     if (col[0] == "#S")
     {
       fontattr_.height = atoi(col[1].c_str());
@@ -84,7 +82,7 @@ void LR2Font::ReadLR2Font(const char* path)
     }
     else if (col[0] == "#T")
     {
-      const auto* f = dxa_file_mapper[rutil::upper(col[2])];
+      const auto* f = dxa_file_mapper[Upper(col[2])];
       if (!f)
       {
         std::cerr << "LR2Font : Cannot find texture " << col[1] <<
