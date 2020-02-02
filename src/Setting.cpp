@@ -11,8 +11,8 @@ using namespace tinyxml2;
 namespace rhythmus
 {
   
-constexpr const char* kSettingPath = "../config/system.xml";
-constexpr const char* kThemeSettingPath = "../config/theme.xml";
+constexpr const char* kSettingPath = "config/system.xml";
+constexpr const char* kThemeSettingPath = "config/theme.xml";
 constexpr const char* kDefaultRootTagName = "setting";
 
 inline const char* GetSafeString(const char* p)
@@ -190,7 +190,7 @@ void MetricList::Clear()
 }
 
 constexpr const char* kLR2SubstitutePath = "LR2files/Theme";
-constexpr const char* kSubstitutePath = "../themes";
+constexpr const char* kSubstitutePath = "themes";
 
 /* @brief compatible layer from LR2 to metric-based */
 void MetricList::ReadLR2Metric(const std::string &filepath)
@@ -367,7 +367,7 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
 void MetricList::ReadLR2SS(const std::string &filepath)
 {
   LR2SceneLoader loader;
-  loader.SetSubStitutePath("LR2files", "..");
+  loader.SetSubStitutePath("LR2files", "");
   loader.Load(filepath);
 
 #define NAMES \
@@ -415,7 +415,7 @@ void MetricList::ReadLR2SS(const std::string &filepath)
     lr2name = v.first.substr(1);
 
     std::string vv = Substitute(
-      GetFirstParam(v.second), "LR2files", ".."
+      GetFirstParam(v.second), "LR2files", ""
     );
 
     while (_lr2names[metric_idx])
@@ -924,7 +924,7 @@ void Setting::ReadAll()
     "CourseResultScene",
     0
   };
-  static const char* fallback_metric_path = "../themes/_fallback/theme.xml";
+  static const char* fallback_metric_path = "themes/_fallback/theme.xml";
 
   // read global setting first, then read metric.
   // after that, read user setting, as it may depends on metrics.
@@ -1011,7 +1011,7 @@ OptionList &Setting::GetSystemSetting()
       .set_description("For development.")
       .reset_value();
 
-    sysoptions.SetOption("SoundSet", "!F../sound/*.lr2ss")
+    sysoptions.SetOption("SoundSet", "!Fsound/*.lr2ss")
       .show().set_description("Soundset file.")
       .reset_value();
 
@@ -1019,23 +1019,23 @@ OptionList &Setting::GetSystemSetting()
       .show().set_description("Theme path.")
       .reset_value();
 
-    sysoptions.SetOption("SelectScene", "!F../themes/*/select/*.lr2skin")
+    sysoptions.SetOption("SelectScene", "!Fthemes/*/select/*.lr2skin")
       .show().set_description("Theme path of select scene.")
       .reset_value();
 
-    sysoptions.SetOption("DecideScene", "!F../themes/*/decide/*.lr2skin")
+    sysoptions.SetOption("DecideScene", "!Fthemes/*/decide/*.lr2skin")
       .show().set_description("Theme path of decide scene.")
       .reset_value();
 
-    sysoptions.SetOption("PlayScene", "!F../themes/*/play/*.lr2skin")
+    sysoptions.SetOption("PlayScene", "!Fthemes/*/play/*.lr2skin")
       .show().set_description("Theme path of play scene.")
       .reset_value();
 
-    sysoptions.SetOption("ResultScene", "!F../themes/*/result/*.lr2skin")
+    sysoptions.SetOption("ResultScene", "!Fthemes/*/result/*.lr2skin")
       .show().set_description("Theme path of result scene.")
       .reset_value();
 
-    sysoptions.SetOption("CourseResultScene", "!F../themes/*/courseresult/*.lr2skin")
+    sysoptions.SetOption("CourseResultScene", "!Fthemes/*/courseresult/*.lr2skin")
       .show().set_description("Theme path of courseresult scene.")
       .reset_value();
 

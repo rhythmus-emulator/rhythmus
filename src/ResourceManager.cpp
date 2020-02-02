@@ -184,7 +184,7 @@ void ResourceManager::UnloadFont(Font *font)
 
 Font* ResourceManager::LoadSystemFont()
 {
-  return LoadFont("../system/default.ttf|size:5;color:0xFFFFFFFF");
+  return LoadFont("system/default.ttf|size:5;color:0xFFFFFFFF");
 }
 
 template <> Font*
@@ -229,9 +229,9 @@ void ResourceManager::CacheSystemDirectory()
   auto &r = getInstance();
 
   /* cache system paths for resource. (not song path) */
-  r.CacheDirectory("../themes/");
-  r.CacheDirectory("../sound/");
-  r.CacheDirectory("../bgm/"); /* for LR2 compatiblity */
+  r.CacheDirectory("themes/");
+  r.CacheDirectory("sound/");
+  r.CacheDirectory("bgm/"); /* for LR2 compatiblity */
 }
 
 void ResourceManager::CacheDirectory(const std::string& dir)

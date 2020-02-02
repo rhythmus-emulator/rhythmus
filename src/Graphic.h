@@ -11,11 +11,23 @@ namespace rhythmus
 {
 
 struct Rect {
-  int x, y, w, h;
+  int x1, y1, x2, y2;
+  void set_points(int x1, int y1, int x2, int y2);
+  void set_rect(int x, int y, int w, int h);
+  void set_width(int w);
+  void set_height(int h);
+  int width() const;
+  int height() const;
 };
 
 struct RectF {
-  float x, y, w, h;
+  float x1, y1, x2, y2;
+  void set_points(float x1, float y1, float x2, float y2);
+  void set_rect(float x, float y, float w, float h);
+  void set_width(float w);
+  void set_height(float h);
+  float width() const;
+  float height() const;
 };
 
 /* @brief Rendering vertex info. */

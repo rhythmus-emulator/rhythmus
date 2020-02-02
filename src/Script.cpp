@@ -109,7 +109,7 @@ void Script::ExecuteFromPath(const std::string &path)
 }
 
 constexpr const char* kLR2SubstitutePath = "LR2files/Theme";
-constexpr const char* kSubstitutePath = "../themes";
+constexpr const char* kSubstitutePath = "themes";
 
 BaseObject* CreateObjectFromMetric(const std::string &objtype, Metric &metrics)
 {

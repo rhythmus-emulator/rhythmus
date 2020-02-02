@@ -28,7 +28,7 @@ void Logger::Initialize()
 {
   if (Setting::GetSystemSetting().GetOption("Logging")->value<bool>())
   {
-    Logger::getInstance().log_path_ = "../log/log.txt";
+    Logger::getInstance().log_path_ = "log/log.txt";
     Logger::getInstance().StartLogging();
     Logger::getInstance().HookStdOut();
   }

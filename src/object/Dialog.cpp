@@ -14,10 +14,7 @@ Dialog::~Dialog() {}
 void StringToRect(const std::string &s, Rect &out)
 {
   CommandArgs a(s, 4);
-  out.x = a.Get<int>(0);
-  out.y = a.Get<int>(1);
-  out.w = a.Get<int>(2);
-  out.h = a.Get<int>(3);
+  out.set_rect(a.Get<int>(0), a.Get<int>(1), a.Get<int>(2), a.Get<int>(3));
 }
 
 void Dialog::Load(const Metric &metric)
@@ -37,8 +34,8 @@ void Dialog::Load(const Metric &metric)
 
   title_.set_name(get_name() + "_title");
   text_.set_name(get_name() + "_text");
-  title_.SetPos(src_rect_[0].x + src_rect_[0].w, src_rect_[0].y + src_rect_[0].h);
-  text_.SetPos(src_rect_[0].x + src_rect_[0].w, src_rect_[0].y + src_rect_[0].h + 50);
+  title_.SetPos(src_rect_[0].x2, src_rect_[0].y2);
+  text_.SetPos(src_rect_[0].x2, src_rect_[0].y2 + 50);
   title_.LoadByName();
   text_.LoadByName();
 
@@ -61,10 +58,16 @@ void Dialog::SetText(const std::string &text)
 void Dialog::doUpdate(float delta)
 {
   BaseObject::doUpdate(delta);
-  int body_w = current_prop_.w - src_rect_[0].w - src_rect_[2].w;
-  int body_h = current_prop_.h - src_rect_[0].h - src_rect_[6].h;
-  src_rect_[1].w = src_rect_[4].w = src_rect_[7].w = body_w;
-  src_rect_[4].h = src_rect_[5].h = src_rect_[6].h = body_h;
+  int body_w = current_prop_.w - src_rect_[0].width() - src_rect_[2].width();
+  int body_h = current_prop_.h - src_rect_[0].height() - src_rect_[6].height();
+  if (body_w < 0) body_w = 0;
+  if (body_h < 0) body_h = 0;
+  src_rect_[1].set_width(body_w);
+  src_rect_[4].set_width(body_w);
+  src_rect_[7].set_width(body_w);
+  src_rect_[3].set_height(body_h);
+  src_rect_[4].set_height(body_h);
+  src_rect_[5].set_height(body_h);
   int xpos, ypos=0;
   for (int i = 0; i < 3; ++i)
   {
@@ -73,11 +76,11 @@ void Dialog::doUpdate(float delta)
     {
       const int idx = i * 3 + j;
       const Rect &_r = src_rect_[idx];
-      sprites_[idx].SetPos(_r.x, _r.y);
-      sprites_[idx].SetSize(_r.w, _r.h);
-      xpos += _r.w;
+      sprites_[idx].SetPos(xpos, ypos);
+      sprites_[idx].SetSize(_r.width(), _r.height());
+      xpos += _r.width();
     }
-    ypos += src_rect_[i * 3].h;
+    ypos += src_rect_[i * 3].height();
   }
 }
 

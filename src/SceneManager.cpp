@@ -112,8 +112,14 @@ void SceneManager::Update()
 
 void SceneManager::Render()
 {
+  if (background_scene_)
+    background_scene_->Render();
+
   if (current_scene_)
     current_scene_->Render();
+
+  for (auto* s : overlay_scenes_)
+    s->Render();
 }
 
 void SceneManager::OnInputEvent(const InputEvent& e)

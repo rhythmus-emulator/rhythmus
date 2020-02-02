@@ -85,7 +85,7 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
     config_.SetOption(ns + "class", "!T0");
   }
 
-  config_name_ = format_string("../player/%s", player_name_.c_str());
+  config_name_ = format_string("player/%s", player_name_.c_str());
 }
 
 Player::~Player()

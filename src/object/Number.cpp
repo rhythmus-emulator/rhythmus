@@ -235,8 +235,8 @@ void Number::CreateTextVertexFromSprite()
   /* register glyphs by divx / divy. */
   int divx = numbersprite_.GetSpriteAnimationInfo().divx;
   int divy = numbersprite_.GetSpriteAnimationInfo().divy;
-  float divw = (float)numbersprite_.GetImageCoordRect().w / divx;
-  float divh = (float)numbersprite_.GetImageCoordRect().h / divy;
+  float divw = (float)numbersprite_.GetImageCoordRect().width() / divx;
+  float divh = (float)numbersprite_.GetImageCoordRect().height() / divy;
   int cycle_sprite = numbersprite_.GetSpriteAnimationInfo().cnt;
   int cycle_number = 0;
   if (cycle_sprite % 10 == 0)

@@ -128,6 +128,7 @@ void PlayScene::ProcessInputEvent(const InputEvent& e)
     }
     else if (e.KeyCode() == GLFW_KEY_TAB)
     {
+      Game::AlertMessageBox("Game Pause", "Game Paused.");
     }
   }
 

@@ -17,6 +17,48 @@ constexpr int kVertexMaxSize = 1024 * 4;
 namespace rhythmus
 {
 
+void Rect::set_points(int x1, int y1, int x2, int y2)
+{
+  this->x1 = x1;
+  this->y1 = y1;
+  this->x2 = x2;
+  this->y2 = y2;
+}
+
+void Rect::set_rect(int x, int y, int w, int h)
+{
+  this->x1 = x;
+  this->y1 = y;
+  this->x2 = x1 + w;
+  this->y2 = y1 + h;
+}
+
+void Rect::set_width(int w) { x2 = x1 + w; }
+void Rect::set_height(int h) { y2 = y1 + h; }
+int Rect::width() const { return x2 - x1; }
+int Rect::height() const { return y2 - y1; }
+
+void RectF::set_points(float x1, float y1, float x2, float y2)
+{
+  this->x1 = x1;
+  this->y1 = y1;
+  this->x2 = x2;
+  this->y2 = y2;
+}
+
+void RectF::set_rect(float x, float y, float w, float h)
+{
+  this->x1 = x;
+  this->y1 = y;
+  this->x2 = x1 + w;
+  this->y2 = y1 + h;
+}
+
+void RectF::set_width(float w) { x2 = x1 + w; }
+void RectF::set_height(float h) { y2 = y1 + h; }
+float RectF::width() const { return x2 - x1; }
+float RectF::height() const { return y2 - y1; }
+
 void VertexInfo::Clear()
 {
   x = y = z = sx = sy = 0.0f;

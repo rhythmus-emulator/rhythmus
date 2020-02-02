@@ -1,6 +1,6 @@
 <theme name="Fallback">
     <OverlayScene />
-    <dialog src="system/dialog.png"
+    <dialog src="themes/_fallback/system/dialog.png"
         tl="0,0,70,65"
         t="70,0,100,65"
         tr="904,0,70,65"

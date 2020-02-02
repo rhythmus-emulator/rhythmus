@@ -25,10 +25,10 @@ void Quad::SetAlpha(float a)
 
 void Quad::SetAlpha(const RectF &alpha)
 {
-  vi_[0].a = alpha.x;
-  vi_[1].a = alpha.y;
-  vi_[2].a = alpha.w;
-  vi_[3].a = alpha.h;
+  vi_[0].a = alpha.x1;
+  vi_[1].a = alpha.y1;
+  vi_[2].a = alpha.x2;
+  vi_[3].a = alpha.y2;
 }
 
 void Quad::doUpdate(float delta) { }
