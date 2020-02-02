@@ -756,7 +756,7 @@ TrackIterator::TrackIterator(TrackContext& track)
   : curr_idx_(0)
 {
   // go back few notes to display previously judged notes (if necessary)
-  size_t idx = std::max(track.curr_judge_idx_, 5lu) - 5;
+  size_t idx = std::max(track.curr_judge_idx_, (size_t)5) - 5;
   for (; idx < track.objects_.size() && notes_.size() < kMaxNotesToDisplay; ++idx)
     notes_.push_back(&track.objects_[idx]);
 }
@@ -1176,7 +1176,7 @@ void PlayContext::UpdateResource()
 Image* PlayContext::GetImage(size_t layer_idx) const
 {
   const auto *obj = static_cast<const rparser::BgaObject*>(
-    bga_context_[std::min(layer_idx, 3lu)].get_current()
+    bga_context_[std::min(layer_idx, (size_t)3)].get_current()
     );
   if (!obj) return nullptr;
   return bg_animations_[obj->channel()];
