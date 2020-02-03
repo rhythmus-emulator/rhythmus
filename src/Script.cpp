@@ -320,7 +320,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
           = curr_metrics
           = Setting::GetThemeMetricList().create_metric(name);
         /* need to push metric to add zindex data */
-        object_metrics.push_back({ name, curr_metrics, true });
+        object_metrics.push_back(std::tuple<std::string, Metric*, bool>{ name, curr_metrics, true });
       }
     }
     else if (_objtypes[nameidx] == 1)
@@ -329,7 +329,7 @@ void Script::ExecuteLR2Script(const std::string &filepath)
     }
     else
     {
-      object_metrics.push_back({ name, new Metric(), false });
+      object_metrics.push_back(std::tuple<std::string, Metric*, bool>{ name, new Metric(), false });
       object_processing[name]
         = curr_metrics
         = std::get<1>(object_metrics.back());

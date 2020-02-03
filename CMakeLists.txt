@@ -17,6 +17,9 @@ if (MSVC)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
+# enable in case of -fPIC error with gcc
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # Build path configuration (generic no-config case e.g. mingw)
 set( CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin" )
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib" )
