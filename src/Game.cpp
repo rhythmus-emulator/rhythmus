@@ -76,8 +76,8 @@ Game::~Game()
 
 void Game::Initialize()
 {
-  // before starting initialization, system path should be cached first.
-  ResourceManager::CacheSystemDirectory();
+  // before starting initialization, resource must be initialized
+  ResourceManager::getInstance().Initialize();
 
   // load settings before logging.
   Setting::ReadAll();

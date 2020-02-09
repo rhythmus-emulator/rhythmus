@@ -6,6 +6,13 @@
 namespace rhythmus
 {
 
+struct ImageParameter
+{
+  ImageParameter();
+  std::string path;
+  uint16_t width, height;
+};
+
 class Image
 {
 public:

@@ -17,12 +17,25 @@ namespace rhythmus
 class ResourceManager
 {
 public:
-  static Image* LoadImage(const std::string& path);
+  /* Load image from given path. */
+  static Image* LoadImage(const std::string &path);
   static void UnloadImage(Image *img);
 
-  static Font* LoadFont(const std::string& path);
-  static void UnloadFont(Font* font);
+  /* Load font from given path.
+   * @warn
+   * Font is not ttf file; it should be font spec file.
+   * If ttf file specified, then default font caching option will be applied. */
+  static Font* LoadFont(const std::string &path);
+  static Font* LoadFont(const FontAttributes &attr);
+  /* Load font by name. The font should have been cached previously. */
+  static Font* LoadFontByName(const std::string &name);
   static Font* LoadSystemFont();
+  static void UnloadFont(Font* font);
+
+  /* @brief Read font attribute from path. Necessary if font should be loaded by name. */
+  const FontAttributes* ReadFontAttribute(const std::string &path);
+  const FontAttributes* GetFontAttributeByName(const std::string &name);
+  void ClearFontAttribute();
 
   template <typename T>
   static T* LoadObject(const std::string &path);
@@ -34,6 +47,12 @@ public:
   static ResourceManager& getInstance();
 
   static void CacheSystemDirectory();
+
+  /**
+   * @brief
+   * Initalize directory hierarchery and default resource profile.
+   */
+  void Initialize();
 
   /**
    * @brief

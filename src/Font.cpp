@@ -26,6 +26,27 @@ inline uint32_t HexToUint(const char *hex)
   return (uint32_t)strtoll(hex, NULL, 16);
 }
 
+FontAttributes::FontAttributes()
+  : height(10), baseline_offset(0), color(0xFF000000), outline_width(0), outline_color(0x00000000)
+{
+  memset(&tex, 0, sizeof(FontFillTexture));
+  memset(&outline_tex, 0, sizeof(FontFillTexture));
+}
+
+void FontAttributes::SetSize(int size)
+{
+  height = size * 4;
+}
+
+void FontAttributes::SetPath(const std::string &path)
+{
+  /* if command exists in path, then apply it. */
+  std::string fn, cmd;
+  Split(path, '|', fn, cmd);
+  SetFromCommand(cmd);
+  this->path = fn;
+}
+
 void FontAttributes::SetFromCommand(const std::string &command)
 {
   std::vector<std::string> params;
@@ -37,7 +58,7 @@ void FontAttributes::SetFromCommand(const std::string &command)
     CommandArgs args(b);
     if (a == "size")
     {
-      size = args.Get<int>(0);
+      SetSize(args.Get<int>(0));
     }
     else if (a == "color")
     {
@@ -244,10 +265,10 @@ const std::string& Font::get_name() const
   return name_;
 }
 
-bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
+bool Font::LoadFont(const FontAttributes& attrs)
 {
   /* invalid font ... */
-  if (attrs.size <= 0)
+  if (attrs.height <= 0)
   {
     std::cerr << "Invalid font size (0)" << std::endl;
     return false;
@@ -263,6 +284,7 @@ bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
   ReleaseFont();
 
   /* Create freetype font */
+  const char *ttfpath = attrs.path.c_str();
   int r = FT_New_Face(ftLib, ttfpath, 0, (FT_Face*)&ftface_);
   if (r)
   {
@@ -284,7 +306,7 @@ bool Font::LoadFont(const char* ttfpath, const FontAttributes& attrs)
   else ftstroker_ = 0;
 
   // Set size to load glyphs as
-  const int fntsize_pixel = fontattr_.size * 4;
+  const int fntsize_pixel = fontattr_.height;
   fontattr_.height = fntsize_pixel;
   FT_Set_Pixel_Sizes(ftface, 0, fntsize_pixel);
 
@@ -620,6 +642,35 @@ bool Font::is_ttf_font() const
 const FontAttributes& Font::get_attribute() const
 {
   return fontattr_;
+}
+
+}
+
+/* for common API */
+#include "LR2/LR2Font.h"
+namespace rhythmus
+{
+
+Font* CreateFont(const FontAttributes &fontattr)
+{
+  std::string fn = fontattr.path;
+  std::string ext = GetExtension(fn);
+  Font *font = nullptr;
+  if (ext == "ttf")
+  {
+    font = new Font();
+  }
+  else if (ext == "dxa")
+  {
+    font = new LR2Font();
+  }
+  else if (ext == "lr2font" && fn.size() > 13)
+  {
+    // /font.lr2font file
+    fn = fn.substr(0, fn.size() - 13) + ".dxa";
+    font = new LR2Font();
+  }
+  return font;
 }
 
 }

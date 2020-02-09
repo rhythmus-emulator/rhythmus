@@ -25,8 +25,13 @@ struct FontFillTexture
 
 struct FontAttributes
 {
-  /* font size in pt. (multiplied by 4) */
-  int size;
+  FontAttributes();
+
+  /* name of font */
+  std::string name;
+
+  /* path of font data */
+  std::string path;
 
   /* font size in pixel. (set internally) */
   int height;
@@ -49,13 +54,20 @@ struct FontAttributes
   /* Texture of font border. color option is ignored when tex is set. */
   FontFillTexture outline_tex;
 
+  /* @brief Set font size (same as height multiplied by 4) */
+  void SetSize(int size);
+
+  /* @brief Set font attribute from file path */
+  void SetPath(const std::string &path);
+
+  /* @brief Set font attribute info from command */
   void SetFromCommand(const std::string &command);
 
   /* @warn this method is in development.
    * may cannot distinguish different font. */
   bool operator==(const FontAttributes& attr) const
   {
-    return attr.size == size &&
+    return attr.height == height &&
       attr.color == color &&
       attr.outline_width == outline_width
       ;
@@ -126,7 +138,7 @@ public:
   void set_name(const std::string& name);
   const std::string& get_name() const;
 
-  virtual bool LoadFont(const char* ttfpath, const FontAttributes& attrs);
+  virtual bool LoadFont(const FontAttributes& attrs);
   void PrepareText(const std::string& text_utf8);
   void PrepareGlyph(uint32_t *chrs, int count);
   void Commit();
@@ -173,6 +185,8 @@ protected:
   void ConvertStringToCodepoint(const std::string& s, uint32_t *cp, int& lenout, int maxlen = -1) const;
   FontBitmap* GetWritableBitmapCache(int w, int h);
 };
+
+Font* CreateFont(const FontAttributes &fontattr);
 
 using FontAuto = std::shared_ptr<Font>;
 

@@ -4,6 +4,7 @@
 #include "Timer.h"
 #include "Logger.h"
 #include "LR2/LR2Font.h"
+#include "Util.h"
 #include "common.h"
 #include <FreeImage.h>
 #include <mutex>
@@ -13,8 +14,12 @@ namespace rhythmus
 
 constexpr bool kUseCache = true;
 
-template <typename T>
-T* CreateObjectFromPath(const std::string &path);
+/* Cached font attributes: (name, font attributes)
+ * XXX: use metrics to cache font attribute? */
+std::map<std::string, FontAttributes> gFontAttributes;
+
+template <typename T, typename T2>
+T* CreateObjectFromPath(const T2 &param);
 
 template <>
 Image *CreateObjectFromPath(const std::string &path)
@@ -26,43 +31,18 @@ Image *CreateObjectFromPath(const std::string &path)
 }
 
 template <>
-Font *CreateObjectFromPath(const std::string &path)
+Font *CreateObjectFromPath(const FontAttributes &fontattr)
 {
-  std::string fn, cmd, ext;
-  Split(path, '|', fn, cmd);
-  ext = GetExtension(fn);
-  FontAttributes attr;
-  Font *font;
-  if (ext == "ttf")
+  Font *font = new Font();
+  if (!font->LoadFont(fontattr))
   {
-    font = new Font();
-  }
-  else if (ext == "dxa")
-  {
-    font = new LR2Font();
-  }
-  else if (ext == "lr2font" && fn.size() > 13)
-  {
-    // /font.lr2font file
-    fn = fn.substr(0, fn.size() - 13) + ".dxa";
-    font = new LR2Font();
-  }
-  else
-  {
-    std::cerr << "Unknown Font file: " << path << std::endl;
-    return nullptr;
-  }
+    std::stringstream ss;
+    ss << "Invalid Font file: " << fontattr.name << " (" << fontattr.path << ")" << std::endl;
 
-  memset(&attr, 0, sizeof(attr));
-  attr.SetFromCommand(cmd);
-
-  if (!font->LoadFont(fn.c_str(), attr))
-  {
-    std::cerr << "Invalid Font file: " << path << std::endl;
     delete font;
-    return nullptr;
+    throw RuntimeException(ss.str());
+    return nullptr; /* not reachable */
   }
-
   return font;
 }
 
@@ -87,12 +67,13 @@ private:
   std::map<std::string, ObjectWithSharedCnt> objects_;
 
 public:
-  T* Load(const std::string &path)
+  template <typename T2>
+  T* Load(const std::string &key, const T2 &param)
   {
     // find for existing object
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      auto it = objects_.find(path);
+      auto it = objects_.find(key);
       if (it != objects_.end())
       {
         ++it->second.count;
@@ -101,10 +82,10 @@ public:
     }
 
     // if not, create object using constructor.
-    T* obj = CreateObjectFromPath<T>(path);
+    T* obj = CreateObjectFromPath<T>(param);
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      objects_[path] = ObjectWithSharedCnt( 1, obj );
+      objects_[key] = ObjectWithSharedCnt( 1, obj );
     }
     return obj;
   }
@@ -149,10 +130,12 @@ public:
 static ObjectPoolWithName<Image> gImgpool;
 static ObjectPoolWithName<Font> gFontpool;
 
+
+
 Image* ResourceManager::LoadImage(const std::string& path)
 {
   std::string gamepath = getInstance().GetPath(path);
-  return gImgpool.Load(gamepath);
+  return gImgpool.Load(gamepath, gamepath);
 }
 
 void ResourceManager::UnloadImage(Image *img)
@@ -169,12 +152,21 @@ ResourceManager::UnloadObject(Image *img) { UnloadImage(img); }
 
 Font* ResourceManager::LoadFont(const std::string& path)
 {
-  // FontAttributes& will be processed later
-  // from file type or parameter in path.
-  std::string fn, attr;
-  Split(path, '|', fn, attr);
-  std::string gamepath = getInstance().GetPath(fn);
-  return gFontpool.Load(gamepath + "|" + attr);
+  const FontAttributes *attr = getInstance().ReadFontAttribute(path);
+  return LoadFont(*attr);
+}
+
+Font* ResourceManager::LoadFont(const FontAttributes &attr)
+{
+  std::string fontpath = attr.path;
+  return gFontpool.Load(fontpath, attr);
+}
+
+Font* ResourceManager::LoadFontByName(const std::string &name)
+{
+  const FontAttributes *attr = getInstance().GetFontAttributeByName(name);
+  if (!attr) return nullptr;
+  return gFontpool.Load(attr->path, *attr);
 }
 
 void ResourceManager::UnloadFont(Font *font)
@@ -184,7 +176,42 @@ void ResourceManager::UnloadFont(Font *font)
 
 Font* ResourceManager::LoadSystemFont()
 {
-  return LoadFont("system/default.ttf|size:5;color:0xFFFFFFFF");
+  /* XXX: load font property from file instead of hard-coding. */
+  const FontAttributes *fontattr = getInstance().GetFontAttributeByName("System");
+  R_ASSERT(fontattr, "'System' font is not defined.");
+  return LoadFont(*fontattr);
+}
+
+/* @brief return font attribute after reading property.
+ * @info  nothrow, not null. */
+const FontAttributes* ResourceManager::ReadFontAttribute(const std::string &path)
+{
+  FontAttributes fontattr;
+  fontattr.SetPath(path);
+  std::string fontname = fontattr.name;
+  if (fontname.size() == 0)
+    fontname = fontattr.path;
+  R_ASSERT(fontname.size(), "Font name cannot be null.");
+
+  auto i = gFontAttributes.find(fontname);
+  if (i != gFontAttributes.end())
+    return &i->second;
+  gFontAttributes[fontname] = fontattr;
+  return &gFontAttributes[fontname];
+}
+
+/* @brief return font attribute if exists, return null otherwise. */
+const FontAttributes* ResourceManager::GetFontAttributeByName(const std::string &fontname)
+{
+  auto i = gFontAttributes.find(fontname);
+  if (i != gFontAttributes.end())
+    return &i->second;
+  return nullptr;
+}
+
+void ResourceManager::ClearFontAttribute()
+{
+  gFontAttributes.clear();
 }
 
 template <> Font*
@@ -204,6 +231,20 @@ ResourceManager& ResourceManager::getInstance()
 {
   static ResourceManager m;
   return m;
+}
+
+void ResourceManager::Initialize()
+{
+  /* Cache system directory hierarchy. */
+  CacheSystemDirectory();
+
+  /* Cache system font profile. XXX: more elegantly ...? */
+  FontAttributes a;
+  a.name = "System";
+  a.SetPath("system/default.ttf");
+  a.SetSize(5);
+  a.color = 0xFFFFFFFF;
+  gFontAttributes[a.name] = a;
 }
 
 void ResourceManager::Cleanup()

@@ -1,8 +1,7 @@
 #pragma once
 #include "Scene.h"
 #include "Sprite.h"
-#include "Font.h"
-#include "LR2/LR2Font.h"
+#include "object/Text.h"
 
 namespace rhythmus
 {
