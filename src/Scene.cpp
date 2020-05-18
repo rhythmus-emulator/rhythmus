@@ -3,6 +3,7 @@
 #include "Setting.h"
 #include "Script.h"
 #include "Util.h"
+#include "Logger.h"
 #include "common.h"
 
 namespace rhythmus
@@ -127,30 +128,24 @@ Scene::Scene()
 
 void Scene::LoadScene()
 {
-  auto *m = Setting::GetThemeMetricList().get_metric(get_name());
-  ASSERT_M(m, "No scene metric had been found.");
-
-  // Load scene specific script if necessary.
-  if (m->exist("script"))
+  if (!get_name().empty())
   {
-    Script::getInstance().SetContextScene(this);
-    Script::ExecuteFromPath(m->get<std::string>("script"));
+    // attempt to load custom scene
+    auto *pref = PREFERENCE->GetPreferenceString(get_name());
+    MetricGroup m;
+    if (pref && m.Load(**pref))
+    {
+      Scene::Load(m);
+      return;
+    }
+    else
+    {
+      Logger::Warn("Attempt to load scene %s but failed.", get_name().c_str());
+    }
   }
 
-  Scene::Load(*m);
-
-  // Initialize objects.
-  for (auto *obj : children_)
-    obj->LoadByName();
-
-  // sort object if necessary.
-  if (do_sort_objects_)
-  {
-    std::sort(children_.begin(), children_.end(),
-      [](BaseObject *o1, BaseObject *o2) {
-        return o1->GetDrawOrder() < o2->GetDrawOrder();
-      });
-  }
+  // fallback: default metric data
+  Scene::Load(*METRIC);
 
   EventManager::SendEvent("Load");
 }
@@ -195,18 +190,45 @@ void Scene::StartScene()
   }
 }
 
-void Scene::Load(const Metric& metric)
+void Scene::Load(const MetricGroup& m)
 {
-  if (metric.exist("sort"))
-    do_sort_objects_ = metric.get<bool>("sort");
-  if (metric.exist("Timeout"))
-    next_scene_time_ = metric.get<int>("Timeout");
-  if (metric.exist("InputStart"))
-    begin_input_time_ = metric.get<int>("InputStart");
-  if (metric.exist("FadeOut"))
-    fade_out_time_ = metric.get<int>("FadeOut");
-  if (metric.exist("FadeIn"))
-    fade_in_time_ = metric.get<int>("FadeIn");
+  if (m.exist("sort"))
+    do_sort_objects_ = m.get<bool>("sort");
+  if (m.exist("Timeout"))
+    next_scene_time_ = m.get<int>("Timeout");
+  if (m.exist("InputStart"))
+    begin_input_time_ = m.get<int>("InputStart");
+  if (m.exist("FadeOut"))
+    fade_out_time_ = m.get<int>("FadeOut");
+  if (m.exist("FadeIn"))
+    fade_in_time_ = m.get<int>("FadeIn");
+
+
+  // Load scene specific script if necessary.
+  if (m.exist("script"))
+  {
+    Script::Execute(m.get<std::string>("script"));
+  }
+
+
+  // Create objects.
+  SetOwnChildren(true);
+  for (auto &c = m.group_cbegin(); c != m.group_cend(); ++c)
+  {
+    BaseObject *o = CreateObject(*c);
+    if (o)
+      AddChild(o);
+  }
+
+
+  // sort object if necessary.
+  if (do_sort_objects_)
+  {
+    std::sort(children_.begin(), children_.end(),
+      [](BaseObject *o1, BaseObject *o2) {
+      return o1->GetDrawOrder() < o2->GetDrawOrder();
+    });
+  }
 }
 
 void Scene::FadeOutScene(bool next)
@@ -337,10 +359,10 @@ void Scene::doUpdate(float delta)
 void Scene::doRenderAfter()
 {
   static VertexInfo vi[4] = {
-    {0, 0, 0.1f, 0, 0, 1, 1, 1, 1},
-    {0, 0, 0.1f, 1, 0, 1, 1, 1, 1},
-    {0, 0, 0.1f, 1, 1, 1, 1, 1, 1},
-    {0, 0, 0.1f, 0, 1, 1, 1, 1, 1}
+    {{ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f }},
+    {{ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f }},
+    {{ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f }},
+    {{ 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f }},
   };
 
   // implementation of fadeout effect
@@ -352,19 +374,18 @@ void Scene::doRenderAfter()
     if (fade_alpha_ > 1)
       fade_alpha_ = 1;
 
-    float w = Graphic::getInstance().width();
-    float h = Graphic::getInstance().height();
-    vi[1].x = w;
-    vi[2].x = w;
-    vi[2].y = h;
-    vi[3].y = h;
-    vi[0].a = vi[1].a = vi[2].a = vi[3].a = fade_alpha_;
+    float w = GRAPHIC->width();
+    float h = GRAPHIC->height();
+    vi[1].p.x = w;
+    vi[2].p.x = w;
+    vi[2].p.y = h;
+    vi[3].p.y = h;
+    vi[0].c.a = vi[1].c.a = vi[2].c.a = vi[3].c.a = fade_alpha_;
 
-    Graphic::SetTextureId(0);
-    Graphic::SetBlendMode(1);
-    glColor3f(0, 0, 0);
-    memcpy(Graphic::get_vertex_buffer(), vi, sizeof(VertexInfo) * 4);
-    Graphic::RenderQuad();
+    GRAPHIC->SetTexture(0, 0);
+    GRAPHIC->SetBlendMode(1);
+    //glColor3f(0, 0, 0);
+    GRAPHIC->DrawQuad(vi);
   }
 }
 

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <functional>
 
 namespace rhythmus
 {
@@ -87,6 +88,7 @@ private:
   std::string name_;
 };
 
+/* @brief Base EventReceiver class, invoked when event occured. */
 class EventReceiver
 {
 public:
@@ -101,6 +103,20 @@ public:
 private:
   /* to what events it subscribed. */
   std::vector<std::string> subscription_;
+};
+
+typedef std::map<std::string, std::function<void()> > EventFnMap;
+
+/* @brief EventReceiver with EventMap. */
+class EventReceiverMap : public EventReceiver
+{
+public:
+  virtual ~EventReceiverMap();
+  void AddEvent(const std::string &event_name, const std::function<void()> &func);
+  void Clear();
+private:
+  virtual bool OnEvent(const EventMessage& msg);
+  EventFnMap eventFnMap_;
 };
 
 class EventManager

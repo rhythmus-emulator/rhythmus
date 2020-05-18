@@ -7,39 +7,46 @@ namespace rhythmus
 Quad::Quad()
 {
   VertexInfo *vi = vi_;
-  vi[0] = { 0, 0, 0.1f, 0, 0, 1, 1, 1, 1 };
-  vi[1] = { 0, 0, 0.1f, 0, 0, 1, 1, 1, 1 };
-  vi[2] = { 0, 0, 0.1f, 0, 0, 1, 1, 1, 1 };
-  vi[3] = { 0, 0, 0.1f, 0, 0, 1, 1, 1, 1 };
+  vi_[0].c = Vector4{ 1.0f };
+  vi_[1].c = Vector4{ 1.0f };
+  vi_[2].c = Vector4{ 1.0f };
+  vi_[3].c = Vector4{ 1.0f };
+  vi_[0].p = Vector3{ 0.0f, 0.0f, 0.0f };
+  vi_[1].p = Vector3{ 0.0f, 0.0f, 0.0f };
+  vi_[2].p = Vector3{ 0.0f, 0.0f, 0.0f };
+  vi_[3].p = Vector3{ 0.0f, 0.0f, 0.0f };
+  vi_[0].t = Vector2{ 0.0f };
+  vi_[1].t = Vector2{ 0.0f };
+  vi_[2].t = Vector2{ 0.0f };
+  vi_[3].t = Vector2{ 0.0f };
 }
 
 Quad::~Quad() { }
 
 void Quad::SetAlpha(float a)
 {
-  vi_[0].a =
-    vi_[1].a =
-    vi_[2].a =
-    vi_[3].a = a;
+  vi_[0].c.a =
+    vi_[1].c.a =
+    vi_[2].c.a =
+    vi_[3].c.a = a;
 }
 
-void Quad::SetAlpha(const RectF &alpha)
+void Quad::SetAlpha(const Vector4 &alpha)
 {
-  vi_[0].a = alpha.x1;
-  vi_[1].a = alpha.y1;
-  vi_[2].a = alpha.x2;
-  vi_[3].a = alpha.y2;
+  vi_[0].c.a = alpha.x;
+  vi_[1].c.a = alpha.y;
+  vi_[2].c.a = alpha.z;
+  vi_[3].c.a = alpha.w;
 }
 
 void Quad::doUpdate(float delta) { }
 
 void Quad::doRender()
 {
-  Graphic::SetTextureId(0);
-  Graphic::SetBlendMode(1);
-  glColor3f(0, 0, 0);
-  memcpy(Graphic::get_vertex_buffer(), vi_, sizeof(VertexInfo) * 4);
-  Graphic::RenderQuad();
+  GRAPHIC->SetTexture(0, 0);
+  GRAPHIC->SetBlendMode(1);
+  //glColor3f(0, 0, 0);
+  GRAPHIC->DrawQuad(vi_);
 }
 
 }

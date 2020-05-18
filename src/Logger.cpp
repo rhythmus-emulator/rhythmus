@@ -3,9 +3,9 @@
 #endif
 
 #include "Logger.h"
+#include "Setting.h"
 #include "Game.h"
 #include "Timer.h"
-#include "Setting.h"
 #include "common.h"
 
 namespace rhythmus
@@ -24,13 +24,27 @@ private:
   std::streambuf * old;
 };
 
+Logger::Logger()
+  : enable_logging_(true), log_path_("log/log.txt"), append_log_(false), log_mode_(LogMode::kLogError), f_(0)
+{
+}
+
+Logger::~Logger()
+{
+  UnHookStdOut();
+  FinishLogging();
+}
+
 void Logger::Initialize()
 {
-  if (Setting::GetSystemSetting().GetOption("Logging")->value<bool>())
+  // fetch preference
+  enable_logging_ = *PREFERENCE->logging;
+
+  // start logging
+  if (enable_logging_)
   {
-    Logger::getInstance().log_path_ = "log/log.txt";
-    Logger::getInstance().StartLogging();
-    Logger::getInstance().HookStdOut();
+    StartLogging();
+    HookStdOut();
   }
 }
 
@@ -110,7 +124,7 @@ void Logger::Info(const char* msg, ...)
 {
   va_list args;
   va_start(args, msg);
-  getInstance().Log_Internal(0, msg, args);
+  getInstance().Log_Internal(LogMode::kLogInfo, msg, args);
   va_end(args);
 }
 
@@ -118,7 +132,7 @@ void Logger::Warn(const char* msg, ...)
 {
   va_list args;
   va_start(args, msg);
-  getInstance().Log_Internal(1, msg, args);
+  getInstance().Log_Internal(LogMode::kLogWarn, msg, args);
   va_end(args);
 }
 
@@ -126,7 +140,7 @@ void Logger::Error(const char* msg, ...)
 {
   va_list args;
   va_start(args, msg);
-  getInstance().Log_Internal(2, msg, args);
+  getInstance().Log_Internal(LogMode::kLogError, msg, args);
   va_end(args);
 }
 
@@ -143,9 +157,18 @@ void Logger::Log_Internal(int level, const char* msg, va_list l)
   sprintf(time_str, "%02u:%02u:%02u ", th, tm, ts);
 
   char buf[1024];
-  if (level == 0) strcpy(buf, "[INFO] ");
-  else if (level == 1) strcpy(buf, "[WARN] ");
-  else if (level == 2) strcpy(buf, "[ERROR] ");
+  switch (level)
+  {
+  case LogMode::kLogInfo:
+    strcpy(buf, "[INFO] ");
+    break;
+  case LogMode::kLogWarn:
+    strcpy(buf, "[WARN] ");
+    break;
+  case LogMode::kLogError:
+    strcpy(buf, "[ERROR] ");
+    break;
+  }
   strcpy(buf + strlen(buf), time_str);
   vsnprintf(buf + strlen(buf), 968, msg, l);
 
@@ -170,15 +193,49 @@ Logger& Logger::getInstance()
   return logger_;
 }
 
-Logger::Logger()
-  : append_log_(false), f_(0)
+Logger& Logger::getInstance(int default_log_mode)
 {
+  auto &logger = getInstance();
+  logger.log_mode_ = default_log_mode;
+  logger.logger_ss_.clear();
+  return logger;
 }
 
-Logger::~Logger()
+Logger& Logger::operator<<(const char* v)
 {
-  UnHookStdOut();
-  FinishLogging();
+  logger_ss_ << v;
+  return *this;
+}
+
+Logger& Logger::operator<<(const std::string &v)
+{
+  logger_ss_ << v;
+  return *this;
+}
+
+Logger& Logger::operator<<(int v)
+{
+  logger_ss_ << v;
+  return *this;
+}
+
+Logger& Logger::operator<<(double v)
+{
+  logger_ss_ << v;
+  return *this;
+}
+
+Logger& Logger::operator<<(float v)
+{
+  logger_ss_ << v;
+  return *this;
+}
+
+Logger& Logger::endl(Logger &logger)
+{
+  va_list args; // dummy
+  logger.Log_Internal(logger.log_mode_, logger.logger_ss_.str().c_str(), args);
+  return logger;
 }
 
 }

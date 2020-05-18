@@ -77,17 +77,17 @@ Game::~Game()
 void Game::Initialize()
 {
   // before starting initialization, resource must be initialized
-  ResourceManager::getInstance().Initialize();
+  ResourceManager::Initialize();
 
   // load settings before logging.
-  Setting::ReadAll();
+  Setting::Initialize();
 
   // Start logging.
-  Logger::Initialize();
+  Logger::getInstance().Initialize();
 
   // initialize threadpool / graphic / sound
   TaskPool::getInstance().SetPoolSize(4);
-  Graphic::Initialize();
+  Graphic::CreateGraphic();
   SoundDriver::getInstance().Initialize();
 
   // initialize all other elements ...
@@ -101,15 +101,14 @@ void Game::Initialize()
 
 void Game::Loop()
 {
-  while (getInstance().is_running_ && !Graphic::IsWindowShouldClose())
+  while (getInstance().is_running_ && !GRAPHIC->IsWindowShouldClose())
   {
+    /* Update main timer in graphic(main) thread. */
+    Timer::Update();
+    double delta = Timer::SystemTimer().GetDeltaTime() * 1000;
+
     try
     {
-      /* Update main timer in graphic(main) thread. */
-      Timer::Update();
-
-      /* TODO: Update Logger to log fps information. */
-
       /**
         * Process cached events in main thread.
         * COMMENT: Event must be processed before Update() method
@@ -121,11 +120,18 @@ void Game::Loop()
       /* Song and movie won't be updated if paused. */
       if (!Game::IsPaused())
       {
-        SongPlayer::getInstance().Update();
-        ResourceManager::UpdateMovie();
+        SongPlayer::getInstance().Update(delta);
+        ResourceManager::Update(delta);
       }
 
-      Graphic::Render();
+      /* Scene update & rendering */
+      SceneManager::getInstance().Update();
+      GRAPHIC->BeginFrame();
+      SceneManager::getInstance().Render();
+      GRAPHIC->EndFrame();
+
+      /* Flush stdout into log message */
+      Logger::getInstance().Flush();
     }
     catch (const RuntimeException &e)
     {
@@ -147,12 +153,13 @@ void Game::Cleanup()
 {
   SongPlayer::getInstance().Stop();
   PlayerManager::Cleanup();
-  TaskPool::getInstance().ClearTaskPool();
   SceneManager::getInstance().Cleanup();
-  Graphic::getInstance().Cleanup();
+  TaskPool::getInstance().ClearTaskPool();
+  Graphic::Cleanup();
   SoundDriver::getInstance().Destroy();
-  Setting::SaveAll();
-  ResourceManager::getInstance().Cleanup();
+  Setting::Save();
+  Setting::Cleanup();
+  ResourceManager::Cleanup();
   Logger::getInstance().FinishLogging();
 }
 
@@ -161,7 +168,7 @@ void Game::Cleanup()
 void Game::Exit()
 {
   getInstance().is_running_ = false;
-  Graphic::SignalWindowClose();
+  GRAPHIC->SignalWindowClose();
 }
 
 /* macro to deal with save/load properties */

@@ -10,6 +10,9 @@ class PlayScene : public Scene
 {
 public:
   PlayScene();
+
+  virtual void Load(const MetricGroup& m);
+
   virtual void LoadScene();
   virtual void StartScene();
   virtual void CloseScene(bool next);

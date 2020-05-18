@@ -49,8 +49,8 @@ void PlayOption::SetDefault(int gamemode)
 
 Player::Player(PlayerTypes player_type, const std::string& player_name)
   : player_type_(player_type), player_name_(player_name),
-  is_guest_(false), is_network_(false), is_courseplay_(false),
-  gamemode_(0), running_combo_(0), pr_db_(nullptr)
+  is_guest_(false), is_network_(false), gamemode_(0), running_combo_(0), course_combo_(0),
+  pr_db_(nullptr)
 {
   if (player_type_ == PlayerTypes::kPlayerGuest)
     is_guest_ = true;
@@ -345,13 +345,17 @@ PlayOption &Player::GetPlayOption()
   return *current_playoption_;
 }
 
-void Player::SetCurrentPlay(const PlayRecord &playrecord, const ReplayData &replaydata)
+void Player::SetCurrentPlay(const PlayRecord &playrecord)
 {
-  // TODO: accumulate playrecord & playrecord.
+  // TODO: accumulate playrecord.
 }
 
-void Player::SaveCurrentPlay()
+/* @brief store given playrecord. */
+void Player::PostPlayRecord(PlayRecord &pr)
 {
+  // TODO: only store replaydata of current player.
+
+
   if (playrecord_.chartname.empty()) return;
   for (size_t i = 0; i < playrecords_.size(); ++i)
   {
@@ -364,6 +368,13 @@ void Player::SaveCurrentPlay()
   // TODO: save replay file as data, or as hash64 in db?
   // TODO: use SQL insert using SQLwrapper
   playrecords_.push_back(playrecord_);
+}
+
+/* @brief store given replay data. */
+void Player::PostReplayData(ReplayData &replay)
+{
+  // TODO: only store replaydata of current player.
+  replaydata_.push_back(replay);
 }
 
 void Player::ClearCurrentPlay()

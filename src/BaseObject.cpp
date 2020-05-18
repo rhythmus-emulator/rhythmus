@@ -3,42 +3,275 @@
 #include "Setting.h"
 #include "Util.h"
 #include "Script.h"
+#include "Logger.h"
+#include "KeyPool.h"
 #include "common.h"
+#include "config.h"
 
 namespace rhythmus
 {
 
+#define TWEEN_ATTRS \
+  TWEEN(pos) \
+  TWEEN(color) \
+  TWEEN(rotate) \
+  TWEEN(align) \
+  TWEEN(scale)
+
+
+void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
+  float r, int ease_type)
+{
+  switch (ease_type)
+  {
+  case EaseTypes::kEaseLinear:
+  {
+#define TWEEN(attr) \
+  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  case EaseTypes::kEaseIn:
+  {
+    // use cubic function
+    r = r * r * r;
+#define TWEEN(attr) \
+  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  case EaseTypes::kEaseOut:
+  {
+    // use cubic function
+    r = 1 - r;
+    r = r * r * r;
+    r = 1 - r;
+#define TWEEN(attr) \
+  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  case EaseTypes::kEaseInOut:
+  {
+    // use cubic function
+    r = 2 * r - 1;
+    r = r * r * r;
+    r = 0.5f + r / 2;
+#define TWEEN(attr) \
+  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  case EaseTypes::kEaseNone:
+  default:
+  {
+#define TWEEN(attr) \
+  ti.attr = t1.attr;
+
+    TWEEN_ATTRS;
+
+#undef TWEEN
+    break;
+  }
+  }
+}
+
+// ---------------------------------------------------------------- class Tween
+
+Animation::Animation(const DrawProperty *initial_state)
+  : current_frame_(0), current_frame_time_(0), frame_time_(0),
+    is_stopped_(true), repeat_(false), repeat_time_(0)
+{
+  if (initial_state)
+    AddFrame(*initial_state, 0, EaseTypes::kEaseLinear);
+}
+
+void Animation::Clear()
+{
+  frames_.clear();
+  is_stopped_ = true;
+}
+
+void Animation::Play()
+{
+  is_stopped_ = false;
+}
+
+void Animation::DuplicateFrame(double duration)
+{
+  if (frames_.empty()) return;
+  if (duration > 0) frames_.push_back(frames_.back());
+  frames_.back().time += duration;
+}
+
+void Animation::AddFrame(const AnimationFrame &frame)
+{
+  if (frames_.empty() || frames_.back().time >= frame.time)
+    frames_.back() = frame;
+  else
+    frames_.push_back(frame);
+}
+
+void Animation::AddFrame(AnimationFrame &&frame)
+{
+  if (frames_.empty() || frames_.back().time >= frame.time)
+    frames_.back() = frame;
+  else
+    frames_.emplace_back(frame);
+}
+
+void Animation::AddFrame(const DrawProperty &draw_prop, double time, int ease_type)
+{
+  if (frames_.empty() || frames_.back().time >= time)
+  {
+    frames_.back().time = time;
+    frames_.back().draw_prop = draw_prop;
+    frames_.back().ease_type = ease_type;
+  }
+  else
+    frames_.emplace_back(AnimationFrame{ draw_prop, time, ease_type });
+}
+
+void Animation::SetCommand(const std::string &cmd)
+{
+  // set command to invoke when animation finished.
+  command = cmd;
+}
+
+void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty *out)
+{
+  // don't do anything if empty or stopped.
+  if (frames_.empty() || is_stopped_) return;
+
+  // find out which frame is it in.
+  frame_time_ += ms;
+  if (repeat_)
+  {
+    const double actual_loop_time = frames_.back().time - (double)repeat_time_;
+    if (actual_loop_time == 0)
+      frame_time_ = 0;
+    else
+      frame_time_ = fmod(frame_time_, actual_loop_time);
+    ms = 0;
+  }
+  if (frame_time_ < frames_.front().time)
+  {
+    // don't update if frame_time is less than first frame
+    return;
+  }
+  for (unsigned i = 0; i < frames_.size(); ++i)
+    if (frame_time_ >= frames_[i].time)
+      current_frame_ = i;
+  if (!repeat_ && frame_time_ >= frames_.back().time)
+  {
+    // stop animation as it had reached its end.
+    current_frame_ = (unsigned)frames_.size() - 1;
+    ms = frame_time_ - frames_.back().time;
+    is_stopped_ = true;
+    command_to_invoke = command;
+  }
+  else current_frame_time_ = frame_time_ - frames_[current_frame_].time;
+
+  // return calculated drawproperty.
+  if (out)
+    GetDrawProperty(*out);
+}
+
+void Animation::GetDrawProperty(DrawProperty &out)
+{
+  if (current_frame_ == frames_.size() - 1)
+    out = frames_.back().draw_prop;
+  else
+    MakeTween(out,
+      frames_[current_frame_].draw_prop,
+      frames_[current_frame_ + 1].draw_prop,
+      current_frame_time_ / (frames_[current_frame_ + 1].time - frames_[current_frame_].time),
+      frames_[current_frame_].ease_type);
+}
+
+void Animation::SetEaseType(int ease_type)
+{
+  if (!frames_.empty())
+    frames_.back().ease_type = ease_type;
+}
+
+void Animation::SetLoop(unsigned repeat_start_time)
+{
+  repeat_ = true;
+  repeat_time_ = repeat_start_time;
+}
+
+void Animation::DeleteLoop()
+{
+  repeat_ = false;
+  repeat_time_ = 0;
+}
+
+const DrawProperty &Animation::LastFrame() const
+{
+  return frames_.back().draw_prop;
+}
+
+DrawProperty &Animation::LastFrame()
+{
+  return frames_.back().draw_prop;
+}
+
+double Animation::GetTweenLength() const
+{
+  if (frames_.empty()) return 0;
+  else frames_.back().time;
+}
+
+bool Animation::is_stopped() const
+{
+  return is_stopped_;
+}
+
+size_t Animation::size() const { return frames_.size(); }
+bool Animation::empty() const { return frames_.empty(); }
+
+
+// ----------------------------------------------------------- class BaseObject
+
 BaseObject::BaseObject()
-  : parent_(nullptr), draw_order_(0), rot_center_(-1),
-    ignore_visible_group_(true), resource_id_(-1), blending_(1),
+  : parent_(nullptr), own_children_(true), draw_order_(0), visible_(false),
+    ignore_visible_group_(true),
     is_focusable_(false), is_focused_(false), is_hovered_(false), do_clipping_(false)
 {
-  memset(&current_prop_, 0, sizeof(DrawProperty));
-  current_prop_.sw = current_prop_.sh = 1.0f;
-  current_prop_.display = true;
+  memset(&frame_, 0, sizeof(DrawProperty));
   SetRGB(1.0f, 1.0f, 1.0f);
   SetAlpha(1.0f);
   SetScale(1.0f, 1.0f);
-  memset(visible_group_, 0, sizeof(visible_group_));
+  memset(visible_flag_, 0, sizeof(visible_flag_));
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
-  : name_(obj.name_), parent_(obj.parent_),
-    draw_order_(obj.draw_order_), rot_center_(obj.rot_center_),
+  : name_(obj.name_), own_children_(true), parent_(obj.parent_), ani_(obj.ani_),
+    draw_order_(obj.draw_order_), visible_(obj.visible_),
     ignore_visible_group_(obj.ignore_visible_group_),
-    resource_id_(obj.resource_id_), blending_(obj.blending_),
     is_focusable_(obj.is_focusable_), is_focused_(false), is_hovered_(false), do_clipping_(false)
 {
   // XXX: childrens won't copied by now
-  tween_ = obj.tween_;
-  current_prop_ = obj.current_prop_;
-  memcpy(visible_group_, obj.visible_group_, sizeof(visible_group_));
+  frame_ = obj.frame_;
+  memcpy(visible_flag_, obj.visible_flag_, sizeof(visible_flag_));
 }
 
 BaseObject::~BaseObject()
 {
-  for (auto* p : owned_children_)
-    delete p;
+  RemoveAllChild();
 }
 
 void BaseObject::set_name(const std::string& name)
@@ -61,17 +294,24 @@ void BaseObject::RemoveChild(BaseObject* obj)
   auto it = std::find(children_.begin(), children_.end(), obj);
   if (it != children_.end())
     children_.erase(it);
+  if (own_children_) delete obj;
 }
 
 void BaseObject::RemoveAllChild()
 {
+  if (own_children_)
+  {
+    for (auto *o : children_)
+      delete o;
+  }
   children_.clear();
 }
 
-void BaseObject::RegisterChild(BaseObject* obj)
+BaseObject* BaseObject::FindChildByName(const std::string& name)
 {
-  owned_children_.push_back(obj);
-  AddChild(obj);
+  for (const auto& spr : children_)
+    if (spr->get_name() == name) return spr;
+  return nullptr;
 }
 
 void BaseObject::set_parent(BaseObject* obj)
@@ -84,25 +324,77 @@ BaseObject* BaseObject::get_parent()
   return parent_;
 }
 
-BaseObject* BaseObject::FindChildByName(const std::string& name)
-{
-  for (const auto& spr : children_)
-    if (spr->get_name() == name) return spr;
-  return nullptr;
-}
-
-BaseObject* BaseObject::FindRegisteredChildByName(const std::string& name)
-{
-  for (const auto& spr : owned_children_)
-    if (spr->get_name() == name) return spr;
-  return nullptr;
-}
-
 BaseObject* BaseObject::GetLastChild()
 {
   if (children_.size() > 0)
     return children_.back();
   else return nullptr;
+}
+
+void BaseObject::SetOwnChildren(bool v)
+{
+  own_children_ = v;
+}
+
+void BaseObject::Load(const MetricGroup &m)
+{
+  // Load command
+  LoadCommand(m);
+
+  // Load values
+  m.get_safe("name", name_);
+  m.get_safe("zindex", draw_order_);
+  m.get_safe("focus", is_focusable_);
+
+#if USE_LR2_FEATURE == 1
+  // Load LR2 properties
+  if (m.exist("lr2cmd"))
+  {
+    std::string lr2cmd;
+    CommandArgs la;
+    m.get_safe("lr2cmd", lr2cmd);
+    la.set_separator(',');
+    la.Set(lr2cmd, 21);
+
+    debug_ = la.Get<std::string>(20);
+
+    // XXX: move this flag to Sprite,
+    // as LR2_TEXT object don't work with this..?
+    SetVisibleFlag(
+      la.Get<std::string>(17), la.Get<std::string>(18), la.Get<std::string>(19), ""
+    );
+    AddCommand(format_string("LR%dOn", la.Get<int>(16)), lr2cmd);
+  }
+#endif
+
+  // Check for children objects to load
+  if (own_children_)
+  {
+    for (auto i = m.group_cbegin(); i != m.group_cend(); ++i)
+    {
+      BaseObject *obj = CreateObject(*i);
+      if (obj) AddChild(obj);
+    }
+  }
+}
+
+void BaseObject::LoadFromFile(const std::string &metric_file)
+{
+  MetricGroup m;
+  if (m.Load(metric_file))
+    Load(m);
+  else
+    Logger::Error("Error occured while opening metric file.");
+}
+
+void BaseObject::LoadFromName()
+{
+  if (get_name().empty())
+    return;
+  MetricGroup *m = METRIC->get_group(get_name());
+  if (!m)
+    return;
+  Load(*m);
 }
 
 void BaseObject::RunCommandByName(const std::string &event_name)
@@ -145,7 +437,7 @@ void BaseObject::RunCommand(const std::string &command, const std::string& value
     try
     {
       CommandArgs args(value);
-      it->second(this, args);
+      it->second(this, args, value);
     }
     catch (std::out_of_range& e)
     {
@@ -170,19 +462,19 @@ void BaseObject::DeleteAllCommand()
 
 void BaseObject::QueueCommand(const std::string &command)
 {
-  if (tween_.empty())
+  if (ani_.empty())
   {
-    std::cerr << "Warning: tried to queue command without tween.";
-    return;
-  }
-
-  // XXX: is it proper to execute command directly? refactoring necessary?
-  if (tween_.size() == 1)
+    //std::cerr << "Warning: tried to queue command without tween.";
+    //return;
     RunCommand(command);
-  tween_.back().commands = command;
+  }
+  else
+  {
+    ani_.back().SetCommand(command);
+  }
 }
 
-void BaseObject::LoadCommand(const std::string &name, const std::string &command)
+void BaseObject::AddCommand(const std::string &name, const std::string &command)
 {
   // Append command if already exist.
   auto it = commands_.find(name);
@@ -202,69 +494,30 @@ void BaseObject::LoadCommand(const std::string &name, const std::string &command
   }
 }
 
-void BaseObject::LoadCommand(const Metric& metric)
+/* @warn Load() methods automatically calls LoadCommand(). */
+void BaseObject::LoadCommand(const MetricGroup& metric)
 {
   // process event handler registering
   // XXX: is this code is good enough?
   for (auto it = metric.cbegin(); it != metric.cend(); ++it)
   {
     if (it->first.size() >= 5 /* XXX: 'On' prefix? */
-        && strnicmp(it->first.c_str(), "On", 2) == 0)
+      && strnicmp(it->first.c_str(), "On", 2) == 0)
     {
-      LoadCommand(it->first.substr(2), it->second);
+      AddCommand(it->first.substr(2), it->second);
     }
   }
 }
 
-void BaseObject::LoadCommandWithPrefix(const std::string &prefix, const Metric& metric)
+void BaseObject::LoadCommandWithPrefix(const std::string &prefix, const MetricGroup& metric)
 {
   for (auto it = metric.cbegin(); it != metric.cend(); ++it)
   {
     if (strnicmp(it->first.c_str(), prefix.c_str(), prefix.size()) == 0)
     {
-      LoadCommand(it->first.substr(prefix.size()), it->second);
+      AddCommand(it->first.substr(prefix.size()), it->second);
     }
   }
-}
-
-void BaseObject::LoadCommandWithNamePrefix(const Metric& metric)
-{
-  if (get_name().empty())
-    return;
-  std::string prefix = get_name() + "On";
-  LoadCommandWithPrefix(prefix, metric);
-}
-
-void BaseObject::AddCommand(const std::string &name, const std::string &command)
-{
-  LoadCommand(name, command);
-}
-
-void BaseObject::Load(const Metric& metric)
-{
-  if (metric.exist("zindex"))
-    draw_order_ = metric.get<int>("zindex");
-  if (metric.exist("lr2src"))
-    LoadFromLR2SRC(metric.get<std::string>("lr2src"));
-  if (metric.exist("_debug"))
-    debug_ = metric.get<std::string>("_debug");
-
-  LoadCommand(metric);
-}
-
-void BaseObject::LoadByText(const std::string &metric_text)
-{
-  Load(Metric(metric_text));
-}
-
-void BaseObject::LoadByName()
-{
-  if (get_name().empty())
-    return;
-  Metric *m = Setting::GetThemeMetricList().get_metric(get_name());
-  if (!m)
-    return;
-  Load(*m);
 }
 
 bool BaseObject::OnEvent(const EventMessage& msg)
@@ -273,83 +526,46 @@ bool BaseObject::OnEvent(const EventMessage& msg)
   return true;
 }
 
-void BaseObject::AddTweenState(const DrawProperty &draw_prop, uint32_t time_duration, int ease_type, bool loop)
+DrawProperty& BaseObject::GetLastFrame()
 {
-  tween_.emplace_back(TweenState{
-    draw_prop, time_duration, 0, 0, loop, ease_type
-    });
-}
-
-void BaseObject::SetTweenTime(int time_msec)
-{
-  auto tween_length = GetTweenLength();
-  if (tween_length > time_msec) return;
-  SetDeltaTweenTime(time_msec - tween_length);
-}
-
-void BaseObject::SetDeltaTweenTime(int time_msec)
-{
-  int easetype = EaseTypes::kEaseOut;
-  if (!tween_.empty())
-    easetype = tween_.back().ease_type;
-  tween_.push_back({
-    GetDestDrawProperty(),
-    (uint32_t)time_msec, 0, 0, false, easetype
-    });
-}
-
-void BaseObject::StopTween()
-{
-  tween_.clear();
-}
-
-uint32_t BaseObject::GetTweenLength() const
-{
-  uint32_t r = 0;
-  for (auto &t : tween_)
-    r += t.time_duration - t.time_eclipsed;
-  return r;
-}
-
-DrawProperty& BaseObject::GetDestDrawProperty()
-{
-  if (tween_.empty())
-    return current_prop_;
+  if (ani_.empty())
+    return frame_;
   else
-    return tween_.back().draw_prop;
+    return ani_.back().LastFrame();
 }
 
-DrawProperty& BaseObject::get_draw_property()
+DrawProperty& BaseObject::GetCurrentFrame()
 {
-  return current_prop_;
+  return frame_;
 }
 
 void BaseObject::SetX(int x)
 {
-  GetDestDrawProperty().pi.x = x;
+  float delta = x - GetLastFrame().pos.x;
+  GetLastFrame().pos.x += delta;
+  GetLastFrame().pos.z += delta;
 }
 
 void BaseObject::SetY(int y)
 {
-  GetDestDrawProperty().pi.y = y;
+  float delta = y - GetLastFrame().pos.y;
+  GetLastFrame().pos.y += delta;
+  GetLastFrame().pos.w += delta;
 }
 
 void BaseObject::SetWidth(int w)
 {
-  GetDestDrawProperty().w = w;
+  GetLastFrame().pos.z = GetLastFrame().pos.x + w;
 }
 
 void BaseObject::SetHeight(int h)
 {
-  GetDestDrawProperty().h = h;
+  GetLastFrame().pos.w = GetLastFrame().pos.y + h;
 }
 
 void BaseObject::SetOpacity(float opa)
 {
-  GetDestDrawProperty().aTL =
-    GetDestDrawProperty().aTR =
-    GetDestDrawProperty().aBL =
-    GetDestDrawProperty().aBR = opa;
+  GetLastFrame().color.a = opa;
 }
 
 void BaseObject::SetClip(bool clip)
@@ -359,23 +575,23 @@ void BaseObject::SetClip(bool clip)
 
 void BaseObject::SetPos(int x, int y)
 {
-  auto& p = GetDestDrawProperty();
-  p.pi.x = x;
-  p.pi.y = y;
+  SetX(x);
+  SetY(y);
 }
 
 void BaseObject::MovePos(int x, int y)
 {
-  auto& p = GetDestDrawProperty();
-  p.pi.x += x;
-  p.pi.y += y;
+  auto &p = GetLastFrame();
+  p.pos.x += x;
+  p.pos.y += y;
+  p.pos.z += x;
+  p.pos.w += y;
 }
 
 void BaseObject::SetSize(int w, int h)
 {
-  auto& p = GetDestDrawProperty();
-  p.w = w;
-  p.h = h;
+  SetWidth(w);
+  SetHeight(h);
 }
 
 void BaseObject::SetAlpha(unsigned a)
@@ -385,8 +601,8 @@ void BaseObject::SetAlpha(unsigned a)
 
 void BaseObject::SetAlpha(float a)
 {
-  auto& p = GetDestDrawProperty();
-  p.aBL = p.aBR = p.aTL = p.aTR = a;
+  auto& p = GetLastFrame();
+  p.color.a = a;
 }
 
 void BaseObject::SetRGB(unsigned r, unsigned g, unsigned b)
@@ -396,28 +612,28 @@ void BaseObject::SetRGB(unsigned r, unsigned g, unsigned b)
 
 void BaseObject::SetRGB(float r, float g, float b)
 {
-  auto& p = GetDestDrawProperty();
-  p.r = r;
-  p.g = g;
-  p.b = b;
+  auto& p = GetLastFrame();
+  p.color.r = r;
+  p.color.g = g;
+  p.color.b = b;
 }
 
 void BaseObject::SetScale(float x, float y)
 {
-  auto& p = GetDestDrawProperty();
-  p.pi.sx = x;
-  p.pi.sy = y;
+  auto& p = GetLastFrame();
+  p.scale.x = x;
+  p.scale.y = y;
 }
 
 void BaseObject::SetRotation(float x, float y, float z)
 {
-  auto& p = GetDestDrawProperty();
-  p.pi.rotx = x;
-  p.pi.roty = y;
-  p.pi.rotz = z;
+  auto& p = GetLastFrame();
+  p.rotate.x = x;
+  p.rotate.y = y;
+  p.rotate.z = z;
 }
 
-void BaseObject::SetRotationAsRadian(float x, float y, float z)
+void BaseObject::SetRotationAsDegree(float x, float y, float z)
 {
   SetRotation(
     glm::radians(x),
@@ -426,139 +642,150 @@ void BaseObject::SetRotationAsRadian(float x, float y, float z)
   );
 }
 
-void BaseObject::SetRotationCenter(int rot_center)
+void BaseObject::SetCenter(float x, float y)
 {
-  rot_center_ = rot_center;
+  auto& p = GetLastFrame();
+  p.align.x = x;
+  p.align.y = y;
 }
 
-void BaseObject::SetRotationCenterCoord(float x, float y)
+void BaseObject::SetCenter(int type)
 {
-  SetRotationCenter(-1);
-  auto& p = GetDestDrawProperty();
-  p.pi.tx = x;
-  p.pi.ty = y;
+  auto& p = GetLastFrame();
+  float px[] = { 0.5f,
+    1.0f,1.0f,1.0f,
+    0.5f,0.5f,0.5f,
+    0.0f,0.0f,0.0f
+  };
+  float py[] = { 0.5f,
+    0.0f, 0.5f, 1.0f,
+    0.0f, 0.5f, 1.0f,
+    0.0f, 0.5f, 1.0f,
+  };
+  p.align.x = px[type];
+  p.align.y = py[type];
 }
 
 void BaseObject::SetAcceleration(int acc)
 {
-  if (tween_.empty())
+  if (ani_.empty())
     return;
-  auto& t = tween_.back();
-  t.ease_type = acc;
+  ani_.back().SetEaseType(acc);
 }
 
-void BaseObject::SetLR2DST(
-  int time, int x, int y, int w, int h, int acc_type,
-  int a, int r, int g, int b, int blend, int filter, int angle,
-  int center)
+void BaseObject::SetLR2DST(const std::string &cmd)
 {
+#if USE_LR2_FEATURE == 1
   // DST specifies time information as the time of motion
   // So we need to calculate 'duration' of that motion.
 
-  // calculate previous tween's duration
-  if (!tween_.empty())
+  //int time, int x, int y, int w, int h, int acc_type,
+  //  int a, int r, int g, int b, int blend, int filter, int angle,
+  //  int center
+
+  int time_prev = 0;
+  CommandArgs cmds;
+  cmds.set_separator(';');
+  cmds.Set(cmd);
+  ani_.emplace_back(Animation(nullptr));
+  Animation &ani = ani_.back();
+
+  for (unsigned i = 0; i < cmds.size(); ++i)
   {
-    auto cur_motion_length = GetTweenLength();
-    // to prevent overflow bug
-    if (time < cur_motion_length)
-      time = cur_motion_length;
-    tween_.back().time_duration = time - cur_motion_length;
+    std::string v = cmds.Get<std::string>(i);
+    CommandArgs params(v, 20);
+    int time = params.Get<int>(1);
+    int x = params.Get<int>(2);
+    int y = params.Get<int>(3);
+    int w = params.Get<int>(4);
+    int h = params.Get<int>(5);
+    int lr2acc = params.Get<int>(6);
+    int a = params.Get<int>(7);
+    int r = params.Get<int>(8);
+    int g = params.Get<int>(9);
+    int b = params.Get<int>(10);
+    //int blend = params.Get<int>(11);
+    //int filter = params.Get<int>(12);
+    int angle = params.Get<int>(13);
+    int center = params.Get<int>(14);
+    int loop = params.Get<int>(15);
+    int acc = 0;
+    // timer/op code is ignored here.
+
+    // set attributes
+    DrawProperty f;
+    f.pos = Vector4{ x, y, x + w, y + h };
+    f.color = Vector4{ r, g, b, a };
+    f.rotate.z = glm::radians((float)angle);
+    f.scale = Vector2{ 1.0f, 1.0f };
+
+    switch (lr2acc)
+    {
+    case 0:
+      acc = EaseTypes::kEaseLinear;
+      break;
+    case 1:
+      acc = EaseTypes::kEaseIn;
+      break;
+    case 2:
+      acc = EaseTypes::kEaseOut;
+      break;
+    case 3:
+      acc = EaseTypes::kEaseInOut;
+      break;
+    }
+
+    // add new animation
+    ani.AddFrame(f, time, acc);
+
+    SetCenter(center);
+
+    // if first loop, then set loop.
+    if (i == 0 && loop > 0)
+      ani.SetLoop(loop);
   }
+#endif
+}
 
-  // make current tween
-  SetDeltaTweenTime(0);
-
-  SetPos(x, y);
-  SetSize(w, h);
-  SetRGB((unsigned)r, (unsigned)g, (unsigned)b);
-  SetAlpha((unsigned)a);
-  SetRotationAsRadian(0, 0, -angle);
-  SetRotationCenter(center);
-
-  switch (acc_type)
+void BaseObject::SetVisibleFlag(const std::string& group0, const std::string& group1,
+  const std::string& group2, const std::string& group3)
+{
+  ignore_visible_group_ = false;
+  if (!group0.empty())
   {
-  case 0:
-    SetAcceleration(EaseTypes::kEaseLinear);
-    break;
-  case 1:
-    SetAcceleration(EaseTypes::kEaseIn);
-    break;
-  case 2:
-    SetAcceleration(EaseTypes::kEaseOut);
-    break;
-  case 3:
-    SetAcceleration(EaseTypes::kEaseInOut);
-    break;
+    KeyData<int> k1 = KEYPOOL->GetInt(group0);
+    visible_flag_[0] = &*k1;
   }
-
-  // blend parameter should set by Sprite command.
-  if (blend != 1)
-    QueueCommand("blend:" + std::to_string(blend));
-
-  // If first tween and starting time is not zero,
-  // then add dummy tween (invisible).
-  if (tween_.size() == 1 && time > 0)
+  if (!group1.empty())
   {
-    SetDeltaTweenTime(0);
-    // dummy tween should invisible
-    // XXX: tween don't support hide/show, so kind of trick - set alpha as zero
-    //SetAlpha(.0f);
-    tween_.front().ease_type = EaseTypes::kEaseNone;
-    tween_.front().time_duration = time;
+    KeyData<int> k2 = KEYPOOL->GetInt(group1);
+    visible_flag_[1] = &*k2;
+  }
+  if (!group2.empty())
+  {
+    KeyData<int> k3 = KEYPOOL->GetInt(group2);
+    visible_flag_[2] = &*k3;
+  }
+  if (!group3.empty())
+  {
+    KeyData<int> k4 = KEYPOOL->GetInt(group3);
+    visible_flag_[3] = &*k4;
   }
 }
 
-void BaseObject::SetLR2DSTCommand(const std::string &lr2dst)
+void BaseObject::UnsetVisibleFlag()
 {
-  CommandArgs args(lr2dst);
-  SetLR2DSTCommandInternal(args);
-}
-
-void BaseObject::SetLR2DSTCommandInternal(const CommandArgs &args)
-{
-  Show();
-  tween_.clear();
-  CommandArgs la;
-  la.set_separator('|');
-  for (size_t i = 1; i < args.size(); ++i)
-  {
-    la.Set(args.Get<std::string>(i));
-    SetLR2DST(
-      la.Get<int>(0), /* time */
-      la.Get<int>(1), la.Get<int>(2), la.Get<int>(3), la.Get<int>(4), /* xywh */
-      la.Get<int>(5), /* acc_type */
-      la.Get<int>(6), la.Get<int>(7), la.Get<int>(8), la.Get<int>(9), /* argb */
-      la.Get<int>(10), la.Get<int>(11), la.Get<int>(12), /* blend, filter, angle */
-      la.Get<int>(13) /* center */
-    );
-  }
-  la.Set(args.Get<std::string>(0));
-  SetVisibleGroup(
-    la.Get<int>(0), la.Get<int>(1), la.Get<int>(2)
-  );
-  SetTweenLoopTime(la.Get<int>(3));
-}
-
-void BaseObject::SetVisibleGroup(int group0, int group1, int group2)
-{
-  visible_group_[0] = group0;
-  visible_group_[1] = group1;
-  visible_group_[2] = group2;
-}
-
-void BaseObject::SetIgnoreVisibleGroup(bool ignore)
-{
-  ignore_visible_group_ = ignore;
+  ignore_visible_group_ = true;
 }
 
 void BaseObject::Hide()
 {
-  current_prop_.display = false;
+  visible_ = false;
 }
 
 void BaseObject::Show()
 {
-  current_prop_.display = true;
+  visible_ = true;
 }
 
 void BaseObject::SetDrawOrder(int order)
@@ -571,24 +798,6 @@ int BaseObject::GetDrawOrder() const
   return draw_order_;
 }
 
-void BaseObject::SetAllTweenPos(int x, int y)
-{
-  for (auto &t : tween_)
-  {
-    t.draw_prop.pi.x = x;
-    t.draw_prop.pi.y = y;
-  }
-}
-
-void BaseObject::SetAllTweenScale(float w, float h)
-{
-  for (auto &t : tween_)
-  {
-    t.draw_prop.w *= w;
-    t.draw_prop.h *= h;
-  }
-}
-
 void BaseObject::SetText(const std::string &value) {}
 
 void BaseObject::SetNumber(int number) { SetText(std::to_string(number)); }
@@ -597,10 +806,6 @@ void BaseObject::SetNumber(double number) { SetText(std::to_string(number)); }
 
 void BaseObject::Refresh() {}
 
-void BaseObject::SetResourceId(int id) { resource_id_ = id; }
-
-int BaseObject::GetResourceId() const { return resource_id_; }
-
 void BaseObject::SetFocusable(bool is_focusable)
 {
   is_focusable_ = is_focusable;
@@ -608,10 +813,9 @@ void BaseObject::SetFocusable(bool is_focusable)
 
 bool BaseObject::IsEntered(float x, float y)
 {
-  x -= current_prop_.pi.x + current_prop_.x;
-  y -= current_prop_.pi.y + current_prop_.y;
-  return (x >= 0 && x <= current_prop_.w
-       && y >= 0 && y <= current_prop_.h);
+  // TODO: in case of rotation?
+  return (x >= frame_.pos.x && x <= frame_.pos.z
+       && y >= frame_.pos.y && y <= frame_.pos.w);
 }
 
 void BaseObject::SetHovered(bool is_hovered)
@@ -659,175 +863,61 @@ void BaseObject::Click()
   RunCommandByName("click");
 }
 
-void BaseObject::SetBlend(int blend_mode) { blending_ = blend_mode; }
-
-// milisecond
-// XXX: whole logic is quite nasty, need to rebuild it?
-void BaseObject::UpdateTween(float delta_ms)
-{
-  if (!IsTweening())
-    return;
-
-  // time process
-  while (!tween_.empty())
-  {
-    //
-    // kind of trick: if single tween with loop,
-    // It's actually useless. turn off loop attr.
-    //
-    // kind of trick: if current tween is last one,
-    // Do UpdateTween here. We expect last tween state
-    // should be same as current tween in that case.
-    //
-    // By this logic, two or more tweens exist
-    // if we exit this loop with delta_ms <= 0.
-    //
-    if (tween_.size() == 1)
-    {
-      auto &t = tween_.front();
-      // XXX: copy except display property. need to be fixed later.
-      bool _disp = current_prop_.display;
-      current_prop_ = t.draw_prop;
-      current_prop_.display = _disp;
-      RunCommand(t.commands);
-      tween_.clear();
-      return;
-    }
-
-    //
-    // actual loop condition
-    //
-    if (delta_ms <= 0)
-      break;
-
-    TweenState &t = tween_.front();
-    if (delta_ms + t.time_eclipsed >= t.time_duration)  // tween end
-    {
-      delta_ms -= t.time_duration - t.time_eclipsed;
-
-      // trigger next tween event if exist
-      auto next = std::next(tween_.begin());
-      if (next != tween_.end())
-        RunCommand(next->commands);
-
-      // tween might be finished early due to RunCommand.
-      if (tween_.empty())
-        return;
-
-      // loop tween by push it again.
-      // -> use more efficient method splice
-      if (t.loop)
-      {
-        t.time_eclipsed = t.time_loopstart;
-        tween_.splice(tween_.end(), tween_, tween_.begin());
-      }
-      else tween_.pop_front();
-    }
-    else  // ongoing tween
-    {
-      t.time_eclipsed += delta_ms;
-      delta_ms = 0;  // actually same as exiting tween
-    }
-  }
-
-  if (tween_.empty())
-    return;
-
-  //
-  // Now calculate DrawState
-  //
-  DrawProperty& ti = current_prop_;
-  const TweenState &t1 = tween_.front();
-  const TweenState &t2 = *std::next(tween_.begin());
-
-  // XXX: is display property necessary?
-  //ti.display = t1.draw_prop.display;
-
-  // If not display, we don't need to calculate further away.
-  if (ti.display)
-  {
-    float r = (float)t1.time_eclipsed / t1.time_duration;
-    MakeTween(ti, t1.draw_prop, t2.draw_prop, r, t1.ease_type);
-
-    // if rotation center need to be calculated
-    if (rot_center_ >= 0 && rot_center_ < 10)
-    {
-      const float rel_pos_arr_x[] =
-      { 0.5f, 0.f, 0.5f, 1.0f, 0.f, 0.5f, 1.0f, 0.f, 0.5f, 1.0f };
-      const float rel_pos_arr_y[] =
-      { 0.5f, 1.0f, 1.0f, 1.0f, 0.5f, 0.5f, 0.5f, 0.f, 0.f, 0.f };
-      const float
-        rel_pos_x = rel_pos_arr_x[rot_center_],
-        rel_pos_y = rel_pos_arr_y[rot_center_];
-      ti.pi.tx = ti.w * rel_pos_x;
-      ti.pi.ty = ti.h * rel_pos_y;
-    }
-  }
-}
-
-/* This method should be called just after all fixed tween is appended. */
-void BaseObject::SetTweenLoopTime(int time_msec)
-{
-  // positive or zero : loop tween since specified time
-  // -1: tween and hide
-  // otherwise: do not loop
-  if (time_msec == -1)
-  {
-    QueueCommand("hide");
-  }
-  else if (time_msec >= 0)
-  {
-    // all tweens should loop after a tween is marked to be looped.
-    bool loopstart = false;
-
-    for (auto& t : tween_)
-    {
-      if (loopstart || time_msec < t.time_duration)
-      {
-        t.time_loopstart = time_msec;
-        t.loop = true;
-        time_msec = 0;
-        loopstart = true;
-      }
-      else {
-        t.time_loopstart = 0;
-        t.loop = false;
-        time_msec -= t.time_duration;
-      }
-    }
-  }
-}
-
 bool BaseObject::IsVisible() const
 {
-  if (!ignore_visible_group_ &&
-    (Script::getInstance().GetFlag(visible_group_[0]) == 0
-    || Script::getInstance().GetFlag(visible_group_[1]) == 0
-    || Script::getInstance().GetFlag(visible_group_[2]) == 0
-    || Script::getInstance().GetFlag(visible_group_[3]) == 0))
+  if (!ignore_visible_group_ && (*visible_flag_[0] == 0
+                              || *visible_flag_[1] == 0
+                              || *visible_flag_[2] == 0
+                              || *visible_flag_[3] == 0))
     return false;
 
-  return current_prop_.display/* &&
+  return visible_/* &&
     current_prop_.aBL > 0 &&
     current_prop_.aBR > 0 &&
     current_prop_.aTL > 0 &&
     current_prop_.aTR > 0*/;
 }
 
+void BaseObject::SetDeltaTime(double time_msec)
+{
+  ani_.back().DuplicateFrame(time_msec);
+}
+
+void BaseObject::Stop()
+{
+  ani_.clear();
+}
+
+double BaseObject::GetTweenLength() const
+{
+  if (ani_.empty()) return 0;
+  else ani_.back().GetTweenLength();
+}
+
 bool BaseObject::IsTweening() const
 {
-  return tween_.size() > 0;
+  return ani_.size() > 0;
 }
 
 
 // milisecond
 void BaseObject::Update(float delta)
 {
-  UpdateTween(delta);
+  // update tweening
+  double t = delta;
+  std::string cmd;
+  while (!ani_.empty() && t > 0)
+  {
+    auto &ani = ani_.front();
+    ani.Update(t, cmd, &frame_);
+    if (ani.is_stopped())
+      ani_.pop_front();
+  }
+
   doUpdate(delta);
   for (auto* p : children_)
     p->Update(delta);
-  doUpdateAfter(delta);
+  doUpdateAfter();
 }
 
 void BaseObject::Render()
@@ -835,17 +925,34 @@ void BaseObject::Render()
   if (!IsVisible())
     return;
 
-  Graphic::PushMatrix();
+  float w = frame_.pos.z - frame_.pos.x;
+  float h = frame_.pos.w - frame_.pos.y;
 
   // set matrix
-  Graphic::getInstance().SetMatrix(get_draw_property().pi);
+  GRAPHIC->PushMatrix();
+  GRAPHIC->Translate(Vector3{
+    frame_.pos.x + w * frame_.align.x,
+    frame_.pos.y + h * frame_.align.y,
+    0 });
+  if (frame_.rotate.x != 0 && frame_.rotate.y != 0 && frame_.rotate.z != 0)
+    GRAPHIC->Rotate(frame_.rotate);
+  GRAPHIC->Scale(Vector3{ frame_.scale.x, frame_.scale.y, 1.0f });
+  if (frame_.align.x != 0.5f || frame_.align.y != 0.5f)
+  {
+    GRAPHIC->Translate(Vector3{
+      -frame_.align.x * w,
+      -frame_.align.y * h,
+      0 });
+  }
+  // TODO: texture translate
 
-  // clip implementation (prevent content overflowing)
-  // - render to texture first, and render the texture to onscreen.
+  // TODO: clip implementation (prevent content overflowing)
+#if 0
   if (do_clipping_)
   {
     Graphic::SetRenderToTexture();
   }
+#endif
 
   // render vertices
   doRender();
@@ -855,9 +962,7 @@ void BaseObject::Render()
 
   doRenderAfter();
 
-  R_ASSERT_FATAL(!Graphic::is_vertex_buffer_remains(),
-    "Vertex buffer should be flushed all after BaseObject::doRenderAfter()");
-
+#if 0
   // clip implementation (rendering texture)
   if (do_clipping_)
   {
@@ -867,160 +972,33 @@ void BaseObject::Render()
     FillVertexInfo(Graphic::get_vertex_buffer());
     Graphic::RenderQuad();
   }
+#endif
 
-  Graphic::PopMatrix();
+  GRAPHIC->PopMatrix();
 }
 
-void BaseObject::FillVertexInfo(VertexInfo *vi_)
+void BaseObject::FillVertexInfo(VertexInfo *vi)
 {
-  const DrawProperty &ti = current_prop_;
+  const DrawProperty &f = GetCurrentFrame();
 
-  float x1, y1, x2, y2;
+  vi[0].p = Vector3{ f.pos.x, f.pos.y, 0 };
+  vi[0].c = f.color;
 
-  x1 = ti.x;
-  y1 = ti.y;
-  x2 = x1 + ti.w;
-  y2 = y1 + ti.h;
+  vi[0].p = Vector3{ f.pos.z, f.pos.y, 0 };
+  vi[1].c = f.color;
 
-  vi_[0].x = x1;
-  vi_[0].y = y1;
-  vi_[0].z = 0;
-  vi_[0].r = ti.r;
-  vi_[0].g = ti.g;
-  vi_[0].b = ti.b;
-  vi_[0].a = ti.aTL;
+  vi[0].p = Vector3{ f.pos.z, f.pos.w, 0 };
+  vi[2].c = f.color;
 
-  vi_[1].x = x2;
-  vi_[1].y = y1;
-  vi_[1].z = 0;
-  vi_[1].r = ti.r;
-  vi_[1].g = ti.g;
-  vi_[1].b = ti.b;
-  vi_[1].a = ti.aBL;
-
-  vi_[2].x = x2;
-  vi_[2].y = y2;
-  vi_[2].z = 0;
-  vi_[2].r = ti.r;
-  vi_[2].g = ti.g;
-  vi_[2].b = ti.b;
-  vi_[2].a = ti.aBR;
-
-  vi_[3].x = x1;
-  vi_[3].y = y2;
-  vi_[3].z = 0;
-  vi_[3].r = ti.r;
-  vi_[3].g = ti.g;
-  vi_[3].b = ti.b;
-  vi_[3].a = ti.aTR;
+  vi[0].p = Vector3{ f.pos.x, f.pos.w, 0 };
+  vi[3].c = f.color;
 }
 
 void BaseObject::doUpdate(float delta) {}
 void BaseObject::doRender() {}
-void BaseObject::doUpdateAfter(float delta) {}
+void BaseObject::doUpdateAfter() {}
 void BaseObject::doRenderAfter() {}
 
-
-#define TWEEN_ATTRS \
-  TWEEN(x) \
-  TWEEN(y) \
-  TWEEN(w) \
-  TWEEN(h) \
-  TWEEN(r) \
-  TWEEN(g) \
-  TWEEN(b) \
-  TWEEN(aTL) \
-  TWEEN(aTR) \
-  TWEEN(aBR) \
-  TWEEN(aBL) \
-  TWEEN(sx) \
-  TWEEN(sy) \
-  TWEEN(sw) \
-  TWEEN(sh) \
-  TWEEN(pi.rotx) \
-  TWEEN(pi.roty) \
-  TWEEN(pi.rotz) \
-  TWEEN(pi.tx) \
-  TWEEN(pi.ty) \
-  TWEEN(pi.x) \
-  TWEEN(pi.y) \
-  TWEEN(pi.sx) \
-  TWEEN(pi.sy) \
-
-
-void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
-  double r, int ease_type)
-{
-  switch (ease_type)
-  {
-  case EaseTypes::kEaseLinear:
-  {
-#define TWEEN(attr) \
-  ti.attr = t1.attr * (1 - r) + t2.attr * r;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  case EaseTypes::kEaseIn:
-  {
-    // use cubic function
-    r = r * r * r;
-#define TWEEN(attr) \
-  ti.attr = t1.attr * (1 - r) + t2.attr * r;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  case EaseTypes::kEaseOut:
-  {
-    // use cubic function
-    r = 1 - r;
-    r = r * r * r;
-    r = 1 - r;
-#define TWEEN(attr) \
-  ti.attr = t1.attr * (1 - r) + t2.attr * r;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  case EaseTypes::kEaseInOut:
-  {
-    // use cubic function
-    r = 2 * r - 1;
-    r = r * r * r;
-    r = 0.5f + r / 2;
-#define TWEEN(attr) \
-  ti.attr = t1.attr * (1 - r) + t2.attr * r;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  case EaseTypes::kEaseNone:
-  default:
-  {
-#define TWEEN(attr) \
-  ti.attr = t1.attr;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  }
-}
-
-void BaseObject::LoadFromLR2SRC(const std::string &cmd)
-{
-  /* implemented later */
-}
 
 /* ---------------------------- Command related */
 
@@ -1029,43 +1007,43 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
   static CommandFnMap cmdfnmap_;
   if (cmdfnmap_.empty())
   {
-    static auto fn_X = [](void *o, CommandArgs& args) {
+    static auto fn_X = [](void *o, CommandArgs& args, const std::string &) {
       std::string v = args.Get<std::string>(0);
       auto *obj = static_cast<BaseObject*>(o);
       int vi = 0;
       // TODO: change it to lua
       if (v == "CENTER_OBJECT")
-        vi = (Graphic::getInstance().width() - obj->get_draw_property().w) / 2;
+        vi = (GRAPHIC->width() - GetWidth(obj->GetLastFrame().pos)) / 2;
       obj->SetX(vi);
     };
-    static auto fn_Y = [](void *o, CommandArgs& args) {
+    static auto fn_Y = [](void *o, CommandArgs& args, const std::string &) {
       std::string v = args.Get<std::string>(0);
       auto *obj = static_cast<BaseObject*>(o);
       int vi = 0;
       // TODO: change it to lua
       if (v == "CENTER_OBJECT")
-        vi = (Graphic::getInstance().height() - obj->get_draw_property().h) / 2;
+        vi = (GRAPHIC->height() - GetHeight(obj->GetLastFrame().pos)) / 2;
       obj->SetY(vi);
     };
-    static auto fn_W = [](void *o, CommandArgs& args) {
+    static auto fn_W = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetWidth(args.Get<int>(0));
     };
-    static auto fn_H = [](void *o, CommandArgs& args) {
+    static auto fn_H = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetHeight(args.Get<int>(0));
     };
-    static auto fn_Pos = [](void *o, CommandArgs& args) {
+    static auto fn_Pos = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetPos(args.Get<int>(0), args.Get<int>(1));
     };
-    static auto fn_Scale = [](void *o, CommandArgs& args) {
+    static auto fn_Scale = [](void *o, CommandArgs& args, const std::string &) {
       if (args.size() == 1)
         static_cast<BaseObject*>(o)->SetScale(args.Get<float>(0), args.Get<float>(0));
       else
         static_cast<BaseObject*>(o)->SetScale(args.Get<float>(0), args.Get<float>(1));
     };
-    static auto fn_Opacity = [](void *o, CommandArgs& args) {
+    static auto fn_Opacity = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetOpacity(args.Get<float>(0));
     };
-    static auto fn_acc = [](void *o, CommandArgs& args) {
+    static auto fn_acc = [](void *o, CommandArgs& args, const std::string &) {
       if (args.size() == 0)
         return;
       std::string v = args.Get<std::string>(0);
@@ -1086,48 +1064,42 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
         }
       }
     };
-    static auto fn_time = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->SetDeltaTweenTime(args.Get<int>(0));
+    static auto fn_time = [](void *o, CommandArgs& args, const std::string &) {
+      static_cast<BaseObject*>(o)->SetDeltaTime(args.Get<int>(0));
     };
-    static auto fn_stop = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->StopTween();
+    static auto fn_stop = [](void *o, CommandArgs& args, const std::string &) {
+      static_cast<BaseObject*>(o)->Stop();
     };
-    static auto fn_SetLR2DST = [](void *o, CommandArgs& args) {
+    static auto fn_SetLR2DST = [](void *o, CommandArgs& args, const std::string &v) {
       auto *b = static_cast<BaseObject*>(o);
-      b->SetLR2DSTCommandInternal(args);
+      ((BaseObject*)o)->SetLR2DST(v);
     };
-    static auto fn_Show = [](void *o, CommandArgs& args) {
+    static auto fn_Show = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->Show();
     };
-    static auto fn_Hide = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->StopTween();
+    static auto fn_Hide = [](void *o, CommandArgs& args, const std::string &) {
+      static_cast<BaseObject*>(o)->Stop();
       static_cast<BaseObject*>(o)->Hide();
     };
-    static auto fn_Loop = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->SetTweenLoopTime((uint32_t)args.Get<int>(0));
-    };
-    static auto fn_Text = [](void *o, CommandArgs& args) {
+    static auto fn_Text = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetText(args.Get<std::string>(0));
     };
-    static auto fn_Number = [](void *o, CommandArgs& args) {
+    static auto fn_Number = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetNumber(args.Get<int>(0));
     };
-    static auto fn_NumberF = [](void *o, CommandArgs& args) {
+    static auto fn_NumberF = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetNumber(args.Get<double>(0));
     };
-    static auto fn_Refresh = [](void *o, CommandArgs& args) {
+    static auto fn_Refresh = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->Refresh();
     };
-    static auto fn_resid = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->SetResourceId(args.Get<int>(0));
+    static auto fn_name = [](void *o, CommandArgs& args, const std::string &) {
+      static_cast<BaseObject*>(o)->set_name(args.Get<std::string>(0));
     };
-    static auto fn_blend = [](void *o, CommandArgs& args) {
-      static_cast<BaseObject*>(o)->SetBlend(args.Get<int>(0));
-    };
-    static auto fn_Focusable = [](void *o, CommandArgs& args) {
+    static auto fn_Focusable = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetFocusable(args.Get<int>(0));
     };
-    static auto fn_SendEvent = [](void *o, CommandArgs& args) {
+    static auto fn_SendEvent = [](void *o, CommandArgs& args, const std::string &) {
       EventManager::SendEvent(args.Get<std::string>(0));
     };
     cmdfnmap_["x"] = fn_X;
@@ -1143,18 +1115,52 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     cmdfnmap_["lr2cmd"] = fn_SetLR2DST;
     cmdfnmap_["show"] = fn_Show;
     cmdfnmap_["hide"] = fn_Hide;
-    cmdfnmap_["loop"] = fn_Loop;
-    cmdfnmap_["text"] = fn_Loop;
+    cmdfnmap_["text"] = fn_Text;
     cmdfnmap_["number"] = fn_Number;
     cmdfnmap_["numberf"] = fn_NumberF;
     cmdfnmap_["refresh"] = fn_Refresh;
-    cmdfnmap_["resid"] = fn_resid;
-    cmdfnmap_["blend"] = fn_blend;
+    cmdfnmap_["name"] = fn_name;
     cmdfnmap_["focusable"] = fn_Focusable;
     cmdfnmap_["sendevent"] = fn_SendEvent;
   }
 
   return cmdfnmap_;
+}
+
+}
+
+#include "Sprite.h"
+#include "object/Text.h"
+
+namespace rhythmus
+{
+
+BaseObject* CreateObject(const MetricGroup &m)
+{
+  std::string type;
+  BaseObject *object = nullptr;
+  m.get_safe("type", type);
+  if (type == "image" || type == "sprite")
+  {
+    object = new Sprite();
+  }
+  else if (type == "text")
+  {
+    object = new Text();
+  }
+  else if (type == "slider")
+  {
+
+  }
+  else if (type == "line")
+  {
+
+  }
+
+  if (object)
+    object->Load(m);
+
+  return object;
 }
 
 }

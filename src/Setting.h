@@ -12,6 +12,7 @@
 #pragma once
 
 #include "Error.h"
+#include "config.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -31,27 +32,71 @@ template <typename T>
 std::string ConvertToString(const T& dst);
 
 /*
- * @brief Read-only key-value theme properties used for scene elements
+ * @brief   Key-value properties used for setting object property.
  *
- * @params exist bool
- * @params get value
- * @params set value
- * @params set_default set value if not exist (set default value)
+ * @params  exist bool
+ * @params  get value
+ * @params  set value
+ * @params  set_default set value if not exist (set default value)
+ *
+ * @warn    Key cannot be duplicated in a MetricGroup (overwritten)
+ *          But MetricGroups can be duplicated.
+ *          You can iterate them with group_begin() / group_end() method.
+ *
+ * @usage
+ * Suppose there is 'Setting' MetricGroup and 'debug' int attribute exists.
+ * To get children property, you can use one of these methods:
+ *
+ * 1.
+ * metric.get<int>("Setting.debug");
+ *
+ * 2.
+ * auto &metric_setting = metric.get_group("Setting");
+ * metric_setting.get<int>("debug");
+ *
+ *
+ * Metric is read-only object. It is not supposed to be saved.
+ * So we don't provide save method.
  */
-class Metric
+class MetricGroup
 {
 public:
-  Metric();
-  Metric(const std::string &metric_text);
-  ~Metric();
+  MetricGroup();
+  MetricGroup(const std::string &name);
+  ~MetricGroup();
+
+  const std::string &name() const;
+  void set_name(const std::string &name);
+
+  bool Load(const std::string &path);
+  bool LoadFromXml(const std::string &path);
+  bool LoadFromIni(const std::string &path);
+  bool LoadFromLR2Metric(const std::string &path);
+  bool LoadFromLR2SoundMetric(const std::string &path);
 
   /* set metric from text. e.g. (attr):(value);(attr):(value) ... */
   void SetFromText(const std::string &metric_text);
 
   bool exist(const std::string &key) const;
 
+  void clear();
+
+  // @warn may contain duplicated group.
+  MetricGroup& add_group(const std::string &group_name);
+
+  // @warn lastest used group is returned.
+  MetricGroup* get_group(const std::string &group_name);
+  const MetricGroup* get_group(const std::string &group_name) const;
+
   template <typename T>
   T get(const std::string &key) const;
+  const std::string &get_str(const std::string &key) const;
+
+  bool get_safe(const std::string &key, std::string &v) const;
+  bool get_safe(const std::string &key, int &v) const;
+  bool get_safe(const std::string &key, double &v) const;
+  bool get_safe(const std::string &key, float &v) const;
+  bool get_safe(const std::string &key, bool &v) const;
 
   void set(const std::string &key, const std::string &v);
   void set(const std::string &key, const char *v);
@@ -66,45 +111,22 @@ public:
   iterator end();
   const_iterator cend() const;
 
+  typedef std::vector<MetricGroup>::iterator group_iterator;
+  typedef std::vector<MetricGroup>::const_iterator const_group_iterator;
+  group_iterator group_begin();
+  group_iterator group_end();
+  const_group_iterator group_cbegin() const;
+  const_group_iterator group_cend() const;
+
 private:
   void resolve_fallback(const std::string &key);
+  std::string name_;
+
+  // attributes. may not be duplicated.
   std::map<std::string, std::string> attr_;
-};
 
-class MetricList
-{
-public:
-  void ReadMetricFromFile(const std::string &filepath);
-  void Clear();
-
-  bool exist(const std::string &group, const std::string &key) const;
-
-  /* get metric considering fallback. */
-  const Metric *get_metric(const std::string &group) const;
-  Metric *get_metric(const std::string &group);
-  Metric *create_metric(const std::string &group);
-  void copy_metric(const std::string &name_from, const std::string &name_to);
-
-  template <typename T>
-  T get(const std::string &group, const std::string &key) const
-  {
-    auto *m = get_metric(group);
-    R_ASSERT(m, "Metric group '" + group + "' is not found.");
-    return m->get<T>(key);
-  }
-
-  void set(const std::string &group, const std::string &key, const std::string &v);
-  void set(const std::string &group, const std::string &key, const char *v);
-  void set(const std::string &group, const std::string &key, int v);
-  void set(const std::string &group, const std::string &key, double v);
-  void set(const std::string &group, const std::string &key, bool v);
-
-private:
-  std::map<std::string, Metric> metricmap_;
-
-  void ReadLR2Metric(const std::string &filepath);
-  void ReadLR2SS(const std::string &filepath);
-  void ReadXml(const std::string &filepath);
+  // children groups. can be duplicated.
+  std::vector<MetricGroup> children_;
 };
 
 class Option
@@ -234,7 +256,7 @@ public:
   ~OptionList();
 
   bool LoadFromFile(const std::string &filepath);
-  void LoadFromMetrics(const Metric &metric);
+  void LoadFromMetrics(const MetricGroup &metric);
 
   /* @brief read only option value from file */
   bool ReadFromFile(const std::string &filepath);
@@ -245,7 +267,7 @@ public:
   Option *GetOption(const std::string &key) const;
   Option &SetOption(const std::string &key, const std::string &optionstr);
   Option &SetOption(const std::string &key, Option *option);
-  void SetOptionFromMetric(Metric *metric);
+  void AddOptionFromMetric(MetricGroup *metric);
   void DeleteOption(const std::string &key);
   void Clear();
 
@@ -255,6 +277,16 @@ public:
     Option *option = GetOption(key);
     R_ASSERT(option);
     return option->value<T>();
+  }
+
+  template <typename T>
+  bool GetValueSafe(const std::string &key, T& value) const
+  {
+    Option *option = GetOption(key);
+    if (!option)
+      return false;
+    value = option->value<T>();
+    return true;
   }
 
   template <typename T>
@@ -269,34 +301,108 @@ private:
   std::map<std::string, Option*> options_;
 };
 
+/* @brief Preference element for set/get value with type. */
+template <typename T>
+class Preference
+{
+public:
+  Preference() : is_static_(false) {};
+  Preference(const T& default_value) : v_(default_value), is_static_(false) {};
+  Preference(const T& default_value, const std::string &desc, const std::string &constraint, bool is_static)
+    : v_(default_value), desc_(desc), constraint_(constraint), is_static_(is_static) {};
+  T& operator*() { return v_; }
+  const T& operator*() const { return v_; }
+
+  const void set_desc(const std::string &v) { desc_ = v; }
+  const void set_constraint(const std::string &v) { constraint_ = v; }
+  const std::string &get_desc() { return desc_; }
+  const std::string &get_constraint() { return constraint_; }
+  bool is_static() const { return is_static_; }
+
+private:
+  T v_;
+  std::string desc_;        // description of preference
+  std::string constraint_;  // constraint of preference (used by option class)
+  bool is_static_;          // is static preference (which means irremovable)
+};
+
+/* @brief Contains multiple preference element and  */
+class PreferenceList
+{
+public:
+  virtual ~PreferenceList();
+
+  void AddPreferenceInt(const std::string &key, Preference<int> *pf);
+  void AddPreferenceFloat(const std::string &key, Preference<float> *pf);
+  void AddPreferenceString(const std::string &key, Preference<std::string> *pf);
+  void AddPreferenceFile(const std::string &key, Preference<std::string> *pf);
+
+  Preference<int>* GetPreferenceInt(const std::string &key);
+  Preference<float>* GetPreferenceFloat(const std::string &key);
+  Preference<std::string>* GetPreferenceString(const std::string &key);
+  Preference<std::string>* GetPreferenceFile(const std::string &key);
+
+  void Load(const std::string &path);
+  void Load(const MetricGroup &m);
+  bool Save(const std::string &path);
+
+  // clear all preference except static preference.
+  void Clear();
+
+protected:
+  std::map<std::string, Preference<int>*> pref_i_;
+  std::map<std::string, Preference<float>*> pref_f_;
+  std::map<std::string, Preference<std::string>*> pref_s_;
+  std::map<std::string, Preference<std::string>*> pref_file_;
+};
+
+/* @brief Preference for global use. */
+class SystemPreference : public PreferenceList
+{
+public:
+  SystemPreference();
+
+  Preference<std::string> resolution;
+
+  Preference<int> sound_buffer_size;
+  Preference<int> volume;
+
+  Preference<int> gamemode;
+  Preference<int> logging;
+
+  Preference<std::string> soundset;
+  Preference<std::string> theme;
+  Preference<std::string> theme_select;
+  Preference<std::string> theme_decide;
+  Preference<std::string> theme_play_7key;
+  Preference<std::string> theme_result;
+  Preference<std::string> theme_courseresult;
+
+  Preference<int> select_sort_type;
+  Preference<int> select_difficulty_mode;
+};
 
 /* @brief Container for Option, ThemeOption, and ThemeMetrics. */
 class Setting
 {
 public:
-  static void ReadAll();
-  static void ClearAll();
-  static void ReloadAll();
-  static void SaveAll();
-
-  static OptionList &GetSystemSetting();
-  static OptionList &GetThemeSetting();
-  static MetricList &GetThemeMetricList();
+  static void Initialize();
+  static void Cleanup();
+  static void Reload();
+  static void Save();
 
 private:
   /* static class. */
   Setting();
 };
 
-/* TODO: move these constants to game module? */
-
-constexpr size_t kMaxPlaySession = 4;
-constexpr size_t kMaxLaneCount = 16;
-
 /* @brief Input setting for play. */
 struct KeySetting
 {
   int keycode_per_track_[kMaxLaneCount][4];
 };
+
+extern SystemPreference *PREFERENCE;
+extern MetricGroup      *METRIC;
 
 }

@@ -1,11 +1,19 @@
 #include "Font.h"
 #include "SceneManager.h"
+#include "Setting.h"
+#include "Image.h"
 #include "Util.h"
 #include "rparser.h"  /* rutil Text encoding to UTF32 */
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_STROKER_H
 #include "common.h"
+#include "config.h"
+
+#if USE_LR2_FONT == 1
+#include "LR2/exdxa.h"
+#include "LR2/LR2JIS.h"
+#endif
 
 namespace rhythmus
 {
@@ -26,28 +34,20 @@ inline uint32_t HexToUint(const char *hex)
   return (uint32_t)strtoll(hex, NULL, 16);
 }
 
-FontAttributes::FontAttributes()
-  : height(10), baseline_offset(0), color(0xFF000000), outline_width(0), outline_color(0x00000000)
+
+void ClearFontAttribute(FontAttribute &fontattr)
 {
-  memset(&tex, 0, sizeof(FontFillTexture));
-  memset(&outline_tex, 0, sizeof(FontFillTexture));
+  fontattr.name.clear();
+  fontattr.height = 10;
+  fontattr.baseline_offset = 0;
+  fontattr.color = 0xFF000000;
+  fontattr.outline_width = 0;
+  fontattr.outline_color = 0x00000000;
+  memset(&fontattr.tex, 0, sizeof(FontFillBitmap));
+  memset(&fontattr.outline_tex, 0, sizeof(FontFillBitmap));
 }
 
-void FontAttributes::SetSize(int size)
-{
-  height = size * 4;
-}
-
-void FontAttributes::SetPath(const std::string &path)
-{
-  /* if command exists in path, then apply it. */
-  std::string fn, cmd;
-  Split(path, '|', fn, cmd);
-  SetFromCommand(cmd);
-  this->path = fn;
-}
-
-void FontAttributes::SetFromCommand(const std::string &command)
+void SetFontAttributeFromCommand(FontAttribute &fontattr, const std::string &command)
 {
   std::vector<std::string> params;
   std::string a, b;
@@ -58,16 +58,16 @@ void FontAttributes::SetFromCommand(const std::string &command)
     CommandArgs args(b);
     if (a == "size")
     {
-      SetSize(args.Get<int>(0));
+      fontattr.height = args.Get<int>(0) * 4;
     }
     else if (a == "color")
     {
-      color = HexToUint(args.Get<std::string>(0).c_str());
+      fontattr.color = HexToUint(args.Get<std::string>(0).c_str());
     }
     else if (a == "border")
     {
-      outline_width = args.Get<int>(0);
-      outline_color = HexToUint(args.Get<std::string>(1).c_str());
+      fontattr.outline_width = args.Get<int>(0);
+      fontattr.outline_color = HexToUint(args.Get<std::string>(1).c_str());
     }
     else if (a == "texture")
     {
@@ -83,7 +83,8 @@ void FontAttributes::SetFromCommand(const std::string &command)
 // --------------------------- class FontBitmap
 
 FontBitmap::FontBitmap(int w, int h)
-  : bitmap_(0), texid_(0), committed_(false)
+  : bitmap_(0), texid_(0), committed_(false),
+    error_code_(0), error_msg_(0)
 {
   width_ = w;
   height_ = h;
@@ -93,37 +94,24 @@ FontBitmap::FontBitmap(int w, int h)
   bitmap_ = (uint32_t*)malloc(width_ * height_ * sizeof(uint32_t));
   ASSERT(bitmap_);
   memset(bitmap_, 0, width_ * height_ * sizeof(uint32_t));
-
-  glGenTextures(1, &texid_);
-  if (texid_ == 0)
-  {
-    GLenum err = glGetError();
-    std::cerr << "Font - Allocating textureID failed: " << (int)err << std::endl;
-    return;
-  }
 }
 
-/* Using this constructor, texture is uploaded directly to GPU. */
+// bitmap is moved into memory.
+FontBitmap::FontBitmap(uint32_t* bitmap, int w, int h)
+  : bitmap_(bitmap), texid_(0), committed_(false),
+    width_(w), height_(h), cur_x_(0), cur_y_(0), cur_line_height_(0),
+    error_code_(0), error_msg_(0)
+{
+}
+
+// bitmap is copied into memory.
 FontBitmap::FontBitmap(const uint32_t* bitmap, int w, int h)
   : bitmap_(0), texid_(0), committed_(false),
-    width_(w), height_(h), cur_x_(0), cur_y_(0), cur_line_height_(0)
+    width_(w), height_(h), cur_x_(0), cur_y_(0), cur_line_height_(0),
+    error_code_(0), error_msg_(0)
 {
-  // create texture & upload directly
-  glGenTextures(1, &texid_);
-  if (texid_ == 0)
-  {
-    GLenum err = glGetError();
-    std::cerr << "Font - Allocating textureID failed: " << (int)err << std::endl;
-    return;
-  }
-
-  glBindTexture(GL_TEXTURE_2D, texid_);
-  /* XXX: FreeImage uses BGR bitmap. need to fix it? */
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0,
-    GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindTexture(GL_TEXTURE_2D, 0);
+  bitmap_ = (uint32_t*)malloc(width_ * height_ * sizeof(uint32_t));
+  memcpy(bitmap_, bitmap, width_ * height_ * sizeof(uint32_t));
 }
 
 FontBitmap::~FontBitmap()
@@ -187,10 +175,18 @@ void FontBitmap::Update()
 {
   if (committed_ || !bitmap_) return;
 
+  glGenTextures(1, &texid_);
+  if (texid_ == 0)
+  {
+    GLenum err = glGetError();
+    std::cerr << "Font - Allocating textureID failed: " << (int)err << std::endl;
+    return;
+  }
+
   // commit bitmap from memory
   glBindTexture(GL_TEXTURE_2D, texid_);
   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0,
-    GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap_);
+    GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap_); // @warn May BGRA bitmap
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glBindTexture(GL_TEXTURE_2D, 0);
@@ -213,6 +209,9 @@ GLuint FontBitmap::get_texid() const
   return texid_;
 }
 
+int FontBitmap::get_error_code() const { return error_code_; }
+const char *FontBitmap::get_error_msg() const { return error_msg_; }
+
 void FontBitmap::SetToReadOnly()
 {
   // update before remove cache
@@ -230,10 +229,9 @@ void FontBitmap::SetToReadOnly()
 // --------------------------------- class Font
 
 Font::Font()
-  : ftface_(0), ftstroker_(0), is_ttf_font_(true)
+  : is_ttf_font_(true), ftface_(0), ftstroker_(0),
+    status_(0), error_code_(0), error_msg_(0)
 {
-  memset(&fontattr_, 0, sizeof(fontattr_));
-
   if (ftLibCnt++ == 0)
   {
     if (FT_Init_FreeType(&ftLib))
@@ -255,43 +253,104 @@ Font::~Font()
     FT_Done_FreeType(ftLib);
 }
 
-void Font::set_name(const std::string& name)
+void Font::Load(const std::string &path)
 {
-  name_ = name;
-}
+  Clear();
+  error_msg_ = 0;
+  error_code_ = 0;
+  status_ = 1;
 
-const std::string& Font::get_name() const
-{
-  return name_;
-}
-
-bool Font::LoadFont(const FontAttributes& attrs)
-{
-  /* invalid font ... */
-  if (attrs.height <= 0)
+  std::string ext = GetExtension(path);
+  path_ = path;
+  if (ext == "ttf")
   {
-    std::cerr << "Invalid font size (0)" << std::endl;
-    return false;
+    LoadFreetypeFont(path);
+  }
+  else if (ext == "dxa")
+  {
+    LoadLR2BitmapFont(path);
+  }
+  else if (ext == ".lr2font" && path.size() > 13)
+  {
+    // /font.lr2font file
+    std::string newpath = path.substr(0, path.size() - 13) + ".dxa";
+    LoadLR2BitmapFont(newpath);
+  }
+  else
+  {
+    error_msg_ = "Unsupported type of font.";
+    error_code_ = -1;
+    status_ = 0;
+  }
+}
+
+void Font::Load(const char *p, size_t len, const char *ext_hint_opt)
+{
+  error_msg_ = "Font load from memory is not supported feature yet.";
+  error_code_ = -1;
+}
+
+void Font::Load(const MetricGroup& metrics)
+{
+  error_msg_ = 0;
+  error_code_ = 0;
+  ASSERT(0 && "Not Implemented");
+}
+
+void Font::Clear()
+{
+  ClearGlyph();
+  ReleaseFont();
+  ClearFontAttribute(fontattr_);
+}
+
+void Font::Update(float)
+{
+  // XXX: optimize commit() method more
+  Commit();
+}
+
+bool Font::is_glyph_loaded() const
+{
+  return status_ >= 2;
+}
+
+bool Font::is_loaded() const
+{
+  return status_ >= 3;
+}
+
+bool Font::is_empty() const
+{
+  return ftface_ == 0 && glyph_.empty() && name_.empty();
+}
+
+void Font::LoadFreetypeFont(const std::string &path)
+{
+  ASSERT(is_empty());
+
+  if (fontattr_.height <= 0)
+  {
+    error_msg_ = "Invalid font size (0)";
+    error_code_ = -1;
+    return;
   }
   if (ftLibCnt == 0)
   {
-    std::cerr << "Freetype is not initalized." << std::endl;
-    return false;
+    error_msg_ = "Freetype is not initalized.";
+    error_code_ = -1;
+    return;
   }
 
-  /* clear before start */
-  ClearGlyph();
-  ReleaseFont();
-
   /* Create freetype font */
-  const char *ttfpath = attrs.path.c_str();
+  const char *ttfpath = path.c_str();
   int r = FT_New_Face(ftLib, ttfpath, 0, (FT_Face*)&ftface_);
   if (r)
   {
-    std::cerr << "ERROR: Could not load font: " << ttfpath << std::endl;
-    return false;
+    error_msg_ = "Cannot read font file.";
+    error_code_ = -1;
+    return;
   }
-  fontattr_ = attrs;
   FT_Face ftface = (FT_Face)ftface_;
 
   /* Create freetype stroker (if necessary) */
@@ -307,10 +366,8 @@ bool Font::LoadFont(const FontAttributes& attrs)
 
   // Set size to load glyphs as
   const int fntsize_pixel = fontattr_.height;
-  fontattr_.height = fntsize_pixel;
+  fontattr_. height = fntsize_pixel;
   FT_Set_Pixel_Sizes(ftface, 0, fntsize_pixel);
-
-  /* Set fontattributes in advance */
 
   // Set font baseline
   if (fontattr_.baseline_offset == 0)
@@ -324,10 +381,165 @@ bool Font::LoadFont(const FontAttributes& attrs)
   for (int i = 0; i < 128; i++)
     glyph_init[i] = i;
   PrepareGlyph(glyph_init, 128);
-
-  path_ = ttfpath;
-  return true;
+  status_ = 2;
 }
+
+void Font::LoadLR2BitmapFont(const std::string &path)
+{
+  ASSERT(is_empty());
+
+#if USE_LR2_FONT == 1
+  DXAExtractor dxa;
+  if (!dxa.Open(path.c_str()))
+  {
+    error_msg_ = "LR2Font : Cannot open file.";
+    error_code_ = -1;
+    return;
+}
+
+  std::map<std::string, const DXAExtractor::DXAFile*> dxa_file_mapper;
+  const DXAExtractor::DXAFile* dxa_file_lr2font;
+  for (const auto& f : dxa)
+  {
+    // make file mapper & find font file (LR2FONT)
+    std::string fn = f.filename;
+    if (fn.size() > 2 && fn[0] == '.' && fn[1] == '/')
+      fn = fn.substr(2);
+    dxa_file_mapper[Upper(fn)] = &f;
+    if (Upper(GetExtension(fn)) == "LR2FONT")
+      dxa_file_lr2font = &f;
+  }
+
+  if (!dxa_file_lr2font)
+  {
+    error_msg_ = "LR2Font : Invalid dxa file (no font info found)";
+    error_code_ = -1;
+    return;
+  }
+
+  // -- parse LR2FONT file --
+
+  const char *p, *p_old, *p_end;
+  p = p_old = dxa_file_lr2font->p;
+  p_end = p + dxa_file_lr2font->len;
+  std::vector<std::string> col;
+  while (p < p_end)
+  {
+    while (p < p_end && *p != '\n' && *p != '\r')
+      ++p;
+    std::string cmd(p_old, p - p_old);
+    while (*p == '\n' || *p == '\r') ++p;
+    p_old = p;
+
+    if (cmd.size() <= 2) continue;
+    if (cmd[0] == '/' && cmd[1] == '/') continue;
+    Split(cmd, ',', col);
+    if (col[0] == "#S")
+    {
+      fontattr_.height = atoi(col[1].c_str());
+      fontattr_.baseline_offset = fontattr_.height;
+    }
+    else if (col[0] == "#M")
+    {
+      // XXX: I don't know what is this ...
+    }
+    else if (col[0] == "#T")
+    {
+      const auto* f = dxa_file_mapper[Upper(col[2])];
+      if (!f)
+      {
+        error_msg_ = "LR2Font : Cannot find texture.";  // col[1]
+        error_code_ = -1;
+        return;
+      }
+      std::unique_ptr<Image> img = std::make_unique<Image>();
+      img->Load(f->p, f->len, nullptr);
+      if (img->get_error_code() != 0)
+      {
+        error_msg_ = "LR2Font : Cannot load texture.";
+        error_code_ = -1;
+        return;
+      }
+      FontBitmap *fbitmap = new FontBitmap(
+        (const uint32_t*)img->get_ptr(), img->get_width(), img->get_height()
+      );
+      fontbitmap_.push_back(fbitmap);
+    }
+    else if (col[0] == "#R")
+    {
+      /* glyphnum, texid, x, y, width, height */
+      FontGlyph g;
+      g.codepoint = atoi(col[1].c_str());
+      g.codepoint = ConvertLR2JIStoUTF16(g.codepoint);
+      g.texidx = atoi(col[2].c_str());
+      g.srcx = atoi(col[3].c_str());
+      g.srcy = atoi(col[4].c_str());
+      g.width = atoi(col[5].c_str());
+      g.height = atoi(col[6].c_str());
+      g.adv_x = g.width;
+      g.pos_x = 0;
+      g.pos_y = g.height;
+
+      /* in case of unexpected texture */
+      if (g.texidx >= fontbitmap_.size())
+        continue;
+
+      /* need to calculate src pos by texture, so need to get texture. */
+      float tex_width = fontbitmap_[g.texidx]->width();
+      float tex_height = fontbitmap_[g.texidx]->height();
+      int texid_real = fontbitmap_[g.texidx]->get_texid();
+
+      /* if width / height is zero, indicates invalid glyph (due to image loading failed) */
+      if (tex_width == 0 || tex_height == 0)
+        continue;
+
+      g.sx1 = (float)g.srcx / tex_width;
+      g.sx2 = (float)(g.srcx + g.width) / tex_width;
+      g.sy1 = (float)g.srcy / tex_height;
+      g.sy2 = (float)(g.srcy + g.height) / tex_height;
+      g.texidx = texid_real; /* change to real one */
+
+      glyph_.push_back(g);
+    }
+  }
+  status_ = 2;
+#else
+  error_msg_ = "LR2font is not supported.";
+  error_code_ = -1;
+#endif
+}
+
+#if 0
+void LR2Font::UploadTextureFile(const char* p, size_t len)
+{
+  FIMEMORY *memstream = FreeImage_OpenMemory((BYTE*)p, len);
+  FREE_IMAGE_FORMAT fmt = FreeImage_GetFileTypeFromMemory(memstream);
+  if (fmt == FREE_IMAGE_FORMAT::FIF_UNKNOWN)
+  {
+    std::cerr << "LR2Font open failed: invalid image internally." << std::endl;
+    FreeImage_CloseMemory(memstream);
+    return;
+  }
+
+  // from here, font bitmap texture must uploaded to memory.
+  FIBITMAP *bitmap, *temp;
+  temp = FreeImage_LoadFromMemory(fmt, memstream);
+  // image need to be flipped
+  FreeImage_FlipVertical(temp);
+  bitmap = FreeImage_ConvertTo32Bits(temp);
+  FreeImage_Unload(temp);
+
+  int width = FreeImage_GetWidth(bitmap);
+  int height = FreeImage_GetHeight(bitmap);
+  const uint8_t* data_ptr = FreeImage_GetBits(bitmap);
+
+  FontBitmap *fbitmap = new FontBitmap((const uint32_t*)data_ptr, width, height);
+  fontbitmap_.push_back(fbitmap);
+
+  // done, release all FreeImage resource
+  FreeImage_Unload(bitmap);
+}
+#endif
 
 #define BLEND_RGBA
 #ifdef BLEND_RGBA
@@ -446,7 +658,11 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
 void Font::Commit()
 {
   for (auto* b : fontbitmap_)
+  {
     b->Update();
+  }
+  if (status_ == 2)
+    status_ = 3;
 }
 
 /**
@@ -530,33 +746,21 @@ void Font::GetTextVertexInfo(const std::string& s,
     cur_x += g->pos_x;
     cur_y = line_y + fontattr_.baseline_offset - g->pos_y;
 
-    vi[0].r = vi[0].g = vi[0].b = vi[0].a = 1.0f;
-    vi[0].x = cur_x;
-    vi[0].y = cur_y;
-    vi[0].z = .0f;
-    vi[0].sx = g->sx1;
-    vi[0].sy = g->sy1;
+    vi[0].c = Vector4{ 1.0f };
+    vi[0].p = Vector3{ cur_x, cur_y, .0f };
+    vi[0].t = Vector2{ g->sx1, g->sy1 };
 
-    vi[1].r = vi[1].g = vi[1].b = vi[1].a = 1.0f;
-    vi[1].x = cur_x + g->width;
-    vi[1].y = cur_y;
-    vi[1].z = .0f;
-    vi[1].sx = g->sx2;
-    vi[1].sy = g->sy1;
+    vi[1].c = Vector4{ 1.0f };
+    vi[1].p = Vector3{ cur_x + g->width, cur_y, .0f };
+    vi[1].t = Vector2{ g->sx2, g->sy1 };
 
-    vi[2].r = vi[2].g = vi[2].b = vi[2].a = 1.0f;
-    vi[2].x = cur_x + g->width;
-    vi[2].y = cur_y + g->height;
-    vi[2].z = .0f;
-    vi[2].sx = g->sx2;
-    vi[2].sy = g->sy2;
+    vi[2].c = Vector4{ 1.0f };
+    vi[2].p = Vector3{ cur_x + g->width, cur_y + g->height, .0f };
+    vi[2].t = Vector2{ g->sx2, g->sy2 };
 
-    vi[3].r = vi[3].g = vi[3].b = vi[3].a = 1.0f;
-    vi[3].x = cur_x;
-    vi[3].y = cur_y + g->height;
-    vi[3].z = .0f;
-    vi[3].sx = g->sx1;
-    vi[3].sy = g->sy2;
+    vi[3].c = Vector4{ 1.0f };
+    vi[3].p = Vector3{ cur_x, cur_y + g->height, .0f };
+    vi[3].t = Vector2{ g->sx1, g->sy2 };
 
     cur_x += g->adv_x - g->pos_x;
     tvi.texid = g->texidx;
@@ -627,6 +831,14 @@ void Font::ReleaseFont()
     FT_Done_Face(ft);
     ftface_ = 0;
   }
+
+  path_.clear();
+  name_.clear();
+  is_ttf_font_ = false;
+  fontattr_ = FontAttribute();
+  status_ = 0;
+  error_code_ = 0;
+  error_msg_ = 0;
 }
 
 const std::string& Font::get_path() const
@@ -639,38 +851,14 @@ bool Font::is_ttf_font() const
   return is_ttf_font_;
 }
 
-const FontAttributes& Font::get_attribute() const
+int Font::height() const
 {
-  return fontattr_;
+  return fontattr_.height;
 }
 
-}
-
-/* for common API */
-#include "LR2/LR2Font.h"
-namespace rhythmus
+const std::string &Font::name() const
 {
-
-Font* CreateFont(const FontAttributes &fontattr)
-{
-  std::string fn = fontattr.path;
-  std::string ext = GetExtension(fn);
-  Font *font = nullptr;
-  if (ext == "ttf")
-  {
-    font = new Font();
-  }
-  else if (ext == "dxa")
-  {
-    font = new LR2Font();
-  }
-  else if (ext == "lr2font" && fn.size() > 13)
-  {
-    // /font.lr2font file
-    fn = fn.substr(0, fn.size() - 13) + ".dxa";
-    font = new LR2Font();
-  }
-  return font;
+  return name_;
 }
 
 }

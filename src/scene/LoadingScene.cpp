@@ -20,16 +20,13 @@ void LoadingScene::LoadScene()
   message_text_.SetSystemFont();
 
   message_text_.SetPos(
-    320,
-    Graphic::getInstance().height() - 160
+    320, GRAPHIC->height() - 160
   );
   current_file_text_.SetPos(
-    320,
-    Graphic::getInstance().height() - 120
+    320, GRAPHIC->height() - 120
   );
   loading_bar_.SetPos(
-    240,
-    Graphic::getInstance().height() - 120
+    240, GRAPHIC->height() - 120
   );
 
   // Register childs
@@ -79,7 +76,7 @@ void LoadingScene::doUpdate(float)
       std::cout << "LoadingScene: Song list loading finished." << std::endl;
       EventManager::SendEvent("SongListLoadFinished");
 
-      current_file_text_.Clear();
+      current_file_text_.ClearText();
       message_text_.SetText("Ready ...!");
 
 #if 0

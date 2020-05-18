@@ -1,5 +1,6 @@
 #include "NoteField.h"
 #include "SongPlayer.h"
+#include "PlaySession.h"
 #include "Util.h"
 
 namespace rhythmus
@@ -16,12 +17,12 @@ void NoteField::set_player(int player_idx)
   player_idx_ = player_idx;
 }
 
-void NoteField::Load(const Metric &metric)
+void NoteField::Load(const MetricGroup &metric)
 {
   if (metric.exist("player"))
     player_idx_ = metric.get<int>("player");
 
-  auto *pctx = SongPlayer::getInstance().GetPlayContext(player_idx_);
+  auto *pctx = SongPlayer::getInstance().GetPlaySession(player_idx_);
   if (!pctx) return;
 
   for (size_t i = 0; i < pctx->GetTrackCount(); ++i)
@@ -29,7 +30,6 @@ void NoteField::Load(const Metric &metric)
     NoteLane *lane;
     lane = new NoteLane(player_idx_, (int)i);
     lane->Load(metric);
-    lane->LoadCommandWithNamePrefix(metric);
     lanes_.push_back(lane);
     AddChild(lane);
   }
@@ -61,9 +61,9 @@ void NoteField::doUpdate(float delta)
 
 void NoteField::FillNoteRenderContext(int player_idx)
 {
-  PlayContext *pctx = nullptr;
+  PlaySession *pctx = nullptr;
   size_t track_cnt = 0;
-  pctx = SongPlayer::getInstance().GetPlayContext(player_idx);
+  pctx = SongPlayer::getInstance().GetPlaySession(player_idx);
   if (!pctx) return;
 
   NoteRenderContext nctx;
@@ -71,6 +71,7 @@ void NoteField::FillNoteRenderContext(int player_idx)
   track_cnt = pctx->GetTrackCount();
   for (size_t track = 0; track < track_cnt; ++track)
   {
+#if 0
     auto iter = pctx->GetTrackIterator(track);
     while (!iter.is_end())
     {
@@ -89,6 +90,7 @@ void NoteField::FillNoteRenderContext(int player_idx)
 
       iter.next();
     }
+#endif
 
     /* XXX: add demo note? */
     nctx.pos_start = 0.4;
@@ -116,7 +118,7 @@ void NoteLane::UpdateNoteRenderContext(std::vector<NoteRenderContext> &nctxs)
   }
 }
 
-void NoteLane::Load(const Metric &metric)
+void NoteLane::Load(const MetricGroup &metric)
 {
   BaseObject::Load(metric);
 
@@ -142,15 +144,15 @@ void NoteLane::Load(const Metric &metric)
   note_spr_auto_.ln_body.set_name(format_string("ANoteLnBody%d", track_idx));
   note_spr_auto_.ln_tail.set_name(format_string("ANoteLnTail%d", track_idx));
 
-  note_spr_normal_.tap.LoadByName();
-  note_spr_normal_.ln_head.LoadByName();
-  note_spr_normal_.ln_body.LoadByName();
-  note_spr_normal_.ln_tail.LoadByName();
-  note_spr_normal_.mine.LoadByName();
-  note_spr_auto_.tap.LoadByName();
-  note_spr_auto_.ln_head.LoadByName();
-  note_spr_auto_.ln_body.LoadByName();
-  note_spr_auto_.ln_tail.LoadByName();
+  note_spr_normal_.tap.Load(metric);
+  note_spr_normal_.ln_head.Load(metric);
+  note_spr_normal_.ln_body.Load(metric);
+  note_spr_normal_.ln_tail.Load(metric);
+  note_spr_normal_.mine.Load(metric);
+  note_spr_auto_.tap.Load(metric);
+  note_spr_auto_.ln_head.Load(metric);
+  note_spr_auto_.ln_body.Load(metric);
+  note_spr_auto_.ln_tail.Load(metric);
 
   /* for sprite update (animated sprite) */
   AddChild(&note_spr_normal_.tap);
@@ -173,7 +175,7 @@ void NoteLane::doRender()
   /* 3. draw normal note */
   for (auto *n : nctxs_)
   {
-    note_spr_normal_.tap.SetPos(0, (-n->pos_start) * current_prop_.pi.y);
+    note_spr_normal_.tap.SetPos(0, (-n->pos_start) * GetCurrentFrame().pos.y);
     note_spr_normal_.tap.Render();
   }
 

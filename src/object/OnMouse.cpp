@@ -1,6 +1,7 @@
 #include "OnMouse.h"
 #include "Util.h"
 #include "common.h"
+#include "config.h"
 
 namespace rhythmus
 {
@@ -12,38 +13,39 @@ OnMouse::OnMouse() : panel_(0)
 
 OnMouse::~OnMouse() {}
 
-void OnMouse::Load(const Metric &metric)
+void OnMouse::Load(const MetricGroup &metric)
 {
   Sprite::Load(metric);
-}
 
-void OnMouse::LoadFromLR2SRC(const std::string &cmd)
-{
-  Sprite::LoadFromLR2SRC(cmd);
-
-  CommandArgs args(cmd);
-
-  panel_ = args.Get<int>(9);
-  if (panel_ > 0 || panel_ == -1)
+#if USE_LR2_FEATURE == 1
+  if (metric.exist("lr2src"))
   {
-    if (panel_ == -1) panel_ = 0;
-    AddCommand("Panel" + std::to_string(panel_), "focusable:1");
-    AddCommand("Panel" + std::to_string(panel_) + "Off", "focusable:0");
-    visible_group_[3] = 20 + panel_;
+    std::string cmd;
+    metric.get_safe("lr2src", cmd);
+    CommandArgs args(cmd);
+
+    panel_ = args.Get<int>(9);
+    if (panel_ > 0 || panel_ == -1)
+    {
+      if (panel_ == -1) panel_ = 0;
+      AddCommand("Panel" + std::to_string(panel_), "focusable:1");
+      AddCommand("Panel" + std::to_string(panel_) + "Off", "focusable:0");
+      SetVisibleFlag("", "", "", std::to_string(20 + panel_));
+    }
+
+    onmouse_rect_ = Vector4(args.Get<int>(10), args.Get<int>(11),
+      args.Get<int>(12), args.Get<int>(13));
   }
-
-  onmouse_rect_.set_rect(args.Get<int>(10), args.Get<int>(11),
-    args.Get<int>(12), args.Get<int>(13));
-
-  debug_ += format_string("called with %d\n", panel_);
+#endif
 }
 
 bool OnMouse::IsEntered(float x, float y)
 {
-  x -= current_prop_.pi.x + current_prop_.x + onmouse_rect_.x1;
-  y -= current_prop_.pi.y + current_prop_.y + onmouse_rect_.y1;
-  return (x >= 0 && x <= onmouse_rect_.width()
-    && y >= 0 && y <= onmouse_rect_.height());
+  auto &f = GetCurrentFrame();
+  x -= f.pos.x + onmouse_rect_.x;
+  y -= f.pos.y + onmouse_rect_.y;
+  return (x >= 0 && x <= GetWidth(onmouse_rect_)
+    && y >= 0 && y <= GetHeight(onmouse_rect_));
 }
 
 void OnMouse::doRender()

@@ -23,7 +23,7 @@ public:
   virtual ~NoteField();
 
   void set_player(int player_idx);
-  virtual void Load(const Metric &metric);
+  virtual void Load(const MetricGroup &metric);
   virtual void doUpdate(float delta);
 
 private:
@@ -39,7 +39,7 @@ class NoteLane : public BaseObject
 public:
   NoteLane(int player_idx, int track_idx);
   virtual ~NoteLane();
-  virtual void Load(const Metric &metric);
+  virtual void Load(const MetricGroup &metric);
 
   /* @warn
    * This method borrows NoteRenderContext object address from other vector for rendering,

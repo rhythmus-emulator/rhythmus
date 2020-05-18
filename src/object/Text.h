@@ -40,29 +40,28 @@ public:
   Text();
   virtual ~Text();
 
-  void SetFontByPath(const std::string& path);
+  virtual void Load(const MetricGroup& metric);
+
+  void SetFont(const std::string& path);
+  void SetFont(const MetricGroup &m);
   void SetSystemFont();
+  void ClearFont();
 
   float GetTextWidth() const;
   virtual void SetText(const std::string& s);
+  void ClearText();
   virtual void Refresh();
   void SetTextAlignment(TextAlignments align);
   void SetTextFitting(TextFitting fitting);
   void SetLineBreaking(bool enable_line_break);
-  void Clear();
 
   Font *font();
 
-  virtual void Load(const Metric& metric);
-  virtual void LoadFromLR2SRC(const std::string &cmd);
-
 protected:
-  void SetFont(Font *font);
   virtual void SetLR2Alignment(int alignment);
   virtual void doRender();
   virtual void doUpdate(float);
   void UpdateTextRenderContext();
-  void ClearTextVertex();
   TextVertexInfo& AddTextVertex(const TextVertexInfo &tvi);
   void SetTextVertexCycle(size_t cycle, size_t duration);
   void SetWidthMultiply(float multiply); /* special API for LR2 */
@@ -99,6 +98,10 @@ private:
   } alignment_attrs_;
 
   float width_multiply_;
+
+  int blending_;
+
+  std::string *res_id_;
 
   // is line-breaking enabled?
   bool do_line_breaking_;

@@ -16,8 +16,8 @@ void OverlayScene::LoadScene()
   log_dialog_ = new Dialog();
   alert_dialog_->set_name("dialog");
   log_dialog_->set_name("log_dialog");
-  RegisterChild(alert_dialog_);
-  RegisterChild(log_dialog_);
+  AddChild(alert_dialog_);
+  AddChild(log_dialog_);
   alert_dialog_->Hide();
   log_dialog_->Hide();
 
@@ -30,7 +30,7 @@ void OverlayScene::StartScene()
   // do nothing here (overlayscene don't use fadein effect)
 }
 
-void OverlayScene::Load(const Metric& metric)
+void OverlayScene::Load(const MetricGroup& metric)
 {
   Scene::Load(metric);
 }

@@ -65,8 +65,8 @@ Menu::Menu()
   memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
 
   // Set bar position expr param with default
-  pos_expr_param_.bar_offset_x = Graphic::getInstance().width() - 540;
-  pos_expr_param_.bar_center_y = Graphic::getInstance().height() / 2;
+  pos_expr_param_.bar_offset_x = GRAPHIC->width() - 540;
+  pos_expr_param_.bar_center_y = GRAPHIC->height() / 2;
   pos_expr_param_.bar_height = 40;
   pos_expr_param_.bar_width = 540;
   pos_expr_param_.bar_margin = 1;
@@ -83,6 +83,56 @@ Menu::~Menu()
     delete p;
   }
   bar_.clear();
+}
+
+void Menu::Load(const MetricGroup &metric)
+{
+  BaseObject::Load(metric);
+
+  pos_method_ = metric.get<int>("PositionType");
+  int center_index = metric.get<int>("CenterIndex");
+  if (center_index)
+  {
+    set_focus_max_index(center_index);
+    set_focus_min_index(center_index);
+    set_focus_index(center_index);
+  }
+  display_count_ = metric.get<int>("BarCount");
+
+  // Build items (bar item)
+  while (bar_.size() < display_count_ + kScrollPosMaxDiff * 2)
+  {
+    auto *item = CreateMenuItem();
+    item->set_parent(this);
+    item->Load(metric);
+    item->Hide();
+    AddChild(item);
+    bar_.push_back(item);
+  }
+
+  // Set item position
+  for (int i = 0; i < display_count_; ++i)
+  {
+    pos_fixed_param_.tween_bar[i].set_name(format_string("Bar%d", i));
+    pos_fixed_param_.tween_bar_focus[i].set_name(format_string("BarOn%d", i));
+    pos_fixed_param_.tween_bar[i].Hide();
+    pos_fixed_param_.tween_bar_focus[i].Hide();
+    AddChild(&pos_fixed_param_.tween_bar[i]);
+    AddChild(&pos_fixed_param_.tween_bar_focus[i]);
+
+    pos_fixed_param_.tween_bar[i].Load(metric);
+  }
+
+  // Load sounds
+  std::string soundpath;
+  if (METRIC->get_safe("Sound.SongSelectChange", soundpath))
+    wheel_sound_.Load(soundpath);
+
+  // Build data & item
+  RebuildData();
+
+  // selectchange for initiailize.
+  OnSelectChange(data_[data_index_], 0);
 }
 
 void Menu::AddData(MenuData* d) { data_.push_back(d); }
@@ -318,10 +368,10 @@ void Menu::UpdateItemPosByFixed()
     BaseObject *obj1 = &pos_fixed_param_.tween_bar[i];
     BaseObject *obj2 = &pos_fixed_param_.tween_bar[i + 1];
     MakeTween(d,
-      obj1->get_draw_property(),
-      obj2->get_draw_property(),
+      obj1->GetCurrentFrame(),
+      obj2->GetCurrentFrame(),
       ratio, EaseTypes::kEaseLinear);
-    bar_[ii]->SetPos(d.pi.x, d.pi.y);
+    bar_[ii]->SetPos(d.pos.x, d.pos.y);
     bar_[ii]->Show();
   }
 }
@@ -329,56 +379,6 @@ void Menu::UpdateItemPosByFixed()
 MenuItem* Menu::CreateMenuItem()
 {
   return new MenuItem();
-}
-
-void Menu::Load(const Metric &metric)
-{
-  BaseObject::Load(metric);
-
-  pos_method_ = metric.get<int>("PositionType");
-  int center_index = metric.get<int>("CenterIndex");
-  if (center_index)
-  {
-    set_focus_max_index(center_index);
-    set_focus_min_index(center_index);
-    set_focus_index(center_index);
-  }
-  display_count_ = metric.get<int>("BarCount");
-
-  // Build items (bar item)
-  while (bar_.size() < display_count_ + kScrollPosMaxDiff * 2)
-  {
-    auto *item = CreateMenuItem();
-    item->set_parent(this);
-    item->Load(metric);
-    item->Hide();
-    AddChild(item);
-    bar_.push_back(item);
-  }
-
-  // Set item position
-  for (int i = 0; i < display_count_; ++i)
-  {
-    pos_fixed_param_.tween_bar[i].set_name(format_string("Bar%d", i));
-    pos_fixed_param_.tween_bar_focus[i].set_name(format_string("BarOn%d", i));
-    pos_fixed_param_.tween_bar[i].Hide();
-    pos_fixed_param_.tween_bar_focus[i].Hide();
-    AddChild(&pos_fixed_param_.tween_bar[i]);
-    AddChild(&pos_fixed_param_.tween_bar_focus[i]);
-
-    pos_fixed_param_.tween_bar[i].LoadCommandWithNamePrefix(metric);
-  }
-
-  // Load sounds
-  wheel_sound_.Load(
-    Setting::GetThemeMetricList().get<std::string>("Sound", "SongSelectChange")
-  );
-
-  // Build data & item
-  RebuildData();
-
-  // selectchange for initiailize.
-  OnSelectChange(data_[data_index_], 0);
 }
 
 void Menu::OnSelectChange(const MenuData *data, int direction) {}

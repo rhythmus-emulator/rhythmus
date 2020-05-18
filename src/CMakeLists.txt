@@ -26,8 +26,12 @@ set (RHYTHMUS_SOURCES
   SongPlayer.cpp
   Sound.cpp
   Setting.cpp
+  KeyPool.cpp
   TaskPool.cpp
   Util.cpp
+
+  PlaySession.cpp
+  PlaySession7Key.cpp
 
   scene/LoadingScene.cpp
   scene/TestScene.cpp
@@ -52,13 +56,12 @@ set (RHYTHMUS_SOURCES
   object/Dialog.cpp
 
   LR2/exdxa.cpp
-  LR2/LR2Font.cpp
   LR2/LR2SceneLoader.cpp
-  LR2/LR2Flag.cpp
   )
 
 set (RHYTHMUS_HEADERS
   common.h
+  config.h
   ResourceManager.h
   Image.h
   BaseObject.h
@@ -78,8 +81,12 @@ set (RHYTHMUS_HEADERS
   SongPlayer.h
   Sound.h
   Setting.h
+  KeyPool.h
   TaskPool.h
   Util.h
+
+  PlaySession.h
+  PlaySession7Key.h
 
   scene/LoadingScene.h
   scene/TestScene.h
@@ -104,9 +111,7 @@ set (RHYTHMUS_HEADERS
   object/Dialog.h
 
   LR2/exdxa.h
-  LR2/LR2Font.h
   LR2/LR2SceneLoader.h
-  LR2/LR2Flag.h
   )
 
 include_directories(

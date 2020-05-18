@@ -1,12 +1,14 @@
 #include "Slider.h"
 #include "Script.h"
+#include "KeyPool.h"
 #include "Util.h"
+#include "config.h"
 
 namespace rhythmus
 {
 
 Slider::Slider()
-  : direction_(0), range_(0), ratio_(1.0f), value_(.0f) { }
+  : direction_(0), range_(0), ratio_(1.0f), value_(.0f), ref_ptr_(nullptr) { }
 
 Slider::~Slider() { }
 
@@ -22,8 +24,8 @@ void Slider::SetNumber(double number)
 
 void Slider::Refresh()
 {
-  // XXX: change to GetSliderValue, or value with "Namespace"
-  SetNumber( Script::getInstance().GetNumber(GetResourceId()) );
+  if (ref_ptr_)
+    SetNumber( *ref_ptr_);
 }
 
 void Slider::SetRatio(float ratio)
@@ -31,29 +33,32 @@ void Slider::SetRatio(float ratio)
   ratio_ = ratio;
 }
 
-void Slider::Load(const Metric &metric)
+void Slider::Load(const MetricGroup &metric)
 {
   Sprite::Load(metric);
-}
 
-void Slider::LoadFromLR2SRC(const std::string &cmd)
-{
-  Sprite::LoadFromLR2SRC(cmd);
+#if USE_LR2_FEATURE == 1
+  if (metric.exist("lr2src"))
+  {
+    std::string cmd;
+    metric.get_safe("lr2src", cmd);
+    CommandArgs args(cmd);
 
-  CommandArgs args(cmd);
+    direction_ = args.Get<int>(9);
+    range_ = args.Get<int>(10);
 
-  direction_ = args.Get<int>(9);
-  range_ = args.Get<int>(10);
+    /* track change of text table */
+    int eventid = args.Get<int>(11) + 1500;
+    std::string eventname = "Number" + std::to_string(eventid);
+    AddCommand(eventname, "refresh");
+    SubscribeTo(eventname);
 
-  /* track change of text table */
-  int eventid = args.Get<int>(11) + 1500;
-  std::string eventname = "Number" + std::to_string(eventid);
-  AddCommand(eventname, "refresh");
-  SubscribeTo(eventname);
-
-  /* set text index for update */
-  SetResourceId(eventid);
-  Refresh();
+    /* set ref value for update */
+    auto k = KEYPOOL->GetFloat("slider" + std::to_string(eventid));
+    ref_ptr_ = &*k;
+    Refresh();
+  }
+#endif
 }
 
 void Slider::doUpdate(float delta)
@@ -64,16 +69,16 @@ void Slider::doUpdate(float delta)
   switch (direction_)
   {
   case 0:
-    current_prop_.y -= pos_delta;
+    SetY(GetCurrentFrame().pos.y - pos_delta);
     break;
   case 1:
-    current_prop_.x += pos_delta;
+    SetX(GetCurrentFrame().pos.x + pos_delta);
     break;
   case 2:
-    current_prop_.y += pos_delta;
+    SetY(GetCurrentFrame().pos.y + pos_delta);
     break;
   case 3:
-    current_prop_.x -= pos_delta;
+    SetX(GetCurrentFrame().pos.x - pos_delta);
     break;
   }
 }

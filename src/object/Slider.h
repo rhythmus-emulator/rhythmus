@@ -14,8 +14,7 @@ public:
   virtual void Refresh();
   void SetRatio(float ratio);
 
-  virtual void Load(const Metric &metric);
-  virtual void LoadFromLR2SRC(const std::string &cmd);
+  virtual void Load(const MetricGroup &metric);
 
 private:
   // 0: horizontal, 1: right, 2: bottom, 3: left
@@ -23,6 +22,7 @@ private:
   int range_;
   float ratio_;
   float value_;
+  float *ref_ptr_;
 
   virtual void doUpdate(float delta);
   virtual void doRender();

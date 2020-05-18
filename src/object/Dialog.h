@@ -11,7 +11,7 @@ class Dialog : public BaseObject
 public:
   Dialog();
   virtual ~Dialog();
-  virtual void Load(const Metric &metric);
+  virtual void Load(const MetricGroup &metric);
   void SetTitle(const std::string &text);
   void SetText(const std::string &text);
 

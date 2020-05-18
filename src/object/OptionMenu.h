@@ -25,7 +25,7 @@ public:
 class OptionItem : public MenuItem
 {
 public:
-  virtual void Load(const Metric &metric);
+  virtual void Load(const MetricGroup &metric);
 
 private:
   Text option_name;
@@ -36,7 +36,7 @@ class OptionMenu : public Menu
 {
 public:
   OptionMenu();
-  virtual void Load(const Metric &metric);
+  virtual void Load(const MetricGroup &metric);
 
 #if 0
   void SetAsNavigator(int mode_to_change);

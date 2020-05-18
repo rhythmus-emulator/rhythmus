@@ -41,20 +41,21 @@ private:
   char num_str_[16];
 };
 
-/* @brief Number based on Text object */
+/* @brief Number based on Text object
+ * TODO: separate it with NumberSprite */
 class Number : public Text
 {
 public:
   Number();
   virtual ~Number();
+
+  virtual void Load(const MetricGroup& metric);
+
   virtual void SetNumber(int number);
   virtual void SetNumber(double number);
   virtual void SetText(const std::string &s);
   virtual void Refresh();
   NumberFormatter &GetFormatter();
-
-  virtual void Load(const Metric& metric);
-  virtual void LoadFromLR2SRC(const std::string &cmd);
 
 private:
   void AllocNumberGlyph(size_t cycles);
@@ -64,6 +65,7 @@ private:
 
   Sprite numbersprite_;
   NumberFormatter formatter_;
+  int *res_ptr_;
 
   /* 0 ~ 9 : positive number glyphs
    * 10 : positive zero(empty) number glyph 

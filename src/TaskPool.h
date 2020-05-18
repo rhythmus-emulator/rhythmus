@@ -63,14 +63,14 @@ public:
   ~TaskThread();
   void run();
   void abort();
-  void set_task(TaskAuto& task);
+  void set_task(Task* task);
 
   friend class TaskPool;
 
 private:
   std::thread thread_;
   bool is_running_;
-  TaskAuto current_task_;
+  Task* current_task_;
   TaskPool *pool_;
 };
 
@@ -83,8 +83,8 @@ public:
   void SetPoolSize(size_t size);
   size_t GetPoolSize() const;
   void ClearTaskPool();
-  void EnqueueTask(TaskAuto& task);
-  TaskAuto DequeueTask();
+  void EnqueueTask(Task* task);
+  Task* DequeueTask();
 
   void AbortAllTask();
   void WaitAllTask();
@@ -99,7 +99,7 @@ private:
 
   /* @brief task pool which needs to be retrieved later.
    * enqueue task with duplicated name in task pool is not allowed. */
-  std::list<TaskAuto> task_pool_;
+  std::list<Task*> task_pool_;
   std::mutex task_pool_mutex_;
   std::condition_variable task_pool_cond_;
 };

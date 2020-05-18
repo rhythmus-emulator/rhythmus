@@ -44,24 +44,18 @@ void Line::doUpdate(float delta) { }
 
 void Line::doRender()
 {
-  const DrawProperty &ti = current_prop_;
-  float x1, y1, x2, y2;
-  x1 = ti.x;
-  y1 = ti.y;
-  x2 = x1 + ti.w;
-  y2 = y1 + ti.h;
-
+  // XXX: is this even work?
+  GRAPHIC->SetTexture(0, 0);
+  GRAPHIC->SetBlendMode(1);
+#if 0
   glLineWidth(width_);
   glColor4ui(color_.r, color_.g, color_.b, color_.a);
-
-  // XXX: is this even work?
-  Graphic::SetTextureId(0);
-  Graphic::SetBlendMode(1);
   glBegin(GL_LINES);
   glVertex2f(x1, y1);
   glVertex2f(x2, y2);
   glEnd();
   glFlush();
+#endif
 }
 
 }

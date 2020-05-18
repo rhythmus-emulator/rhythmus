@@ -85,7 +85,7 @@ void TaskThread::run()
   });
 }
 
-void TaskThread::set_task(TaskAuto& task)
+void TaskThread::set_task(Task* task)
 {
   current_task_ = task;
 }
@@ -131,14 +131,14 @@ size_t TaskPool::GetPoolSize() const
   return pool_size_;
 }
 
-void TaskPool::EnqueueTask(TaskAuto& task)
+void TaskPool::EnqueueTask(Task* task)
 {
   std::lock_guard<std::mutex> lock(task_pool_mutex_);
   task_pool_.push_back(task);
   task_pool_cond_.notify_one();
 }
 
-TaskAuto TaskPool::DequeueTask()
+Task* TaskPool::DequeueTask()
 {
   std::unique_lock<std::mutex> lock(task_pool_mutex_);
   // wait until new task is registered
@@ -149,7 +149,7 @@ TaskAuto TaskPool::DequeueTask()
   if (stop_)
     return nullptr;
   // fetch task
-  TaskAuto task = task_pool_.front();
+  Task* task = task_pool_.front();
   task_pool_.pop_front();
   return task;
 }

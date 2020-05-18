@@ -1,49 +1,56 @@
 #pragma once
 #include "Graphic.h"
+#include "ResourceManager.h"
 #include <memory>
 #include <string>
 
 namespace rhythmus
 {
 
-struct ImageParameter
+enum ImageErrorCode
 {
-  ImageParameter();
-  std::string path;
-  uint16_t width, height;
+  kImageNoError,
+  kImageNoFile,
+  kImageFileReadFailed,
+  kImageTextureUploadFailed,
+  kImageMovieFailed,
 };
 
-class Image
+/**
+ * @brief Contains loaded bitmap image / texture.
+ * @warn After Commit(), image data will be deleted to save memory space.
+ * @warn All bitmap is stored in 32bit.
+ */
+class Image : public ResourceElement
 {
 public:
   Image();
-  ~Image();
-  void set_name(const std::string& name);
-  std::string get_name() const;
+  virtual ~Image();
   std::string get_path() const;
-  void LoadFromPath(const std::string& path);
-  void LoadFromData(uint8_t* p, size_t len);
-  void CommitImage(bool delete_data = true);
+  void Load(const std::string& path);
+  void Load(const char* p, size_t len, const char *ext_hint_opt);
   void Update(float delta_ms);
-  void UnloadAll();
-  void UnloadTexture();
-  void UnloadBitmap();
-  void UnloadMovie();
+  void Unload();
   bool is_loaded() const;
-  GLuint get_texture_ID() const;
+  int get_error_code() const;
+  const char* get_error_msg() const;
+  unsigned get_texture_ID() const;
   uint16_t get_width() const;
   uint16_t get_height() const;
+  const uint8_t *Image::get_ptr() const;
   void SetLoopMovie(bool loop = true);
   void RestartMovie();
 
 private:
-  std::string name_;
   std::string path_;
 
   void* bitmap_ctx_;
   uint8_t *data_ptr_;
   uint16_t width_, height_;
-  GLuint textureID_;
+  unsigned textureID_;
+  int error_code_;
+  const char *error_msg_;
+  std::string error_msg_buf_;
 
   /*
    * Context used for ffmpeg playing.
@@ -57,10 +64,14 @@ private:
   /* loop in case of movie */
   bool loop_movie_;
 
+  void Commit();
+  void UnloadTexture();
+  void UnloadBitmap();
+  void UnloadMovie();
   void LoadImageFromPath(const std::string& path);
   void LoadMovieFromPath(const std::string& path);
-  bool LoadImageFromMemory(uint8_t* p, size_t len);
-  void LoadMovieFromMemory(uint8_t* p, size_t len);
+  bool LoadImageFromMemory(const char* p, size_t len);
+  void LoadMovieFromMemory(const char* p, size_t len);
 };
 
 using ImageAuto = std::shared_ptr<Image>;

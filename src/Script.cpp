@@ -1,82 +1,19 @@
 #include "Script.h"
+#include "Logger.h"
 #include "SceneManager.h"
-#include "ResourceManager.h"
 #include "Setting.h"
 
-/* Basic objects for CreateObjectFromMetric */
-#include "Sprite.h"
-#include "object/Text.h"
-#include "object/Number.h"
-#include "object/Line.h"
-#include "object/Slider.h"
-#include "object/Button.h"
-#include "object/OnMouse.h"
-
-#include "LR2/LR2SceneLoader.h"
-#include "LR2/LR2Flag.h"
 #include "Util.h"
 #include "common.h"
 
 namespace rhythmus
 {
 
-Script::Script() : scene_(nullptr)
-{
-  memset(flags_, 0, sizeof(flags_));
-  memset(numbers_, 0, sizeof(numbers_));
-  flags_[0] = 1;
-
-  // XXX: by default ...? or in select scene start?
-  flags_[50] = 1;  // OFFLINE
-  flags_[52] = 1;  // EXTRA MODE OFF
-}
+Script::Script()
+{}
 
 Script::~Script()
 {}
-
-void Script::SetContextScene(Scene *scene)
-{
-  scene_ = scene;
-}
-
-void Script::SetFlag(int flag_no, int value)
-{
-  flags_[flag_no] = value;
-}
-
-int Script::GetFlag(int flag_no) const
-{
-  if (flag_no >= 1000) return 0;
-  if (flag_no < 0)
-    return flags_[-flag_no] == 0 ? 1 : 0;
-  else
-    return flags_[flag_no] > 0 ? 1 : 0;
-}
-
-void Script::SetString(size_t idx, const std::string &value)
-{
-  strings_[idx] = value;
-  EventManager::SendEvent("Text" + std::to_string(idx));
-}
-
-void Script::SetNumber(size_t idx, int number)
-{
-  numbers_[idx] = number;
-  EventManager::SendEvent("Number" + std::to_string(idx));
-}
-
-const std::string& Script::GetString(size_t idx) const { return strings_[idx]; }
-int Script::GetNumber(size_t idx) const { return numbers_[idx]; }
-
-void Script::SetButtonNumber(size_t idx, int number)
-{
-  SetNumber(idx + 1000, number);
-}
-
-void Script::SetSliderNumber(size_t idx, int number)
-{
-  SetNumber(idx + 1500, number);
-}
 
 Script &Script::getInstance()
 {
@@ -84,12 +21,13 @@ Script &Script::getInstance()
   return instance;
 }
 
-void Script::ExecuteFromPath(const std::string &path)
+void Script::Execute(const std::string &path)
 {
+  ASSERT(0 && "NotImplemented");
+#if 0
   std::string ext(GetExtension(path));
   if (ext == "lr2skin")
   {
-    getInstance().ExecuteLR2Script(path);
   }
   else if (ext == "lua")
   {
@@ -106,8 +44,10 @@ void Script::ExecuteFromPath(const std::string &path)
     std::cerr << "Unknown script: " << path << std::endl;
     return;
   }
+#endif
 }
 
+#if 0
 constexpr const char* kLR2SubstitutePath = "LR2files/Theme";
 constexpr const char* kSubstitutePath = "themes";
 
@@ -449,5 +389,6 @@ void Script::ExecuteLR2Script(const std::string &filepath)
   /* Hook event */
   LR2Flag::HookEvent();
 }
+#endif
 
 }

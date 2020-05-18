@@ -27,22 +27,18 @@ public:
   Sprite(const Sprite& spr) = default;
   virtual ~Sprite();
 
+  virtual void Load(const MetricGroup &metric);
+
   /* Set sprite's image by path */
-  void SetImageByPath(const std::string &path);
+  void SetImage(const std::string &path);
 
-  /* Set sprite's image by prefetch image.
-   * @warn The image is not owned by this sprite,
-   * so be aware of texture leaking. */
-  void SetImage(Image *img);
+  Image *image();
   
-  void ReplaySprite();
-  void SetImageCoordRect(const Rect &r);
-  void SetTextureCoordRect(const RectF &r);
-  const Rect& GetImageCoordRect();
-  const RectF& GetTextureCoordRect();
+  void SetBlending(int blend);
+  void SetImageCoord(const Rect &r);
+  void SetTextureCoord(const Rect &r);
+  void Replay();
   const SpriteAnimationInfo& GetSpriteAnimationInfo();
-
-  void FillTextureCoordToVertexInfo(VertexInfo* vi, size_t frame);
 
   /* Set sprite animation frame by number manually.
    * @warn This function won't work
@@ -50,37 +46,34 @@ public:
   virtual void SetNumber(int number);
   virtual void Refresh();
 
-  Image *image();
-
-  /* @brief Load property(resource). */
-  virtual void Load(const Metric &metric);
-  virtual void LoadFromLR2SRC(const std::string &cmd);
-
 protected:
   Image *img_;
-  bool img_owned_;
 
-  SpriteAnimationInfo ani_info_;
+  SpriteAnimationInfo sprani_;
 
-  // current sprite animation frame
-  int idx_;
+  // current sprite time
+  float time_;
 
-  // eclipsed time of sprite animation
-  int eclipsed_time_;
+  // current sprite frame
+  int frame_;
 
-  // texture coordination source
-  RectF texcoord_;
+  // resource id
+  int *res_id_;
 
-  // source sprite size spec
-  Rect imgcoord_;
+  // blending mode
+  int blending_;
+
+  // texture coord
+  Rect texcoord_;
+
+  // use coord by texture pos or pixel
+  bool use_texture_coord_;
 
   // texture attribute (TODO)
   float tex_attribute_;
 
   virtual void doUpdate(float delta);
   virtual void doRender();
-
-  virtual const CommandFnMap& GetCommandFnMap();
 };
 
 /* Sprite may not need to be shared. */

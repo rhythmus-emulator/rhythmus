@@ -1,8 +1,11 @@
 #include "Sound.h"
+#include "Setting.h"
 #include "Game.h"
 #include "Error.h"
 #include "SceneManager.h" /* GameSound::Load() */
+#include "ResourceManager.h"
 #include "Util.h"
+#include "Logger.h"
 #include "common.h"
 
 /* OpenAL */
@@ -12,6 +15,7 @@
 /* Playback thread */
 #include <thread>
 #include <mutex>
+#include <chrono>
 
 namespace rhythmus
 {
@@ -19,119 +23,115 @@ namespace rhythmus
 constexpr int kMixerBitsize = 16;
 constexpr int kMixerSampleRate = 44100;
 constexpr int kMixerChannel = 2;
-constexpr size_t kBufferCount = 4;
-constexpr size_t kDefaultMixSize = 2048;
+
+// Maximum limited source count
+constexpr size_t kMaxSourceCount = 256;
+
+// Buffer count for each source (generally 2)
+constexpr size_t kBufferCount = 2;
+
+// Default buffer size, should be small to reduce sound delay.
+// e.g.
+// 16bit(2Byte) * 2ch = 4Byte for frame
+// 1024 / 4 = 256 frame,
+// nearly 256/44100 ~= 6msec delay
+constexpr size_t kDefaultBufferSize = 1024;
+
+// Sleeping time for sound body thread.
+constexpr long long kSleepMilisecond = 100;
 
 ALCdevice *device;
 ALCcontext *context;
-ALuint source_id;
-ALuint buffer_id[kBufferCount];
+ALuint source_id[kMaxSourceCount];
+ALuint buffer_id[kMaxSourceCount * kBufferCount];
 std::thread sound_thread;
-bool sound_thread_finish;
-
-int get_audio_fmt()
-{
-  switch (kMixerBitsize)
-  {
-  case 8:
-    return AL_FORMAT_STEREO8;
-    break;
-  case 16:
-    return AL_FORMAT_STEREO16;
-    break;
-  default:
-    // SHOULD not happen
-    // ASSERT
-    break;
-  }
-  return -1;
-}
 
 void SoundDriver::sound_thread_body()
 {
   char* pData = (char*)calloc(1, buffer_size_);
   int iBuffersProcessed = 0;
-  ALuint cur_buffer_id;
-  int audio_fmt = get_audio_fmt();
+  const ALsizei iSingleBufferSize = (ALsizei)(buffer_size_ / kBufferCount);
+  const size_t uFrameSize = iSingleBufferSize / (sinfo_.channels * sinfo_.bitsize / 8);
+  ALuint cur_source_id, cur_buffer_id;
+  ALint state, buffers_queued;
 
-  // stream initialization
-  for (int i = 0; i < kBufferCount; ++i)
-  {
-    /* Don't know why but always need to cache dummy data into buffer ... */
-    alBufferData(buffer_id[i], get_audio_fmt(), pData, buffer_size_, 44100);
-    alSourceQueueBuffers(source_id, 1, &buffer_id[i]);
-    ASSERT(alGetError() == 0);
-  }
-  alSourcePlay(source_id);
-
-  while (!sound_thread_finish)
-  {
-    // TODO: just for buffering test
-    alGetSourcei(source_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
-
-    while (iBuffersProcessed)
-    {
-      alSourceUnqueueBuffers(source_id, 1, &cur_buffer_id);
-      memset(pData, 0, buffer_size_);
-      SoundDriver::getMixer().Mix(pData, buffer_size_);
-      alBufferData(cur_buffer_id, audio_fmt, pData, buffer_size_, kMixerSampleRate);
-      alSourceQueueBuffers(source_id, 1, &cur_buffer_id);
-      iBuffersProcessed--;
-    }
-
-#if 1
-    ALint state, errcode;
-    alGetSourcei(source_id, AL_SOURCE_STATE, &state);
-    if (state != AL_PLAYING)
-    {
-      ASSERT((errcode = alGetError()) == 0);
-      /**
-       * This logic shouldn't reached too much due to flickering sound.
-       * If reached this logic, then might problem with alSourceQueueBuffers() ...
-       * Or just program is stopped (e.g. debugging)
-       */
-      alSourcePlay(source_id);
-    }
+  // -- stream initialization --
+  // set property of channel.
+#if 0
+  alSourcef(source_id, AL_PITCH, 1);
+  alSourcef(source_id, AL_GAIN, 1);
+  alSource3f(source_id, AL_POSITION, 0, 0, 0);
+  alSourcei(source_id, AL_LOOPING, AL_FALSE);
 #endif
 
-    Sleep(1);
+  // fill empty data into buffer and start playing.
+  for (size_t i = 0; i < source_count_; ++i)
+  {
+    for (size_t j = 0; j < kBufferCount; ++j)
+    {
+      alBufferData(buffer_id[i * kBufferCount * j], audio_format_, pData,
+        iSingleBufferSize, sinfo_.rate);
+      alSourceQueueBuffers(source_id[i], 1, &buffer_id[i]);
+      ASSERT(alGetError() == 0);
+    }
   }
+  for (size_t i = 0; i < source_count_; ++i)
+    alSourcePlay(source_id[i]);
+
+  // -- main thread loop --
+  while (is_running_)
+  {
+    for (size_t i = 0; i < source_count_; ++i)
+    {
+      cur_source_id = source_id[i];
+      alGetSourcei(cur_source_id, AL_BUFFERS_PROCESSED, &iBuffersProcessed);
+
+      while (iBuffersProcessed)
+      {
+        alSourceUnqueueBuffers(cur_source_id, 1, &cur_buffer_id);
+#if NOSOUND
+        memset(pData, 0, iSingleBufferSize);
+#else
+        SoundDriver::getMixer().Copy(pData, uFrameSize, i);
+#endif
+        alBufferData(cur_buffer_id, audio_format_, pData, buffer_size_, kMixerSampleRate);
+        alSourceQueueBuffers(cur_source_id, 1, &cur_buffer_id);
+        iBuffersProcessed--;
+      }
+
+      // handle buffer underrun.
+      alGetSourcei(cur_source_id, AL_SOURCE_STATE, &state);
+      if (state != AL_PLAYING)
+      {
+        alGetSourcei(cur_source_id, AL_BUFFERS_QUEUED, &buffers_queued);
+        if (buffers_queued > 0 && is_running_)
+          alSourcePlay(cur_source_id);
+      }
+    }
+
+    // CPU halt
+    //Sleep(1);
+    std::this_thread::sleep_for(std::chrono::milliseconds(kSleepMilisecond));
+  }
+
+  // -- finialize --
   free(pData);
-}
-
-// ---------------------------- class GameSound
-
-void GameSound::set_name(const std::string &name)
-{
-  name_ = name;
-}
-
-void GameSound::Load()
-{
-  std::string path;
-  if (!Setting::GetThemeMetricList().exist("Sound", name_))
-    return;
-  if (rmixer::Sound::Load(Setting::GetThemeMetricList().get<std::string>("Sound", name_)))
-    RegisterToMixer(&SoundDriver::getMixer());
-}
-
-void GameSound::Load(const std::string &path)
-{
-  // XXX: returning value?
-  rmixer::Sound::Load(path);
-}
-
-void GameSound::LoadWithName(const std::string &name)
-{
-  set_name(name);
-  Load();
 }
 
 
 // -------------------------------- class Mixer
 
-SoundDriver::SoundDriver() : buffer_size_(kDefaultMixSize)
-{}
+SoundDriver::SoundDriver()
+  : source_count_(kMaxSourceCount), buffer_size_(kDefaultBufferSize),
+    channel_count_(4096), audio_format_(AL_FORMAT_STEREO16), is_running_(false),
+    mixer_(nullptr)
+{
+  // S16, 44100, 2ch audio
+  sinfo_.is_signed = 1;
+  sinfo_.bitsize = kMixerBitsize;
+  sinfo_.rate = kMixerSampleRate;
+  sinfo_.channels = kMixerChannel;
+}
 
 SoundDriver::~SoundDriver()
 {
@@ -142,58 +142,94 @@ void SoundDriver::Initialize()
 {
   using namespace rmixer;
 
-  // get output device from Game settings
-  auto& setting = Setting::GetSystemSetting();
-  std::string device_name;
-  if (setting.GetOption("SoundDevice"))
+  // Load settings from perference
+  // TODO: Load SoundInfo setting
+  //setting.GetValueSafe("AudioSourceCount", source_count_);
+  //setting.GetValueSafe("SoundDevice", device_name_);
+  buffer_size_ = (unsigned)*PREFERENCE->sound_buffer_size;
+
+  // Additional settings: set audio format.
+  bool audio_format_set = true;
+  if (sinfo_.is_signed == 1)
   {
-    device_name = setting.GetOption("SoundDevice")->value<std::string>();
-    device = alcOpenDevice(device_name.c_str());
+    if (sinfo_.channels == 1)
+    {
+      switch (sinfo_.bitsize)
+      {
+      case 8:
+        audio_format_ = AL_FORMAT_MONO8;
+        break;
+      case 16:
+        audio_format_ = AL_FORMAT_MONO16;
+        break;
+      default:
+        audio_format_set = false;
+        break;
+      }
+    }
+    else if (sinfo_.channels == 2)
+    {
+      switch (sinfo_.bitsize)
+      {
+      case 8:
+        audio_format_ = AL_FORMAT_STEREO8;
+        break;
+      case 16:
+        audio_format_ = AL_FORMAT_STEREO16;
+        break;
+      default:
+        audio_format_set = false;
+        break;
+      }
+    }
+    else audio_format_set = false;
   }
+  else audio_format_set = false;
+  if (!audio_format_set)
+    Logger::Error("Unknown sound format, use fallback.");
 
-  // load sound buffer size (fallback: use default value)
-  buffer_size_ = setting.GetOption("SoundBufferSize")->value<size_t>();
-
+  // get output device from Game settings
+  device = alcOpenDevice(
+    device_name_.empty() ? nullptr : device_name_.c_str()
+  );
   if (!device)
   {
-    std::cerr << "Cannot find sound device or specified device is wrong, use NULL device (warn: no sound)." <<
-      std::endl;
-    device = alcOpenDevice(0);
-    if (!device)
-    {
-      std::cerr << "Sound device initializing failed. Error: " << alGetError() << std::endl;
-      return;
-    }
+    Logger::getInstance(LogMode::kLogError)
+      << "Sound device initializing failed. Error: " << alGetError()
+      << "(device name: " << device_name_ << ")" << Logger::endl;
+    return;
   }
 
   // from here, device is must generated.
   context = alcCreateContext(device, 0);
   if (!alcMakeContextCurrent(context))
   {
-    std::cerr << "Failed to make default context audio" << std::endl;
+    Logger::getInstance(LogMode::kLogError)
+      << "Failed to make default audio context." << Logger::endl;
+    return;
   }
 
-  alGenSources(1, &source_id);
-  alSourcef(source_id, AL_PITCH, 1);
-  alSourcef(source_id, AL_GAIN, 1);
-  alSource3f(source_id, AL_POSITION, 0, 0, 0);
-  alSourcei(source_id, AL_LOOPING, AL_FALSE);
+  // check maximum audio source size
+  ALCint numstereo;
+  alcGetIntegerv(device, ALC_STEREO_SOURCES, 1, &numstereo);
+  if (source_count_ > numstereo)
+    source_count_ = numstereo;
 
-  alGenBuffers(kBufferCount, buffer_id);
+  // create audio channels and buffers
+  alGenSources(source_count_, source_id);
+  alGenBuffers(source_count_ * kBufferCount, buffer_id);
 
   // now mixer initialization
-  SoundInfo mixinfo;
-  mixinfo.bitsize = kMixerBitsize;
-  mixinfo.rate = kMixerSampleRate;
-  mixinfo.channels = kMixerChannel;
-  mixer_.SetSoundInfo(mixinfo);
+  mixer_ = new Mixer(sinfo_, channel_count_);
 
-  // okay start stream
-  sound_thread_finish = false;
+  // start audio stream
+  is_running_ = true;
   sound_thread = std::thread(&SoundDriver::sound_thread_body, this);
   if (alGetError() != AL_NO_ERROR)
   {
-    std::cerr << "Something wrong happened playing audio.." << std::endl;
+    Logger::getInstance(LogMode::kLogError)
+      << "Something wrong happened playing audio.. (" << alGetError() << ")" << Logger::endl;
+    is_running_ = false;
   }
 }
 
@@ -201,13 +237,14 @@ void SoundDriver::Destroy()
 {
   if (device)
   {
-    alSourceStop(source_id);
+    for (int i = 0; i < source_count_; ++i)
+      alSourceStop(source_id[i]);
 
-    sound_thread_finish = true;
+    is_running_ = false;
     sound_thread.join();
 
-    alDeleteSources(1, &source_id);
-    alDeleteBuffers(kBufferCount, buffer_id);
+    alDeleteSources(source_count_, source_id);
+    alDeleteBuffers(source_count_ * kBufferCount, buffer_id);
     alcMakeContextCurrent(0);
     alcDestroyContext(context);
     alcCloseDevice(device);
@@ -246,7 +283,162 @@ SoundDriver& SoundDriver::getInstance()
 
 rmixer::Mixer& SoundDriver::getMixer()
 {
-  return getInstance().mixer_;
+  return *getInstance().mixer_;
+}
+
+// ---------------------------- class SoundData
+
+SoundData::SoundData() : sound_(nullptr), result_(0) {}
+
+SoundData::~SoundData()
+{
+  Unload();
+}
+
+/* @warn
+ * This procedure is not async;
+ * calling this procedure in main thread may stop rendering loop(hanging).
+ * To load object without hang, use ResourceManager::LoadSound(...)
+ * It will create async task which calls SoundData::Load(...) internally. */
+bool SoundData::Load(const std::string &path)
+{
+  Unload();
+  result_ = -1;
+  if (sound_) return false;
+  sound_ = new rmixer::Sound();
+  if (!sound_->Load(path, SoundDriver::getMixer().GetSoundInfo()))
+  {
+    delete sound_;
+    sound_ = nullptr;
+  }
+  else
+  {
+    result_ = 0;
+  }
+  return sound_ != nullptr;
+}
+
+bool SoundData::Load(const char *p, size_t len, const char *name_opt)
+{
+  Unload();
+  result_ = -1;
+  if (sound_) return false;
+  sound_ = new rmixer::Sound();
+  if (!sound_->Load(p, len, name_opt, SoundDriver::getMixer().GetSoundInfo()))
+  {
+    delete sound_;
+    sound_ = nullptr;
+  }
+  else
+  {
+    result_ = 0;
+  }
+  return sound_ != nullptr;
+}
+
+void SoundData::Unload()
+{
+  if (sound_)
+  {
+    delete sound_;
+    sound_ = nullptr;
+  }
+}
+
+int SoundData::get_result() const
+{
+  return result_;
+}
+
+rmixer::Sound *SoundData::get_sound()
+{
+  return sound_;
+}
+
+bool SoundData::is_empty() const
+{
+  return sound_ == nullptr;
+}
+
+
+// -------------------------------- class Sound
+
+Sound::Sound() : sounddata_(nullptr), channel_(nullptr), is_sound_from_rm_(false){}
+
+/* @warn  This function instantly  */
+bool Sound::Load(const std::string &path)
+{
+  Unload();
+  sounddata_ = SOUNDMAN->Load(path);
+  if (!sounddata_ || !sounddata_->get_sound())
+    return false;
+  is_sound_from_rm_ = true;
+  channel_ = SoundDriver::getMixer().PlaySound(sounddata_->get_sound(), false);
+  if (channel_) channel_->LockChannel();
+  return channel_ != 0;
+}
+
+bool Sound::Load(const char *p, size_t len, const char *name_opt)
+{
+  Unload();
+  sounddata_ = SOUNDMAN->Load(p, len, name_opt);
+  if (!sounddata_ || !sounddata_->get_sound())
+    return false;
+  is_sound_from_rm_ = true;
+  channel_ = SoundDriver::getMixer().PlaySound(sounddata_->get_sound(), false);
+  if (channel_) channel_->LockChannel();
+  return channel_ != 0;
+}
+
+bool Sound::Load(SoundData *sounddata)
+{
+  sounddata_ = sounddata;
+  is_sound_from_rm_ = false;
+  channel_ = SoundDriver::getMixer().PlaySound(sounddata_->get_sound(), false);
+  if (channel_) channel_->LockChannel();
+  return channel_ != 0;
+}
+
+void Sound::Unload()
+{
+  if (channel_)
+  {
+    channel_->Stop();
+    channel_->UnlockChannel();
+    channel_ = nullptr;
+    if (sounddata_ && is_sound_from_rm_)
+    {
+      SOUNDMAN->Unload(sounddata_);
+      sounddata_ = nullptr;
+    }
+  }
+}
+
+void Sound::Play()
+{
+  if (channel_)
+    channel_->Play();
+}
+
+void Sound::Stop()
+{
+  if (channel_)
+    channel_->Stop();
+}
+
+rmixer::Channel *Sound::get_channel()
+{
+  return channel_;
+}
+
+bool Sound::is_empty() const
+{
+  return channel_ == 0;
+}
+
+bool Sound::is_loading() const
+{
+  return (sounddata_ && sounddata_->is_loading());
 }
 
 }

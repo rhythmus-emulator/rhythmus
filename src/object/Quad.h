@@ -10,7 +10,7 @@ public:
   Quad();
   virtual ~Quad();
   void SetAlpha(float alpha);
-  void SetAlpha(const RectF &alpha);
+  void SetAlpha(const Vector4 &alpha);
 
 private:
   VertexInfo vi_[4];

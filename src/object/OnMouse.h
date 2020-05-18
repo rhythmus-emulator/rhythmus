@@ -9,8 +9,7 @@ class OnMouse : public Sprite
 public:
   OnMouse();
   virtual ~OnMouse();
-  virtual void Load(const Metric &metric);
-  virtual void LoadFromLR2SRC(const std::string &cmd);
+  virtual void Load(const MetricGroup &metric);
   virtual bool IsEntered(float x, float y);
 private:
   // XXX: for debug?

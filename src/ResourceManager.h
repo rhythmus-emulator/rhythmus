@@ -1,64 +1,75 @@
 #pragma once
 
-#include "Image.h"
-#include "Font.h"
 #include <string>
 #include <vector>
 #include <map>
 #include <list>
+#include <mutex>
 
 namespace rhythmus
 {
 
-/**
- * @brief
- * Contains cached resource(image, sound, etc.) objects
- */
-class ResourceManager
+class Task;
+class MetricGroup;
+class Image;
+class Font;
+class SoundData;
+
+/* @brief All resource objects, which is async-loadable. */
+class ResourceElement
 {
 public:
-  /* Load image from given path. */
-  static Image* LoadImage(const std::string &path);
-  static void UnloadImage(Image *img);
+  ResourceElement();
+  virtual ~ResourceElement();
+  void set_name(const std::string &name);
+  const std::string &get_name() const;
+  void set_parent_task(Task *task);
+  Task *get_parent_task();
+  virtual bool is_loading() const;
 
-  /* Load font from given path.
-   * @warn
-   * Font is not ttf file; it should be font spec file.
-   * If ttf file specified, then default font caching option will be applied. */
-  static Font* LoadFont(const std::string &path);
-  static Font* LoadFont(const FontAttributes &attr);
-  /* Load font by name. The font should have been cached previously. */
-  static Font* LoadFontByName(const std::string &name);
-  static Font* LoadSystemFont();
-  static void UnloadFont(Font* font);
+  friend class ResourceContainer;
+private:
+  Task *parent_task_;
+  std::string name_;
+  int ref_count_;
+};
 
-  /* @brief Read font attribute from path. Necessary if font should be loaded by name. */
-  const FontAttributes* ReadFontAttribute(const std::string &path);
-  const FontAttributes* GetFontAttributeByName(const std::string &name);
-  void ClearFontAttribute();
+/* @brief Base container for ResourceElement. */
+class ResourceContainer
+{
+public:
+  void AddResource(ResourceElement *elem);
+  ResourceElement* SearchResource(const std::string &name);
+  void DropResource(ResourceElement *elem);
 
-  template <typename T>
-  static T* LoadObject(const std::string &path);
-  template <typename T>
-  static void UnloadObject(T* obj);
+  typedef std::list<ResourceElement*>::iterator iterator;
+  iterator begin();
+  iterator end();
+  bool is_empty() const;
+  
+private:
+  std::list<ResourceElement*> elems_;
+};
 
-  static void UpdateMovie();
-
-  static ResourceManager& getInstance();
-
-  static void CacheSystemDirectory();
+/* @brief Cache directory/files managed by program. */
+class PathCache
+{
+public:
+  PathCache();
 
   /**
    * @brief
-   * Initalize directory hierarchery and default resource profile.
+   * Get cached file path masked path.
+   * Result is returned as input is if it's not masked path or not found.
    */
-  void Initialize();
+  std::string GetPath(const std::string& masked_path, bool &is_found) const;
+  std::string GetPath(const std::string& masked_path) const;
 
-  /**
-   * @brief
-   * check resource states and deallocates all resource objects.
-   */
-  void Cleanup();
+  /* @brief get all available paths from cached path */
+  void GetAllPaths(const std::string& masked_path, std::vector<std::string> &out) const;
+
+  /* @brief add path replacement for some special use */
+  void SetAlias(const std::string& path_from, const std::string& path_to);
 
   /**
    * @brief
@@ -67,6 +78,8 @@ public:
    * Cached paths are used for masked-path searching.
    */
   void CacheDirectory(const std::string& dir);
+
+  void CacheSystemDirectory();
 
   /**
    * @brief
@@ -83,24 +96,7 @@ public:
   void SetPrefixReplace(const std::string &prefix_from, const std::string &prefix_to);
   void ClearPrefixReplace();
 
-  /**
-   * @brief
-   * Get cached file path masked path.
-   * Result is returned as input is if it's not masked path or not found.
-   */
-  std::string GetPath(const std::string& masked_path, bool &is_found) const;
-  std::string GetPath(const std::string& masked_path) const;
-
-  /* @brief get all available paths from cached path */
-  void GetAllPaths(const std::string& masked_path, std::vector<std::string> &out) const;
-
-  /* @brief add path replacement for some special use */
-  static void SetAlias(const std::string& path_from, const std::string& path_to);
-
 private:
-  ResourceManager();
-  ~ResourceManager();
-
   // cached paths
   std::vector<std::string> path_cached_;
 
@@ -115,20 +111,84 @@ private:
   std::string PrefixReplace(const std::string &path) const;
 };
 
-/* @brief Object from ResourceManager using RAII model */
-template <typename T>
-class ResourceObject
+/* @brief Image object manager. */
+class ImageManager : private ResourceContainer
 {
 public:
-  ResourceObject(T *obj)
-    : obj_(obj) {};
-  ResourceObject(const std::string &name)
-    : obj_(ResourceManager::LoadObject<T>(name)) {};
-  ~ResourceObject() { ResourceManager::UnloadObject<T>(obj_); }
-  T &get() const { return *obj_; }
-  T &operator*() const { return *obj_; }
+  ImageManager();
+  virtual ~ImageManager();
+  Image* Load(const std::string &path);
+  Image* Load(const char *p, size_t len, const char *name_opt);
+  void Unload(Image *image);
+  void Update(float ms);
+  void set_load_async(bool load_async);
+  
 private:
-  T *obj_;
+  bool load_async_;
 };
+
+/* @brief Font object manager. */
+class SoundManager : private ResourceContainer
+{
+public:
+  SoundManager();
+  ~SoundManager();
+  SoundData* Load(const std::string &path);
+  SoundData* Load(const char *p, size_t len, const char *name_opt);
+  void Unload(SoundData *sound);
+  void set_load_async(bool load_async);
+
+private:
+  bool load_async_;
+};
+
+/* @brief Font object manager. */
+class FontManager : private ResourceContainer
+{
+public:
+  FontManager();
+  ~FontManager();
+  Font* Load(const std::string &path);
+  Font* Load(const char *p, size_t len, const char *name_opt);
+  Font* Load(const MetricGroup &metrics);
+  void Unload(Font *font);
+  void Update(float ms);
+  void set_load_async(bool load_async);
+
+private:
+  bool load_async_;
+};
+
+
+class ResourceManager
+{
+public:
+  /**
+   * @brief
+   * Initalize directory hierarchery and default resource profile.
+   */
+  static void Initialize();
+
+  /**
+   * @brief
+   * check resource states and deallocates all resource objects.
+   */
+  static void Cleanup();
+
+  /**
+   * @brief
+   * Update status of registered resource.
+   */
+  static void Update(float ms);
+
+private:
+  ResourceManager() {};
+};
+
+
+extern PathCache *PATH;
+extern ImageManager *IMAGEMAN;
+extern SoundManager *SOUNDMAN;
+extern FontManager *FONTMAN;
 
 }

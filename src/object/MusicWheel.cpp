@@ -72,32 +72,25 @@ MusicWheelItem::MusicWheelItem()
 }
 
 /* @warn use same metric that MusicWheel used. */
-void MusicWheelItem::Load(const Metric &metric)
+void MusicWheelItem::Load(const MetricGroup &metric)
 {
   title_ = std::make_unique<Text>();
   title_->set_name("MusicWheelTitle");
-  title_->LoadByName();
-  title_->LoadCommandWithNamePrefix(metric);
+  title_->Load(metric);
 
   /* title object won't be affected by op code. */
-  title_->SetIgnoreVisibleGroup(true);
+  //title_->SetIgnoreVisibleGroup(true);
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
     background_[i].set_name("MusicWheelType" + std::to_string(i));
-    background_[i].LoadByName();
-    background_[i].LoadCommandWithPrefix("Bar" + std::to_string(i), metric);
-    // Call LoadFromLR2DST and clear position data after it if necessary
-    // (for LR2 compatibility)
-    if (true /* TODO: BarTypeSpritePosRemove metric */)
-      background_[i].SetAllTweenPos(0, 0);
+    background_[i].Load(metric);
   }
 
   for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
   {
     level_[i].set_name("MusicWheelLevel" + std::to_string(i));
-    level_[i].LoadByName();
-    level_[i].LoadCommandWithNamePrefix(metric);
+    level_[i].Load(metric);
   }
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
@@ -175,7 +168,41 @@ bool MusicWheelItem::LoadFromMenuData(MenuData *d)
 
 // --------------------------- class MusicWheel
 
-MusicWheel::MusicWheel()
+MusicWheel::MusicWheel() :
+  info_title(KEYPOOL->GetString("MusicWheelTitle")),
+  info_subtitle(KEYPOOL->GetString("MusicWheelSubTitle")),
+  info_fulltitle(KEYPOOL->GetString("MusicWheelFullTitle")),
+  info_genre(KEYPOOL->GetString("MusicWheelGenre")),
+  info_artist(KEYPOOL->GetString("MusicWheelArtist")),
+  info_itemtype(KEYPOOL->GetInt("MusicWheelType")),
+  info_diff(KEYPOOL->GetInt("MusicWheelDiff")),
+  info_bpmmax(KEYPOOL->GetInt("MusicWheelBpmMax")),
+  info_bpmmin(KEYPOOL->GetInt("MusicWheelBpmMin")),
+  info_level(KEYPOOL->GetInt("MusicWheelLevel")),
+  info_difftype_1(KEYPOOL->GetInt("MusicWheelDT1")),
+  info_difftype_2(KEYPOOL->GetInt("MusicWheelDT2")),
+  info_difftype_3(KEYPOOL->GetInt("MusicWheelDT3")),
+  info_difftype_4(KEYPOOL->GetInt("MusicWheelDT4")),
+  info_difftype_5(KEYPOOL->GetInt("MusicWheelDT5")),
+  info_difflv_1(KEYPOOL->GetInt("MusicWheelDLV1")),
+  info_difflv_2(KEYPOOL->GetInt("MusicWheelDLV2")),
+  info_difflv_3(KEYPOOL->GetInt("MusicWheelDLV3")),
+  info_difflv_4(KEYPOOL->GetInt("MusicWheelDLV4")),
+  info_difflv_5(KEYPOOL->GetInt("MusicWheelDLV5")),
+  info_score(KEYPOOL->GetInt("MusicWheelScore")),
+  info_exscore(KEYPOOL->GetInt("MusicWheelExScore")),
+  info_totalnote(KEYPOOL->GetInt("MusicWheelTotalNote")),
+  info_maxcombo(KEYPOOL->GetInt("MusicWheelMaxCombo")),
+  info_playcount(KEYPOOL->GetInt("MusicWheelPlayCount")),
+  info_clearcount(KEYPOOL->GetInt("MusicWheelClearCount")),
+  info_failcount(KEYPOOL->GetInt("MusicWheelFailCount")),
+  info_cleartype(KEYPOOL->GetInt("MusicWheelClearType")),
+  info_pg(KEYPOOL->GetInt("MusicWheelPG")),
+  info_gr(KEYPOOL->GetInt("MusicWheelGR")),
+  info_gd(KEYPOOL->GetInt("MusicWheelGD")),
+  info_bd(KEYPOOL->GetInt("MusicWheelBD")),
+  info_pr(KEYPOOL->GetInt("MusicWheelPR")),
+  info_musicwheelpos(KEYPOOL->GetFloat("MusicWheelPos"))
 {
   set_name("MusicWheel");
   set_infinite_scroll(true);
@@ -205,24 +232,7 @@ MusicWheel::~MusicWheel()
   Clear();
 }
 
-MusicWheelData& MusicWheel::get_data(int dataindex)
-{
-  return static_cast<MusicWheelData&>(Menu::GetMenuDataByIndex(dataindex));
-}
-
-MusicWheelData& MusicWheel::get_selected_data(int player_num)
-{
-  return static_cast<MusicWheelData&>(Menu::GetSelectedMenuData());
-}
-
-MenuItem* MusicWheel::CreateMenuItem()
-{
-  MusicWheelItem* item = new MusicWheelItem();
-  item->set_parent(this);
-  return item;
-}
-
-void MusicWheel::Load(const Metric &metric)
+void MusicWheel::Load(const MetricGroup &metric)
 {
   /* create section datas */
   MusicWheelData section;
@@ -232,10 +242,10 @@ void MusicWheel::Load(const Metric &metric)
   data_sections_.push_back(section);
 
   /* load system preference */
-  filter_.gamemode = Setting::GetSystemSetting().GetOption("Gamemode")->value<int>();
-  filter_.difficulty = Setting::GetSystemSetting().GetOption("Difficultymode")->value<int>();
+  filter_.gamemode = *PREFERENCE->gamemode;
+  filter_.difficulty = *PREFERENCE->select_difficulty_mode;
   filter_.invalidate = true;
-  sort_.type = Setting::GetSystemSetting().GetOption("Sorttype")->value<int>();
+  sort_.type = *PREFERENCE->select_sort_type;
   sort_.invalidate = true;
 
   /* limit gamemode and sort filter types by metric */
@@ -282,186 +292,84 @@ void MusicWheel::Load(const Metric &metric)
   Menu::Load(metric);
 }
 
+MusicWheelData& MusicWheel::get_data(int dataindex)
+{
+  return static_cast<MusicWheelData&>(Menu::GetMenuDataByIndex(dataindex));
+}
+
+MusicWheelData& MusicWheel::get_selected_data(int player_num)
+{
+  return static_cast<MusicWheelData&>(Menu::GetSelectedMenuData());
+}
+
+MenuItem* MusicWheel::CreateMenuItem()
+{
+  MusicWheelItem* item = new MusicWheelItem();
+  item->set_parent(this);
+  return item;
+}
+
 void MusicWheel::OnSelectChange(const MenuData *data, int direction)
 {
   const auto *d = static_cast<const MusicWheelData*>(data);
-  int flag_code[6];
-  memset(flag_code, 0, sizeof(flag_code));
 
-  /* Type of item? */
-  switch (d->type)
-  {
-  case 0: /* General Song Item */
-    flag_code[2] = 1;
-    flag_code[5] = 1;
-    break;
-  case 1: /* Folder */
-    flag_code[1] = 1;
-    break;
-  case 2: /* User-Customized Folder */
-    flag_code[1] = 1;
-    break;
-  case 3: /* New song folder */
-    flag_code[1] = 1;
-    break;
-  case 4: /* Rival folder */
-    flag_code[1] = 1;
-    break;
-  case 5: /* Song (versus mode) */
-    flag_code[2] = 1;
-    flag_code[5] = 1;
-    break;
-  case 6: /* Course folder */
-    flag_code[3] = 1;
-    flag_code[5] = 1;
-    break;
-  case 8: /* Course */
-    flag_code[3] = 1;
-    flag_code[5] = 1;
-    break;
-  case 9: /* Random */
-    flag_code[5] = 1;
-    break;
-  }
-  for (size_t i = 1; i < 6; ++i)
-    Script::getInstance().SetFlag(i, flag_code[i]);
 
-  /* Flag for difficulty of current song. */
-  Script::getInstance().SetString(10, d->info.title);
-  Script::getInstance().SetString(11, d->info.subtitle);
-  Script::getInstance().SetString(12, d->info.title + " " + d->info.subtitle);
-  Script::getInstance().SetString(13, d->info.genre);
-  Script::getInstance().SetString(14, d->info.artist);
-  /* BPM */
-  Script::getInstance().SetNumber(90, d->info.bpm_max);
-  Script::getInstance().SetNumber(91, d->info.bpm_min);
-  Script::getInstance().SetFlag(176, d->info.bpm_max == d->info.bpm_min);
-  Script::getInstance().SetFlag(177, d->info.bpm_max != d->info.bpm_min);
-  /* IR */
-  Script::getInstance().SetNumber(92, 0);
-  Script::getInstance().SetNumber(93, 0);
-  Script::getInstance().SetNumber(94, 0);
-  /* Song difficulty existence */
+  // update KeyPool
+  *info_title = d->info.title;
+  *info_subtitle = d->info.subtitle;
+  *info_fulltitle = d->info.title + " " + d->info.subtitle;
+  *info_genre = d->info.genre;
+  *info_artist = d->info.artist;
+  *info_diff = d->info.difficulty;
+  *info_itemtype = d->type;
+  *info_bpmmax = d->info.bpm_max;
+  *info_bpmmin = d->info.bpm_min;
+  *info_level = d->info.level;
+
+
+  /* TODO: Song difficulty existence
   int diff_exist[5] = { 0, 0, 0, 0, 0 };
-  int diff_not_exist[5] = { 1, 1, 1, 1, 1 };
-  uint32_t levels[5] = { UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX, UINT_MAX };
-  int diff_type = 0;
-  /* TODO: search all difficulty in songlistdata. */
-  if (flag_code[2] == 1 /* if song */)
-  {
-    switch (d->info.difficulty)
-    {
-    case Difficulty::kDifficultyEasy:
-      diff_exist[0] = 1;
-      diff_not_exist[0] = 0;
-      levels[0] = d->info.level;
-      diff_type = 1;
-      break;
-    case Difficulty::kDifficultyNormal:
-      diff_exist[1] = 1;
-      diff_not_exist[1] = 0;
-      levels[1] = d->info.level;
-      diff_type = 2;
-      break;
-    case Difficulty::kDifficultyHard:
-      diff_exist[2] = 1;
-      diff_not_exist[2] = 0;
-      levels[2] = d->info.level;
-      diff_type = 3;
-      break;
-    case Difficulty::kDifficultyEx:
-      diff_exist[3] = 1;
-      diff_not_exist[3] = 0;
-      levels[3] = d->info.level;
-      diff_type = 4;
-      break;
-    case Difficulty::kDifficultyInsane:
-      diff_exist[4] = 1;
-      diff_not_exist[4] = 0;
-      levels[4] = d->info.level;
-      diff_type = 5;
-      break;
-    }
-  }
-  for (size_t i = 0; i < 5; ++i)
-  {
-    Script::getInstance().SetFlag(500 + i, diff_not_exist[i]);
-    Script::getInstance().SetFlag(505 + i, diff_exist[i]);
-    Script::getInstance().SetFlag(510 + i, diff_type > 0);  // TODO: single
-    Script::getInstance().SetFlag(515 + i, 0);              // TODO: multiple
-    Script::getInstance().SetNumber(45 + i, levels[i]);
-    Script::getInstance().SetFlag(151 + i, diff_type - 1 == i);
-  }
-  Script::getInstance().SetFlag(150, diff_type == 0);
+  int diff_type[5] = { 2, 2, -1, 2 ,3 };
+  uint32_t levels[5] = { 3, 6, 9, 11, 12 };
+   */
+  *info_difftype_1 = 1;
+  *info_difftype_2 = 2;
+  *info_difftype_3 = 2;
+  *info_difftype_4 = 4;
+  *info_difftype_5 = 5;
+  *info_difflv_1 = 2;
+  *info_difflv_2 = 3;
+  *info_difflv_3 = 8;
+  *info_difflv_4 = 11;
+  *info_difflv_5 = 12;
 
-  /* Load matching playrecord */
+
+  // Load matching playrecord
   auto *playrecord = PlayerManager::GetPlayer()->GetPlayRecord(d->name);
-  if (!playrecord)
+  if (playrecord)
   {
-    static PlayRecord playrecord_empty;
-    playrecord_empty.pg = 0;
-    playrecord_empty.gr = 0;
-    playrecord_empty.gd = 0;
-    playrecord_empty.bd = 0;
-    playrecord_empty.pr = 0;
-    playrecord_empty.total_note = d->info.notecount;
-    playrecord_empty.maxcombo = 0;
-    playrecord_empty.option = 0;
-    playrecord_empty.option_dp = 0;
-    playrecord_empty.score = 0;
-    playrecord_empty.playcount = 0;
-    playrecord_empty.clearcount = 0;
-    playrecord_empty.failcount = 0;
-    playrecord = &playrecord_empty;
-  }
-  Script::getInstance().SetNumber(70, playrecord->score);
-  Script::getInstance().SetNumber(71, playrecord->exscore());
-  Script::getInstance().SetNumber(72, playrecord->total_note * 2);
-  Script::getInstance().SetNumber(73, (int)playrecord->rate());
-  Script::getInstance().SetNumber(74, playrecord->total_note);
-  Script::getInstance().SetNumber(75, playrecord->maxcombo);
-  Script::getInstance().SetNumber(76, playrecord->bd + playrecord->pr);
-  Script::getInstance().SetNumber(77, playrecord->playcount);
-  Script::getInstance().SetNumber(78, playrecord->clearcount);
-  Script::getInstance().SetNumber(79, playrecord->failcount);
-  Script::getInstance().SetNumber(80, playrecord->pg);
-  Script::getInstance().SetNumber(81, playrecord->gr);
-  Script::getInstance().SetNumber(82, playrecord->gd);
-  Script::getInstance().SetNumber(83, playrecord->bd);
-  Script::getInstance().SetNumber(84, playrecord->pr);
-  Script::getInstance().SetNumber(85, static_cast<int>(playrecord->pg * 100.0f / playrecord->total_note));
-  Script::getInstance().SetNumber(86, static_cast<int>(playrecord->gr * 100.0f / playrecord->total_note));
-  Script::getInstance().SetNumber(87, static_cast<int>(playrecord->gd * 100.0f / playrecord->total_note));
-  Script::getInstance().SetNumber(88, static_cast<int>(playrecord->bd * 100.0f / playrecord->total_note));
-  Script::getInstance().SetNumber(89, static_cast<int>(playrecord->pr * 100.0f / playrecord->total_note));
-  for (int i = 0; i <= 45; ++i)
-    Script::getInstance().SetFlag(520 + i, 0);
-  if (flag_code[2] == 1 /* if song */ && playrecord)
-  {
-    int clridx = playrecord->clear_type;  // XXX: need to use enum
-    switch (d->info.difficulty)
-    {
-    case Difficulty::kDifficultyEasy:
-      Script::getInstance().SetFlag(520 + clridx, 1);
-      break;
-    case Difficulty::kDifficultyNormal:
-      Script::getInstance().SetFlag(530 + clridx, 1);
-      break;
-    case Difficulty::kDifficultyHard:
-      Script::getInstance().SetFlag(540 + clridx, 1);
-      break;
-    case Difficulty::kDifficultyEx:
-      Script::getInstance().SetFlag(550 + clridx, 1);
-      break;
-    case Difficulty::kDifficultyInsane:
-      Script::getInstance().SetFlag(560 + clridx, 1);
-      break;
-    }
+    *info_score = 100000;
+    *info_exscore = 1234;
+    *info_totalnote = 3000;
+    *info_maxcombo = 1000;
+    *info_playcount = 2;
+    *info_clearcount = 1;
+    *info_failcount = 1;
+    *info_cleartype = 2;
+    *info_pg = 1000;
+    *info_gr = 234;
+    *info_gd = 0;
+    *info_bd = 0;
+    *info_pr = 0;
   }
 
-  Script::getInstance().SetSliderNumber(1, data_index_ * 100.0 / size());
 
-  EventManager::SendEvent("SongSelectChange");
+  // update pos
+  *info_musicwheelpos = data_index_ * 100.0 / (float)size();
+
+
+  // send event
+  EventManager::SendEvent("SongSelectChanged");
   if (direction == -1)
     EventManager::SendEvent("SongSelectChangeUp");
   else if (direction == 1)
@@ -564,6 +472,9 @@ void MusicWheel::RebuildData()
           d.AddChart(&sdata);
       }
     }
+
+    // XXX: need to send in sort invalidation
+    EventManager::SendEvent("SongFilterChanged");
   }
 
   // sort data object
@@ -664,21 +575,18 @@ void MusicWheel::CloseSection()
 void MusicWheel::Sort(int sort)
 {
   sort_.type = sort;
-  Setting::GetSystemSetting().GetOption("Sorttype")->set_value(sort_.type);
   sort_.invalidate = true;
 }
 
 void MusicWheel::SetGamemodeFilter(int filter)
 {
   filter_.gamemode = filter;
-  Setting::GetSystemSetting().GetOption("Gamemode")->set_value(filter_.gamemode);
   filter_.invalidate = true;
 }
 
 void MusicWheel::SetDifficultyFilter(int filter)
 {
   filter_.difficulty = filter;
-  Setting::GetSystemSetting().GetOption("Difficultymode")->set_value(filter_.difficulty);
   filter_.invalidate = true;
 }
 

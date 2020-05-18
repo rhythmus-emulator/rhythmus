@@ -59,6 +59,8 @@ public:
   Menu();
   ~Menu();
 
+  virtual void Load(const MetricGroup &metric);
+
   MenuData& GetSelectedMenuData();
   MenuData& GetMenuDataByIndex(int index);
   MenuData* GetMenuDataByName(const std::string& name);
@@ -94,8 +96,6 @@ public:
   virtual void NavigateRight();
 
   /* TODO: curve & rot with z pos? */
-
-  virtual void Load(const Metric &metric);
 
   virtual void OnSelectChange(const MenuData *data, int direction);
   virtual void OnSelectChanged();
@@ -161,7 +161,7 @@ protected:
 
   Sprite focus_effect_;
 
-  GameSound wheel_sound_;
+  Sound wheel_sound_;
 
   void UpdateItemPos();
   void UpdateItemPosByExpr();

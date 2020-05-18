@@ -31,7 +31,7 @@ void AddOption(const std::string& option_name,
 
 void EnumResolution(std::vector<std::string>& out)
 {
-  Graphic::GetResolutions(out);
+  //Graphic::GetResolutions(out);
 }
 
 void EnumUserList(std::vector<std::string>& out)

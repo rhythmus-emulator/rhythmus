@@ -1,5 +1,4 @@
 ﻿#include "TestScene.h"
-#include <iostream>
 
 namespace rhythmus
 {
@@ -13,12 +12,9 @@ TestScene::~TestScene()
 {
 }
 
-void TestScene::StartScene()
-{
-}
-
 void TestScene::LoadScene()
 {
+#if 0
   // XXX: test animation
   spr_.SetImageByPath("../test/test.png");
   spr_.AddTweenState({ 0, 0, 100, 100,
@@ -68,10 +64,8 @@ void TestScene::LoadScene()
   AddChild(&spr2_);
   AddChild(&text_);
   AddChild(&lr2text_);
-}
-
-void TestScene::CloseScene()
-{
+#endif
+  Scene::LoadScene();
 }
 
 void TestScene::ProcessInputEvent(const InputEvent& e)

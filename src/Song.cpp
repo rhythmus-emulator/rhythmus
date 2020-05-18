@@ -193,7 +193,7 @@ void SongList::Load()
   size_t thread_count_ = TaskPool::getInstance().GetPoolSize();
   for (size_t i = 0; i < thread_count_; ++i)
   {
-    TaskAuto t = std::make_unique<SongListUpdateTask>();
+    Task* t = new SongListUpdateTask();
     TaskPool::getInstance().EnqueueTask(t);
   }
 }
@@ -358,7 +358,7 @@ void SongList::LoadInvalidationList()
         if (!c) break;
         i = INT_MAX; // kind of trick to exit for loop instantly
       }
-      c->Invalidate();
+      c->Update();
       auto &meta = c->GetMetaData();
       dat.chartpath = c->GetFilename();
       dat.id = c->GetHash();

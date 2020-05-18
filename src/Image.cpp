@@ -38,6 +38,9 @@ public:
   float get_duration() { return duration_; }
   AVFrame* get_frame() { return frame; }
 
+  int get_error_code() const { return error_code_; }
+  const char *get_error_msg() const { return error_msg_.c_str(); }
+
 private:
   AVCodec* codec;
   AVCodecContext* context;
@@ -76,6 +79,9 @@ private:
 
   // video width / height
   int width_, height_;
+
+  int error_code_;
+  std::string error_msg_;
 };
 
 FFmpegContext::FFmpegContext()
@@ -133,17 +139,21 @@ bool FFmpegContext::Open(const std::string& path)
 {
   // should not open it again ...
   ASSERT(formatctx == 0);
+  error_msg_.clear();
+  error_code_ = 0;
 
   if (avformat_open_input(&formatctx, path.c_str(), 0, 0) != 0)
   {
-    std::cerr << "Movie file open failed: " << path << std::endl;
+    error_msg_ = "Movie file open failed.";
+    error_code_ = -1;
     return false;
   }
 
   int sinfo_ret = avformat_find_stream_info(formatctx, NULL);
   if (sinfo_ret < 0)
   {
-    std::cerr << "Movie stream search failed (code " << sinfo_ret << "): " << path << std::endl;
+    error_msg_ = "Movie stream search failed (code " + std::to_string(sinfo_ret) + ")";
+    error_code_ = -1;
     Unload();
     return false;
   }
@@ -155,7 +165,8 @@ bool FFmpegContext::Open(const std::string& path)
     formatctx->streams[video_stream_idx]->codecpar->codec_id);
   if (!codec)
   {
-    std::cerr << "Movie stream codec failed: " << path << std::endl;
+    error_msg_ = "Movie stream codec failed.";
+    error_code_ = -1;
     Unload();
     return false;
   }
@@ -175,7 +186,8 @@ bool FFmpegContext::Open(const std::string& path)
   int codec_open_code = avcodec_open2(context, codec, NULL);
   if (codec_open_code < 0)
   {
-    std::cerr << "Movie codec open failed - code: " << codec_open_code << ". " << path << std::endl;
+    error_msg_ = "Movie codec open failed - code: " + std::to_string(codec_open_code);
+    error_code_ = -1;
     Unload();
     return false;
   }
@@ -335,24 +347,14 @@ bool IsMovieFile(const std::string& path)
 
 Image::Image()
   : bitmap_ctx_(0), data_ptr_(nullptr), width_(0), height_(0),
-    textureID_(0), ffmpeg_ctx_(0), video_time_(.0f), loop_movie_(true)
+    textureID_(0), error_code_(0), error_msg_(nullptr),
+    ffmpeg_ctx_(0), video_time_(.0f), loop_movie_(true)
 {
 }
 
 Image::~Image()
 {
-  UnloadAll();
-}
-
-/* Set an alias of image in case of searching. */
-void Image::set_name(const std::string& name)
-{
-  name_ = name;
-}
-
-std::string Image::get_name() const
-{
-  return name_;
+  Unload();
 }
 
 std::string Image::get_path() const
@@ -381,9 +383,9 @@ void Image::LoadImageFromPath(const std::string& path)
 }
 
 /* Return boolean value: whether is image file */
-bool Image::LoadImageFromMemory(uint8_t* p, size_t len)
+bool Image::LoadImageFromMemory(const char* p, size_t len)
 {
-  FIMEMORY *memstream = FreeImage_OpenMemory(p, len);
+  FIMEMORY *memstream = FreeImage_OpenMemory((uint8_t*)p, len);
   FREE_IMAGE_FORMAT fmt = FreeImage_GetFileTypeFromMemory(memstream);
   if (fmt == FREE_IMAGE_FORMAT::FIF_UNKNOWN)
   {
@@ -419,7 +421,10 @@ void Image::LoadMovieFromPath(const std::string& path)
   FFmpegContext *ffmpeg_ctx = new FFmpegContext();
   if (!ffmpeg_ctx->Open(path))
   {
-    std::cerr << "Movie open failure: " << path << std::endl;
+    error_msg_buf_ = ffmpeg_ctx->get_error_msg();
+    error_msg_ = error_msg_buf_.c_str();
+    error_code_ = -1;
+
     delete ffmpeg_ctx;
     ffmpeg_ctx = 0;
     return;
@@ -439,14 +444,17 @@ void Image::LoadMovieFromPath(const std::string& path)
   }
 }
 
-void Image::LoadMovieFromMemory(uint8_t* p, size_t len)
+void Image::LoadMovieFromMemory(const char* p, size_t len)
 {
   // TODO
+  ASSERT(0);
 }
 
-void Image::LoadFromPath(const std::string& path)
+void Image::Load(const std::string& path)
 {
-  UnloadAll();
+  Unload();
+  error_code_ = 0;
+  error_msg_ = 0;
 
   if (IsMovieFile(path))
     LoadMovieFromPath(path);
@@ -454,47 +462,56 @@ void Image::LoadFromPath(const std::string& path)
     LoadImageFromPath(path);
 }
 
-void Image::LoadFromData(uint8_t* p, size_t len)
+void Image::Load(const char* p, size_t len, const char *ext_hint_opt)
 {
-  UnloadAll();
+  Unload();
+  error_code_ = 0;
+  error_msg_ = 0;
 
-  if (!LoadImageFromMemory(p, len))
-    LoadMovieFromMemory(p, len);
+  if (ext_hint_opt)
+  {
+    bool is_image = false;
+    static const char *ext_img_hints[] = {
+      "jpg", "png", "gif", "jpeg", "bmp", "tga", 0
+    };
+    const char *ext = ext_hint_opt;
+    for (const char *p = ext; *p; ++p)
+      if (*p == '.') ext = p + 1;
+    for (const char **ext_img = ext_img_hints; !is_image && *ext_img; ++ext_img)
+      if (stricmp(*ext_img, ext) == 0)
+        is_image = true;
+    if (!is_image)
+      LoadMovieFromMemory(p, len);
+    else
+      LoadImageFromMemory(p, len);
+  }
+  else
+  {
+    if (!LoadImageFromMemory(p, len))
+      LoadMovieFromMemory(p, len);
+  }
 }
 
-void Image::CommitImage(bool delete_data)
+void Image::Commit()
 {
   if (!data_ptr_)
   {
-    std::cerr << "Cannot commit image as it's not loaded." << std::endl;
+    error_msg_ = "Cannot commit image as it's not loaded.";
+    error_code_ = -2;
     return;
   }
 
-  glGenTextures(1, &textureID_);
+  textureID_ = GRAPHIC->CreateTexture(data_ptr_, width_, height_);
+
   if (textureID_ == 0)
   {
-    GLenum err = glGetError();
-    std::cerr << "Allocating textureID failed: " << (int)err << std::endl;
+    error_msg_ = "Allocating textureID failed";
+    error_code_ = -2;
     return;
   }
-  glBindTexture(GL_TEXTURE_2D, textureID_);
-  /* Don't know why, but FreeImage is currently loading image with BGR bitmap.
-   * should fix it? */
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0,
-    GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid*)data_ptr_);
 
-  /* do not render outside texture, clamp it. */
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-  /* prevent font mumbling when minimized, prevent cracking when magnified. */
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  /* movie type: won't remove bitmap (need to update continously) */
-  if (delete_data && ffmpeg_ctx_ == 0)
+  /* if movie type -- won't remove bitmap (need to update continously) */
+  if (ffmpeg_ctx_ == 0)
   {
     UnloadBitmap();
   }
@@ -502,66 +519,68 @@ void Image::CommitImage(bool delete_data)
 
 void Image::Update(float delta)
 {
-  if (!ffmpeg_ctx_)
-    return;
-
-  FFmpegContext *fctx = (FFmpegContext*)ffmpeg_ctx_;
-
-  // If EOF and not image, restart (if necessary)
-  if (loop_movie_ && !fctx->is_image() && fctx->is_eof())
+  /* update movie */
+  if (ffmpeg_ctx_)
   {
-    fctx->Rewind();
-    video_time_ = 0;
+    FFmpegContext *fctx = (FFmpegContext*)ffmpeg_ctx_;
+
+    // If EOF and not image, restart (if necessary)
+    if (loop_movie_ && !fctx->is_image() && fctx->is_eof())
+    {
+      fctx->Rewind();
+      video_time_ = 0;
+    }
+    video_time_ += delta;
+
+    // Decode first, Read later.
+    // If both failed, video stream is completely end. exit loop.
+    int ret = 0; /* ret of decoding */
+    while (!fctx->is_eof())
+    {
+      // DecodePacket == 0 --> EOF or decoding failure.
+      // We read next packet in this case.
+      // If successfully decode packet, exit loop.
+      if (ret = fctx->DecodePacket(video_time_))
+        break;
+
+      // ReadPacket() might fail, But we can retry.
+      // If success, retry decoding. otherwise exit loop.
+      if (fctx->ReadPacket() == 0) break;
+    }
+
+    // Convert decoded image into image (if necessary)
+    if (ret == 1)
+    {
+      AVFrame *frame = fctx->get_frame();
+      AVFrame *frame_conv = av_frame_alloc();
+      avpicture_fill((AVPicture*)frame_conv, data_ptr_, AV_PIX_FMT_RGBA, width_, height_);
+
+      // convert frame to RGB24
+      SwsContext* mod_ctx;
+      mod_ctx = sws_getContext(
+        frame->width, frame->height, (AVPixelFormat)frame->format,
+        width_, height_, AV_PIX_FMT_RGBA,
+        SWS_BICUBIC, 0, 0, 0);
+      sws_scale(mod_ctx, frame->data, frame->linesize, 0, frame->height,
+        frame_conv->data, frame_conv->linesize);
+      sws_freeContext(mod_ctx);
+
+      // XXX: need to flip but I don't know why. should check about this problem
+
+      // Upload texture
+      GRAPHIC->UpdateTexture(textureID_, data_ptr_, 0, 0, width_, height_);
+
+      // Free mem
+      av_frame_free(&frame_conv);
+    }
   }
-  video_time_ += delta;
 
-  // Decode first, Read later.
-  // If both failed, video stream is completely end. exit loop.
-  int ret = 0; /* ret of decoding */
-  while (!fctx->is_eof())
-  {
-    // DecodePacket == 0 --> EOF or decoding failure.
-    // We read next packet in this case.
-    // If successfully decode packet, exit loop.
-    if (ret = fctx->DecodePacket(video_time_))
-      break;
-
-    // ReadPacket() might fail, But we can retry.
-    // If success, retry decoding. otherwise exit loop.
-    if (fctx->ReadPacket() == 0) break;
-  }
-
-  // Convert decoded image into image (if necessary)
-  if (ret == 1)
-  {
-    AVFrame *frame = fctx->get_frame();
-    AVFrame *frame_conv = av_frame_alloc();
-    avpicture_fill((AVPicture*)frame_conv, data_ptr_, AV_PIX_FMT_RGBA, width_, height_);
-
-    // convert frame to RGB24
-    SwsContext* mod_ctx;
-    mod_ctx = sws_getContext(
-      frame->width, frame->height, (AVPixelFormat)frame->format,
-      width_, height_, AV_PIX_FMT_RGBA,
-      SWS_BICUBIC, 0, 0, 0);
-    sws_scale(mod_ctx, frame->data, frame->linesize, 0, frame->height,
-      frame_conv->data, frame_conv->linesize);
-    sws_freeContext(mod_ctx);
-
-    // XXX: need to flip but I don't know why. should check about this problem
-
-    // Upload texture
-    glBindTexture(GL_TEXTURE_2D, textureID_);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0,
-      GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)data_ptr_);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    // Free mem
-    av_frame_free(&frame_conv);
-  }
+  /* upload texture (if static image) */
+  if (!ffmpeg_ctx_ && data_ptr_)
+    Commit();
 }
 
-void Image::UnloadAll()
+void Image::Unload()
 {
   UnloadMovie();
   UnloadBitmap();
@@ -599,15 +618,20 @@ void Image::UnloadTexture()
 {
   if (textureID_)
   {
-    glDeleteTextures(1, &textureID_);
+    GRAPHIC->DeleteTexture(textureID_);
     textureID_ = 0;
   }
 }
 
+/* @brief Is texture loaded into graphic memory? */
 bool Image::is_loaded() const
 {
-  return width_ > 0 && height_ > 0;
+  return textureID_ > 0;
 }
+
+int Image::get_error_code() const { return error_code_; }
+
+const char* Image::get_error_msg() const { return error_msg_; }
 
 void Image::RestartMovie()
 {
@@ -615,7 +639,7 @@ void Image::RestartMovie()
     static_cast<FFmpegContext*>(ffmpeg_ctx_)->Rewind();
 }
 
-GLuint Image::get_texture_ID() const
+unsigned Image::get_texture_ID() const
 {
   return textureID_;
 }
@@ -628,6 +652,11 @@ uint16_t Image::get_width() const
 uint16_t Image::get_height() const
 {
   return height_;
+}
+
+const uint8_t *Image::get_ptr() const
+{
+  return data_ptr_;
 }
 
 void Image::SetLoopMovie(bool loop)

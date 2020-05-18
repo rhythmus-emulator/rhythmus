@@ -4,206 +4,186 @@
 #include "Script.h"
 #include "Util.h"
 #include "common.h"
+#include "config.h"
 
 namespace rhythmus
 {
 
 Sprite::Sprite()
-  : img_(nullptr), img_owned_(true),
-    idx_(0), eclipsed_time_(0),
-    tex_attribute_(0)
+  : img_(nullptr), time_(0), frame_(0), res_id_(nullptr),
+    blending_(0), use_texture_coord_(true), tex_attribute_(0)
 {
-  ani_info_.divx = ani_info_.divy = ani_info_.cnt = 1;
-  ani_info_.duration = 0;
-  texcoord_.x1 = texcoord_.y1 = 0.f;
-  texcoord_.x2 = texcoord_.y2 = 1.f;
-  memset(&imgcoord_, 0, sizeof(imgcoord_));
+  sprani_.divx = sprani_.divy = sprani_.cnt = 1;
+  sprani_.duration = 0;
+  texcoord_ = Rect{ 0.0f, 0.0f, 1.0f, 1.0f };
 }
 
 Sprite::~Sprite()
 {
-  if (img_ && img_owned_)
-    ResourceManager::UnloadImage(img_);
+  if (img_)
+    IMAGEMAN->Unload(img_);
 }
 
-void Sprite::SetImageByPath(const std::string &path)
-{
-  Image *img = ResourceManager::LoadImage(path);
-  if (!img)
-    return;
-  if (img_ && img_owned_)
-    ResourceManager::UnloadImage(img_);
-
-  img_ = img;
-  img_owned_ = true;
-
-  /* default image src set */
-  texcoord_.x1 = texcoord_.y1 = 0.f;
-  texcoord_.x2 = texcoord_.y2 = 1.f;
-}
-
-void Sprite::SetImage(Image *img)
-{
-  if (img_ && img_owned_)
-    ResourceManager::UnloadImage(img_);
-
-  img_ = img;
-  img_owned_ = false;
-}
-
-void Sprite::ReplaySprite()
-{
-  eclipsed_time_ = 0;
-}
-
-void Sprite::SetImageCoordRect(const Rect &r)
-{
-  imgcoord_ = r;
-  texcoord_.x1 = imgcoord_.x1 / (float)img_->get_width();
-  texcoord_.y1 = imgcoord_.y1 / (float)img_->get_height();
-  if (imgcoord_.x2 < 0 || imgcoord_.x2 < imgcoord_.x1 /* LR2 compatibility */) imgcoord_.x2 = 1.0f;
-  else texcoord_.x2 = imgcoord_.x2 / (float)img_->get_width();
-  if (imgcoord_.y2 < 0 || imgcoord_.y2 < imgcoord_.y1 /* LR2 compatibility */) imgcoord_.y2 = 1.0f;
-  else texcoord_.y2 = imgcoord_.y2 / (float)img_->get_height();
-}
-
-void Sprite::SetTextureCoordRect(const RectF &r)
-{
-  texcoord_ = r;
-  imgcoord_.x1 = texcoord_.x1 * (float)img_->get_width();
-  imgcoord_.y1 = texcoord_.y1 * (float)img_->get_height();
-  imgcoord_.x2 = texcoord_.x2 * (float)img_->get_width();
-  imgcoord_.y2 = texcoord_.y2 * (float)img_->get_height();
-}
-
-const Rect& Sprite::GetImageCoordRect() { return imgcoord_; }
-
-const RectF& Sprite::GetTextureCoordRect() { return texcoord_; }
-
-const SpriteAnimationInfo&
-Sprite::GetSpriteAnimationInfo() { return ani_info_; }
-
-Image *Sprite::image() { return img_; }
-
-void Sprite::Load(const Metric& metric)
+void Sprite::Load(const MetricGroup& metric)
 {
   BaseObject::Load(metric);
 
-  if (metric.exist("blend"))
-    blending_ = metric.get<int>("blend");
+  metric.get_safe("blend", blending_);
+
+#if USE_LR2_FEATURE == 1
+  if (metric.exist("lr2src"))
+  {
+    /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
+    std::string lr2src;
+    CommandArgs args(lr2src, 10);
+
+    SetImage(args.Get<std::string>(0));
+
+    Vector4 r{
+      args.Get<int>(1), args.Get<int>(2), args.Get<int>(3), args.Get<int>(4)
+    };
+    // Use whole image if width/height is zero.
+    if (r.z <= 0 || r.w <= 0)
+      SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
+    else
+      SetImageCoord(Vector4{r.x, r.y, r.x+r.z, r.y+r.w});
+
+    int divx = args.Get<int>(5);
+    int divy = args.Get<int>(6);
+
+    sprani_.divx = divx > 0 ? divx : 1;
+    sprani_.divy = divy > 0 ? divy : 1;
+    sprani_.cnt = sprani_.divx *  sprani_.divy;
+    sprani_.duration = args.Get<int>(7);
+  }
+  // TODO: load blending from lr2dst property
+  // TODO: load resource id
+#endif
 }
 
-void Sprite::FillTextureCoordToVertexInfo(VertexInfo* vi, size_t frame)
+void Sprite::SetImage(const std::string &path)
 {
-  float sw = texcoord_.width() / ani_info_.divx;
-  float sh = texcoord_.height() / ani_info_.divy;
-  float sx = texcoord_.x1 + sw * (frame % ani_info_.divx);
-  float sy = texcoord_.y1 + sh * (frame / ani_info_.divx % ani_info_.divy);
+  if (img_)
+  {
+    IMAGEMAN->Unload(img_);
+    img_ = nullptr;
+  }
 
-  vi[0].sx = sx;
-  vi[0].sy = sy;
-  vi[1].sx = sx + sw;
-  vi[1].sy = sy;
-  vi[2].sx = sx + sw;
-  vi[2].sy = sy + sh;
-  vi[3].sx = sx;
-  vi[3].sy = sy + sh;
+  img_ = IMAGEMAN->Load(path);
+  if (!img_)
+    return;
+
+  /* default image texture coord set */
+  use_texture_coord_ = true;
+  texcoord_ = Rect{ 0.0f, 0.0f, 1.0f, 1.0f };
 }
+
+Image *Sprite::image() { return img_; }
+
+void Sprite::SetBlending(int blend)
+{
+  blending_ = blend;
+}
+
+void Sprite::SetImageCoord(const Rect &r)
+{
+  texcoord_ = r;
+  use_texture_coord_ = false;
+}
+
+void Sprite::SetTextureCoord(const Rect &r)
+{
+  texcoord_ = r;
+  use_texture_coord_ = true;
+}
+
+void Sprite::Replay()
+{
+  time_ = 0;
+  frame_ = 0;
+}
+
+const SpriteAnimationInfo&
+Sprite::GetSpriteAnimationInfo() { return sprani_; }
 
 void Sprite::SetNumber(int number)
 {
-  if (ani_info_.duration <= 0)
+  if (sprani_.duration <= 0)
   {
-    number = std::min(std::max(number, 0), ani_info_.cnt - 1);
-    idx_ = number;
+    number = std::min(std::max(number, 0), sprani_.cnt - 1);
+    frame_ = number;
   }
 }
 
 void Sprite::Refresh()
 {
-  auto id = GetResourceId();
-  if (id >= 0)
-    SetNumber(Script::getInstance().GetNumber(id));
+  if (res_id_)
+    SetNumber(*res_id_);
+}
+
+// milisecond
+void Sprite::doUpdate(float delta)
+{
+  // update sprite frame
+  if (sprani_.duration > 0)
+  {
+    time_ += delta;
+    frame_ = (int)(time_ * sprani_.divx * sprani_.divy / sprani_.duration)
+      % sprani_.cnt;
+    time_ = fmod(time_, (float)sprani_.duration);
+  }
 }
 
 void Sprite::doRender()
 {
+  VertexInfo vi[4];
+  Vector4 texcrop;
+  Point imgsize;
+
   // If not loaded or hide, then not draw
   if (!img_ || !img_->is_loaded() || !IsVisible())
     return;
 
-  Graphic::SetTextureId(img_->get_texture_ID());
-  Graphic::SetBlendMode(blending_);
+  // calculate texture crop area
+  imgsize = Point{ (float)img_->get_width(), (float)img_->get_height() };
+  if (use_texture_coord_)
+    texcrop = texcoord_;
+  else
+  {
+    texcrop.x = texcoord_.x / imgsize.x;
+    texcrop.y = texcoord_.y / imgsize.y;
+    texcrop.z = texcoord_.z / imgsize.x;
+    texcrop.w = texcoord_.w / imgsize.y;
+  }
+
+  // texture animation
+  if (sprani_.divx > 1 || sprani_.divy > 1)
+  {
+    float w = GetWidth(texcrop) / sprani_.divx;
+    float h = GetHeight(texcrop) / sprani_.divy;
+    int ix = frame_ % sprani_.divx;
+    int iy = frame_ / sprani_.divx % sprani_.divy;
+    texcrop.x += w * ix;
+    texcrop.y += h * ix;
+    texcrop.z = texcrop.x + w;
+    texcrop.w = texcrop.y + h;
+  }
+
+  BaseObject::FillVertexInfo(vi);
+  vi[0].t = Point{ texcrop.x, texcrop.y };
+  vi[1].t = Point{ texcrop.z, texcrop.y };
+  vi[2].t = Point{ texcrop.z, texcrop.w };
+  vi[3].t = Point{ texcrop.x, texcrop.w };
+
+  GRAPHIC->SetTexture(0, img_->get_texture_ID());
+  GRAPHIC->SetBlendMode(blending_);
+  GRAPHIC->DrawQuad(vi);
 
 #if 0
   // for predefined src width / height (-1 means use whole texture)
   if (ti.sw == -1) sx1 = 0.0, sx2 = 1.0;
   if (ti.sh == -1) sy1 = 0.0, sy2 = 1.0;
 #endif
-
-  VertexInfo* vi = Graphic::get_vertex_buffer();
-  FillVertexInfo(vi);
-  FillTextureCoordToVertexInfo(vi, idx_);
-
-  Graphic::RenderQuad();
-}
-
-// milisecond
-void Sprite::doUpdate(float delta)
-{
-  // update sprite info
-  if (ani_info_.duration > 0)
-  {
-    eclipsed_time_ += delta;
-    idx_ = eclipsed_time_ * ani_info_.divx * ani_info_.divy / ani_info_.duration % ani_info_.cnt;
-    eclipsed_time_ = eclipsed_time_ % ani_info_.duration;
-  }
-}
-
-void Sprite::LoadFromLR2SRC(const std::string &cmd)
-{
-  /* imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
-  CommandArgs args(cmd, 12);
-
-  SetImageByPath(args.Get<std::string>(0));
-
-  if (!img_ || !img_->is_loaded())
-    return;
-
-  Rect r;
-  r.set_rect(args.Get<int>(1), args.Get<int>(2), args.Get<int>(3), args.Get<int>(4));
-  SetImageCoordRect(r);
-
-  int divx = args.Get<int>(5);
-  int divy = args.Get<int>(6);
-
-  ani_info_.divx = divx > 0 ? divx : 1;
-  ani_info_.divy = divy > 0 ? divy : 1;
-  ani_info_.cnt = ani_info_.divx *  ani_info_.divy;
-  ani_info_.duration = args.Get<int>(7);
-
-  // set default sprite size
-  SetSize(imgcoord_.width() / ani_info_.divx, imgcoord_.height() / ani_info_.divy);
-
-  if (args.size() > 8)
-  {
-    // Register event : Sprite restarting
-    AddCommand("LR" + args.Get<std::string>(8), "replay");
-  }
-}
-
-const CommandFnMap& Sprite::GetCommandFnMap()
-{
-  static CommandFnMap cmdfnmap_;
-  if (cmdfnmap_.empty())
-  {
-    cmdfnmap_ = BaseObject::GetCommandFnMap();
-    cmdfnmap_["replay"] = [](void *o, CommandArgs& args) {
-      static_cast<Sprite*>(o)->ReplaySprite();
-    };
-  }
-
-  return cmdfnmap_;
 }
 
 }

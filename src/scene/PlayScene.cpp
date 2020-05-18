@@ -22,18 +22,21 @@ PlayScene::PlayScene()
   }
 }
 
+void PlayScene::Load(const MetricGroup& m)
+{
+  m.get_safe("LoadingDelay", theme_play_param_.load_wait_time);
+  m.get_safe("ReadyDelay", theme_play_param_.ready_time);
+}
+
 void PlayScene::LoadScene()
 {
-  if (!SongPlayer::getInstance().Load())
+  if (!SongPlayer::getInstance().LoadNext())
   {
     // exit scene instantly if no chart to play
     CloseScene(false);
   }
 
-  Metric *metric = Setting::GetThemeMetricList().get_metric(get_name());
-  ASSERT(metric);
-  theme_play_param_.load_wait_time = metric->get<int>("LoadingDelay");
-  theme_play_param_.ready_time = metric->get<int>("ReadyDelay");
+  Scene::LoadScene();
 
   // Create notefield object per player.
   FOR_EACH_PLAYER(p, i)
@@ -43,8 +46,6 @@ void PlayScene::LoadScene()
     AddChild(&notefield_[i]);
   }
   END_EACH_PLAYER()
-
-  Scene::LoadScene();
 }
 
 void PlayScene::StartScene()
@@ -60,7 +61,7 @@ void PlayScene::StartScene()
     });
     task->wait_for(theme_play_param_.load_wait_time);
     task->wait_cond([this] {
-      return SongPlayer::getInstance().is_loaded() >= 2;
+      return SongPlayer::getInstance().is_loaded();
     });
     playscenetask_.Enqueue(task);
   }
@@ -84,7 +85,7 @@ void PlayScene::StartScene()
       this->play_status_ = 3;
     });
     task->wait_cond([this] {
-      return this->play_status_ == 1 && SongPlayer::getInstance().IsFinished();
+      return this->play_status_ == 1 && SongPlayer::getInstance().is_play_finished();
     });
     playscenetask_.Enqueue(task);
   }

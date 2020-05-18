@@ -1,6 +1,6 @@
 #include "LR2SceneLoader.h"
 #include "LR2Flag.h"
-#include "Script.h"   /* flag_no */
+#include "KeyPool.h"
 #include "Util.h"
 #include "rparser.h"  /* rutil: utf-8 file load */
 #include <iostream>
@@ -81,8 +81,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
     /* conditional statement first */
     if (cmd == "#IF")
     {
-      int cond = atoi_op(val.c_str());
-      if (Script::getInstance().GetFlag(cond))
+      if (*KEYPOOL->GetInt(val))
         if_stack_.emplace_back(IfStmt{ 0, false });
       else
         if_stack_.emplace_back(IfStmt{ 1, true });
@@ -99,8 +98,7 @@ void LR2SceneLoader::ParseCSV(const char* p, size_t len)
         continue;
       }
 
-      int cond = atoi_op(val.c_str());
-      if (Script::getInstance().GetFlag(cond))
+      if (*KEYPOOL->GetInt(val))
       {
         if_stack_.back().cond_is_true = true;
         if_stack_.back().cond_match_count++;

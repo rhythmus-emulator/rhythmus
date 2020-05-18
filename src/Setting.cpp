@@ -1,5 +1,6 @@
 #include "Setting.h"
 #include "Util.h"
+#include "Logger.h"
 #include "ResourceManager.h"
 #include "LR2/LR2SceneLoader.h"
 #include "common.h"
@@ -12,8 +13,12 @@ namespace rhythmus
 {
   
 constexpr const char* kSettingPath = "config/system.xml";
-constexpr const char* kThemeSettingPath = "config/theme.xml";
 constexpr const char* kDefaultRootTagName = "setting";
+
+#ifdef USE_LR2_FEATURE == 1
+constexpr const char* kLR2SubstitutePath = "LR2files/Theme";
+constexpr const char* kSubstitutePath = "themes";
+#endif
 
 inline const char* GetSafeString(const char* p)
 {
@@ -22,239 +27,307 @@ inline const char* GetSafeString(const char* p)
 
 // ------------------------- class Metric
 
-Metric::Metric() {}
+MetricGroup::MetricGroup() {}
 
-Metric::Metric(const std::string &metric_text) { SetFromText(metric_text); }
+MetricGroup::MetricGroup(const std::string &name) : name_(name) {}
 
-Metric::~Metric() {}
+MetricGroup::~MetricGroup() {}
 
-bool Metric::exist(const std::string &key) const
+const std::string &MetricGroup::name() const
 {
-  auto it = attr_.find(key);
-  return (it != attr_.end());
+  return name_;
 }
 
-template <>
-std::string Metric::get(const std::string &key) const
+void MetricGroup::set_name(const std::string &name)
 {
-  auto it = attr_.find(key);
-  ASSERT_M(it != attr_.end(), "ThemeMetric Key not found: " + key);
-  return it->second;
+  name_ = name;
 }
 
-template <>
-bool Metric::get(const std::string &key) const
+bool MetricGroup::Load(const std::string &path)
 {
-  const_cast<Metric*>(this)->resolve_fallback(key);
-  return get<std::string>(key) == "true";
-}
-
-template <>
-int Metric::get(const std::string &key) const
-{
-  const_cast<Metric*>(this)->resolve_fallback(key);
-  return atoi(get<std::string>(key).c_str());
-}
-
-template <>
-size_t Metric::get(const std::string &key) const
-{
-  const_cast<Metric*>(this)->resolve_fallback(key);
-  return (size_t)get<int>(key);
-}
-
-template <>
-double Metric::get(const std::string &key) const
-{
-  const_cast<Metric*>(this)->resolve_fallback(key);
-  return atof(get<std::string>(key).c_str());
-}
-
-template <>
-float Metric::get(const std::string &key) const
-{
-  const_cast<Metric*>(this)->resolve_fallback(key);
-  return (float)get<double>(key);
-}
-
-#if 0
-template <>
-std::vector<std::string> Metric::get(const std::string &key) const
-{
-  std::vector<std::string> vtmp;
-  Split(get<std::string>(key), ',', vtmp);
-  return vtmp;
-}
-
-template <>
-std::vector<int> Metric::get(const std::string &key) const
-{
-  std::vector<int> vtmp;
-  for (auto &s : get<std::vector<std::string> >(key))
-  {
-    vtmp.push_back(atoi(s.c_str()));
-  }
-  return vtmp;
-}
-#endif
-
-void Metric::SetFromText(const std::string &metric_text)
-{
-  size_t ia = 0, ib = 0;
-  std::string cmd_type, value;
-  while (ib < metric_text.size())
-  {
-    if (metric_text[ib] == ';' || metric_text[ib] == 0)
-    {
-      Split(metric_text.substr(ia, ib - ia), ':', cmd_type, value);
-      set(cmd_type, value);
-      ia = ib = ib + 1;
-    }
-    else ++ib;
-  }
-}
-
-void Metric::set(const std::string &key, const std::string &v)
-{
-  attr_[key] = v;
-}
-
-void Metric::set(const std::string &key, const char* v)
-{
-  attr_[key] = v;
-}
-
-void Metric::set(const std::string &key, int v)
-{
-  set(key, std::to_string(v));
-}
-
-void Metric::set(const std::string &key, double v)
-{
-  set(key, std::to_string(v));
-}
-
-void Metric::set(const std::string &key, bool v)
-{
-  set(key, std::string(v ? "true" : "false"));
-}
-
-Metric::iterator Metric::begin() { return attr_.begin(); }
-Metric::const_iterator Metric::cbegin() const { return attr_.cbegin(); }
-Metric::iterator Metric::end() { return attr_.end(); }
-Metric::const_iterator Metric::cend() const { return attr_.cend(); }
-
-void Metric::resolve_fallback(const std::string &key)
-{
-  // TODO
-  auto it = attr_.find(key);
-  if (it == attr_.end()) return;
-  std::string &v = it->second;
-  if (v == "_fallback")
-  {
-    ASSERT_M(true, "NotImplemented");
-  }
-}
-
-void MetricList::ReadMetricFromFile(const std::string &filepath)
-{
-  std::string ext = Upper(GetExtension(filepath));
+  clear();
+  std::string ext = Upper(GetExtension(path));
 
   if (ext == "INI")
   {
-    // TODO: Stepmania metrics info
-    throw UnimplementedException("Stepmania skin is not supported yet.");
+    return LoadFromIni(path);
   }
   else if (ext == "XML")
   {
-    ReadXml(filepath);
+    return LoadFromXml(path);
   }
   else if (ext == "LR2SKIN")
   {
-    ReadLR2Metric(filepath);
+    return LoadFromLR2Metric(path);
   }
   else if (ext == "LR2SS")
   {
-    ReadLR2SS(filepath);
+    return LoadFromLR2SoundMetric(path);
   }
   else
   {
-    std::cerr << "Error: not supported ThemeMetrics file: "
-      << filepath << std::endl;
+    Logger::Error("Error: not supported Metrics file: %s", path.c_str());
+    return false;
+  }
+
+  /* unreachable section */
+}
+
+bool MetricGroup::LoadFromXml(const std::string &path)
+{
+  tinyxml2::XMLDocument doc;
+  if (doc.LoadFile(path.c_str()) != XML_SUCCESS)
+  {
+    throw FileNotFoundException(path);
+  }
+
+  XMLElement* root = doc.RootElement();
+  XMLElement* ele = root->FirstChildElement();
+
+  const char *name = root->Attribute("name");
+  if (name) set_name(name);
+
+  while (ele)
+  {
+    // XXX: supporting more nested elements? (depth over 2)
+    const char* elename = ele->Name();
+    MetricGroup& metric = add_group(elename);
+    const XMLAttribute* attr = ele->FirstAttribute();
+    while (attr)
+    {
+      const char* v = attr->Value();
+      R_ASSERT(v, "No value given on xml attribute.");
+      metric.set(attr->Name(), attr->Value());
+      attr = attr->Next();
+    }
+    ele = ele->NextSiblingElement();
   }
 }
 
-void MetricList::Clear()
+bool MetricGroup::LoadFromIni(const std::string &path)
 {
-  metricmap_.clear();
+  // TODO: Stepmania metrics info
+  throw UnimplementedException("Stepmania skin is not supported yet.");
 }
 
-constexpr const char* kLR2SubstitutePath = "LR2files/Theme";
-constexpr const char* kSubstitutePath = "themes";
-
-/* @brief compatible layer from LR2 to metric-based */
-void MetricList::ReadLR2Metric(const std::string &filepath)
+#if USE_LR2_FEATURE == 1
+struct LR2CommandDesc
 {
+  const char *name;
+  const char *newname;
+  bool not_create_if_exist;
+  const char *attributes[64];
+  const char *default_value[64];
+};
+
+static const LR2CommandDesc **GetLR2CommandDesc()
+{
+  static LR2CommandDesc information =
+  { "INFORMATION", "", true, {"gamemode", "title", "artist", "previewimage", 0}, {0} };
+
+  // TODO: more elegant format specifier?
+  static LR2CommandDesc customoption =
+  { "CUSTOMOPTION", "option", true,
+    {"name", "id", "constraint:%3s,%4s,%5s,%6s,%7s,%8s,%9s,%10s", 0},
+    {"type", "option", 0}
+  };
+
+  static LR2CommandDesc customfile =
+  { "CUSTOMFILE", "option", true, {"name", "constraint", "default", 0}, {"type", "file", 0} };
+
+  static LR2CommandDesc image =
+  { "IMAGE", "image", false, {"path", 0}, {"name", "image%i", 0} };
+
+  static LR2CommandDesc lr2font =
+  { "LR2FONT", "font", false, {"path", 0}, {"name", "font%i", 0} };
+
+  static LR2CommandDesc font =
+  { "FONT", "FONT__", false, {"size", "thick", "type", "name", 0}, {0} };
+
+  static LR2CommandDesc bar_center =
+  { "BAR_CENTER", "", true, {"bar_center", 0}, {0} };
+
+  static LR2CommandDesc bar_available =
+  { "BAR_AVAILABLE", "", true, {"bar_available", 0}, {0} };
+
+  static LR2CommandDesc transcolor =
+  { "TRANSCLOLR", "", true, {"transcolor", 0}, {0} };
+
+  static LR2CommandDesc startinput =
+  { "STARTINPUT", "", true, {"startinput", 0}, {0} };
+
+  static LR2CommandDesc ignoreinput =
+  { "IGNOREINPUT", "", true, {"ignoreinput", 0}, {0} };
+
+  static LR2CommandDesc fadeout =
+  { "FADEOUT", "", true, {"fadeout", 0}, {0} };
+
+  static LR2CommandDesc fadein =
+  { "FADEIN", "", true, {"fadein", 0}, {0} };
+
+  static LR2CommandDesc timeout =
+  { "SCENETIME", "", true, {"timeout", 0}, {0} };
+
+  static LR2CommandDesc loadstart =
+  { "LOADSTART", "", true, {"loadstart", 0}, {0} };
+
+  static LR2CommandDesc loadend =
+  { "LOADEND", "", true, {"loadend", 0}, {0} };
+
+  static LR2CommandDesc playstart =
+  { "SCRATCHSIDE", "", true, {"playstart", 0}, {0} };
+
+  static LR2CommandDesc helpfile =
+  { "HELPFILE", "", true, {"help", 0}, {0} };
+
+  static LR2CommandDesc src_sprite =
+  { "SRC_IMAGE", "sprite", false,
+  {"lr2src:%v", 0}, {"type", "sprite", 0} };
+
+  static LR2CommandDesc dst_sprite =
+  { "DST_IMAGE", "sprite", true /* WARN: must use last element */,
+  {"lr2dst:%a;%v", 0}, {0} };
+
+  static LR2CommandDesc src_text =
+  { "SRC_TEXT", "text", false,
+  {"lr2src:%v", 0}, {"type", "text", 0} };
+
+  static LR2CommandDesc dst_text =
+  { "DST_TEXT", "text", true /* WARN: must use last element */,
+  {"lr2dst:%a;%v", 0}, {0} };
+
+  static LR2CommandDesc src_number =
+  { "SRC_TEXT", "number", false,
+  {"lr2src:%v", 0}, {"type", "number", 0} };
+
+  static LR2CommandDesc dst_number =
+  { "DST_TEXT", "number", true /* WARN: must use last element */,
+  {"lr2dst:%a;%v", 0}, {0} };
+
+  static LR2CommandDesc src_slider =
+  { "SRC_TEXT", "slider", false,
+  {"lr2src:%v", 0}, {"type", "slider", 0} };
+
+  static LR2CommandDesc dst_slider =
+  { "DST_TEXT", "slider", true /* WARN: must use last element */,
+  {"lr2dst:%a;%v", 0}, {0} };
+
+  // TODO: bargraph
+  // TODO: note -- stepmania
+  //static LR2CommandDesc src_note =
+  //{ "SRC_NOTE", "NoteField", false, { "!note%s...", 0 }, { 0 } };
+
+  static const LR2CommandDesc *gLR2CommandDesc[] = {
+    &information,
+    &customoption,
+    &customfile,
+    &image,
+    &lr2font,
+    &font,
+    &bar_center,
+    &bar_available,
+    &transcolor,
+    &startinput,
+    &ignoreinput,
+    &fadeout,
+    &fadein,
+    &timeout,
+    &loadstart,
+    &loadend,
+    &playstart,
+    &helpfile,
+    &src_sprite,
+    &dst_sprite,
+    &src_text,
+    &dst_text,
+    &src_number,
+    &dst_number,
+    &src_slider,
+    &dst_slider,
+    0
+  };
+
+  return gLR2CommandDesc;
+}
+#endif
+
+
+/**
+ * Load from LR2 metric file.
+ * Each command (#XXX) converts into MetricGroup.
+ *
+ * TODO: make code tidy -- make pattern struct such as
+ * (name), (newname), (not_create_if_exist), (attributes_per_comma)
+ * IMAGE, image, false, _dummy, path, ...
+ */
+bool MetricGroup::LoadFromLR2Metric(const std::string &path)
+{
+#if USE_LR2_FEATURE == 1
   LR2SceneLoader loader;
   std::vector<std::string> params;
   size_t optioncount = 0, imagecount = 0, fontcount = 0;
   loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
-  loader.Load(filepath);
-
-  Metric *curr_metrics = nullptr;
+  loader.Load(path);
 
   /* Set metric group using path
    * (kind of trick; no group information is given at file) */
   std::string group;
-  if (filepath.find("select") != std::string::npos)
+  if (path.find("select") != std::string::npos)
   {
     group = "SelectScene";
-    auto *m = Setting::GetThemeMetricList().create_metric("MusicWheel");
-    m->set("CenterIndex", 10);
-    m->set("PositionType", 1);  /* use bar position */
-    m->set("BarCount", 20);     /* XXX: default 20? */
+    auto &m = add_group("MusicWheel");
+    m.set("CenterIndex", 10);
+    m.set("PositionType", 1);  /* use bar position */
+    m.set("BarCount", 20);     /* XXX: default 20? */
     /* below is filter setting for LR2. */
-    m->set("GamemodeFilter", "none,IIDXSP,IIDXDP,popn");
-    m->set("DifficultyFilter", "none,easy,normal,hard,ex,insane");
-    m->set("SortType", "none,title,level,clear");
+    m.set("GamemodeFilter", "none,IIDXSP,IIDXDP,popn");
+    m.set("DifficultyFilter", "none,easy,normal,hard,ex,insane");
+    m.set("SortType", "none,title,level,clear");
   }
-  else if (filepath.find("decide") != std::string::npos)
+  else if (path.find("decide") != std::string::npos)
   {
     group = "DecideScene";
   }
-  else if (filepath.find("play") != std::string::npos)
+  else if (path.find("play") != std::string::npos)
   {
     group = "PlayScene";
-    curr_metrics = Setting::GetThemeMetricList().create_metric(group);
-    auto *m = Setting::GetThemeMetricList().create_metric("NoteField");
-    m->set("LR2TypeLane", true);
+    auto &m = add_group("NoteField");
+    m.set("LR2TypeLane", true);
     /* XXX: move it to _default.xml later */
-    auto *m1 = Setting::GetThemeMetricList().create_metric("NoteField1P");
-    m1->set("_fallback", "NoteField");
-    auto *m2 = Setting::GetThemeMetricList().create_metric("NoteField2P");
-    m2->set("_fallback", "NoteField");
+    auto &m1 = add_group("NoteField1P");
+    m1.set("_fallback", "NoteField");
+    auto &m2 = add_group("NoteField2P");
+    m2.set("_fallback", "NoteField");
   }
-  else if (filepath.find("courseresult") != std::string::npos) /* must courseresult first */
+  else if (path.find("courseresult") != std::string::npos) /* must courseresult first */
   {
     group = "CourseResultScene";
   }
-  else if (filepath.find("result") != std::string::npos)
+  else if (path.find("result") != std::string::npos)
   {
     group = "ResultScene";
   }
 
   if (group.empty())
   {
-    std::cerr << "Unknown type of LR2 metric file: " << filepath << std::endl;
-    return;
+    Logger::Error("Unknown type of LR2 metric file: %s", path.c_str());
+    return false;
   }
-  if (!curr_metrics)
-    curr_metrics = Setting::GetThemeMetricList().create_metric(group);
 
   // default settings
   // use itself as script file.
-  curr_metrics->set("script", filepath);
-  curr_metrics->set("sort", true);
+  set("script", path);
+  set("sort", true);
+
+
+  std::string name;                         // command name
+  std::string value;                        // command value
+  const char *value_ptr;                    // pointer to current value
+  std::string attr_name;                    // current attribute name
+  std::string attr_value;                   // current attribute value. (only used if need to modified)
+  std::string value_reg[128];               // value register (maximum 128)
+  int value_reg_index;                      // current value register number
+  std::map<std::string, int> command_count; // how many times command was called
 
   // convert csv commands into metrics
   for (auto &v : loader)
@@ -267,108 +340,146 @@ void MetricList::ReadLR2Metric(const std::string &filepath)
      //if (v.first == "#ENDOFHEADER")
      //  break;
 
-     /* Get metric name from LR2 command */
-    std::string lr2name = Upper(v.first.substr(1));
-    std::string value(v.second);
+    /* set command name and its value. */
+    value_reg[0] = name = Upper(v.first.substr(1));
+    value = v.second;
+    value_ptr = value.c_str();
+    value_reg_index = 1;
+    command_count[name]++;
 
-    /* Set metric attribute */
-    if (lr2name == "INFORMATION")
+    /* process LR2 command */
+    const auto *lr2desc = GetLR2CommandDesc();
+    while (*lr2desc)
     {
-      MakeParamCountSafe(value, params, 4);
-      curr_metrics->set("Gamemode", params[0]);
-      curr_metrics->set("Title", params[1]);
-      curr_metrics->set("Artist", params[2]);
-      curr_metrics->set("PreviewImage", params[3]);
-    }
-    else if (lr2name == "CUSTOMOPTION")
-    {
-      optioncount++;
-      curr_metrics->set("Option", (int)optioncount);
-      curr_metrics->set("Option" + std::to_string(optioncount), value);
-    }
-    else if (lr2name == "CUSTOMFILE")
-    {
-      optioncount++;
-      CommandArgs args(value, 3);
-      curr_metrics->set("Option", (int)optioncount);
-      curr_metrics->set("Option" + std::to_string(optioncount),
-        args.Get<std::string>(0) + ",!F" + args.Get<std::string>(1) + "," + args.Get<std::string>(2)
-      );
-    }
-    else if (lr2name == "IMAGE")
-    {
-      curr_metrics->set("Image", (int)imagecount);
-      curr_metrics->set("Image" + std::to_string(imagecount), value);
-      imagecount++;
-    }
-    else if (lr2name == "LR2FONT")
-    {
-      curr_metrics->set("Font", (int)fontcount);
-      curr_metrics->set("Font" + std::to_string(fontcount), value);
-      fontcount++;
-    }
-    else if (lr2name == "FONT")
-    {
-      // TODO: fallback FONT ?
-    }
-    else if (lr2name == "BAR_CENTER" || lr2name == "BAR_AVAILABLE")
-    {
-      auto *m = Setting::GetThemeMetricList().create_metric("MusicWheel");
-      m->set("CenterIndex", GetFirstParam(value));
-    }
-    else if (lr2name == "TRANSCLOLR")
-    {
-      curr_metrics->set("TransparentColor", value);
-    }
-    else if (lr2name == "STARTINPUT" || lr2name == "IGNOREINPUT")
-    {
-      curr_metrics->set("InputStart", GetFirstParam(value));
-    }
-    else if (lr2name == "FADEOUT")
-    {
-      curr_metrics->set("FadeOut", GetFirstParam(value));
-    }
-    else if (lr2name == "FADEIN")
-    {
-      curr_metrics->set("FadeIn", GetFirstParam(value));
-    }
-    else if (lr2name == "SCENETIME")
-    {
-      curr_metrics->set("Timeout", GetFirstParam(value));
-    }
-    else if (lr2name == "LOADSTART")
-    {
-      // ignore this parameter
-    }
-    else if (lr2name == "LOADEND")
-    {
-      curr_metrics->set("LoadingDelay", GetFirstParam(value));
-    }
-    else if (lr2name == "PLAYSTART")
-    {
-      curr_metrics->set("ReadyDelay", GetFirstParam(value));
-    }
-    else if (lr2name == "SCRATCHSIDE")
-    {
-      curr_metrics->set("PlaySide", GetFirstParam(value));
-    }
-    else if (lr2name == "HELPFILE")
-    {
-      // TODO
+      if (strcmp(name.c_str(), (*lr2desc)->name) == 0)
+      {
+        // set which metric to write
+        MetricGroup *m = nullptr;
+        if ((*lr2desc)->newname == nullptr || *(*lr2desc)->newname == 0)
+        {
+          m = this;
+        }
+        else
+        {
+          if ((*lr2desc)->not_create_if_exist)
+            m = get_group((*lr2desc)->newname);
+          if (!m)
+            m = &add_group((*lr2desc)->newname);
+        }
+        // parse value and add it to value register
+        for (unsigned i = 0; i < 128; ++i) value_reg[i].clear();
+        while (*value_ptr && value_reg_index < 128)
+        {
+          while (*value_ptr != ',')
+          {
+            value_reg[value_reg_index].push_back(*value_ptr);
+            ++value_ptr;
+          }
+          ++value_ptr;
+          ++value_reg_index;
+        }
+        // set attribute name / value.
+        const char *const *attrname = (*lr2desc)->attributes;
+        value_reg_index = 1;
+        while (attrname)
+        {
+          const char *attr_ptr = *attrname;
+          std::string *string_to_fill = &attr_name;
+          attr_name.clear();
+          attr_value.clear();
+          while (*attr_ptr && *attr_ptr != ',')
+          {
+            if (*attr_ptr == ':')
+            {
+              // fill attr_value
+              string_to_fill = &attr_value;
+              continue;
+            }
+            if (*attr_ptr == '%')
+            {
+              // resolve format specifier
+              int reg_idx = 0;
+              char escapecmd = 0;
+              ++attr_ptr;
+              while (*attr_ptr)
+              {
+                if (*attr_ptr >= '0' && *attr_ptr <= '9')
+                {
+                  reg_idx = reg_idx * 10 + (*attr_ptr - '0');
+                  ++attr_ptr;
+                }
+                else
+                {
+                  escapecmd = *attr_ptr;
+                  ++attr_ptr;
+                  break;
+                }
+              }
+              switch (escapecmd)
+              {
+              case 'd':
+                *string_to_fill += std::to_string(atoi(value_reg[reg_idx].c_str()));
+                break;
+              case 's':
+                *string_to_fill += value_reg[reg_idx];
+                break;
+              case 'i':
+                // get command count(index)
+                *string_to_fill += std::to_string(command_count[name]);
+                break;
+              case 'a':
+                // get whole string of previous attribute
+                // (do nothing if attribute not exists)
+                if (exist(attr_name))
+                  *string_to_fill += get<std::string>(attr_name);
+                break;
+              case 'v':
+                // get whole original value
+                *string_to_fill += value;
+                break;
+              case 0:
+                break;
+              default:
+                (*string_to_fill).push_back(escapecmd);
+              }
+            }
+            else
+            {
+              (*string_to_fill).push_back(*attr_ptr);
+              ++attr_ptr;
+            }
+          }
+          // if empty attrname, then don't add it to value (silent)
+          if (*attrname)
+          {
+            set(*attrname, attr_value.empty()
+              ? value_reg[value_reg_index]
+              : attr_value);
+          }
+          ++attrname;
+          ++value_reg_index;
+        }
+      }
+      ++lr2desc;
     }
   }
 
   /* turn on path prefix for LR2. */
-  ResourceManager::getInstance().SetPrefixReplace(
+  PATH->SetPrefixReplace(
     "LR2files/Theme", kSubstitutePath
   );
+  return true;
+#else
+  return false;
+#endif
 }
 
-void MetricList::ReadLR2SS(const std::string &filepath)
+bool MetricGroup::LoadFromLR2SoundMetric(const std::string &path)
 {
+#if USE_LR2_FEATURE == 1
   LR2SceneLoader loader;
   loader.SetSubStitutePath("LR2files", "");
-  loader.Load(filepath);
+  loader.Load(path);
 
 #define NAMES \
   NAME("SELECT", "SongSelect"), \
@@ -403,8 +514,6 @@ void MetricList::ReadLR2SS(const std::string &filepath)
 
 #undef NAMES
 
-  Metric &metric = metricmap_["Sound"];
-
   for (auto &v : loader)
   {
     size_t metric_idx = 0;
@@ -428,103 +537,208 @@ void MetricList::ReadLR2SS(const std::string &filepath)
     if (_metricnames[metric_idx] == 0)
       continue;
     metricname = _metricnames[metric_idx];
-    metric.set(metricname, vv);
+    set(metricname, vv);
   }
+  return true;
+#else
+  return false;
+#endif
 }
 
-void MetricList::ReadXml(const std::string& filepath)
+bool MetricGroup::exist(const std::string &key) const
 {
-  tinyxml2::XMLDocument doc;
-  if (doc.LoadFile(filepath.c_str()) != XML_SUCCESS)
-  {
-    throw FileNotFoundException(filepath);
-  }
+  auto it = attr_.find(key);
+  return (it != attr_.end());
+}
 
-  XMLElement* root = doc.RootElement();
-  XMLElement* ele = root->FirstChildElement();
+void MetricGroup::clear()
+{
+  children_.clear();
+  attr_.clear();
+}
+
+MetricGroup& MetricGroup::add_group(const std::string &group_name)
+{
+  children_.emplace_back(MetricGroup(group_name));
+  return children_.back();
+}
+
+MetricGroup* MetricGroup::get_group(const std::string &group_name)
+{
+  for (auto ii = children_.rbegin(); ii != children_.rend(); ++ii)
+    if (ii->name() == group_name) return &*ii;
+  return nullptr;
+}
+
+const MetricGroup* MetricGroup::get_group(const std::string &group_name) const
+{
+  return const_cast<MetricGroup*>(this)->get_group(group_name);
+}
+
+const std::string &MetricGroup::get_str(const std::string &key) const
+{
+  auto it = attr_.find(key);
+  ASSERT_M(it != attr_.end(), "ThemeMetric Key not found: " + key);
+  return it->second;
+}
+
+template <>
+bool MetricGroup::get(const std::string &key) const
+{
+  const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  return get<std::string>(key) == "true";
+}
+
+template <>
+int MetricGroup::get(const std::string &key) const
+{
+  const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  return atoi(get<std::string>(key).c_str());
+}
+
+template <>
+size_t MetricGroup::get(const std::string &key) const
+{
+  const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  return (size_t)get<int>(key);
+}
+
+template <>
+double MetricGroup::get(const std::string &key) const
+{
+  const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  return atof(get<std::string>(key).c_str());
+}
+
+template <>
+float MetricGroup::get(const std::string &key) const
+{
+  const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  return (float)get<double>(key);
+}
+
 #if 0
-  /* Is name necessary? I don't think so */
-  const char *name = root->Attribute("name");
-  R_ASSERT(name, "name attribute missing on root xml node of metric file.");
+template <>
+std::vector<std::string> Metric::get(const std::string &key) const
+{
+  std::vector<std::string> vtmp;
+  Split(get<std::string>(key), ',', vtmp);
+  return vtmp;
+}
+
+template <>
+std::vector<int> Metric::get(const std::string &key) const
+{
+  std::vector<int> vtmp;
+  for (auto &s : get<std::vector<std::string> >(key))
+  {
+    vtmp.push_back(atoi(s.c_str()));
+  }
+  return vtmp;
+}
 #endif
 
-  while (ele)
+bool MetricGroup::get_safe(const std::string &key, std::string &v) const
+{
+  auto it = attr_.find(key);
+  if (it != attr_.end())
+    v = it->second;
+  return it != attr_.end();
+}
+
+bool MetricGroup::get_safe(const std::string &key, int &v) const
+{
+  auto it = attr_.find(key);
+  if (it != attr_.end())
+    v = atoi(it->second.c_str());
+  return it != attr_.end();
+}
+
+bool MetricGroup::get_safe(const std::string &key, double &v) const
+{
+  auto it = attr_.find(key);
+  if (it != attr_.end())
+    v = atof(it->second.c_str());
+  return it != attr_.end();
+}
+
+bool MetricGroup::get_safe(const std::string &key, float &v) const
+{
+  auto it = attr_.find(key);
+  if (it != attr_.end())
+    v = (float)atof(it->second.c_str());
+  return it != attr_.end();
+}
+
+bool MetricGroup::get_safe(const std::string &key, bool &v) const
+{
+  auto it = attr_.find(key);
+  if (it != attr_.end())
+    v = (Upper(it->second) == "TRUE");
+  return it != attr_.end();
+}
+
+void MetricGroup::SetFromText(const std::string &metric_text)
+{
+  size_t ia = 0, ib = 0;
+  std::string cmd_type, value;
+  while (ib < metric_text.size())
   {
-    const char* elename = ele->Name();
-    Metric& metric = metricmap_[elename];
-    const XMLAttribute* attr = ele->FirstAttribute();
-    while (attr)
+    if (metric_text[ib] == ';' || metric_text[ib] == 0)
     {
-      const char* v = attr->Value();
-      R_ASSERT(v, "No value given on xml attribute.");
-      metric.set(attr->Name(), attr->Value());
-      attr = attr->Next();
+      Split(metric_text.substr(ia, ib - ia), ':', cmd_type, value);
+      set(cmd_type, value);
+      ia = ib = ib + 1;
     }
-    ele = ele->NextSiblingElement();
+    else ++ib;
   }
 }
 
-bool MetricList::exist(const std::string &group, const std::string &key) const
+void MetricGroup::set(const std::string &key, const std::string &v)
 {
-  auto it = metricmap_.find(group);
-  if (it == metricmap_.end()) return false;
-  return it->second.exist(key);
+  attr_[key] = v;
 }
 
-const Metric *MetricList::get_metric(const std::string &group) const
+void MetricGroup::set(const std::string &key, const char* v)
 {
-  return const_cast<MetricList*>(this)->get_metric(group);
+  attr_[key] = v;
 }
 
-Metric *MetricList::get_metric(const std::string &group)
+void MetricGroup::set(const std::string &key, int v)
 {
-  auto it = metricmap_.find(group);
-  if (it == metricmap_.end()) return nullptr;
-  /* if fallback, then return fallback metric. */
-  if (it->second.exist("_fallback"))
+  set(key, std::to_string(v));
+}
+
+void MetricGroup::set(const std::string &key, double v)
+{
+  set(key, std::to_string(v));
+}
+
+void MetricGroup::set(const std::string &key, bool v)
+{
+  set(key, std::string(v ? "true" : "false"));
+}
+
+MetricGroup::iterator MetricGroup::begin() { return attr_.begin(); }
+MetricGroup::const_iterator MetricGroup::cbegin() const { return attr_.cbegin(); }
+MetricGroup::iterator MetricGroup::end() { return attr_.end(); }
+MetricGroup::const_iterator MetricGroup::cend() const { return attr_.cend(); }
+
+MetricGroup::group_iterator MetricGroup::group_begin() { return children_.begin(); }
+MetricGroup::group_iterator MetricGroup::group_end() { return children_.end(); }
+MetricGroup::const_group_iterator MetricGroup::group_cbegin() const { return children_.cbegin(); }
+MetricGroup::const_group_iterator MetricGroup::group_cend() const { return children_.cend(); }
+
+void MetricGroup::resolve_fallback(const std::string &key)
+{
+  // TODO
+  auto it = attr_.find(key);
+  if (it == attr_.end()) return;
+  std::string &v = it->second;
+  if (v == "_fallback")
   {
-    std::string fallback_group = it->second.get<std::string>("_fallback");
-    if (!fallback_group.empty())
-      return get_metric(fallback_group);
+    ASSERT_M(true, "NotImplemented");
   }
-  return &it->second;
-}
-
-Metric *MetricList::create_metric(const std::string &group)
-{
-  return &metricmap_[group];
-}
-
-void MetricList::copy_metric(const std::string &name_from, const std::string &name_to)
-{
-  auto it = metricmap_.find(name_from);
-  if (it == metricmap_.end()) return;
-  metricmap_[name_to] = it->second;
-}
-
-void MetricList::set(const std::string &group, const std::string &key, const std::string &v)
-{
-  metricmap_[group].set(key, v);
-}
-
-void MetricList::set(const std::string &group, const std::string &key, const char *v)
-{
-  metricmap_[group].set(key, v);
-}
-
-void MetricList::set(const std::string &group, const std::string &key, int v)
-{
-  set(group, key, std::to_string(v));
-}
-
-void MetricList::set(const std::string &group, const std::string &key, double v)
-{
-  set(group, key, std::to_string(v));
-}
-
-void MetricList::set(const std::string &group, const std::string &key, bool v)
-{
-  set(group, key, std::string(v ? "true" : "false"));
 }
 
 
@@ -683,7 +897,7 @@ FileOption::FileOption() {}
 
 void FileOption::SetOption(const std::string &options)
 {
-  ResourceManager::getInstance().GetAllPaths(options, options_);
+  PATH->GetAllPaths(options, options_);
   // set default if it's empty.
   if (default_.empty() && !options_.empty())
     default_ = options_.front();
@@ -785,7 +999,7 @@ bool OptionList::LoadFromFile(const std::string &filepath)
   return true;
 }
 
-void OptionList::LoadFromMetrics(const Metric &metric)
+void OptionList::LoadFromMetrics(const MetricGroup &metric)
 {
   if (!metric.exist("Option"))
     return;
@@ -793,7 +1007,7 @@ void OptionList::LoadFromMetrics(const Metric &metric)
   for (int i = 0; i < optioncount; ++i)
   {
     /* attr,default,select list */
-    CommandArgs args(metric.get<std::string>("Option" + std::to_string(i)), 3);
+    CommandArgs args(metric.get_str("Option" + std::to_string(i)), 3);
     auto &option = SetOption(args.Get<std::string>(0), args.Get<std::string>(2));
     option.SetDefault(args.Get<std::string>(1));
   }
@@ -879,7 +1093,7 @@ Option &OptionList::SetOption(const std::string &key, Option *option)
   return *option;
 }
 
-void OptionList::SetOptionFromMetric(Metric *metric)
+void OptionList::AddOptionFromMetric(MetricGroup *metric)
 {
   if (!metric) return;
   if (metric->exist("Option"))
@@ -912,153 +1126,301 @@ void OptionList::Clear()
 
 // ------------------------------ class Setting
 
-void Setting::ReadAll()
+void Setting::Initialize()
+{
+  PREFERENCE = new SystemPreference();
+  METRIC = new MetricGroup();
+  METRIC->set_name("game");
+}
+
+void Setting::Cleanup()
+{
+  delete PREFERENCE;
+  delete METRIC;
+}
+
+void Setting::Reload()
 {
   static const char *metric_option_attrs[] = {
     "SoundSet",
-    "Theme",
     "SelectScene",
     "DecideScene",
-    "PlayScene",
+    "Play7Key",
     "ResultScene",
     "CourseResultScene",
     0
   };
   static const char* fallback_metric_path = "themes/_fallback/theme.xml";
 
-  // read global setting first, then read metric.
-  // after that, read user setting, as it may depends on metrics.
-  GetSystemSetting().ReadFromFile(kSettingPath);
-  GetThemeMetricList().ReadMetricFromFile(fallback_metric_path);
+  // clear non-static preference and clear theme metric.
+  PREFERENCE->Clear();
+  METRIC->clear();
+
+  // read metrics --> create non-static preference
+  METRIC->Load(fallback_metric_path);
   {
     std::string filepath;
     for (size_t i = 0; metric_option_attrs[i]; ++i)
     {
-      auto *option = GetSystemSetting().GetOption(metric_option_attrs[i]);
-      if (!option) continue;
-      GetThemeMetricList().ReadMetricFromFile(option->value<std::string>());
+      auto *pref = PREFERENCE->GetPreferenceFile(metric_option_attrs[i]);
+      if (!pref || (**pref).empty()) continue;
+
+      MetricGroup m;
+      if (m.Load(**pref))
+        PREFERENCE->Load(m);
     }
   }
 
-  // create theme option from ThemeMetric,
-  // and load stored option value.
-  for (size_t i = 2; metric_option_attrs[i]; ++i)
+  // read preference value
+  PREFERENCE->Load(kSettingPath);
+}
+
+void Setting::Save()
+{
+  PREFERENCE->Save(kSettingPath);
+}
+
+
+// ------------------------------------------------------------- PreferenceList
+
+PreferenceList::~PreferenceList() { Clear(); }
+
+void PreferenceList::AddPreferenceInt(const std::string &key, Preference<int> *pf)
+{
+  auto i = pref_i_.find(key);
+  ASSERT(i == pref_i_.end());
+  pref_i_[key] = pf;
+}
+
+void PreferenceList::AddPreferenceFloat(const std::string &key, Preference<float> *pf)
+{
+  auto i = pref_i_.find(key);
+  ASSERT(i == pref_i_.end());
+  pref_f_[key] = pf;
+}
+
+void PreferenceList::AddPreferenceString(const std::string &key,
+  Preference<std::string> *pf)
+{
+  auto i = pref_i_.find(key);
+  ASSERT(i == pref_i_.end());
+  pref_s_[key] = pf;
+}
+
+void PreferenceList::AddPreferenceFile(const std::string &key,
+  Preference<std::string> *pf)
+{
+  auto i = pref_i_.find(key);
+  ASSERT(i == pref_i_.end());
+  pref_file_[key] = pf;
+}
+
+Preference<int>* PreferenceList::GetPreferenceInt(const std::string &key)
+{
+  auto i = pref_i_.find(key);
+  if (i != pref_i_.end()) return i->second;
+  else return nullptr;
+}
+
+Preference<float>* PreferenceList::GetPreferenceFloat(const std::string &key)
+{
+  auto i = pref_f_.find(key);
+  if (i != pref_f_.end()) return i->second;
+  else return nullptr;
+}
+
+Preference<std::string>* PreferenceList::GetPreferenceString(const std::string &key)
+{
+  auto i = pref_s_.find(key);
+  if (i != pref_s_.end()) return i->second;
+  else return nullptr;
+}
+
+Preference<std::string>* PreferenceList::GetPreferenceFile(const std::string &key)
+{
+  auto i = pref_file_.find(key);
+  if (i != pref_file_.end()) return i->second;
+  else return nullptr;
+}
+
+void PreferenceList::Load(const std::string &path)
+{
+  MetricGroup m;
+  m.Load(path);
+  Load(m);
+}
+
+void PreferenceList::Load(const MetricGroup &m)
+{
+  // Add elements if necessary
+  for (auto i = m.group_cbegin(); i != m.group_cend(); ++i)
   {
-    GetThemeSetting().SetOptionFromMetric(
-      GetThemeMetricList().get_metric(metric_option_attrs[i])
-    );
+    if (i->name() == "option")
+    {
+      std::string name;
+      std::string type;
+      std::string constraint;
+      std::string desc = "(none)";
+      i->get_safe("name", name);
+      i->get_safe("type", type);
+      i->get_safe("con", constraint);
+      i->get_safe("desc", desc);
+      if (name.empty() || type.empty()) continue;
+      if (type == "int" || type == "number")
+      {
+        int def;
+        i->get_safe("def", def);
+        pref_i_[name] = new Preference<int>(def, desc, constraint, false);
+      }
+      else if (type == "float")
+      {
+        double def;
+        i->get_safe("def", def);
+        pref_f_[name] = new Preference<float>((float)def, desc, constraint, false);
+      }
+      else if (type == "text" || type == "string" || type == "option"
+            || type == "file")
+      {
+        std::string def;
+        i->get_safe("def", def);
+        auto *pref = new Preference<std::string>(def, desc, constraint, false);
+        if (type == "file")
+          pref_file_[name] = pref;
+        else
+          pref_s_[name] = pref;
+      }
+    }
   }
-  GetThemeSetting().ReadFromFile(kThemeSettingPath);
+
+  // Load values
+  for (auto i : pref_i_)
+    m.get_safe(i.first, **i.second);
+  for (auto i : pref_f_)
+    m.get_safe(i.first, **i.second);
+  for (auto i : pref_s_)
+    m.get_safe(i.first, **i.second);
+  for (auto i : pref_file_)
+    m.get_safe(i.first, **i.second);
 }
 
-void Setting::ClearAll()
+bool PreferenceList::Save(const std::string &path)
 {
-  GetThemeMetricList().Clear();
-  GetThemeSetting().Clear();
-  GetSystemSetting().Clear();
-}
+  if (path.empty()) return false;
+  tinyxml2::XMLDocument doc;
+  XMLElement *root = doc.NewElement(kDefaultRootTagName);
+  doc.InsertFirstChild(root);
 
-void Setting::ReloadAll()
-{
-  ClearAll();
-  ReadAll();
-}
+  XMLElement *nodeval;
 
-void Setting::SaveAll()
-{
-  if (!GetSystemSetting().SaveToFile(kSettingPath))
-    std::cerr << "Failed to save Game setting." << std::endl;
-  if (!GetThemeSetting().SaveToFile(kThemeSettingPath))
-    std::cerr << "Failed to save Theme setting." << std::endl;
-}
-
-OptionList &Setting::GetSystemSetting()
-{
-  static OptionList sysoptions;
-  static bool is_initialized = false;
-  if (!is_initialized)
+  for (auto &i : pref_i_)
   {
-    is_initialized = true;
-
-    /* Initialize game settings */
-    sysoptions.SetOption("Resolution", "640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200")
-      .show().SetDefault("640x480")
-      .set_description("Game resolution")
-      .reset_value();
-
-    sysoptions.SetOption("SoundDevice", "Default")
-      .show().SetDefault("Default")
-      .set_description("Set default sound device.")
-      .reset_value();
-
-    sysoptions.SetOption("SoundBufferSize", "1024,2048,3072,4096,8192,16384")
-      .show().SetDefault("2048")
-      .set_description("Sound latency increases if sound buffer is big. If sound flickers, use large buffer size.")
-      .reset_value();
-
-    sysoptions.SetOption("Volume", "0,10,20,30,40,50,60,70,80,90,100")
-      .show().SetDefault("70")
-      .set_description("Set game volume.")
-      .reset_value();
-
-    sysoptions.SetOption("GameMode", "Home,Arcade,LR2")
-      .show().SetDefault("LR2")
-      .set_description("Set game mode, whether to run as arcade or home.")
-      .reset_value();
-
-    sysoptions.SetOption("Logging", "Off,On")
-      .show().SetDefault("On")
-      .set_description("For development.")
-      .reset_value();
-
-    sysoptions.SetOption("SoundSet", "!Fsound/*.lr2ss")
-      .show().set_description("Soundset file.")
-      .reset_value();
-
-    sysoptions.SetOption("Theme", "")
-      .show().set_description("Theme path.")
-      .reset_value();
-
-    sysoptions.SetOption("SelectScene", "!Fthemes/*/select/*.lr2skin")
-      .show().set_description("Theme path of select scene.")
-      .reset_value();
-
-    sysoptions.SetOption("DecideScene", "!Fthemes/*/decide/*.lr2skin")
-      .show().set_description("Theme path of decide scene.")
-      .reset_value();
-
-    sysoptions.SetOption("PlayScene", "!Fthemes/*/play/*.lr2skin")
-      .show().set_description("Theme path of play scene.")
-      .reset_value();
-
-    sysoptions.SetOption("ResultScene", "!Fthemes/*/result/*.lr2skin")
-      .show().set_description("Theme path of result scene.")
-      .reset_value();
-
-    sysoptions.SetOption("CourseResultScene", "!Fthemes/*/courseresult/*.lr2skin")
-      .show().set_description("Theme path of courseresult scene.")
-      .reset_value();
-
-    sysoptions.SetOption("Sorttype", "!N");
-    sysoptions.SetOption("Gamemode", "!N");
-    sysoptions.SetOption("Difficultymode", "!N");
+    nodeval = doc.NewElement(i.first.c_str());
+    root->InsertFirstChild(nodeval);
+    nodeval->SetAttribute("value", **i.second);
+  }
+  for (auto &i : pref_f_)
+  {
+    nodeval = doc.NewElement(i.first.c_str());
+    root->InsertFirstChild(nodeval);
+    nodeval->SetAttribute("value", **i.second);
+  }
+  for (auto &i : pref_s_)
+  {
+    nodeval = doc.NewElement(i.first.c_str());
+    root->InsertFirstChild(nodeval);
+    nodeval->SetAttribute("value", (**i.second).c_str());
+  }
+  for (auto &i : pref_file_)
+  {
+    nodeval = doc.NewElement(i.first.c_str());
+    root->InsertFirstChild(nodeval);
+    nodeval->SetAttribute("value", (**i.second).c_str());
   }
 
-  return sysoptions;
+  return doc.SaveFile(path.c_str()) == XML_SUCCESS;
 }
 
-OptionList &Setting::GetThemeSetting()
+void PreferenceList::Clear()
 {
-  static OptionList themeoptions;
-  return themeoptions;
+  // XXX: tidy code with template
+  for (auto i = pref_i_.begin(); i != pref_i_.end(); )
+  {
+    if (!i->second->is_static())
+    {
+      delete i->second;
+      pref_i_.erase(i++);
+    }
+    else
+      ++i;
+  }
+
+  for (auto i = pref_f_.begin(); i != pref_f_.end(); )
+  {
+    if (!i->second->is_static())
+    {
+      delete i->second;
+      pref_f_.erase(i++);
+    }
+    else
+      ++i;
+  }
+
+  for (auto i = pref_s_.begin(); i != pref_s_.end(); )
+  {
+    if (!i->second->is_static())
+    {
+      delete i->second;
+      pref_s_.erase(i++);
+    }
+    else
+      ++i;
+  }
+
+  for (auto i = pref_file_.begin(); i != pref_file_.end(); )
+  {
+    if (!i->second->is_static())
+    {
+      delete i->second;
+      pref_file_.erase(i++);
+    }
+    else
+      ++i;
+  }
 }
 
-MetricList &Setting::GetThemeMetricList()
+SystemPreference::SystemPreference() :
+  resolution("1280x800", "Screen resolution",
+    "640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200", true),
+  sound_buffer_size(2048, "Sound buffer size (bigger, longer latency)",
+    "512,1024,2048,3072,4096,8192", true),
+  gamemode(3, "Set gamemode to play.", "ALL,4Key,5Key,6Key,7Key,8Key,Popn,10Key,14Key", true),
+  logging(1, "For development.", "0,1", true),
+  soundset("", "Soundset file.", "sound/*.lr2ss", true),
+  theme("themes/_fallback/theme.xml", "Set game theme file.", "themes/**.xml", true),
+  theme_select("", "Set game theme file for select scene.", "themes/**.lr2skin", true),
+  theme_decide("", "Set game theme file for decide scene.", "themes/**.lr2skin", true),
+  theme_play_7key("", "Set game theme file for 7key play.", "themes/**.lr2skin", true),
+  theme_result("", "Set game theme file for result scene.", "themes/**.lr2skin", true),
+  theme_courseresult("", "Set game theme file for course result scene.", "themes/**.lr2skin", true),
+  select_sort_type(0, "Song sort type", "NOSORT,LEVEL,NAME,DIFFICULT,CLEARLAMP,CLEARRATE,JUDGERATE", true),
+  select_difficulty_mode(0, "Song difficulty mode", "ALL,BEGINNER,NORMAL,HYPER,HARD,EXPERT,CHALLENGE", true)
 {
-  static MetricList metriclist;
-  return metriclist;
+  AddPreferenceString("resolution", &resolution);
+  AddPreferenceInt("sound_buffer_size", &sound_buffer_size);
+  AddPreferenceInt("mode", &gamemode);
+  AddPreferenceInt("logging", &logging);
+  AddPreferenceFile("theme", &theme);
+  AddPreferenceFile("SelectTheme", &theme_select);
+  AddPreferenceFile("DecideTheme", &theme_decide);
+  AddPreferenceFile("Play7Key", &theme_play_7key);
+  AddPreferenceFile("ResultScene", &theme_result);
+  AddPreferenceFile("CourseResultScene", &theme_courseresult);
+  AddPreferenceInt("sortmode", &select_sort_type);
+  AddPreferenceInt("difficulty", &select_difficulty_mode);
 }
 
+MetricGroup *METRIC = nullptr;
+SystemPreference *PREFERENCE = nullptr;
 
 // ------------------------ Serialization
 

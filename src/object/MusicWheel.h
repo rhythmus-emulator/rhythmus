@@ -5,6 +5,7 @@
 #include "Menu.h"
 #include "Text.h"
 #include "Number.h"
+#include "KeyPool.h"
 #include <string>
 
 namespace rhythmus
@@ -54,7 +55,7 @@ class MusicWheelItem : public MenuItem
 {
 public:
   MusicWheelItem();
-  virtual void Load(const Metric &metric);
+  virtual void Load(const MetricGroup &metric);
   virtual bool LoadFromMenuData(MenuData *d);
 
 private:
@@ -69,10 +70,11 @@ public:
   MusicWheel();
   ~MusicWheel();
 
+  virtual void Load(const MetricGroup &metric);
+
   MusicWheelData &get_data(int dataindex);
   MusicWheelData &get_selected_data(int player_num);
 
-  virtual void Load(const Metric &metric);
   virtual void OnSelectChange(const MenuData *data, int direction);
   virtual void OnSelectChanged();
   virtual void NavigateLeft();
@@ -114,6 +116,42 @@ private:
   std::vector<MusicWheelData> data_filtered_;
   /* section items (created in Load procedure) */
   std::vector<MusicWheelData> data_sections_;
+
+  /* Keypools updated by MusicWheel object */
+  KeyData<std::string> info_title;
+  KeyData<std::string> info_subtitle;
+  KeyData<std::string> info_fulltitle;
+  KeyData<std::string> info_genre;
+  KeyData<std::string> info_artist;
+  KeyData<int> info_itemtype;
+  KeyData<int> info_diff;
+  KeyData<int> info_bpmmax;
+  KeyData<int> info_bpmmin;
+  KeyData<int> info_level;
+  KeyData<int> info_difftype_1;
+  KeyData<int> info_difftype_2;
+  KeyData<int> info_difftype_3;
+  KeyData<int> info_difftype_4;
+  KeyData<int> info_difftype_5;
+  KeyData<int> info_difflv_1;
+  KeyData<int> info_difflv_2;
+  KeyData<int> info_difflv_3;
+  KeyData<int> info_difflv_4;
+  KeyData<int> info_difflv_5;
+  KeyData<int> info_score;
+  KeyData<int> info_exscore;
+  KeyData<int> info_totalnote;
+  KeyData<int> info_maxcombo;
+  KeyData<int> info_playcount;
+  KeyData<int> info_clearcount;
+  KeyData<int> info_failcount;
+  KeyData<int> info_cleartype;
+  KeyData<int> info_pg;
+  KeyData<int> info_gr;
+  KeyData<int> info_gd;
+  KeyData<int> info_bd;
+  KeyData<int> info_pr;
+  KeyData<float> info_musicwheelpos;
 
   virtual MenuItem* CreateMenuItem();
 };

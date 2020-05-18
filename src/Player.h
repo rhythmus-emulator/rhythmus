@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SongPlayer.h" /* PlayRecord */
+#include "PlaySession.h"  /* for playrecord */
 #include "Game.h"
 #include "Setting.h"
 #include "Event.h"
@@ -15,9 +15,6 @@ struct sqlite3;
 
 namespace rhythmus
 {
-
-class PlayRecord;
-class PlayContext;
 
 enum PlayerTypes
 {
@@ -77,17 +74,17 @@ public:
   void SetRunningCombo(int combo);
   int GetRunningCombo() const;
 
-  /* @brief Set gamemode for player config */
-  void SetGamemode(int gamemode);
-
   /* @brief Get Playoption for current gamemode */
   PlayOption &GetPlayOption();
 
   /* @brief set current playdata for saving (not actually saved) */
-  void SetCurrentPlay(const PlayRecord &playrecord, const ReplayData &replaydata);
+  void SetCurrentPlay(const PlayRecord &playrecord);
 
-  /* @brief save current play record / replay. */
-  void SaveCurrentPlay();
+  /* @brief store given playrecord. */
+  void PostPlayRecord(PlayRecord &pr);
+
+  /* @brief store given replay data. */
+  void PostReplayData(ReplayData &replay);
 
   /* @brief clear out current play record / replay data. */
   void ClearCurrentPlay();
@@ -99,18 +96,21 @@ private:
   std::string config_name_;
 
   /* context for current play */
+  int gamemode_;
   bool is_guest_;
   bool is_network_;
-  bool is_courseplay_;
-  int gamemode_;
   int running_combo_;
+  int course_combo_;
 
   /* PlayOption for various gamemode & current gamemode. */
   PlayOption playoptions_[Gamemode::kGamemodeEnd];
   PlayOption *current_playoption_;
 
-  /* PlayRecord of this player. Filled in Load() method. */
+  /* PlayRecord of this player. */
   std::vector<PlayRecord> playrecords_;
+
+  /* ReplayData of this player. */
+  std::vector<ReplayData> replaydata_;
 
   /* PlayRecord DB */
   sqlite3 *pr_db_;

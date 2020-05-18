@@ -39,16 +39,15 @@ class CommandArgs;
 /** @brief Drawing properties of Object */
 struct DrawProperty
 {
-  float x, y, w, h;         // general object position
-  float r, g, b;            // alpha masking
-  float aTL, aTR, aBR, aBL; // alpha fade
-  float sx, sy, sw, sh;     // texture src crop
-  ProjectionInfo pi;
-  bool display;             // display: show or hide
+  Vector4 pos;    // x1, y1, x2, y2
+  Vector4 color;  // a, r, g, b
+  Vector4 rotate; // rotation
+  Point align;    // center(align) of object (.0f ~ .1f)
+  Point scale;    // object scale
 };
 
 /** @brief Command function type for object. */
-typedef std::function<void(void*, CommandArgs&)> CommandFn;
+typedef std::function<void(void*, CommandArgs&, const std::string&)> CommandFn;
 
 /** @brief Command mapping for object. */
 typedef std::map<std::string, CommandFn> CommandFnMap;
@@ -64,6 +63,9 @@ enum EaseTypes
   kEaseInOutBack,
 };
 
+void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
+  float r, int ease_type);
+
 /**
  * @brief
  * Declaration for state of current tween
@@ -74,18 +76,46 @@ enum EaseTypes
  * - Tween ease type
  * - Event to be called (kind of triggering)
  */
-struct TweenState
+struct AnimationFrame
 {
   DrawProperty draw_prop;
-  uint32_t time_duration;   // original duration time of this loop
-  uint32_t time_loopstart;  // time to start when looping
-  uint32_t time_eclipsed;   // current tween's eclipsed time
-  bool loop;                // should this tween reused?
+  double time;              // timepoint of this frame
   int ease_type;            // tween ease type
-  std::string commands;     // commands to be triggered when this tween starts
 };
 
-using Tween = std::list<TweenState>;
+class Animation
+{
+public:
+  Animation(const DrawProperty *initial_state);
+  void Clear();
+  void Play();
+  void DuplicateFrame(double duration);
+  void AddFrame(const AnimationFrame &frame);
+  void AddFrame(AnimationFrame &&frame);
+  void AddFrame(const DrawProperty &draw_prop, double time, int ease_type);
+  void SetCommand(const std::string &cmd);
+  void Update(double &ms, std::string &command_to_invoke, DrawProperty *out);
+  void GetDrawProperty(DrawProperty &out);
+  void SetEaseType(int ease_type);
+  void SetLoop(unsigned repeat_start_time);
+  void DeleteLoop();
+  const DrawProperty &LastFrame() const;
+  DrawProperty &LastFrame();
+  double GetTweenLength() const;
+  bool is_stopped() const;
+  size_t size() const;
+  bool empty() const;
+
+private:
+  std::vector<AnimationFrame> frames_;
+  unsigned current_frame_;    // current frame
+  double current_frame_time_; // current frame eclipsed time
+  double frame_time_;         // eclipsed time of whole animation
+  bool is_stopped_;
+  bool repeat_;
+  unsigned repeat_time_;
+  std::string command;        // commands to be triggered when this tween starts
+};
 
 /**
  * @brief
@@ -102,39 +132,44 @@ public:
   void set_name(const std::string& name);
   const std::string& get_name() const;
 
-  /* Add child to be updated / rendered. */
+  // Add child to be updated / rendered.
   void AddChild(BaseObject* obj);
 
-  /* Remove child to be updated / rendered. */
-  void RemoveChild(BaseObject* obj);
-
+  // Remove child.
+  void RemoveChild(BaseObject *obj);
   void RemoveAllChild();
 
-  /**
-   * @brief
-   * Make cacsading relationship to object.
-   * If parent object is deleted, then registered children are also deleted.
-   */
-  void RegisterChild(BaseObject* obj);
+  // Find child by name.
+  BaseObject* FindChildByName(const std::string& name);
 
   void set_parent(BaseObject* obj);
   BaseObject* get_parent();
-  BaseObject* FindChildByName(const std::string& name);
-  BaseObject* FindRegisteredChildByName(const std::string& name);
   BaseObject* GetLastChild();
+  void SetOwnChildren(bool v);
 
+  // Load object property from metric info.
+  virtual void Load(const MetricGroup &m);
+
+  // Load object property from metric file.
+  void LoadFromFile(const std::string &metric_file);
+
+  // Load object property from ThemeMetric using name of this object.
+  void LoadFromName();
+
+  /**
+   * Commands can modify attributes(mainly animation) of objects during runtime.
+   * Metric, on the other hand, is expect to set object's initial state,
+   * and all objects are expected to have general command set.
+   * So, commands has more limitation than metric property.
+   */
   void RunCommandByName(const std::string &name);
   void RunCommand(std::string command);
   void ClearCommand(const std::string &name);
   void DeleteAllCommand();
   void QueueCommand(const std::string &command);
-  void LoadCommand(const std::string &name, const std::string &command);
-  void LoadCommand(const Metric& metric);
-  void LoadCommandWithPrefix(const std::string &prefix, const Metric& metric);
-  void LoadCommandWithNamePrefix(const Metric& metric);
-
-  /* alias for LoadCommand */
   void AddCommand(const std::string &name, const std::string &command);
+  void LoadCommand(const MetricGroup& metric);
+  void LoadCommandWithPrefix(const std::string &prefix, const MetricGroup& metric);
 
   /**
    * @brief
@@ -145,26 +180,11 @@ public:
    */
   void RunCommand(const std::string &commandname, const std::string& value);
 
-  /* @brief Load property(resource). */
-  virtual void Load(const Metric &metric);
-  void LoadByText(const std::string &metric_text);
-  void LoadByName();
-
-  /* @brief Load from LR2SRC (for LR2) */
-  virtual void LoadFromLR2SRC(const std::string &cmd);
-
   /* @brief Inherited from EventReceiver */
   virtual bool OnEvent(const EventMessage& msg);
 
-  void AddTweenState(const DrawProperty &draw_prop, uint32_t time_duration,
-    int ease_type = EaseTypes::kEaseOut, bool loop = false);
-  void SetTweenTime(int time_msec);
-  void SetDeltaTweenTime(int time_msec);
-  void StopTween();
-  uint32_t GetTweenLength() const;
-
-  DrawProperty& GetDestDrawProperty();
-  DrawProperty& get_draw_property();
+  DrawProperty& GetLastFrame();
+  DrawProperty& GetCurrentFrame();
   void SetX(int x);
   void SetY(int y);
   void SetWidth(int w);
@@ -180,56 +200,48 @@ public:
   void SetRGB(float r, float g, float b);
   void SetScale(float x, float y);
   void SetRotation(float x, float y, float z);
-  void SetRotationAsRadian(float x, float y, float z);
+  void SetRotationAsDegree(float x, float y, float z);
+  void SetLR2DST(const std::string &cmd);
 
   /**
-   * -1: Use absolute coord
    * 0: Center
    * 1: Bottomleft
    * 2: Bottomcenter
    * ... (Same as numpad position)
    */
-  void SetRotationCenter(int rot_center);
-  void SetRotationCenterCoord(float x, float y);
+  void SetCenter(int type);
+
+  /* local coord (0.0 ~ 1.0) */
+  void SetCenter(float x, float y);
+
   /**
    * refer: enum EaseTypes
    */
   void SetAcceleration(int acc);
-  void SetVisibleGroup(int group0 = 0, int group1 = 0, int group2 = 0);
-  void SetIgnoreVisibleGroup(bool ignore);
+  void SetVisibleFlag(const std::string& group0, const std::string& group1,
+    const std::string& group2, const std::string& group3);
+  void UnsetVisibleFlag();
   void Hide();
   void Show();
   void SetDrawOrder(int order);
   int GetDrawOrder() const;
-  void SetAllTweenPos(int x, int y);
-  void SetAllTweenScale(float w, float h);
   virtual void SetText(const std::string &value);
   virtual void SetNumber(int number);
   virtual void SetNumber(double number);
-  /* Refresh value from resource id (if it has) */
+  /* Refresh object value. */
   virtual void Refresh();
-  /* Set value automatically using Refresh() method from resource id */
-  void SetResourceId(int id);
-  /* -1: no resource */
-  int GetResourceId() const;
 
   void SetFocusable(bool is_focusable);
-  virtual bool IsEntered(float x, float y);
+  bool IsEntered(float x, float y);
   void SetHovered(bool is_hovered);
   void SetFocused(bool is_focused);
   bool IsHovered() const;
   bool IsFocused() const;
   virtual void Click();
 
-  /**
-   * 0: Don't use blending (always 100% alpha)
-   * 1: Use basic alpha blending (Default)
-   * 2: Use color blending instead of alpha channel
-   */
-  void SetBlend(int blend_mode);
-
-  void SetLR2DSTCommand(const std::string &lr2dst);
-
+  void SetDeltaTime(double time);
+  void Stop();
+  double GetTweenLength() const;
   bool IsTweening() const;
   bool IsVisible() const;
 
@@ -241,9 +253,6 @@ public:
   }
 
 private:
-  void SetLR2DST(int time, int x, int y, int w, int h, int acc_type,
-    int a, int r, int g, int b, int blend, int filter, int angle,
-    int center);
 
 protected:
   std::string name_;
@@ -253,33 +262,26 @@ protected:
   // children for rendering (not released when this object is destructed)
   std::vector<BaseObject*> children_;
 
-  // owned children list (released when its destruction)
-  std::vector<BaseObject*> owned_children_;
+  // is this object owns children? if so, delete them when Removed.
+  bool own_children_;
 
   // drawing order
   int draw_order_;
 
-  // description of drawing motion
-  Tween tween_;
+  // queued animation list
+  std::list<Animation> ani_;
 
-  // current cached drawing state
-  DrawProperty current_prop_;
+  // current drawing state
+  DrawProperty frame_;
 
-  // rotation center property
-  int rot_center_;
+  bool visible_;
 
   // group for visibility
   // @warn 4th group: for special use (e.g. panel visibility of onmouse)
-  int visible_group_[4];
+  int *visible_flag_[4];
 
   // ignoring visible group
   bool ignore_visible_group_;
-
-  // Resource id for text/number value
-  int resource_id_;
-
-  // blending properties for image/text.
-  int blending_;
 
   // is this object focusable?
   bool is_focusable_;
@@ -299,22 +301,20 @@ protected:
   // information for debugging
   std::string debug_;
 
-  // Tween
-  void UpdateTween(float delta);
-  void SetTweenLoopTime(int loopstart_time_msec);
-
   void FillVertexInfo(VertexInfo *vi);
   virtual void doUpdate(float delta);
   virtual void doRender();
-  virtual void doUpdateAfter(float delta);
+  virtual void doUpdateAfter();
   virtual void doRenderAfter();
 
   virtual const CommandFnMap& GetCommandFnMap();
-  
-  void SetLR2DSTCommandInternal(const CommandArgs &args);
 };
 
-void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
-  double r, int ease_type);
+
+/**
+ * @brief
+ * An util function for creating general object from metric.
+ */
+BaseObject* CreateObject(const MetricGroup &m);
 
 }

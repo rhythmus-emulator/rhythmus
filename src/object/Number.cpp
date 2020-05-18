@@ -1,5 +1,6 @@
 #include "Number.h"
 #include "Script.h"
+#include "config.h"
 
 namespace rhythmus
 {
@@ -88,9 +89,66 @@ const char* NumberFormatter::numstr() const
 
 // --------------------------- class NumberText
 
-Number::Number() : tvi_glyphs_(nullptr) {}
+Number::Number() : tvi_glyphs_(nullptr), res_ptr_(nullptr) {}
 
 Number::~Number() { AllocNumberGlyph(0); }
+
+void Number::Load(const MetricGroup& metric)
+{
+  Text::Load(metric);
+
+#if USE_LR2_FEATURE == 1
+#if 0
+  if (metric.exist("lr2src"))
+  {
+    // This method only supports number with sprite, not font.
+    numbersprite_.LoadFromLR2SRC(cmd);
+
+    // (image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align)
+    CommandArgs args(cmd);
+
+    /* track change of number table */
+    int eventid = args.Get<int>(9);
+    std::string eventname = "Number" + args.Get<std::string>(9);
+    AddCommand(eventname, "refresh");
+    SubscribeTo(eventname);
+
+    /* set value instantly */
+    SetResourceId(eventid);
+    Refresh();
+
+    /* alignment (not use LR2 alignment here) */
+    switch (args.Get<int>(10))
+    {
+    case 0:
+      SetTextAlignment(TextAlignments::kTextAlignLeft);
+      break;
+    case 1:
+      SetTextAlignment(TextAlignments::kTextAlignRight);
+      break;
+    case 2:
+      SetTextAlignment(TextAlignments::kTextAlignCenter);
+      break;
+    }
+
+    /* keta processing: tween width multiply & set number formatter */
+    int keta = args.Get<int>(11);
+    SetWidthMultiply((float)keta);
+  }
+#endif
+#endif
+
+  /* Use font if loaded (by Text::Load).
+   * If not, use texture if necessary (by Number::LoadFromLR2SRC). */
+  if (font())
+  {
+    CreateTextVertexFromFont();
+  }
+  else if (numbersprite_.image())
+  {
+    CreateTextVertexFromSprite();
+  }
+}
 
 void Number::SetNumber(int number)
 {
@@ -108,7 +166,7 @@ void Number::SetText(const std::string &num)
 {
   if (!tvi_glyphs_)
     return;
-  ClearTextVertex();
+  ClearText();
   if (num.empty())
     return;
 
@@ -130,11 +188,11 @@ void Number::SetText(const std::string &num)
       continue;
 
     auto *vi = AddTextVertex(tvi_glyphs_[gidx]).vi;
-    vi[0].x += x;
-    vi[1].x += x;
-    vi[2].x += x;
-    vi[3].x += x;
-    x += vi[1].x - vi[0].x;
+    vi[0].p.x += x;
+    vi[1].p.x += x;
+    vi[2].p.x += x;
+    vi[3].p.x += x;
+    x += vi[1].p.x - vi[0].p.x;
   }
 
   // TODO: cycle property, add tvi with cycles
@@ -154,31 +212,17 @@ void Number::doUpdate(float delta)
   Text::doUpdate(delta);
 }
 
-void Number::Load(const Metric& metric)
-{
-  Text::Load(metric);
-
-  /* Use font if loaded (by Text::Load).
-   * If not, use texture if necessary (by Number::LoadFromLR2SRC). */
-  if (font())
-  {
-    CreateTextVertexFromFont();
-  }
-  else if (numbersprite_.image())
-  {
-    CreateTextVertexFromSprite();
-  }
-}
-
 void Number::Refresh()
 {
   /* kind of trick to compatible with LR2:
-   * if value is UINT_MIX, then set with empty value. */
-  int v = Script::getInstance().GetNumber(GetResourceId());
-  if (v == 0xFFFFFFFF)
-    SetText(std::string());
-  else
-    SetNumber(v);
+   * if value is UINT_MAX, then set with empty value. */
+  if (res_ptr_)
+  {
+    if (*res_ptr_ == 0xFFFFFFFF)
+      SetText(std::string());
+    else
+      SetNumber(*res_ptr_);
+  }
 }
 
 void Number::AllocNumberGlyph(size_t cycles)
@@ -193,45 +237,9 @@ void Number::AllocNumberGlyph(size_t cycles)
   tvi_glyphs_ = (TextVertexInfo*)calloc(24 * cycles, sizeof(TextVertexInfo));
 }
 
-void Number::LoadFromLR2SRC(const std::string &cmd)
-{
-  // This method only supports number with sprite, not font.
-  numbersprite_.LoadFromLR2SRC(cmd);
-
-  // (image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align)
-  CommandArgs args(cmd);
-
-  /* track change of number table */
-  int eventid = args.Get<int>(9);
-  std::string eventname = "Number" + args.Get<std::string>(9);
-  AddCommand(eventname, "refresh");
-  SubscribeTo(eventname);
-
-  /* set value instantly */
-  SetResourceId(eventid);
-  Refresh();
-
-  /* alignment (not use LR2 alignment here) */
-  switch (args.Get<int>(10))
-  {
-  case 0:
-    SetTextAlignment(TextAlignments::kTextAlignLeft);
-    break;
-  case 1:
-    SetTextAlignment(TextAlignments::kTextAlignRight);
-    break;
-  case 2:
-    SetTextAlignment(TextAlignments::kTextAlignCenter);
-    break;
-  }
-
-  /* keta processing: tween width multiply & set number formatter */
-  int keta = args.Get<int>(11);
-  SetWidthMultiply((float)keta);
-}
-
 void Number::CreateTextVertexFromSprite()
 {
+#if 0
   /* register glyphs by divx / divy. */
   int divx = numbersprite_.GetSpriteAnimationInfo().divx;
   int divy = numbersprite_.GetSpriteAnimationInfo().divy;
@@ -249,22 +257,14 @@ void Number::CreateTextVertexFromSprite()
       {
         const int ii = i * 24 + j;
         tvi_glyphs_[ii].texid = numbersprite_.image()->get_texture_ID();
-        tvi_glyphs_[ii].vi[0].a = tvi_glyphs_[ii].vi[1].a
-          = tvi_glyphs_[ii].vi[2].a = tvi_glyphs_[ii].vi[3].a = 1.0f;
-        tvi_glyphs_[ii].vi[0].r = tvi_glyphs_[ii].vi[1].r
-          = tvi_glyphs_[ii].vi[2].r = tvi_glyphs_[ii].vi[3].r = 1.0f;
-        tvi_glyphs_[ii].vi[0].g = tvi_glyphs_[ii].vi[1].g
-          = tvi_glyphs_[ii].vi[2].g = tvi_glyphs_[ii].vi[3].g = 1.0f;
-        tvi_glyphs_[ii].vi[0].b = tvi_glyphs_[ii].vi[1].b
-          = tvi_glyphs_[ii].vi[2].b = tvi_glyphs_[ii].vi[3].b = 1.0f;
-        tvi_glyphs_[ii].vi[0].x = 0;
-        tvi_glyphs_[ii].vi[0].y = 0;
-        tvi_glyphs_[ii].vi[1].x = divw;
-        tvi_glyphs_[ii].vi[1].y = 0;
-        tvi_glyphs_[ii].vi[2].x = divw;
-        tvi_glyphs_[ii].vi[2].y = divh;
-        tvi_glyphs_[ii].vi[3].x = 0;
-        tvi_glyphs_[ii].vi[3].y = divh;
+        tvi_glyphs_[ii].vi[0].c = Vector4{ 1.0f };
+        tvi_glyphs_[ii].vi[1].c = Vector4{ 1.0f };
+        tvi_glyphs_[ii].vi[2].c = Vector4{ 1.0f };
+        tvi_glyphs_[ii].vi[3].c = Vector4{ 1.0f };
+        tvi_glyphs_[ii].vi[0].p = Vector3{ 0.0f, 0.0f, 0.0f };
+        tvi_glyphs_[ii].vi[1].p = Vector3{ divw, 0.0f, 0.0f };
+        tvi_glyphs_[ii].vi[2].p = Vector3{ divw, divh, 0.0f };
+        tvi_glyphs_[ii].vi[3].p = Vector3{ 0.0f, divh, 0.0f };
         numbersprite_.FillTextureCoordToVertexInfo(tvi_glyphs_[ii].vi, ii);
       }
     }
@@ -283,6 +283,7 @@ void Number::CreateTextVertexFromSprite()
   }
   else return;
   SetTextVertexCycle(cycle_number, 0);
+#endif
 }
 
 void Number::CreateTextVertexFromFont()
@@ -294,30 +295,18 @@ void Number::CreateTextVertexFromFont()
     if (!g) continue;
 
     tvi_glyphs_[i].texid = numbersprite_.image()->get_texture_ID();
-    tvi_glyphs_[i].vi[0].a = tvi_glyphs_[i].vi[1].a
-      = tvi_glyphs_[i].vi[2].a = tvi_glyphs_[i].vi[3].a = 1.0f;
-    tvi_glyphs_[i].vi[0].r = tvi_glyphs_[i].vi[1].r
-      = tvi_glyphs_[i].vi[2].r = tvi_glyphs_[i].vi[3].r = 1.0f;
-    tvi_glyphs_[i].vi[0].g = tvi_glyphs_[i].vi[1].g
-      = tvi_glyphs_[i].vi[2].g = tvi_glyphs_[i].vi[3].g = 1.0f;
-    tvi_glyphs_[i].vi[0].b = tvi_glyphs_[i].vi[1].b
-      = tvi_glyphs_[i].vi[2].b = tvi_glyphs_[i].vi[3].b = 1.0f;
-    tvi_glyphs_[i].vi[0].x = 0;
-    tvi_glyphs_[i].vi[0].y = 0;
-    tvi_glyphs_[i].vi[1].x = g->width;
-    tvi_glyphs_[i].vi[1].y = 0;
-    tvi_glyphs_[i].vi[2].x = g->width;
-    tvi_glyphs_[i].vi[2].y = g->height;
-    tvi_glyphs_[i].vi[3].x = 0;
-    tvi_glyphs_[i].vi[3].y = g->height;
-    tvi_glyphs_[i].vi[0].sx = g->sx1;
-    tvi_glyphs_[i].vi[0].sy = g->sy1;
-    tvi_glyphs_[i].vi[1].sx = g->sx2;
-    tvi_glyphs_[i].vi[1].sy = g->sy1;
-    tvi_glyphs_[i].vi[2].sx = g->sx2;
-    tvi_glyphs_[i].vi[2].sy = g->sy2;
-    tvi_glyphs_[i].vi[3].sx = g->sx1;
-    tvi_glyphs_[i].vi[3].sy = g->sy2;
+    tvi_glyphs_[i].vi[0].c = Vector4{ 1.0f };
+    tvi_glyphs_[i].vi[1].c = Vector4{ 1.0f };
+    tvi_glyphs_[i].vi[2].c = Vector4{ 1.0f };
+    tvi_glyphs_[i].vi[3].c = Vector4{ 1.0f };
+    tvi_glyphs_[i].vi[0].p = Vector3{ 0.0f, 0.0f, 0.0f };
+    tvi_glyphs_[i].vi[1].p = Vector3{ g->width, 0.0f, 0.0f };
+    tvi_glyphs_[i].vi[2].p = Vector3{ g->width, g->height, 0.0f };
+    tvi_glyphs_[i].vi[3].p = Vector3{ 0.0f, g->height, 0.0f };
+    tvi_glyphs_[i].vi[0].t = Vector2{ g->sx1, g->sy1 };
+    tvi_glyphs_[i].vi[1].t = Vector2{ g->sx2, g->sy1 };
+    tvi_glyphs_[i].vi[2].t = Vector2{ g->sx2, g->sy2 };
+    tvi_glyphs_[i].vi[3].t = Vector2{ g->sx1, g->sy2 };
   }
   SetTextVertexCycle(1, 0);
 }

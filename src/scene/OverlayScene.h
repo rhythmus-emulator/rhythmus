@@ -15,7 +15,7 @@ public:
 
   virtual void LoadScene();
   virtual void StartScene();
-  virtual void Load(const Metric& metric);
+  virtual void Load(const MetricGroup& metric);
   virtual void CloseScene(bool next);
   virtual void ProcessInputEvent(const InputEvent& e);
 

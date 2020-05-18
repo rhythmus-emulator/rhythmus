@@ -1,20 +1,20 @@
 #pragma once
 
 #include "Sprite.h"
+#include "ResourceManager.h"
 #include <stdint.h>
+#include <stddef.h>
 #include <string>
 #include <vector>
 
 namespace rhythmus
 {
 
-struct TextVertexInfo
-{
-  GLuint texid;
-  VertexInfo vi[4];
-};
+class Image;
+class MetricGroup;
 
-struct FontFillTexture
+// @brief Bitmap property for filling font outline or foreground
+struct FontFillBitmap
 {
   // image data ptr. only 32bit unsigned RGBA allowed
   char *p;
@@ -23,15 +23,11 @@ struct FontFillTexture
   int width, height;
 };
 
-struct FontAttributes
+// @brief Font parameters required for creating font object
+struct FontAttribute
 {
-  FontAttributes();
-
-  /* name of font */
+  /* specified name of font (optional) */
   std::string name;
-
-  /* path of font data */
-  std::string path;
 
   /* font size in pixel. (set internally) */
   int height;
@@ -49,29 +45,17 @@ struct FontAttributes
   uint32_t outline_color;
 
   /* Texture of font foreground. color option is ignored when tex is set. */
-  FontFillTexture tex;
+  FontFillBitmap tex;
 
   /* Texture of font border. color option is ignored when tex is set. */
-  FontFillTexture outline_tex;
+  FontFillBitmap outline_tex;
+};
 
-  /* @brief Set font size (same as height multiplied by 4) */
-  void SetSize(int size);
 
-  /* @brief Set font attribute from file path */
-  void SetPath(const std::string &path);
-
-  /* @brief Set font attribute info from command */
-  void SetFromCommand(const std::string &command);
-
-  /* @warn this method is in development.
-   * may cannot distinguish different font. */
-  bool operator==(const FontAttributes& attr) const
-  {
-    return attr.height == height &&
-      attr.color == color &&
-      attr.outline_width == outline_width
-      ;
-  }
+struct TextVertexInfo
+{
+  GLuint texid;
+  VertexInfo vi[4];
 };
 
 struct FontGlyph
@@ -100,6 +84,7 @@ class FontBitmap
 {
 public:
   FontBitmap(int w, int h);
+  FontBitmap(uint32_t* bitmap, int w, int h);
   FontBitmap(const uint32_t* bitmap, int w, int h);
   ~FontBitmap();
   void Write(uint32_t* bitmap, int w, int h, FontGlyph &glyph_out);
@@ -108,6 +93,9 @@ public:
   int width() const;
   int height() const;
   GLuint get_texid() const;
+  
+  int get_error_code() const;
+  const char *get_error_msg() const;
 
   /**
    * Delete memory cache and set as read-only.
@@ -126,22 +114,35 @@ private:
   int cur_x_, cur_y_;
   bool committed_;
 
+  int error_code_;
+  const char *error_msg_;
+
   void GetGlyphTexturePos(FontGlyph &glyph_out);
 };
 
-class Font
+class Font : public ResourceElement
 {
 public:
   Font();
   virtual ~Font();
 
-  void set_name(const std::string& name);
-  const std::string& get_name() const;
+  void Load(const std::string &path);
+  void Load(const char *p, size_t len, const char *ext_hint_opt);
+  void Load(const MetricGroup& metrics);
+  void Clear();
+  void Update(float ms);
 
-  virtual bool LoadFont(const FontAttributes& attrs);
+  // This indicates glyph and bitmap info is loaded,
+  // but texture might not be loaded.
+  bool is_glyph_loaded() const;
+
+  // This indicates is font fully loaded, including texture.
+  bool is_loaded() const;
+
+  bool is_empty() const;
+
   void PrepareText(const std::string& text_utf8);
   void PrepareGlyph(uint32_t *chrs, int count);
-  void Commit();
 
   const FontGlyph* GetGlyph(uint32_t chr) const;
   bool IsNullGlyph(const FontGlyph* g) const;
@@ -151,18 +152,22 @@ public:
     std::vector<TextVertexInfo>& tvi,
     bool do_line_breaking) const;
 
-  void ClearGlyph();
-  void ReleaseFont();
-
   const std::string& get_path() const;
   bool is_ttf_font() const;
-  const FontAttributes& get_attribute() const;
+  int height() const;
+  const std::string &name() const;
 
-protected:
+private:
+  void LoadFreetypeFont(const std::string &path);
+  void LoadLR2BitmapFont(const std::string &path);
+  void ClearGlyph();
+  void ReleaseFont();
+  void Commit();
+
   // Font data path. used for identification.
   std::string path_;
 
-  // font resource name
+  // Font name
   std::string name_;
 
   // is bitmap font or ttf font?
@@ -171,22 +176,31 @@ protected:
   // FT_Face, FT_Stroker type
   void *ftface_, *ftstroker_;
 
+  // font attribute
+  FontAttribute fontattr_;
+
+  // glyph which is returned when glyph is not found
+  FontGlyph null_glyph_;
+
   // cached glyph
   std::vector<FontGlyph> glyph_;
 
   // store bitmap / texture
   std::vector<FontBitmap*> fontbitmap_;
 
-  // current font attributes
-  FontAttributes fontattr_;
-  // glyph which is returned when glyph is not found
-  FontGlyph null_glyph_;
+  // status of current font.
+  // 0: is not loaded
+  // 1: loading
+  // 2: loaded, but texture is not prepared
+  // 3: fully loaded, ready to render.
+  int status_;
+
+  int error_code_;
+  const char *error_msg_;
 
   void ConvertStringToCodepoint(const std::string& s, uint32_t *cp, int& lenout, int maxlen = -1) const;
   FontBitmap* GetWritableBitmapCache(int w, int h);
 };
-
-Font* CreateFont(const FontAttributes &fontattr);
 
 using FontAuto = std::shared_ptr<Font>;
 
