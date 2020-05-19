@@ -102,6 +102,8 @@ bool MetricGroup::LoadFromXml(const std::string &path)
     }
     ele = ele->NextSiblingElement();
   }
+
+  return true;
 }
 
 bool MetricGroup::LoadFromIni(const std::string &path)
@@ -1137,6 +1139,8 @@ void Setting::Cleanup()
 {
   delete PREFERENCE;
   delete METRIC;
+  PREFERENCE = nullptr;
+  METRIC = nullptr;
 }
 
 void Setting::Reload()
@@ -1162,7 +1166,7 @@ void Setting::Reload()
     std::string filepath;
     for (size_t i = 0; metric_option_attrs[i]; ++i)
     {
-      auto *pref = PREFERENCE->GetPreferenceFile(metric_option_attrs[i]);
+      auto *pref = PREFERENCE->GetFile(metric_option_attrs[i]);
       if (!pref || (**pref).empty()) continue;
 
       MetricGroup m;
@@ -1185,58 +1189,90 @@ void Setting::Save()
 
 PreferenceList::~PreferenceList() { Clear(); }
 
-void PreferenceList::AddPreferenceInt(const std::string &key, Preference<int> *pf)
+void PreferenceList::AddInt(const std::string &key, Preference<int> *pf)
 {
   auto i = pref_i_.find(key);
   R_ASSERT(i == pref_i_.end());
   pref_i_[key] = pf;
+  if (!pf->is_static())
+    non_static_prefs_.push_back(pf);
 }
 
-void PreferenceList::AddPreferenceFloat(const std::string &key, Preference<float> *pf)
+void PreferenceList::AddFloat(const std::string &key, Preference<float> *pf)
 {
-  auto i = pref_i_.find(key);
-  R_ASSERT(i == pref_i_.end());
+  auto i = pref_f_.find(key);
+  R_ASSERT(i == pref_f_.end());
   pref_f_[key] = pf;
+  if (!pf->is_static())
+    non_static_prefs_.push_back(pf);
 }
 
-void PreferenceList::AddPreferenceString(const std::string &key,
+void PreferenceList::AddString(const std::string &key,
   Preference<std::string> *pf)
 {
-  auto i = pref_i_.find(key);
-  R_ASSERT(i == pref_i_.end());
+  auto i = pref_s_.find(key);
+  R_ASSERT(i == pref_s_.end());
   pref_s_[key] = pf;
+  if (!pf->is_static())
+    non_static_prefs_.push_back(pf);
 }
 
-void PreferenceList::AddPreferenceFile(const std::string &key,
+void PreferenceList::AddFile(const std::string &key,
   Preference<std::string> *pf)
 {
-  auto i = pref_i_.find(key);
-  R_ASSERT(i == pref_i_.end());
+  auto i = pref_file_.find(key);
+  R_ASSERT(i == pref_file_.end());
   pref_file_[key] = pf;
+  if (!pf->is_static())
+    non_static_prefs_.push_back(pf);
 }
 
-Preference<int>* PreferenceList::GetPreferenceInt(const std::string &key)
+void PreferenceList::SetInt(const std::string &key, int v)
+{
+  auto *pf = GetInt(key);
+  if (pf) *pf = v;
+}
+
+void PreferenceList::SetFloat(const std::string &key, float v)
+{
+  auto *pf = GetFloat(key);
+  if (pf) *pf = v;
+}
+
+void PreferenceList::SetString(const std::string &key, const std::string &v)
+{
+  auto *pf = GetString(key);
+  if (pf) *pf = v;
+}
+
+void PreferenceList::SetFile(const std::string &key, const std::string &v)
+{
+  auto *pf = GetFile(key);
+  if (pf) *pf = v;
+}
+
+Preference<int>* PreferenceList::GetInt(const std::string &key)
 {
   auto i = pref_i_.find(key);
   if (i != pref_i_.end()) return i->second;
   else return nullptr;
 }
 
-Preference<float>* PreferenceList::GetPreferenceFloat(const std::string &key)
+Preference<float>* PreferenceList::GetFloat(const std::string &key)
 {
   auto i = pref_f_.find(key);
   if (i != pref_f_.end()) return i->second;
   else return nullptr;
 }
 
-Preference<std::string>* PreferenceList::GetPreferenceString(const std::string &key)
+Preference<std::string>* PreferenceList::GetString(const std::string &key)
 {
   auto i = pref_s_.find(key);
   if (i != pref_s_.end()) return i->second;
   else return nullptr;
 }
 
-Preference<std::string>* PreferenceList::GetPreferenceFile(const std::string &key)
+Preference<std::string>* PreferenceList::GetFile(const std::string &key)
 {
   auto i = pref_file_.find(key);
   if (i != pref_file_.end()) return i->second;
@@ -1342,14 +1378,20 @@ bool PreferenceList::Save(const std::string &path)
 
 void PreferenceList::Clear()
 {
+  // Non-static preference objects should be stored separated.
+  // If not, static preference memory will be removed first,
+  // And Clear() method will be work after that. And at that time
+  // we cannot see preference->is_static? member correctly,
+  // which will see wrong memory address and cause SIGSEGV.
+  for (auto *p : non_static_prefs_)
+    delete p;
+  non_static_prefs_.clear();
+
   // XXX: tidy code with template
   for (auto i = pref_i_.begin(); i != pref_i_.end(); )
   {
     if (!i->second->is_static())
-    {
-      delete i->second;
       pref_i_.erase(i++);
-    }
     else
       ++i;
   }
@@ -1357,10 +1399,7 @@ void PreferenceList::Clear()
   for (auto i = pref_f_.begin(); i != pref_f_.end(); )
   {
     if (!i->second->is_static())
-    {
-      delete i->second;
       pref_f_.erase(i++);
-    }
     else
       ++i;
   }
@@ -1368,10 +1407,7 @@ void PreferenceList::Clear()
   for (auto i = pref_s_.begin(); i != pref_s_.end(); )
   {
     if (!i->second->is_static())
-    {
-      delete i->second;
       pref_s_.erase(i++);
-    }
     else
       ++i;
   }
@@ -1379,10 +1415,7 @@ void PreferenceList::Clear()
   for (auto i = pref_file_.begin(); i != pref_file_.end(); )
   {
     if (!i->second->is_static())
-    {
-      delete i->second;
       pref_file_.erase(i++);
-    }
     else
       ++i;
   }
@@ -1397,6 +1430,7 @@ SystemPreference::SystemPreference() :
   logging(1, "For development.", "0,1", true),
   soundset("", "Soundset file.", "sound/*.lr2ss", true),
   theme("themes/_fallback/theme.xml", "Set game theme file.", "themes/**.xml", true),
+  theme_test("", "Test theme file (for debug purpose).", "", true),
   theme_select("", "Set game theme file for select scene.", "themes/**.lr2skin", true),
   theme_decide("", "Set game theme file for decide scene.", "themes/**.lr2skin", true),
   theme_play_7key("", "Set game theme file for 7key play.", "themes/**.lr2skin", true),
@@ -1405,18 +1439,23 @@ SystemPreference::SystemPreference() :
   select_sort_type(0, "Song sort type", "NOSORT,LEVEL,NAME,DIFFICULT,CLEARLAMP,CLEARRATE,JUDGERATE", true),
   select_difficulty_mode(0, "Song difficulty mode", "ALL,BEGINNER,NORMAL,HYPER,HARD,EXPERT,CHALLENGE", true)
 {
-  AddPreferenceString("resolution", &resolution);
-  AddPreferenceInt("sound_buffer_size", &sound_buffer_size);
-  AddPreferenceInt("mode", &gamemode);
-  AddPreferenceInt("logging", &logging);
-  AddPreferenceFile("theme", &theme);
-  AddPreferenceFile("SelectTheme", &theme_select);
-  AddPreferenceFile("DecideTheme", &theme_decide);
-  AddPreferenceFile("Play7Key", &theme_play_7key);
-  AddPreferenceFile("ResultScene", &theme_result);
-  AddPreferenceFile("CourseResultScene", &theme_courseresult);
-  AddPreferenceInt("sortmode", &select_sort_type);
-  AddPreferenceInt("difficulty", &select_difficulty_mode);
+  AddString("resolution", &resolution);
+  AddInt("sound_buffer_size", &sound_buffer_size);
+  AddInt("mode", &gamemode);
+  AddInt("logging", &logging);
+  AddFile("theme", &theme);
+  AddFile("TestScene", &theme_test);
+  AddFile("SelectScene", &theme_select);
+  AddFile("DecideScene", &theme_decide);
+  AddFile("Play7Key", &theme_play_7key);
+  AddFile("ResultScene", &theme_result);
+  AddFile("CourseResultScene", &theme_courseresult);
+  AddInt("sortmode", &select_sort_type);
+  AddInt("difficulty", &select_difficulty_mode);
+}
+
+SystemPreference::~SystemPreference()
+{
 }
 
 MetricGroup *METRIC = nullptr;

@@ -58,6 +58,11 @@ int StringToGamemode(const char* s)
 // temporary stored metric before initialization
 std::map<std::string, std::string> gMetricTemp;
 
+// temporary stored preference before initialization
+std::map<std::string, int> gPrefIntTemp;
+std::map<std::string, std::string> gPrefStrTemp;
+std::map<std::string, std::string> gPrefFileTemp;
+
 /* --------------------------------- class Game */
 
 Game Game::game_;
@@ -84,11 +89,15 @@ void Game::Initialize()
   // load settings before logging.
   Setting::Initialize();
 
-  // flush temporary variable into setting.
+  // flush temporary variables into setting.
   for (auto i : gMetricTemp)
-  {
     METRIC->set(i.first, i.second);
-  }
+  for (auto i : gPrefIntTemp)
+    PREFERENCE->SetInt(i.first, i.second);
+  for (auto i : gPrefStrTemp)
+    PREFERENCE->SetString(i.first, i.second);
+  for (auto i : gPrefFileTemp)
+    PREFERENCE->SetFile(i.first, i.second);
   gMetricTemp.clear();
 
   // Start logging.
@@ -129,8 +138,8 @@ void Game::Loop()
       /* Song and movie won't be updated if paused. */
       if (!Game::IsPaused())
       {
-        //SongPlayer::getInstance().Update(delta);
-        //ResourceManager::Update(delta);
+        SongPlayer::getInstance().Update(delta);
+        ResourceManager::Update(delta);
       }
 
       /* Scene update & rendering */
@@ -247,7 +256,7 @@ void Game::LoadArgument(const std::string& argv)
   if (cmd == "-test")
   {
     game_boot_mode_ = GameBootMode::kBootTest;
-    gMetricTemp["TestScene"] = v;
+    gPrefFileTemp["TestScene"] = v;
   }
   else if (cmd == "-reset")
   {

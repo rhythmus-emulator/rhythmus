@@ -232,7 +232,7 @@ DrawProperty &Animation::LastFrame()
 double Animation::GetTweenLength() const
 {
   if (frames_.empty()) return 0;
-  else frames_.back().time;
+  else return frames_.back().time;
 }
 
 bool Animation::is_stopped() const
@@ -891,7 +891,7 @@ void BaseObject::Stop()
 double BaseObject::GetTweenLength() const
 {
   if (ani_.empty()) return 0;
-  else ani_.back().GetTweenLength();
+  else return ani_.back().GetTweenLength();
 }
 
 bool BaseObject::IsTweening() const

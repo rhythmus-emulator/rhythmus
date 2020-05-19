@@ -131,7 +131,7 @@ void Scene::LoadScene()
   if (!get_name().empty())
   {
     // attempt to load custom scene
-    auto *pref = PREFERENCE->GetPreferenceString(get_name());
+    auto *pref = PREFERENCE->GetFile(get_name());
     MetricGroup m;
     if (pref && m.Load(**pref))
     {

@@ -326,21 +326,26 @@ private:
   bool is_static_;          // is static preference (which means irremovable)
 };
 
-/* @brief Contains multiple preference element and  */
+/* @brief Load/Save preference values by types, and Get/Set easily. */
 class PreferenceList
 {
 public:
   virtual ~PreferenceList();
 
-  void AddPreferenceInt(const std::string &key, Preference<int> *pf);
-  void AddPreferenceFloat(const std::string &key, Preference<float> *pf);
-  void AddPreferenceString(const std::string &key, Preference<std::string> *pf);
-  void AddPreferenceFile(const std::string &key, Preference<std::string> *pf);
+  void AddInt(const std::string &key, Preference<int> *pf);
+  void AddFloat(const std::string &key, Preference<float> *pf);
+  void AddString(const std::string &key, Preference<std::string> *pf);
+  void AddFile(const std::string &key, Preference<std::string> *pf);
 
-  Preference<int>* GetPreferenceInt(const std::string &key);
-  Preference<float>* GetPreferenceFloat(const std::string &key);
-  Preference<std::string>* GetPreferenceString(const std::string &key);
-  Preference<std::string>* GetPreferenceFile(const std::string &key);
+  void SetInt(const std::string &key, int v);
+  void SetFloat(const std::string &key, float v);
+  void SetString(const std::string &key, const std::string &v);
+  void SetFile(const std::string &key, const std::string &v);
+
+  Preference<int>* GetInt(const std::string &key);
+  Preference<float>* GetFloat(const std::string &key);
+  Preference<std::string>* GetString(const std::string &key);
+  Preference<std::string>* GetFile(const std::string &key);
 
   void Load(const std::string &path);
   void Load(const MetricGroup &m);
@@ -354,6 +359,7 @@ protected:
   std::map<std::string, Preference<float>*> pref_f_;
   std::map<std::string, Preference<std::string>*> pref_s_;
   std::map<std::string, Preference<std::string>*> pref_file_;
+  std::vector<void*> non_static_prefs_;
 };
 
 /* @brief Preference for global use. */
@@ -361,6 +367,7 @@ class SystemPreference : public PreferenceList
 {
 public:
   SystemPreference();
+  virtual ~SystemPreference();
 
   Preference<std::string> resolution;
 
@@ -372,6 +379,7 @@ public:
 
   Preference<std::string> soundset;
   Preference<std::string> theme;
+  Preference<std::string> theme_test;
   Preference<std::string> theme_select;
   Preference<std::string> theme_decide;
   Preference<std::string> theme_play_7key;
