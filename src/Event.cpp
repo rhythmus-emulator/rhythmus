@@ -554,7 +554,7 @@ public:
     });
 
     /* Events for SelectScene Panel */
-    static auto fnPanel = [](int panelidx) {
+    static auto fnPanel = [this](int panelidx) {
       const char* paneloffevents[] = { 0,
         "Panel1Off","Panel2Off","Panel3Off","Panel4Off","Panel5Off",
         "Panel6Off","Panel7Off","Panel8Off","Panel9Off",0
@@ -662,18 +662,18 @@ public:
       EventManager::SendEvent("SongSelectChange");
     });
     /* Events for PlayScene */
-    fnmap.AddEvent("PlayLoading", []() {
+    fnmap.AddEvent("PlayLoading", [this]() {
       *F[80] = 1;   // Loading
       *F[81] = 1;   // Loaded
       EventManager::SendEvent("LR40Off");     // READY
       EventManager::SendEvent("LR41Off");     // START
     });
-    fnmap.AddEvent("PlayReady", []() {
+    fnmap.AddEvent("PlayReady", [this]() {
       *F[80] = 0;   // Loading
       *F[81] = 1;   // Loaded
       EventManager::SendEvent("LR40");        // READY
     });
-    fnmap.AddEvent("PlayStart", []() {
+    fnmap.AddEvent("PlayStart", [this]() {
       EventManager::SendEvent("LR41");        // START
     });
   }
@@ -690,22 +690,22 @@ public:
   }
 
   // LR2 flags
-  static KeyData<int> F[1000];
+  KeyData<int> F[1000];
 
   // LR2 numbers
-  static KeyData<int> N[1000];
+  KeyData<int> N[1000];
 
   // LR2 string
-  static KeyData<std::string> S[1000];
+  KeyData<std::string> S[1000];
 
   // LR2 buttons
-  static KeyData<int> button[1000];
+  KeyData<int> button[1000];
 
   // LR2 bargraph
-  static KeyData<float> bargraph[100];
+  KeyData<float> bargraph[100];
 
   // LR2 slider
-  static KeyData<float> slider[100];
+  KeyData<float> slider[100];
 
   // Game used KeyPools
   KeyData<std::string> info_title;

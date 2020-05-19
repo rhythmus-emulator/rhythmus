@@ -17,7 +17,7 @@ void Button::Load(const MetricGroup &metric)
 #if USE_LR2_FEATURE == 1
   if (metric.exist("lr2src"))
   {
-    CommandArgs args(metric.get<std::string>("lr2src"));
+    CommandArgs args(metric.get_str("lr2src"));
 
     SetFocusable(args.Get<int>(10));
 

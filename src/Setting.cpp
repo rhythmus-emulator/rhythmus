@@ -431,7 +431,7 @@ bool MetricGroup::LoadFromLR2Metric(const std::string &path)
                 // get whole string of previous attribute
                 // (do nothing if attribute not exists)
                 if (exist(attr_name))
-                  *string_to_fill += get<std::string>(attr_name);
+                  *string_to_fill += get_str(attr_name);
                 break;
               case 'v':
                 // get whole original value
@@ -586,14 +586,14 @@ template <>
 bool MetricGroup::get(const std::string &key) const
 {
   const_cast<MetricGroup*>(this)->resolve_fallback(key);
-  return get<std::string>(key) == "true";
+  return get_str(key) == "true";
 }
 
 template <>
 int MetricGroup::get(const std::string &key) const
 {
   const_cast<MetricGroup*>(this)->resolve_fallback(key);
-  return atoi(get<std::string>(key).c_str());
+  return atoi(get_str(key).c_str());
 }
 
 template <>
@@ -607,7 +607,7 @@ template <>
 double MetricGroup::get(const std::string &key) const
 {
   const_cast<MetricGroup*>(this)->resolve_fallback(key);
-  return atof(get<std::string>(key).c_str());
+  return atof(get_str(key).c_str());
 }
 
 template <>
@@ -1101,7 +1101,7 @@ void OptionList::AddOptionFromMetric(MetricGroup *metric)
     auto count = metric->get<size_t>("Option");
     for (auto i = 0; i < count; ++i)
     {
-      std::string option_str = metric->get<std::string>("Option" + std::to_string(i+1));
+      std::string option_str = metric->get_str("Option" + std::to_string(i+1));
       CommandArgs args(option_str, 2);
       SetOption(args.Get<std::string>(0), args.Get<std::string>(1));
     }

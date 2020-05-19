@@ -253,7 +253,7 @@ void MusicWheel::Load(const MetricGroup &metric)
   {
     for (size_t i = 0; i < Gamemode::kGamemodeEnd; ++i)
       filter_.avail_gamemode[i] = 0;
-    CommandArgs filters(metric.get<std::string>("GamemodeFilter"));
+    CommandArgs filters(metric.get_str("GamemodeFilter"));
     for (size_t i = 0; i < filters.size(); ++i)
     {
       filter_.avail_gamemode[
@@ -266,7 +266,7 @@ void MusicWheel::Load(const MetricGroup &metric)
   {
     for (size_t i = 0; i < Difficulty::kDifficultyEnd; ++i)
       filter_.avail_difficulty[i] = 0;
-    CommandArgs diffs(metric.get<std::string>("DifficultyFilter"));
+    CommandArgs diffs(metric.get_str("DifficultyFilter"));
     for (size_t i = 0; i < diffs.size(); ++i)
     {
       filter_.avail_difficulty[
@@ -279,7 +279,7 @@ void MusicWheel::Load(const MetricGroup &metric)
   {
     for (size_t i = 0; i < Sorttype::kSortEnd; ++i)
       sort_.avail_type[i] = 0;
-    CommandArgs sorts(metric.get<std::string>("SortType"));
+    CommandArgs sorts(metric.get_str("SortType"));
     for (size_t i = 0; i < sorts.size(); ++i)
     {
       sort_.avail_type[

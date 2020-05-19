@@ -365,6 +365,11 @@ bool SoundData::is_empty() const
 
 Sound::Sound() : sounddata_(nullptr), channel_(nullptr), is_sound_from_rm_(false){}
 
+Sound::~Sound()
+{
+  Unload();
+}
+
 /* @warn  This function instantly  */
 bool Sound::Load(const std::string &path)
 {

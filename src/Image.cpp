@@ -1,8 +1,8 @@
 #include "ResourceManager.h"
 #include "Image.h"
 #include "Timer.h"
-#include <FreeImage.h>
 #include "common.h"
+#include <FreeImage.h>
 
 /* ffmpeg */
 extern "C"

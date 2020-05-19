@@ -24,10 +24,10 @@ void Dialog::Load(const MetricGroup &metric)
   };
 
   BaseObject::Load(metric);
-  std::string src = metric.get<std::string>("src");
+  std::string src = metric.get_str("src");
   for (size_t i = 0; i < 9; ++i)
   {
-    StringToRect(metric.get<std::string>(_attrs[i]), src_rect_[i]);
+    StringToRect(metric.get_str(_attrs[i]), src_rect_[i]);
     sprites_[i].SetImage(src);
     sprites_[i].SetImageCoord(src_rect_[i]);
   }

@@ -31,9 +31,9 @@ Text::~Text()
 void Text::Load(const MetricGroup &m)
 {
   if (m.exist("font"))
-    SetFont(m.get<std::string>("font"));
+    SetFont(m.get_str("font"));
   if (m.exist("text"))
-    SetText(m.get<std::string>("text"));
+    SetText(m.get_str("text"));
   if (m.exist("align"))
     SetTextAlignment((TextAlignments)m.get<int>("align"));
 

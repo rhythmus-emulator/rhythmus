@@ -207,7 +207,7 @@ void Scene::Load(const MetricGroup& m)
   // Load scene specific script if necessary.
   if (m.exist("script"))
   {
-    Script::Execute(m.get<std::string>("script"));
+    Script::Execute(m.get_str("script"));
   }
 
 
