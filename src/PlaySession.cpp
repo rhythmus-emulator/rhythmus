@@ -47,7 +47,7 @@ PlaySession::PlaySession(unsigned session, Player *player, rparser::Chart &c)
 void PlaySession::LoadFromChart(rparser::Chart &c)
 {
   /* MUST be called only once. */
-  ASSERT(total_songtime_ == 0);
+  R_ASSERT(total_songtime_ == 0);
 
   /* get timing segment and metadata from chart */
   timing_seg_data_ = &c.GetTimingSegmentData();

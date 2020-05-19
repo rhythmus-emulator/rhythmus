@@ -32,7 +32,7 @@ bool Task::is_finished() const
 //---------------------------- class TaskThread
 
 TaskThread::TaskThread(TaskPool *pool)
-  : is_running_(true), pool_(pool)
+  : is_running_(true), current_task_(nullptr), pool_(pool)
 {
 }
 

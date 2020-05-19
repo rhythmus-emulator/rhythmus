@@ -396,13 +396,13 @@ Player* PlayerManager::GetPlayer()
 {
   Player *r = nullptr;
   for (size_t i = 0; !r && i < kMaxPlaySession; ++i) r = players_[i];
-  ASSERT(r);
+  R_ASSERT(r);
   return r;
 }
 
 Player* PlayerManager::GetPlayer(int player_slot)
 {
-  ASSERT(player_slot < kMaxPlaySession);
+  R_ASSERT(player_slot < kMaxPlaySession);
 
   return players_[player_slot];
 }
@@ -427,7 +427,7 @@ void PlayerManager::CreatePlayer(PlayerTypes playertype,
   const std::string &passwd,
   int slot_no)
 {
-  ASSERT(slot_no < kMaxPlaySession);
+  R_ASSERT(slot_no < kMaxPlaySession);
   if (IsAvailable(slot_no))
     return;
 
@@ -466,7 +466,7 @@ void PlayerManager::UnloadNonePlayer()
 
 void PlayerManager::UnloadPlayer(int player_slot)
 {
-  ASSERT(player_slot < kMaxPlaySession);
+  R_ASSERT(player_slot < kMaxPlaySession);
   if (players_[player_slot])
   {
     players_[player_slot]->Save();
@@ -478,7 +478,7 @@ void PlayerManager::UnloadPlayer(int player_slot)
 
 bool PlayerManager::IsAvailable(int player_slot)
 {
-  ASSERT(player_slot < kMaxPlaySession);
+  R_ASSERT(player_slot < kMaxPlaySession);
 
   // @warn if player is guest, then it
 

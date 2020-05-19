@@ -23,7 +23,7 @@ Script &Script::getInstance()
 
 void Script::Execute(const std::string &path)
 {
-  ASSERT(0 && "NotImplemented");
+  R_ASSERT(0 && "NotImplemented");
 #if 0
   std::string ext(GetExtension(path));
   if (ext == "lr2skin")

@@ -49,7 +49,7 @@ void SceneManager::Initialize()
     SceneManager::ChangeScene("PlayScene");
     break;
   default:
-    ASSERT(0);
+    R_ASSERT(0);
   }
 }
 

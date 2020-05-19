@@ -58,28 +58,28 @@ const char* FileNotFoundException::exception_name() const noexcept
   return "FileNotFoundException";
 }
 
-void R_ASSERT(bool v)
+void R_THROW(bool v)
 {
-  static const std::string& msg("ASSERT failed");
-  R_ASSERT(v, msg);
+  static const std::string& msg("exception thrown");
+  R_THROW(v, msg);
 }
 
-void R_ASSERT(bool v, const char* msg)
+void R_THROW(bool v, const char* msg)
 {
   if (!v) throw RuntimeException(msg ? msg : "");
 }
 
-void R_ASSERT(bool v, const std::string& msg)
+void R_THROW(bool v, const std::string& msg)
 {
   if (!v) throw RuntimeException(msg);
 }
 
-void R_ASSERT_FATAL(bool v, const char* msg)
+void R_THROW_FATAL(bool v, const char* msg)
 {
   if (!v) throw FatalException(msg ? msg : "");
 }
 
-void R_ASSERT_FATAL(bool v, const std::string& msg)
+void R_THROW_FATAL(bool v, const std::string& msg)
 {
   if (!v) throw FatalException(msg);
 }

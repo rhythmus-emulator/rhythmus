@@ -55,6 +55,8 @@ int StringToGamemode(const char* s)
   return Gamemode::kGamemodeNone;
 }
 
+// temporary stored metric before initialization
+std::map<std::string, std::string> gMetricTemp;
 
 /* --------------------------------- class Game */
 
@@ -81,6 +83,13 @@ void Game::Initialize()
 
   // load settings before logging.
   Setting::Initialize();
+
+  // flush temporary variable into setting.
+  for (auto i : gMetricTemp)
+  {
+    METRIC->set(i.first, i.second);
+  }
+  gMetricTemp.clear();
 
   // Start logging.
   Logger::getInstance().Initialize();
@@ -155,7 +164,7 @@ void Game::Cleanup()
   PlayerManager::Cleanup();
   SceneManager::getInstance().Cleanup();
   TaskPool::getInstance().ClearTaskPool();
-  Graphic::Cleanup();
+  Graphic::DeleteGraphic();
   SoundDriver::getInstance().Destroy();
   Setting::Save();
   Setting::Cleanup();
@@ -236,7 +245,10 @@ void Game::LoadArgument(const std::string& argv)
   Split(argv, '=', cmd, v);
 
   if (cmd == "-test")
+  {
     game_boot_mode_ = GameBootMode::kBootTest;
+    gMetricTemp["TestScene"] = v;
+  }
   else if (cmd == "-reset")
   {
   } // TODO
@@ -247,6 +259,11 @@ void Game::LoadArgument(const std::string& argv)
   {
     game_boot_mode_ = GameBootMode::kBootPlay;
     SongPlayer::getInstance().SetSongtoPlay(v, "");
+  }
+  else if (cmd.substr(0, 2) == "-D")
+  {
+    cmd = cmd.substr(2);
+    gMetricTemp[cmd] = v;
   }
 }
 

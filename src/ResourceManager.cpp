@@ -150,7 +150,7 @@ ResourceElement* ResourceContainer::SearchResource(const std::string &name)
 void ResourceContainer::DropResource(ResourceElement *elem)
 {
   auto ii = std::find(elems_.begin(), elems_.end(), elem);
-  ASSERT(ii != elems_.end());
+  R_ASSERT(ii != elems_.end());
   elems_.erase(ii);
   if (elem->ref_count_ == 0)
   {

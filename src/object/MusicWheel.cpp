@@ -510,7 +510,7 @@ void MusicWheel::RebuildData()
       });
       break;
     default:
-      ASSERT(0);
+      R_ASSERT(0);
     }
   }
 

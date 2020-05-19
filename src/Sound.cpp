@@ -54,6 +54,7 @@ void SoundDriver::sound_thread_body()
   const size_t uFrameSize = iSingleBufferSize / (sinfo_.channels * sinfo_.bitsize / 8);
   ALuint cur_source_id, cur_buffer_id;
   ALint state, buffers_queued;
+  int err;
 
   // -- stream initialization --
   // set property of channel.
@@ -69,10 +70,19 @@ void SoundDriver::sound_thread_body()
   {
     for (size_t j = 0; j < kBufferCount; ++j)
     {
-      alBufferData(buffer_id[i * kBufferCount * j], audio_format_, pData,
+      alBufferData(buffer_id[i * kBufferCount + j], audio_format_, pData,
         iSingleBufferSize, sinfo_.rate);
-      alSourceQueueBuffers(source_id[i], 1, &buffer_id[i]);
-      ASSERT(alGetError() == 0);
+      if ((err = (int)alGetError()) != AL_NO_ERROR)
+      {
+        Logger::Error("Error occured while buffering sound : code %d, audio cannot play.", err);
+        is_running_ = false;
+      }
+    }
+    alSourceQueueBuffers(source_id[i], 2, &buffer_id[i * kBufferCount]);
+    if ((err = (int)alGetError()) != AL_NO_ERROR)
+    {
+      Logger::Error("Error occured while queueing sound : code %d, audio cannot play.", err);
+      is_running_ = false;
     }
   }
   for (size_t i = 0; i < source_count_; ++i)

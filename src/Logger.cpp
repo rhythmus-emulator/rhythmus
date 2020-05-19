@@ -25,7 +25,7 @@ private:
 };
 
 Logger::Logger()
-  : enable_logging_(true), log_path_("log/log.txt"), append_log_(false), log_mode_(LogMode::kLogError), f_(0)
+  : enable_logging_(true), log_path_("../log/log.txt"), append_log_(false), log_mode_(LogMode::kLogError), f_(0)
 {
 }
 
@@ -176,6 +176,7 @@ void Logger::Log_Internal(int level, const char* msg, va_list l)
   {
     fwrite(buf, 1, strlen(buf), f_);
     fwrite("\n", 1, 1, f_);
+    fflush(f_);
   }
   AddToRecentLog(buf);
 }

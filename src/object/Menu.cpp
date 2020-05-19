@@ -214,7 +214,7 @@ void Menu::RebuildItems()
 {
   /* Number dataindex for all items. */
   auto data_count = size();
-  ASSERT(data_count > 0);
+  R_ASSERT(data_count > 0);
   int data_idx = data_index_ - focus_index_ - kScrollPosMaxDiff;
   data_idx %= data_count;
   if (data_idx < 0) data_idx += data_count;

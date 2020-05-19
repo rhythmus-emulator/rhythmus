@@ -88,7 +88,7 @@ void Text::SetFont(const MetricGroup &m)
 void Text::SetSystemFont()
 {
   // TODO
-  ASSERT(0);
+  R_ASSERT(0);
 #if 0
   ClearFont();
   SetFont(FONTMAN->Load("TODO"));
@@ -152,7 +152,7 @@ TextVertexInfo& Text::AddTextVertex(const TextVertexInfo &tvi)
 
 void Text::SetTextVertexCycle(size_t cycle, size_t duration)
 {
-  ASSERT_M(cycle == 0 || text_render_ctx_.textvertex.size() % cycle == 0,
+  R_ASSERT_M(cycle == 0 || text_render_ctx_.textvertex.size() % cycle == 0,
     "TextVertexCycle is invalid; cycle number is not correct.");
   text_render_ctx_.cycles = cycle;
   text_render_ctx_.duration = duration;

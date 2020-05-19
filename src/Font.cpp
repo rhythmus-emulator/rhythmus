@@ -92,7 +92,7 @@ FontBitmap::FontBitmap(int w, int h)
   cur_line_height_ = 0;
 
   bitmap_ = (uint32_t*)malloc(width_ * height_ * sizeof(uint32_t));
-  ASSERT(bitmap_);
+  R_ASSERT(bitmap_);
   memset(bitmap_, 0, width_ * height_ * sizeof(uint32_t));
 }
 
@@ -294,7 +294,7 @@ void Font::Load(const MetricGroup& metrics)
 {
   error_msg_ = 0;
   error_code_ = 0;
-  ASSERT(0 && "Not Implemented");
+  R_ASSERT(0 && "Not Implemented");
 }
 
 void Font::Clear()
@@ -327,7 +327,7 @@ bool Font::is_empty() const
 
 void Font::LoadFreetypeFont(const std::string &path)
 {
-  ASSERT(is_empty());
+  R_ASSERT(is_empty());
 
   if (fontattr_.height <= 0)
   {
@@ -386,7 +386,7 @@ void Font::LoadFreetypeFont(const std::string &path)
 
 void Font::LoadLR2BitmapFont(const std::string &path)
 {
-  ASSERT(is_empty());
+  R_ASSERT(is_empty());
 
 #if USE_LR2_FONT == 1
   DXAExtractor dxa;

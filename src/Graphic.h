@@ -99,10 +99,11 @@ public:
   virtual ~Graphic();
 
   static void CreateGraphic();
-  static void Cleanup();
+  static void DeleteGraphic();
 
   /* setting */
   virtual void Initialize() = 0;
+  virtual void Cleanup() = 0;
   void SetVideoMode(VideoModeParams &p);
   const VideoModeParams &GetVideoMode() const;
   virtual bool TryVideoMode(const VideoModeParams &p) = 0;
@@ -225,6 +226,7 @@ public:
   GLFWwindow* window();
 
   virtual void Initialize();
+  virtual void Cleanup();
   virtual bool TryVideoMode(const VideoModeParams &p);
   virtual void GetSupportedVideoMode(std::vector<VideoModeParams> &p);
 

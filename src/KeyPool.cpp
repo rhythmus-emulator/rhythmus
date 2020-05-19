@@ -14,7 +14,7 @@ KeyPool::KeyPool()
 
 KeyData<int> KeyPool::GetInt(const std::string &name)
 {
-  ASSERT(intpool_.size() < 100000);
+  R_ASSERT(intpool_.size() < 100000);
   auto ii = intpool_.find(name);
   if (ii == intpool_.end())
   {
@@ -26,7 +26,7 @@ KeyData<int> KeyPool::GetInt(const std::string &name)
 
 KeyData<float> KeyPool::GetFloat(const std::string &name)
 {
-  ASSERT(floatpool_.size() < 100000);
+  R_ASSERT(floatpool_.size() < 100000);
   auto ii = floatpool_.find(name);
   if (ii == floatpool_.end())
   {
@@ -38,7 +38,7 @@ KeyData<float> KeyPool::GetFloat(const std::string &name)
 
 KeyData<std::string> KeyPool::GetString(const std::string &name)
 {
-  ASSERT(strpool_.size() < 100000);
+  R_ASSERT(strpool_.size() < 100000);
   auto ii = strpool_.find(name);
   if (ii == strpool_.end())
   {

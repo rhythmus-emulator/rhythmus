@@ -138,7 +138,7 @@ void FFmpegContext::Unload()
 bool FFmpegContext::Open(const std::string& path)
 {
   // should not open it again ...
-  ASSERT(formatctx == 0);
+  R_ASSERT(formatctx == 0);
   error_msg_.clear();
   error_code_ = 0;
 
@@ -447,7 +447,7 @@ void Image::LoadMovieFromPath(const std::string& path)
 void Image::LoadMovieFromMemory(const char* p, size_t len)
 {
   // TODO
-  ASSERT(0);
+  R_ASSERT(0);
 }
 
 void Image::Load(const std::string& path)

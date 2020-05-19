@@ -218,7 +218,7 @@ void EventReceiverMap::Clear()
 bool EventReceiverMap::OnEvent(const EventMessage& msg)
 {
   auto i = eventFnMap_.find(msg.GetEventName());
-  ASSERT(i != eventFnMap_.end());
+  R_ASSERT(i != eventFnMap_.end());
   i->second();
   return true;
 }
@@ -753,7 +753,7 @@ void EventManager::Initialize()
 {
 // TODO: Only give callback, and graphic should deal with it.
   auto* window_ = ((GraphicGL*)GRAPHIC)->window();
-  ASSERT(window_);
+  R_ASSERT(window_);
   glfwSetKeyCallback(window_, on_keyevent);
   glfwSetCharCallback(window_, on_text);
   glfwSetCursorPosCallback(window_, on_cursormove);

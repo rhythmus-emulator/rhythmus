@@ -24,7 +24,7 @@ SongPlayer::SongPlayer()
 void SongPlayer::SetCoursetoPlay(const std::string &coursepath)
 {
   // TODO
-  ASSERT(0, "CoursePlayNotImplemented");
+  R_ASSERT(0, "CoursePlayNotImplemented");
   Clear();
 }
 

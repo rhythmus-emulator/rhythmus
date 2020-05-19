@@ -578,7 +578,7 @@ const MetricGroup* MetricGroup::get_group(const std::string &group_name) const
 const std::string &MetricGroup::get_str(const std::string &key) const
 {
   auto it = attr_.find(key);
-  ASSERT_M(it != attr_.end(), "ThemeMetric Key not found: " + key);
+  R_ASSERT_M(it != attr_.end(), "ThemeMetric Key not found: " + key);
   return it->second;
 }
 
@@ -737,7 +737,7 @@ void MetricGroup::resolve_fallback(const std::string &key)
   std::string &v = it->second;
   if (v == "_fallback")
   {
-    ASSERT_M(true, "NotImplemented");
+    R_ASSERT_M(true, "NotImplemented");
   }
 }
 
@@ -1188,14 +1188,14 @@ PreferenceList::~PreferenceList() { Clear(); }
 void PreferenceList::AddPreferenceInt(const std::string &key, Preference<int> *pf)
 {
   auto i = pref_i_.find(key);
-  ASSERT(i == pref_i_.end());
+  R_ASSERT(i == pref_i_.end());
   pref_i_[key] = pf;
 }
 
 void PreferenceList::AddPreferenceFloat(const std::string &key, Preference<float> *pf)
 {
   auto i = pref_i_.find(key);
-  ASSERT(i == pref_i_.end());
+  R_ASSERT(i == pref_i_.end());
   pref_f_[key] = pf;
 }
 
@@ -1203,7 +1203,7 @@ void PreferenceList::AddPreferenceString(const std::string &key,
   Preference<std::string> *pf)
 {
   auto i = pref_i_.find(key);
-  ASSERT(i == pref_i_.end());
+  R_ASSERT(i == pref_i_.end());
   pref_s_[key] = pf;
 }
 
@@ -1211,7 +1211,7 @@ void PreferenceList::AddPreferenceFile(const std::string &key,
   Preference<std::string> *pf)
 {
   auto i = pref_i_.find(key);
-  ASSERT(i == pref_i_.end());
+  R_ASSERT(i == pref_i_.end());
   pref_file_[key] = pf;
 }
 

@@ -51,6 +51,10 @@ void ResetVertexInfo(VertexInfo &v)
   v.c.a = v.c.r = v.c.g = v.c.b = 1.f;
 }
 
+void StringSafeAssign(std::string &s, const void *p)
+{
+  if (p) s = (const char*)p;
+}
 
 // -------------------------------------------------------------- class Graphic
 
@@ -58,10 +62,12 @@ void Graphic::CreateGraphic()
 {
   // TODO: selectable graphic engine from option.
   GRAPHIC = new GraphicGL();
+  GRAPHIC->Initialize();
 }
 
-void Graphic::Cleanup()
+void Graphic::DeleteGraphic()
 {
+  GRAPHIC->Cleanup();
   delete GRAPHIC;
   GRAPHIC = nullptr;
 }
@@ -171,7 +177,7 @@ void Graphic::PushMatrix()
 
 void Graphic::PopMatrix()
 {
-  ASSERT(mat_world_.size() > 1);
+  R_ASSERT(mat_world_.size() > 1);
   mat_world_.pop_back();
 }
 
@@ -251,7 +257,7 @@ void Graphic::TexturePushMatrix()
 
 void Graphic::TexturePopMatrix()
 {
-  ASSERT(mat_tex_.size() > 1);
+  R_ASSERT(mat_tex_.size() > 1);
   mat_tex_.pop_back();
 }
 
@@ -280,7 +286,7 @@ void Graphic::CameraPushMatrix()
 
 void Graphic::CameraPopMatrix()
 {
-  ASSERT(mat_proj_.size() > 1);
+  R_ASSERT(mat_proj_.size() > 1);
   mat_proj_.pop_back();
 }
 
@@ -437,6 +443,18 @@ GLFWwindow* GraphicGL::window()
 
 void GraphicGL::Initialize()
 {
+  R_ASSERT(glfwInit());
+
+  if (!glfwInit())
+  {
+    Logger::Error("glfwInit() failed, exit program.");
+    exit(EXIT_FAILURE);
+  }
+
+  // glfw w/ 2.0
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
   // Load width / height
   VideoModeParams p;
   {
@@ -448,7 +466,15 @@ void GraphicGL::Initialize()
 
   // create GL context
   SetVideoMode(p);
-  ASSERT(window_);
+  R_ASSERT(window_);
+
+  // initialize glew
+  GLenum err = glewInit();
+  if (err != GLEW_OK)
+  {
+    Logger::Error("glewInit() failed : %s", glewGetErrorString(err));
+    exit(EXIT_FAILURE);
+  }
 
   // create shader
   if (!CompileDefaultShader())
@@ -457,15 +483,26 @@ void GraphicGL::Initialize()
   }
 
   // fetch params
-  gl_vendor_ = (const char*)glGetString(GL_VENDOR);
-  gl_renderer_ = (const char*)glGetString(GL_RENDERER);
-  gl_version_ = (const char*)glGetString(GL_VERSION);
-  glu_version_ = (const char*)glGetString(GLU_VERSION);
+  StringSafeAssign(gl_vendor_, glGetString(GL_VENDOR));
+  StringSafeAssign(gl_renderer_, glGetString(GL_RENDERER));
+  StringSafeAssign(gl_version_, glGetString(GL_VERSION));
+  StringSafeAssign(glu_version_, glGetString(GLU_VERSION));
   glGetIntegerv(GL_MAX_TEXTURE_SIZE, &max_texture_size_);
   if (use_multi_texture_)
     glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint *)&max_texture_count_);
   else
     max_texture_count_ = 1;
+}
+
+void GraphicGL::Cleanup()
+{
+  // TODO: destroy shader, program.
+
+  if (window_)
+  {
+    glfwDestroyWindow(window_);
+    window_ = nullptr;
+  }
 }
 
 bool GraphicGL::TryVideoMode(const VideoModeParams &p)
@@ -478,19 +515,14 @@ bool GraphicGL::TryVideoMode(const VideoModeParams &p)
   }
 
   // create new window and swap context
-  GLFWwindow *w = glfwCreateWindow(p.width, p.height, "TEST", 0, NULL);
+  GLFWwindow *w = glfwCreateWindow(p.width, p.height, 
+    Game::getInstance().get_window_title().c_str(), 0, NULL);
   if (!w)
     return false;
 
   glfwSetErrorCallback(error_callback);
   glfwMakeContextCurrent(w);
   glfwSwapInterval(p.vsync);
-
-  GLenum err = glewInit();
-  if (err != GLEW_OK)
-  {
-    Logger::Error("glewInit() failed : %s", glewGetErrorString(err));
-  }
 
   window_ = w;
   return true;
@@ -709,7 +741,7 @@ void GraphicGL::SetZWrite(bool enable)
 void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
 {
 #if RENDER_WITH_HLSL
-  ASSERT(count < 4);
+  R_ASSERT(count < 4);
   
   // pre-process for special blendmode
   // - See SetBlendMode() function for detail.
@@ -837,7 +869,7 @@ VertexInfo* GraphicGL::get_vertex_buffer(int size)
   vi_idx_ += size;
   if (vi_idx_ >= kVertexMaxSize)
   {
-    ASSERT(size < kVertexMaxSize);
+    R_ASSERT(size < kVertexMaxSize);
     // prevent vertex buffer overflow
     DrawQuads(vi_, size);
     // now flushed buffer. clear vertex index.
@@ -938,7 +970,7 @@ bool GraphicGL::CompileShaderInfo(ShaderInfo& shader)
   // Prepare VAOs with buffer orphaning method.
   glGenVertexArrays(1, &shader.VAO_id);
   glGenBuffers(1, &shader.buffer_id);
-  ASSERT(shader.VAO_id && shader.buffer_id);
+  R_ASSERT(shader.VAO_id && shader.buffer_id);
 
   glBindVertexArray(shader.VAO_id);
   glBindBuffer(GL_ARRAY_BUFFER, shader.buffer_id);

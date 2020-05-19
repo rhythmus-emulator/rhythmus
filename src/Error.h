@@ -4,11 +4,6 @@
 #include <stdexcept>
 #include <string>
 
-#define ASSERT(x) assert(x)
-#define ASSERT_M(x, s) while (!(x)) { throw std::runtime_error(s); break; }
-#define ASSERT_GL() ASSERT(glGetError() == 0)
-#define ASSERT_GL_VAL(x) ASSERT((x = glGetError()) == 0)
-
 namespace rhythmus
 {
 
@@ -67,12 +62,17 @@ public:
 
 /* @brief ASSERT for rhythmus solution.
  * RuntimeException will be thrown if false. */
-void R_ASSERT(bool v);
+void R_THROW(bool v);
 
 /* @brief ASSERT with message */
-void R_ASSERT(bool v, const char *msg);
-void R_ASSERT(bool v, const std::string &msg);
-void R_ASSERT_FATAL(bool v, const char *msg);
-void R_ASSERT_FATAL(bool v, const std::string &msg);
+void R_THROW(bool v, const char *msg);
+void R_THROW(bool v, const std::string &msg);
+void R_THROW_FATAL(bool v, const char *msg);
+void R_THROW_FATAL(bool v, const std::string &msg);
 
 }
+
+#define R_ASSERT(x)         assert(x)
+#define R_ASSERT_M(x, s)    while (!(x)) { throw std::runtime_error(s); break; }
+#define R_ASSERT_GL()       ASSERT(glGetError() == 0)
+#define R_ASSERT_GL_VAL(x)  ASSERT((x = glGetError()) == 0)
