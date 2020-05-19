@@ -25,7 +25,7 @@ private:
 };
 
 Logger::Logger()
-  : enable_logging_(true), log_path_("../log/log.txt"), append_log_(false), log_mode_(LogMode::kLogError), f_(0)
+  : enable_logging_(true), log_path_("log/log.txt"), append_log_(false), log_mode_(LogMode::kLogError), f_(0)
 {
 }
 

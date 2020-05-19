@@ -129,8 +129,8 @@ void Game::Loop()
       /* Song and movie won't be updated if paused. */
       if (!Game::IsPaused())
       {
-        SongPlayer::getInstance().Update(delta);
-        ResourceManager::Update(delta);
+        //SongPlayer::getInstance().Update(delta);
+        //ResourceManager::Update(delta);
       }
 
       /* Scene update & rendering */

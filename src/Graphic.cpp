@@ -456,7 +456,7 @@ void GraphicGL::Initialize()
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
   // Load width / height
-  VideoModeParams p;
+  VideoModeParams p = GetVideoMode();
   {
     std::string w, h;
     Split( *PREFERENCE->resolution, 'x', w, h );
@@ -503,6 +503,8 @@ void GraphicGL::Cleanup()
     glfwDestroyWindow(window_);
     window_ = nullptr;
   }
+
+  glfwTerminate();
 }
 
 bool GraphicGL::TryVideoMode(const VideoModeParams &p)
@@ -515,14 +517,26 @@ bool GraphicGL::TryVideoMode(const VideoModeParams &p)
   }
 
   // create new window and swap context
-  GLFWwindow *w = glfwCreateWindow(p.width, p.height, 
-    Game::getInstance().get_window_title().c_str(), 0, NULL);
+  GLFWwindow *w = nullptr;
+  if (p.windowed)
+  {
+    w = glfwCreateWindow(p.width, p.height,
+      Game::getInstance().get_window_title().c_str(), 0, NULL);
+  }
+  else
+  {
+    int totalMonitor;
+    GLFWmonitor** monitors = glfwGetMonitors(&totalMonitor);
+    R_ASSERT(totalMonitor > 0);
+    w = glfwCreateWindow(p.width, p.height,
+      Game::getInstance().get_window_title().c_str(), monitors[0], NULL);
+  }
   if (!w)
     return false;
 
   glfwSetErrorCallback(error_callback);
   glfwMakeContextCurrent(w);
-  glfwSwapInterval(p.vsync);
+  glfwSwapInterval(p.vsync ? 1 : 0);
 
   window_ = w;
   return true;
