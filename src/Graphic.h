@@ -251,6 +251,7 @@ public:
   VertexInfo* get_vertex_buffer(int size);
   bool CompileDefaultShader();
   bool CompileShaderInfo(ShaderInfo& shader);
+  void CreateDefaultTexture();
 
 private:
   /* parameters */
@@ -263,6 +264,9 @@ private:
   int blendmode_;
   unsigned texunit_;
   unsigned tex_id_;
+  unsigned def_tex_id_;
+  int shader_mat_Projection_;
+  int shader_mat_ModelView_;
 
   /* shader */
   ShaderInfo quad_shader_;

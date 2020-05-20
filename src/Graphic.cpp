@@ -315,23 +315,6 @@ void Graphic::CameraLoadOrtho(float w, float h)
 
 void Graphic::CameraLoadPerspective(float fOV, float w, float h, float vanishx, float vanishy)
 {
-#if 0
-  m_projection_ = glm::perspective(
-    60.0f,
-    (float)Game::getInstance().GetAspect(),
-    1.0f, 2000.0f
-  );
-#endif
-
-  //const float fWidth = width_;
-  //const float fHeight = height_;
-  //const float fVanishPointX = cx;
-  //const float fVanishPointY = cy;
-  //float fovRadians = glm::radians(30.0f);
-  //float theta = fovRadians / 2;
-  //float fDistCameraFromImage = fWidth / 2 / std::tan(theta);
-  //float fDistCameraFromImage = 1000.0f;
-
   if (fOV == 0)
   {
     CameraLoadOrtho(w, h);
@@ -348,7 +331,7 @@ void Graphic::CameraLoadPerspective(float fOV, float w, float h, float vanishx, 
       (vanishx + w / 2) / fDistCamera,
       (vanishy + h / 2) / fDistCamera,
       (vanishy - h / 2) / fDistCamera,
-      1.0f, fDistCamera + 1000.0f
+      1.0f, fDistCamera
     );
 
     mat_view_ = glm::lookAt(
@@ -421,7 +404,8 @@ static void error_callback(int error, const char* description)
 
 GraphicGL::GraphicGL()
   : blendmode_(-1), use_multi_texture_(true), texunit_(0),
-    max_texture_count_(0), max_texture_size_(0)
+    max_texture_count_(0), max_texture_size_(0),
+    shader_mat_Projection_(-1), shader_mat_ModelView_(-1)
 {
   vi_ = (VertexInfo*)malloc(kVertexMaxSize * sizeof(VertexInfo));
 }
@@ -475,6 +459,13 @@ void GraphicGL::Initialize()
   if (!CompileDefaultShader())
   {
     Logger::Error("Failed to compile shader.");
+  }
+
+  // create default texture, which is used for rendering 'NON-TEXTURE' state.
+  CreateDefaultTexture();
+  if (!def_tex_id_)
+  {
+    Logger::Error("Failed to create default texture.");
   }
 
   // fetch params
@@ -564,8 +555,7 @@ unsigned GraphicGL::CreateTexture(const uint8_t *p, unsigned width, unsigned hei
     return 0;
   }
 
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
-    GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid*)p);
+  glBindTexture(GL_TEXTURE_2D, texid);
 
   /* do not render outside texture, clamp it. */
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -574,6 +564,9 @@ unsigned GraphicGL::CreateTexture(const uint8_t *p, unsigned width, unsigned hei
   /* prevent font mumbling when minimized, prevent cracking when magnified. */
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
+    GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid*)p);
 
   return texid;
 }
@@ -693,12 +686,13 @@ void GraphicGL::SetTexture(unsigned texunit, unsigned tex_id)
     tex_id_ = tex_id;
     if (tex_id)
     {
-      glEnable(GL_TEXTURE_2D);
+      //glEnable(GL_TEXTURE_2D);
       glBindTexture(GL_TEXTURE_2D, tex_id);
     }
     else
     {
-      glDisable(GL_TEXTURE_2D);
+      //glDisable(GL_TEXTURE_2D);
+      glBindTexture(GL_TEXTURE_2D, def_tex_id_);
     }
   }
 }
@@ -767,7 +761,6 @@ void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
   glBindBuffer(GL_ARRAY_BUFFER, quad_shader_.buffer_id);
   glBufferData(GL_ARRAY_BUFFER, sizeof(VertexInfo) * count, nullptr, GL_STREAM_DRAW);
   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VertexInfo) * count, vi);
-  //glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   // read buffer
   glDrawArrays(GL_QUADS, 0, count);
@@ -797,23 +790,38 @@ void GraphicGL::BeginFrame()
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
 
-  // expect to set View / Proj matrix here and consider it as constant.
-  CameraLoadPerspective(30, vp.width, vp.height, vp.width / 2, vp.height / 2);
-  glMatrixMode(GL_PROJECTION);
-  glLoadMatrixf(&GetProjectionMatrix()[0][0]);
-
-  Matrix modelView = GetViewMatrix() * GetWorldMatrix();
-  glMatrixMode(GL_MODELVIEW);
-  glLoadMatrixf(&modelView[0][0]);
-
-  // set viewport
-  glViewport(0, 0, width_, height_);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 #if RENDER_WITH_HLSL
   // set shader
   glUseProgram(quad_shader_.prog_id);
   glBindVertexArray(quad_shader_.VAO_id);
+#endif
+
+  // expect to set View / Proj matrix here and consider it as constant.
+  CameraLoadPerspective(30, vp.width, vp.height, vp.width / 2, vp.height / 2);
+  glMatrixMode(GL_PROJECTION);
+  glLoadMatrixf(&GetProjectionMatrix()[0][0]);
+  glUniformMatrix4fv(shader_mat_Projection_, 1, GL_FALSE, &GetProjectionMatrix()[0][0]); // for HLSL
+
+  Matrix modelView = GetViewMatrix() * GetWorldMatrix();
+  glMatrixMode(GL_MODELVIEW);
+  glLoadMatrixf(&modelView[0][0]);
+  glUniformMatrix4fv(shader_mat_ModelView_, 1, GL_FALSE, &modelView[0][0]);   // for HLSL
+
+  // set viewport
+  glViewport(0, 0, width_, height_);
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+#if 0
+  // test purpose code. big red rect must be drawn to surface.
+  glUseProgram(0);
+  glBegin(GL_QUADS);
+  glColor3f(1, 0, 0);
+  glVertex2f(10, 10);
+  glVertex2f(10, 600);
+  glVertex2f(1000, 600);
+  glVertex2f(1000, 10);
+  glEnd();
 #endif
 }
 
@@ -865,19 +873,17 @@ bool GraphicGL::CompileDefaultShader()
 
   quad_shader_.vertex_shader =
     "#version 330 core\n"
-    "#extension GL_ARB_explicit_uniform_location : require\n"
     "in vec3 positionAttribute;"
     "in vec4 colorAttribute;"
     "in vec2 texCoordinate;"
     "out vec4 passColor;"
     "out vec2 passTextureCoord;"
-    "layout (location=0) uniform mat4 projection;"
-    "layout (location=1) uniform mat4 view;"
-    "layout (location=2) uniform mat4 model;"
+    "uniform mat4 projection;"
+    "uniform mat4 modelview;"
     ""
     "void main()"
     "{"
-    "gl_Position = projection * view * model * vec4(positionAttribute, 1.0);"
+    "gl_Position = projection * modelview * vec4(positionAttribute, 1.0);"
     "passColor = colorAttribute;"
     "passTextureCoord = texCoordinate;"
     "}";
@@ -897,6 +903,9 @@ bool GraphicGL::CompileDefaultShader()
   {
     return false;
   }
+
+  shader_mat_Projection_ = glGetUniformLocation(quad_shader_.prog_id, "projection");
+  shader_mat_ModelView_ = glGetUniformLocation(quad_shader_.prog_id, "modelview");
 
   return true;
 }
@@ -942,7 +951,7 @@ bool GraphicGL::CompileShaderInfo(ShaderInfo& shader)
   if (!result)
   {
     glGetShaderInfoLog(shader.prog_id, 512, NULL, errorLog);
-    std::cerr << "ERROR: fragment shader compile failed : " << errorLog << std::endl;
+    Logger::Error("ERROR: fragment shader compile failed : %s", errorLog);
     return false;
   }
 
@@ -968,6 +977,12 @@ bool GraphicGL::CompileShaderInfo(ShaderInfo& shader)
   glBindVertexArray(0);
 
   return true;
+}
+
+void GraphicGL::CreateDefaultTexture()
+{
+  uint8_t p[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
+  def_tex_id_ = CreateTexture(p, 1, 1);
 }
 
 #else
