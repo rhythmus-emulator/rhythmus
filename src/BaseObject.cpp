@@ -92,7 +92,7 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
 
 Animation::Animation(const DrawProperty *initial_state)
   : current_frame_(0), current_frame_time_(0), frame_time_(0),
-    is_stopped_(true), repeat_(false), repeat_time_(0)
+    is_finished_(false), repeat_(false), repeat_time_(0)
 {
   if (initial_state)
     AddFrame(*initial_state, 0, EaseTypes::kEaseLinear);
@@ -101,12 +101,6 @@ Animation::Animation(const DrawProperty *initial_state)
 void Animation::Clear()
 {
   frames_.clear();
-  is_stopped_ = true;
-}
-
-void Animation::Play()
-{
-  is_stopped_ = false;
 }
 
 void Animation::DuplicateFrame(double duration)
@@ -118,7 +112,7 @@ void Animation::DuplicateFrame(double duration)
 
 void Animation::AddFrame(const AnimationFrame &frame)
 {
-  if (frames_.empty() || frames_.back().time >= frame.time)
+  if (!frames_.empty() && frames_.back().time >= frame.time)
     frames_.back() = frame;
   else
     frames_.push_back(frame);
@@ -126,7 +120,7 @@ void Animation::AddFrame(const AnimationFrame &frame)
 
 void Animation::AddFrame(AnimationFrame &&frame)
 {
-  if (frames_.empty() || frames_.back().time >= frame.time)
+  if (!frames_.empty() && frames_.back().time >= frame.time)
     frames_.back() = frame;
   else
     frames_.emplace_back(frame);
@@ -134,7 +128,7 @@ void Animation::AddFrame(AnimationFrame &&frame)
 
 void Animation::AddFrame(const DrawProperty &draw_prop, double time, int ease_type)
 {
-  if (frames_.empty() || frames_.back().time >= time)
+  if (!frames_.empty() && frames_.back().time >= time)
   {
     frames_.back().time = time;
     frames_.back().draw_prop = draw_prop;
@@ -152,8 +146,8 @@ void Animation::SetCommand(const std::string &cmd)
 
 void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty *out)
 {
-  // don't do anything if empty or stopped.
-  if (frames_.empty() || is_stopped_) return;
+  // don't do anything if empty.
+  if (frames_.empty()) return;
 
   // find out which frame is it in.
   frame_time_ += ms;
@@ -172,15 +166,18 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
     return;
   }
   for (unsigned i = 0; i < frames_.size(); ++i)
+  {
     if (frame_time_ >= frames_[i].time)
       current_frame_ = i;
+    else break;
+  }
   if (!repeat_ && frame_time_ >= frames_.back().time)
   {
     // stop animation as it had reached its end.
     current_frame_ = (unsigned)frames_.size() - 1;
     ms = frame_time_ - frames_.back().time;
-    is_stopped_ = true;
     command_to_invoke = command;
+    is_finished_ = true;
   }
   else current_frame_time_ = frame_time_ - frames_[current_frame_].time;
 
@@ -235,19 +232,15 @@ double Animation::GetTweenLength() const
   else return frames_.back().time;
 }
 
-bool Animation::is_stopped() const
-{
-  return is_stopped_;
-}
-
 size_t Animation::size() const { return frames_.size(); }
 bool Animation::empty() const { return frames_.empty(); }
+bool Animation::is_finished() const { return is_finished_; }
 
 
 // ----------------------------------------------------------- class BaseObject
 
 BaseObject::BaseObject()
-  : parent_(nullptr), own_children_(true), draw_order_(0), visible_(false),
+  : parent_(nullptr), own_children_(true), draw_order_(0), visible_(true),
     ignore_visible_group_(true),
     is_focusable_(false), is_focused_(false), is_hovered_(false), do_clipping_(false)
 {
@@ -410,8 +403,13 @@ void BaseObject::RunCommand(std::string command)
   // RunCommand parameter must be passed by value, not by reference
   // since original command string might be destroyed while processing command
   // e.g. command 'flush' clears event early and it destroys original command.
+  //
+  // @brief
+  // Each command should create a single animation.
+  //
 
   if (command.empty()) return;
+  ani_.emplace_back(Animation(&GetCurrentFrame()));
   size_t ia = 0, ib = 0;
   std::string cmd_type, value;
   while (ib <= command.size())
@@ -910,7 +908,7 @@ void BaseObject::Update(float delta)
   {
     auto &ani = ani_.front();
     ani.Update(t, cmd, &frame_);
-    if (ani.is_stopped())
+    if (ani.is_finished())
       ani_.pop_front();
   }
 
@@ -984,13 +982,13 @@ void BaseObject::FillVertexInfo(VertexInfo *vi)
   vi[0].p = Vector3{ f.pos.x, f.pos.y, 0 };
   vi[0].c = f.color;
 
-  vi[0].p = Vector3{ f.pos.z, f.pos.y, 0 };
+  vi[1].p = Vector3{ f.pos.z, f.pos.y, 0 };
   vi[1].c = f.color;
 
-  vi[0].p = Vector3{ f.pos.z, f.pos.w, 0 };
+  vi[2].p = Vector3{ f.pos.z, f.pos.w, 0 };
   vi[2].c = f.color;
 
-  vi[0].p = Vector3{ f.pos.x, f.pos.w, 0 };
+  vi[3].p = Vector3{ f.pos.x, f.pos.w, 0 };
   vi[3].c = f.color;
 }
 
@@ -1139,7 +1137,18 @@ BaseObject* CreateObject(const MetricGroup &m)
 {
   std::string type;
   BaseObject *object = nullptr;
+  const std::string& objname = m.name();
+
+  // inference type from object name (implicit)
+  type = objname;
+  /*
+  if (objname == "image" || objname == "sprite") type = "image";
+  else if (objname == "text") type = "text";
+  else if (objname == "slider") type = "slider";*/
+  // fetch type from attribute (explicit)
   m.get_safe("type", type);
+
+  // create object from type string
   if (type == "image" || type == "sprite")
   {
     object = new Sprite();

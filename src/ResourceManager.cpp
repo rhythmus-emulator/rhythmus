@@ -51,7 +51,7 @@ public:
 
     if (img_to_load_)
     {
-      if (p_)
+      if (p_ == nullptr)
         img_to_load_->Load(filename_);
       else
         img_to_load_->Load(p_, len_,
@@ -60,7 +60,7 @@ public:
     }
     else if (font_to_load_)
     {
-      if (p_)
+      if (p_ == nullptr)
         font_to_load_->Load(filename_);
       else
         font_to_load_->Load(p_, len_,
@@ -69,7 +69,7 @@ public:
     }
     else if (sound_to_load_)
     {
-      if (p_)
+      if (p_ == nullptr)
         sound_to_load_->Load(filename_);
       else
         sound_to_load_->Load(p_, len_,
@@ -319,6 +319,7 @@ Image* ImageManager::Load(const std::string &path)
     if (load_async_)
     {
       ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      task->SetFilename(newpath);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
     }
@@ -344,6 +345,7 @@ Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
     if (load_async_)
     {
       ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      task->SetData(p, len, name_opt);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
     }
@@ -396,6 +398,7 @@ SoundData* SoundManager::Load(const std::string &path)
     if (load_async_)
     {
       ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      task->SetFilename(newpath);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
     }
@@ -421,6 +424,7 @@ SoundData* SoundManager::Load(const char *p, size_t len, const char *name_opt)
     if (load_async_)
     {
       ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      task->SetData(p, len, name_opt);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
     }
@@ -465,6 +469,7 @@ Font* FontManager::Load(const std::string &path)
     if (load_async_)
     {
       ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      task->SetFilename(newpath);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
     }
@@ -490,6 +495,7 @@ Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
     if (load_async_)
     {
       ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      task->SetData(p, len, name_opt);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
     }

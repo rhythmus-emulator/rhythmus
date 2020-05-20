@@ -88,7 +88,6 @@ class Animation
 public:
   Animation(const DrawProperty *initial_state);
   void Clear();
-  void Play();
   void DuplicateFrame(double duration);
   void AddFrame(const AnimationFrame &frame);
   void AddFrame(AnimationFrame &&frame);
@@ -102,16 +101,16 @@ public:
   const DrawProperty &LastFrame() const;
   DrawProperty &LastFrame();
   double GetTweenLength() const;
-  bool is_stopped() const;
   size_t size() const;
   bool empty() const;
+  bool is_finished() const;
 
 private:
   std::vector<AnimationFrame> frames_;
   unsigned current_frame_;    // current frame
   double current_frame_time_; // current frame eclipsed time
   double frame_time_;         // eclipsed time of whole animation
-  bool is_stopped_;
+  bool is_finished_;
   bool repeat_;
   unsigned repeat_time_;
   std::string command;        // commands to be triggered when this tween starts

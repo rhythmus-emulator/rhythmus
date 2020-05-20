@@ -412,10 +412,6 @@ bool Graphic::IsWindowShouldClose() const
 #if USE_GLEW == 1
 // ------------------------------------------------------------ class GraphicGL
 
-// An global variable indicating window width / height
-// (not rendering canvas size)
-int sWidth, sHeight;
-
 static void error_callback(int error, const char* description)
 {
   Logger::Error("Graphic engine Error: %s", description);
@@ -747,7 +743,7 @@ void GraphicGL::SetZWrite(bool enable)
 void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
 {
 #if RENDER_WITH_HLSL
-  R_ASSERT(count < 4);
+  R_ASSERT(count >= 4);
   
   // pre-process for special blendmode
   // - See SetBlendMode() function for detail.
@@ -771,7 +767,7 @@ void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
   glBindBuffer(GL_ARRAY_BUFFER, quad_shader_.buffer_id);
   glBufferData(GL_ARRAY_BUFFER, sizeof(VertexInfo) * count, nullptr, GL_STREAM_DRAW);
   glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VertexInfo) * count, vi);
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
+  //glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   // read buffer
   glDrawArrays(GL_QUADS, 0, count);
@@ -811,7 +807,7 @@ void GraphicGL::BeginFrame()
   glLoadMatrixf(&modelView[0][0]);
 
   // set viewport
-  glViewport(0, 0, sWidth, sHeight);
+  glViewport(0, 0, width_, height_);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 #if RENDER_WITH_HLSL
