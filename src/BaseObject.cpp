@@ -156,8 +156,8 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
     const double actual_loop_time = frames_.back().time - (double)repeat_time_;
     if (actual_loop_time == 0)
       frame_time_ = 0;
-    else
-      frame_time_ = fmod(frame_time_, actual_loop_time);
+    else if (frame_time_ > repeat_time_)
+      frame_time_ = fmod(frame_time_ - repeat_time_, actual_loop_time) + repeat_time_;
     ms = 0;
   }
   if (frame_time_ < frames_.front().time)
@@ -165,11 +165,10 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
     // don't update if frame_time is less than first frame
     return;
   }
-  for (unsigned i = 0; i < frames_.size(); ++i)
+  for (current_frame_ = 0; current_frame_ < frames_.size(); ++current_frame_)
   {
-    if (frame_time_ >= frames_[i].time)
-      current_frame_ = i;
-    else break;
+    if (frame_time_ >= frames_[current_frame_].time)
+      break;
   }
   if (!repeat_ && frame_time_ >= frames_.back().time)
   {
@@ -179,7 +178,11 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
     command_to_invoke = command;
     is_finished_ = true;
   }
-  else current_frame_time_ = frame_time_ - frames_[current_frame_].time;
+  else
+  {
+    current_frame_time_ = frame_time_ - frames_[current_frame_].time;
+    ms = 0;
+  }
 
   // return calculated drawproperty.
   if (out)
@@ -640,6 +643,22 @@ void BaseObject::SetRotationAsDegree(float x, float y, float z)
   );
 }
 
+void BaseObject::SetRepeat(bool repeat)
+{
+  if (!ani_.empty())
+  {
+    if (repeat)
+      ani_.back().SetLoop(0);
+    else
+      ani_.back().DeleteLoop();
+  }
+}
+
+void BaseObject::SetLoop(unsigned loop_start_time)
+{
+  ani_.back().SetLoop(loop_start_time);
+}
+
 void BaseObject::SetCenter(float x, float y)
 {
   auto& p = GetLastFrame();
@@ -1006,21 +1025,13 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
   if (cmdfnmap_.empty())
   {
     static auto fn_X = [](void *o, CommandArgs& args, const std::string &) {
-      std::string v = args.Get<std::string>(0);
       auto *obj = static_cast<BaseObject*>(o);
-      int vi = 0;
-      // TODO: change it to lua
-      if (v == "CENTER_OBJECT")
-        vi = (GRAPHIC->width() - GetWidth(obj->GetLastFrame().pos)) / 2;
+      int vi = args.Get<int>(0);
       obj->SetX(vi);
     };
     static auto fn_Y = [](void *o, CommandArgs& args, const std::string &) {
-      std::string v = args.Get<std::string>(0);
       auto *obj = static_cast<BaseObject*>(o);
-      int vi = 0;
-      // TODO: change it to lua
-      if (v == "CENTER_OBJECT")
-        vi = (GRAPHIC->height() - GetHeight(obj->GetLastFrame().pos)) / 2;
+      int vi = args.Get<int>(0);
       obj->SetY(vi);
     };
     static auto fn_W = [](void *o, CommandArgs& args, const std::string &) {
@@ -1068,6 +1079,12 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     static auto fn_stop = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->Stop();
     };
+    static auto fn_loop = [](void *o, CommandArgs& args, const std::string &) {
+      static_cast<BaseObject*>(o)->SetLoop(args.Get<int>(0));
+    };
+    static auto fn_repeat = [](void *o, CommandArgs& args, const std::string &) {
+      static_cast<BaseObject*>(o)->SetRepeat(true);
+    };
     static auto fn_SetLR2DST = [](void *o, CommandArgs& args, const std::string &v) {
       auto *b = static_cast<BaseObject*>(o);
       ((BaseObject*)o)->SetLR2DST(v);
@@ -1109,6 +1126,8 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     cmdfnmap_["acc"] = fn_acc;
     cmdfnmap_["time"] = fn_time;
     cmdfnmap_["stop"] = fn_stop;
+    cmdfnmap_["loop"] = fn_loop;
+    cmdfnmap_["repeat"] = fn_repeat;
     cmdfnmap_["pos"] = fn_Pos;
     cmdfnmap_["lr2cmd"] = fn_SetLR2DST;
     cmdfnmap_["show"] = fn_Show;

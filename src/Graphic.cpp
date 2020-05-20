@@ -22,8 +22,6 @@
 # include <GLFW/glfw3.h>
 #endif
 
-#define RENDER_WITH_HLSL 1
-int errorcode_;
 constexpr int kVertexMaxSize = 1024 * 4;
 
 namespace rhythmus
@@ -73,8 +71,9 @@ void StringSafeAssign(std::string &s, const void *p)
 void Graphic::CreateGraphic()
 {
   // TODO: selectable graphic engine from option.
-  GRAPHIC = new GraphicGL();
+  GRAPHIC = new GraphicGLShader();
   GRAPHIC->Initialize();
+  Logger::Info("Using graphic type: %s", GRAPHIC->name());
 }
 
 void Graphic::DeleteGraphic()
@@ -391,6 +390,7 @@ bool Graphic::IsWindowShouldClose() const
   return !is_game_running_;
 }
 
+const char* Graphic::name() { return "Basic"; }
 
 #if USE_GLEW == 1
 // ------------------------------------------------------------ class GraphicGL
@@ -404,20 +404,11 @@ static void error_callback(int error, const char* description)
 
 GraphicGL::GraphicGL()
   : blendmode_(-1), use_multi_texture_(true), texunit_(0),
-    max_texture_count_(0), max_texture_size_(0),
-    shader_mat_Projection_(-1), shader_mat_ModelView_(-1)
-{
-  vi_ = (VertexInfo*)malloc(kVertexMaxSize * sizeof(VertexInfo));
-}
+    tex_id_(0), def_tex_id_(0), max_texture_count_(0), max_texture_size_(0)
+{}
 
 GraphicGL::~GraphicGL()
-{
-  if (vi_)
-  {
-    free(vi_);
-    vi_ = 0;
-  }
-}
+{}
 
 void GraphicGL::Initialize()
 {
@@ -444,7 +435,11 @@ void GraphicGL::Initialize()
 
   // create GL context
   SetVideoMode(p);
-  R_ASSERT(GAME->handler());
+  if (GAME->handler() == nullptr)
+  {
+    Logger::Error("GLFW window context initialization failed.");
+    exit(EXIT_FAILURE);
+  }
   GAME->CenterWindow();
 
   // initialize glew
@@ -453,19 +448,6 @@ void GraphicGL::Initialize()
   {
     Logger::Error("glewInit() failed : %s", glewGetErrorString(err));
     exit(EXIT_FAILURE);
-  }
-
-  // create shader
-  if (!CompileDefaultShader())
-  {
-    Logger::Error("Failed to compile shader.");
-  }
-
-  // create default texture, which is used for rendering 'NON-TEXTURE' state.
-  CreateDefaultTexture();
-  if (!def_tex_id_)
-  {
-    Logger::Error("Failed to create default texture.");
   }
 
   // fetch params
@@ -484,6 +466,13 @@ void GraphicGL::Initialize()
     gl_renderer_.c_str(),
     gl_version_.c_str(),
     glu_version_.c_str(), max_texture_count_);
+
+  // create default texture, which is used for rendering 'NON-TEXTURE' state.
+  CreateDefaultTexture();
+  if (!def_tex_id_)
+  {
+    Logger::Error("Failed to create default texture.");
+  }
 }
 
 void GraphicGL::Cleanup()
@@ -742,7 +731,6 @@ void GraphicGL::SetZWrite(bool enable)
 
 void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
 {
-#if RENDER_WITH_HLSL
   R_ASSERT(count >= 4);
   
   // pre-process for special blendmode
@@ -763,26 +751,16 @@ void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
   // set model matrix
   // TODO: set texture matrix
 
-  // write buffer
-  glBindBuffer(GL_ARRAY_BUFFER, quad_shader_.buffer_id);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(VertexInfo) * count, nullptr, GL_STREAM_DRAW);
-  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VertexInfo) * count, vi);
-
-  // read buffer
-  glDrawArrays(GL_QUADS, 0, count);
-
-#else
   glBegin(GL_QUADS);
-  glTexCoord2d(vi[0].sx, vi[0].sy);   // TL
-  glVertex3f(vi[0].x, vi[0].y, 0.0f);
-  glTexCoord2d(vi[1].sx, vi[1].sy);   // TR
-  glVertex3f(vi[1].x, vi[1].y, 0.0f);
-  glTexCoord2d(vi[2].sx, vi[2].sy);   // BR
-  glVertex3f(vi[2].x, vi[2].y, 0.0f);
-  glTexCoord2d(vi[3].sx, vi[3].sy);   // BL
-  glVertex3f(vi[3].x, vi[3].y, 0.0f);
+  glTexCoord2d(vi[0].t.x, vi[0].t.y);   // TL
+  glVertex3f(vi[0].p.x, vi[0].p.y, vi[0].p.z);
+  glTexCoord2d(vi[1].t.x, vi[1].t.y);   // TR
+  glVertex3f(vi[1].p.x, vi[1].p.y, vi[1].p.z);
+  glTexCoord2d(vi[2].t.x, vi[2].t.y);   // BR
+  glVertex3f(vi[2].p.x, vi[2].p.y, vi[2].p.z);
+  glTexCoord2d(vi[3].t.x, vi[3].t.y);   // BL
+  glVertex3f(vi[3].p.x, vi[3].p.y, vi[3].p.z);
   glEnd();
-#endif
 }
 
 void GraphicGL::BeginFrame()
@@ -796,22 +774,14 @@ void GraphicGL::BeginFrame()
   glEnable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
 
-#if RENDER_WITH_HLSL
-  // set shader
-  glUseProgram(quad_shader_.prog_id);
-  glBindVertexArray(quad_shader_.VAO_id);
-#endif
-
   // expect to set View / Proj matrix here and consider it as constant.
   CameraLoadPerspective(30, vp.width, vp.height, vp.width / 2, vp.height / 2);
   glMatrixMode(GL_PROJECTION);
   glLoadMatrixf(&GetProjectionMatrix()[0][0]);
-  glUniformMatrix4fv(shader_mat_Projection_, 1, GL_FALSE, &GetProjectionMatrix()[0][0]); // for HLSL
 
   Matrix modelView = GetViewMatrix() * GetWorldMatrix();
   glMatrixMode(GL_MODELVIEW);
   glLoadMatrixf(&modelView[0][0]);
-  glUniformMatrix4fv(shader_mat_ModelView_, 1, GL_FALSE, &modelView[0][0]);   // for HLSL
 
   // set viewport
   glViewport(0, 0, width_, height_);
@@ -820,7 +790,6 @@ void GraphicGL::BeginFrame()
 
 #if 0
   // test purpose code. big red rect must be drawn to surface.
-  glUseProgram(0);
   glBegin(GL_QUADS);
   glColor3f(1, 0, 0);
   glVertex2f(10, 10);
@@ -850,73 +819,42 @@ bool GraphicGL::IsWindowShouldClose() const
   return glfwWindowShouldClose((GLFWwindow*)GAME->handler()) != 0;
 }
 
-/* Returns single quad vertex buffer. */
-VertexInfo* GraphicGL::get_vertex_buffer()
+void GraphicGL::CreateDefaultTexture()
 {
-  return get_vertex_buffer(1);
+  uint8_t p[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
+  def_tex_id_ = CreateTexture(p, 1, 1);
 }
 
-VertexInfo* GraphicGL::get_vertex_buffer(int size)
+const char* GraphicGL::name() { return "GLBasic"; }
+
+// ------------------------------------------------------------ class GraphicGL
+
+GraphicGLShader::GraphicGLShader()
+  : shader_mat_Projection_(-1), shader_mat_ModelView_(-1), vi_idx_(0)
 {
-  int _ = vi_idx_;
-  vi_idx_ += size;
-  if (vi_idx_ >= kVertexMaxSize)
+  vi_ = (VertexInfo*)malloc(kVertexMaxSize * sizeof(VertexInfo));
+}
+
+GraphicGLShader::~GraphicGLShader()
+{
+  if (vi_)
   {
-    R_ASSERT(size < kVertexMaxSize);
-    // prevent vertex buffer overflow
-    DrawQuads(vi_, size);
-    // now flushed buffer. clear vertex index.
-    vi_idx_ = 0;
-    return get_vertex_buffer(size);
+    free(vi_);
+    vi_ = 0;
   }
-  return vi_ + _;
 }
 
-#if RENDER_WITH_HLSL
-bool GraphicGL::CompileDefaultShader()
+void GraphicGLShader::Initialize()
 {
-  memset(&quad_shader_, 0, sizeof(ShaderInfo));
+  GraphicGL::Initialize();
 
-  quad_shader_.vertex_shader =
-    "#version 330 core\n"
-    "in vec3 positionAttribute;"
-    "in vec4 colorAttribute;"
-    "in vec2 texCoordinate;"
-    "out vec4 passColor;"
-    "out vec2 passTextureCoord;"
-    "uniform mat4 projection;"
-    "uniform mat4 modelview;"
-    ""
-    "void main()"
-    "{"
-    "gl_Position = projection * modelview * vec4(positionAttribute, 1.0);"
-    "passColor = colorAttribute;"
-    "passTextureCoord = texCoordinate;"
-    "}";
-
-  quad_shader_.frag_shader =
-    "#version 330 core\n"
-    "in vec4 passColor;"
-    "in vec2 passTextureCoord;"
-    "uniform sampler2D tex;"
-    "out vec4 fragmentColor;"
-    "void main()"
-    "{"
-    "fragmentColor = texture(tex, passTextureCoord) * passColor;"
-    "}";
-
-  if (!CompileShaderInfo(quad_shader_))
+  // create shader
+  if (!CompileDefaultShader())
   {
-    return false;
+    Logger::Error("Failed to compile shader.");
   }
-
-  shader_mat_Projection_ = glGetUniformLocation(quad_shader_.prog_id, "projection");
-  shader_mat_ModelView_ = glGetUniformLocation(quad_shader_.prog_id, "modelview");
-
-  return true;
 }
-
-bool GraphicGL::CompileShaderInfo(ShaderInfo& shader)
+bool GraphicGLShader::CompileShaderInfo(ShaderInfo& shader)
 {
   GLint result;
   GLuint vertex_shader_id, frag_shader_id;
@@ -985,22 +923,123 @@ bool GraphicGL::CompileShaderInfo(ShaderInfo& shader)
   return true;
 }
 
-void GraphicGL::CreateDefaultTexture()
+bool GraphicGLShader::CompileDefaultShader()
 {
-  uint8_t p[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
-  def_tex_id_ = CreateTexture(p, 1, 1);
+  memset(&quad_shader_, 0, sizeof(ShaderInfo));
+
+  quad_shader_.vertex_shader =
+    "#version 330 core\n"
+    "in vec3 positionAttribute;"
+    "in vec4 colorAttribute;"
+    "in vec2 texCoordinate;"
+    "out vec4 passColor;"
+    "out vec2 passTextureCoord;"
+    "uniform mat4 projection;"
+    "uniform mat4 modelview;"
+    ""
+    "void main()"
+    "{"
+    "gl_Position = projection * modelview * vec4(positionAttribute, 1.0);"
+    "passColor = colorAttribute;"
+    "passTextureCoord = texCoordinate;"
+    "}";
+
+  quad_shader_.frag_shader =
+    "#version 330 core\n"
+    "in vec4 passColor;"
+    "in vec2 passTextureCoord;"
+    "uniform sampler2D tex;"
+    "out vec4 fragmentColor;"
+    "void main()"
+    "{"
+    "fragmentColor = texture(tex, passTextureCoord) * passColor;"
+    "}";
+
+  if (!CompileShaderInfo(quad_shader_))
+  {
+    return false;
+  }
+
+  shader_mat_Projection_ = glGetUniformLocation(quad_shader_.prog_id, "projection");
+  shader_mat_ModelView_ = glGetUniformLocation(quad_shader_.prog_id, "modelview");
+
+  return true;
 }
 
-#else
-bool Graphic::CompileShader()
+void GraphicGLShader::DrawQuads(const VertexInfo *vi, unsigned count)
 {
-  return false;
+  R_ASSERT(count >= 4);
+
+  // pre-process for special blendmode
+  // - See SetBlendMode() function for detail.
+  VertexInfo vi_tmp[4];
+  if (blendmode_ == 0)
+  {
+    for (int i = 0; i < count; ++i)
+    {
+      vi_tmp[i].c = vi[i].c;
+      vi_tmp[i].p = vi[i].p;
+      vi_tmp[i].t = vi[i].t;
+      vi_tmp[i].c.a = 1.0f;
+    }
+    vi = vi_tmp;
+  }
+
+  // set model matrix
+  // TODO: set texture matrix
+
+  glBindBuffer(GL_ARRAY_BUFFER, quad_shader_.buffer_id);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(VertexInfo) * count, nullptr, GL_STREAM_DRAW);
+  glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(VertexInfo) * count, vi);
+  glDrawArrays(GL_QUADS, 0, count);
 }
 
-bool Graphic::CompileShaderInfo(ShaderInfo& shader)
+void GraphicGLShader::BeginFrame()
 {
-  return false;
+  const VideoModeParams &vp = GetVideoMode();
+
+  // To calculate FPS
+  Graphic::BeginFrame();
+
+  // set shader
+  glUseProgram(quad_shader_.prog_id);
+  glBindVertexArray(quad_shader_.VAO_id);
+
+  // expect to set View / Proj matrix here and consider it as constant.
+  CameraLoadPerspective(30, vp.width, vp.height, vp.width / 2, vp.height / 2);
+  glUniformMatrix4fv(shader_mat_Projection_, 1, GL_FALSE, &GetProjectionMatrix()[0][0]); // for HLSL
+
+  Matrix modelView = GetViewMatrix() * GetWorldMatrix();
+  glUniformMatrix4fv(shader_mat_ModelView_, 1, GL_FALSE, &modelView[0][0]);   // for HLSL
+
+  // set viewport
+  glViewport(0, 0, width_, height_);
+  glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
-#endif
+
+/* Returns single quad vertex buffer. */
+VertexInfo* GraphicGLShader::get_vertex_buffer()
+{
+  return get_vertex_buffer(1);
+}
+
+VertexInfo* GraphicGLShader::get_vertex_buffer(int size)
+{
+  int _ = vi_idx_;
+  vi_idx_ += size;
+  if (vi_idx_ >= kVertexMaxSize)
+  {
+    R_ASSERT(size < kVertexMaxSize);
+    // prevent vertex buffer overflow
+    DrawQuads(vi_, size);
+    // now flushed buffer. clear vertex index.
+    vi_idx_ = 0;
+    return get_vertex_buffer(size);
+  }
+  return vi_ + _;
+}
+
+const char* GraphicGLShader::name() { return "GLwithShader"; }
 
 }

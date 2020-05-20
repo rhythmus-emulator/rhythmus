@@ -180,6 +180,8 @@ public:
   virtual void SignalWindowClose();
   virtual bool IsWindowShouldClose() const;
 
+  virtual const char* name();
+
 private:
   VideoModeParams video_mode_;
 
@@ -247,11 +249,9 @@ public:
   virtual void SignalWindowClose();
   virtual bool IsWindowShouldClose() const;
 
-  VertexInfo* get_vertex_buffer();
-  VertexInfo* get_vertex_buffer(int size);
-  bool CompileDefaultShader();
-  bool CompileShaderInfo(ShaderInfo& shader);
   void CreateDefaultTexture();
+
+  virtual const char* name();
 
 private:
   /* parameters */
@@ -260,24 +260,47 @@ private:
   unsigned max_texture_count_;
   int max_texture_size_;
 
+protected:
   /* rendering state */
   int blendmode_;
   unsigned texunit_;
   unsigned tex_id_;
   unsigned def_tex_id_;
+
+  float width_, height_;
+  int current_proj_mode_;
+};
+
+/* @brief Graphic Engine with GL shader */
+class GraphicGLShader : public GraphicGL
+{
+public:
+  GraphicGLShader();
+  virtual ~GraphicGLShader();
+
+  virtual void Initialize();
+  bool CompileShaderInfo(ShaderInfo& shader);
+
+  virtual void DrawQuads(const VertexInfo *vi, unsigned count);
+  virtual void BeginFrame();
+
+  // @DEPRECIATED
+  VertexInfo* get_vertex_buffer();
+  VertexInfo* get_vertex_buffer(int size);
+
+  virtual const char* name();
+
+private:
   int shader_mat_Projection_;
   int shader_mat_ModelView_;
 
   /* shader */
   ShaderInfo quad_shader_;
 
-  float width_, height_;
-  int current_proj_mode_;
-  glm::mat4 m_projection_, m_view_, m_model_;
-  std::vector<glm::mat4> m_model_stack_;
-
   VertexInfo *vi_;
   int vi_idx_;
+
+  bool CompileDefaultShader();
 };
 
 }

@@ -1,4 +1,4 @@
 <theme>
   <image path="test/test.png"
-         OnLoad="x:0;y:0;w:100;h:100;time:1500;x:10;y:10;w:110;h:110" />
+         OnLoad="x:0;y:0;w:100;h:100;time:1500;x:10;y:10;w:150;h:150;loop:1000" />
 </theme>

@@ -200,6 +200,8 @@ public:
   void SetScale(float x, float y);
   void SetRotation(float x, float y, float z);
   void SetRotationAsDegree(float x, float y, float z);
+  void SetRepeat(bool repeat);
+  void SetLoop(unsigned loop_start_time);
   void SetLR2DST(const std::string &cmd);
 
   /**
