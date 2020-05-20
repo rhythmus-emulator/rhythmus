@@ -478,6 +478,12 @@ void GraphicGL::Initialize()
     glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, (GLint *)&max_texture_count_);
   else
     max_texture_count_ = 1;
+
+  Logger::Info("Graphic info: %s, %s, %s, %s, multitexture?(%d)",
+    gl_vendor_.c_str(),
+    gl_renderer_.c_str(),
+    gl_version_.c_str(),
+    glu_version_.c_str(), max_texture_count_);
 }
 
 void GraphicGL::Cleanup()
@@ -924,7 +930,7 @@ bool GraphicGL::CompileShaderInfo(ShaderInfo& shader)
   if (!result)
   {
     glGetShaderInfoLog(vertex_shader_id, 512, NULL, errorLog);
-    std::cerr << "ERROR: vertex shader compile failed : " << errorLog << std::endl;
+    Logger::Error("ERROR: vertex shader compile failed : %s", errorLog);
     return false;
   }
 
@@ -936,7 +942,7 @@ bool GraphicGL::CompileShaderInfo(ShaderInfo& shader)
   if (!result)
   {
     glGetShaderInfoLog(frag_shader_id, 512, NULL, errorLog);
-    std::cerr << "ERROR: fragment shader compile failed : " << errorLog << std::endl;
+    Logger::Error("ERROR: fragment shader compile failed : %s", errorLog);
     return false;
   }
 
@@ -951,7 +957,7 @@ bool GraphicGL::CompileShaderInfo(ShaderInfo& shader)
   if (!result)
   {
     glGetShaderInfoLog(shader.prog_id, 512, NULL, errorLog);
-    Logger::Error("ERROR: fragment shader compile failed : %s", errorLog);
+    Logger::Error("ERROR: shader program compile failed : %s", errorLog);
     return false;
   }
 
