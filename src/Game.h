@@ -7,6 +7,12 @@
 #include <list>
 #include <map>
 
+/**
+ * Our game module
+ * If we're going to support operating system that glfw does not support,
+ * e.g. Android, we need to work again a lot ...
+ */
+ 
 namespace rhythmus
 {
 
@@ -48,12 +54,16 @@ int StringToGamemode(const char* s);
 class Game
 {
 public:
+  static void Create();
   static void Initialize();
   static void Loop();
   static void Cleanup();
   static void Exit();
 
-  static Game& getInstance();
+  void CenterWindow();
+
+  void *handler();
+  void set_handler(void *p);
 
   /* Update game status. */
   void Update();
@@ -61,12 +71,12 @@ public:
   /* Load execute argument */
   void LoadArgument(const std::string& argv);
 
-  static void MessageBox(const std::string &title, const std::string &text);
-  static void AlertMessageBox(const std::string &title, const std::string &text);
-  static void WarningMessageBox(const std::string &title, const std::string &text);
-  static void CriticalMessageBox(const std::string &title, const std::string &text);
-  static void Pause(bool pause);
-  static bool IsPaused();
+  void MessageBox(const std::string &title, const std::string &text);
+  void AlertMessageBox(const std::string &title, const std::string &text);
+  void WarningMessageBox(const std::string &title, const std::string &text);
+  void CriticalMessageBox(const std::string &title, const std::string &text);
+  void Pause(bool pause);
+  bool IsPaused();
 
   GameBootMode get_boot_mode() const;
 
@@ -76,7 +86,11 @@ private:
   Game();
   ~Game();
 
-  static Game game_;
+  void InitializeHandler();
+  void DestroyHandler();
+
+  // core object handler
+  void *handler_;
 
   // is game loop running?
   bool is_running_;
@@ -87,5 +101,7 @@ private:
   // current game boot mode.
   GameBootMode game_boot_mode_;
 };
+
+extern Game *GAME;
 
 }

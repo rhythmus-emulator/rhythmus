@@ -6,15 +6,6 @@
 #include "Error.h"
 #include "config.h"
 
-#if USE_GLEW == 1
-
-#define GLEW_STATIC
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-
-#endif
-
-
 namespace rhythmus
 {
 
@@ -202,18 +193,21 @@ private:
   bool is_game_running_;
 };
 
+}
 
 #if USE_GLEW == 1
+namespace rhythmus
+{
 
 /* @brief Shader info for OpenGL. */
 struct ShaderInfo {
   const char* vertex_shader;
   const char* frag_shader;
-  GLuint prog_id;
+  unsigned prog_id;
   const char* VAO_params[16];   // TODO?
 
   /* Round-robin buffering */
-  GLuint VAO_id, buffer_id;
+  unsigned VAO_id, buffer_id;
 };
 
 /* @brief Graphic engine based on GLES (OpenGL) */
@@ -222,8 +216,6 @@ class GraphicGL : public Graphic
 public:
   GraphicGL();
   virtual ~GraphicGL();
-
-  GLFWwindow* window();
 
   virtual void Initialize();
   virtual void Cleanup();
@@ -255,15 +247,12 @@ public:
   virtual void SignalWindowClose();
   virtual bool IsWindowShouldClose() const;
 
-  void CenterWindow();
   VertexInfo* get_vertex_buffer();
   VertexInfo* get_vertex_buffer(int size);
   bool CompileDefaultShader();
   bool CompileShaderInfo(ShaderInfo& shader);
 
 private:
-  GLFWwindow* window_;
-
   /* parameters */
   std::string gl_vendor_, gl_renderer_, gl_version_, glu_version_;
   bool use_multi_texture_;
@@ -273,7 +262,7 @@ private:
   /* rendering state */
   int blendmode_;
   unsigned texunit_;
-  GLuint tex_id_;
+  unsigned tex_id_;
 
   /* shader */
   ShaderInfo quad_shader_;
@@ -286,8 +275,11 @@ private:
   VertexInfo *vi_;
   int vi_idx_;
 };
+
+}
 #endif
 
+namespace rhythmus
+{
 extern Graphic *GRAPHIC;
-
 }

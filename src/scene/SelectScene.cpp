@@ -45,7 +45,7 @@ void SelectScene::CloseScene(bool next)
 
 void SelectScene::ProcessInputEvent(const InputEvent& e)
 {
-  if (e.type() == InputEvents::kOnKeyUp && e.KeyCode() == GLFW_KEY_ESCAPE)
+  if (e.type() == InputEvents::kOnKeyUp && e.KeyCode() == RI_KEY_ESCAPE)
   {
     // Exit program instantly.
     CloseScene(false);
@@ -59,19 +59,19 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
 
   if (e.type() == InputEvents::kOnKeyDown || e.type() == InputEvents::kOnKeyPress)
   {
-    if (e.KeyCode() == GLFW_KEY_UP)
+    if (e.KeyCode() == RI_KEY_UP)
     {
       wheel_.NavigateUp();
     }
-    else if (e.KeyCode() == GLFW_KEY_DOWN)
+    else if (e.KeyCode() == RI_KEY_DOWN)
     {
       wheel_.NavigateDown();
     }
-    else if (e.KeyCode() == GLFW_KEY_RIGHT)
+    else if (e.KeyCode() == RI_KEY_RIGHT)
     {
       wheel_.NavigateRight();
     }
-    else if (e.KeyCode() == GLFW_KEY_LEFT)
+    else if (e.KeyCode() == RI_KEY_LEFT)
     {
       wheel_.NavigateLeft();
     }
@@ -79,7 +79,7 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
 
   if (e.type() == InputEvents::kOnKeyUp)
   {
-    if (e.KeyCode() == GLFW_KEY_ENTER)
+    if (e.KeyCode() == RI_KEY_ENTER)
     {
       // Register select song / course into Game / Player state.
       // XXX: can we preload selected song from here before PlayScene...?

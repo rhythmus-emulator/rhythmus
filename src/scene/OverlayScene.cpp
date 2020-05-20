@@ -64,11 +64,11 @@ void OverlayScene::doUpdate(float delta)
       alert_dialog_->Show();
     } else
     {
-      Game::Pause(false);
+      GAME->Pause(false);
     }
   }
   else
-    Game::Pause(true);
+    GAME->Pause(true);
 }
 
 

@@ -37,8 +37,10 @@ int main(int argc, char **argv)
 {
 #endif
 
+  Game::Create();
+
   for (int i = 0; i < argc; i++)
-    Game::getInstance().LoadArgument(argv[i]);
+    GAME->LoadArgument(argv[i]);
 
   Game::Initialize();
 

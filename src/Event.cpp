@@ -751,8 +751,8 @@ public:
 /* @brief Subscribe to input events */
 void EventManager::Initialize()
 {
-// TODO: Only give callback, and graphic should deal with it.
-  auto* window_ = ((GraphicGL*)GRAPHIC)->window();
+#if USE_GLFW
+  GLFWwindow* window_ = (GLFWwindow*)GAME->handler();
   R_ASSERT(window_);
   glfwSetKeyCallback(window_, on_keyevent);
   glfwSetCharCallback(window_, on_text);
@@ -760,8 +760,9 @@ void EventManager::Initialize()
   glfwSetMouseButtonCallback(window_, on_cursorbutton);
   glfwSetJoystickCallback(on_joystick_conn);
   glfwSetWindowSizeCallback(window_, on_window_resize);
+#endif
 
-#if USE_LR2_FEATURE == 1
+#if USE_LR2_FEATURE
   // enable LR2 event hooking
   static LR2KeyPool lr2keypool;
   lr2keypool.Initialize();

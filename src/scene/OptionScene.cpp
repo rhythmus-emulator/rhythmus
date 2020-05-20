@@ -141,12 +141,12 @@ void OptionScene::ProcessInputEvent(const InputEvent& e)
 
   if (e.type() == InputEvents::kOnKeyUp)
   {
-    /*if (e.KeyCode() == GLFW_KEY_ENTER)
+    /*if (e.KeyCode() == RI_KEY_ENTER)
     {
       EnterOptionItem();
     }
     else */
-    if (e.KeyCode() == GLFW_KEY_ESCAPE)
+    if (e.KeyCode() == RI_KEY_ESCAPE)
     {
       EscapeOptionItem();
     }

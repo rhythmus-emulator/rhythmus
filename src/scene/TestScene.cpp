@@ -70,7 +70,7 @@ void TestScene::LoadScene()
 
 void TestScene::ProcessInputEvent(const InputEvent& e)
 {
-  if (e.type() == InputEvents::kOnKeyUp && e.KeyCode() == GLFW_KEY_ESCAPE)
+  if (e.type() == InputEvents::kOnKeyUp && e.KeyCode() == RI_KEY_ESCAPE)
   {
     Game::Exit();
   }

@@ -15,7 +15,7 @@ PlayScene::PlayScene()
   next_scene_ = "ResultScene";
   prev_scene_ = "SelectScene";
 
-  if (Game::getInstance().get_boot_mode() == GameBootMode::kBootPlay)
+  if (GAME->get_boot_mode() == GameBootMode::kBootPlay)
   {
     next_scene_ = "Exit";
     prev_scene_ = "Exit";
@@ -121,15 +121,15 @@ void PlayScene::ProcessInputEvent(const InputEvent& e)
 {
   if (e.type() == InputEvents::kOnKeyDown)
   {
-    if (e.KeyCode() == GLFW_KEY_ESCAPE)
+    if (e.KeyCode() == RI_KEY_ESCAPE)
     {
       SongPlayer::getInstance().Stop();
       FadeOutScene(false);
       return;
     }
-    else if (e.KeyCode() == GLFW_KEY_TAB)
+    else if (e.KeyCode() == RI_KEY_TAB)
     {
-      Game::AlertMessageBox("Game Pause", "Game Paused.");
+      GAME->AlertMessageBox("Game Pause", "Game Paused.");
     }
   }
 

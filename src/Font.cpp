@@ -3,6 +3,7 @@
 #include "Setting.h"
 #include "Image.h"
 #include "Util.h"
+#include "Logger.h"
 #include "rparser.h"  /* rutil Text encoding to UTF32 */
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -118,7 +119,7 @@ FontBitmap::~FontBitmap()
 {
   if (texid_)
   {
-    glDeleteTextures(1, &texid_);
+    GRAPHIC->DeleteTexture(texid_);
     texid_ = 0;
   }
 
@@ -175,21 +176,15 @@ void FontBitmap::Update()
 {
   if (committed_ || !bitmap_) return;
 
-  glGenTextures(1, &texid_);
+  // commit bitmap
+  texid_ = GRAPHIC->CreateTexture((uint8_t*)bitmap_, width_, height_);
   if (texid_ == 0)
   {
-    GLenum err = glGetError();
-    std::cerr << "Font - Allocating textureID failed: " << (int)err << std::endl;
+    Logger::Error("Font - Allocating texture failed.");
     return;
   }
-
-  // commit bitmap from memory
-  glBindTexture(GL_TEXTURE_2D, texid_);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width_, height_, 0,
-    GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)bitmap_); // @warn May BGRA bitmap
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindTexture(GL_TEXTURE_2D, 0);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   committed_ = true;
 }
@@ -204,7 +199,7 @@ bool FontBitmap::IsWritable(int w, int h) const
 int FontBitmap::width() const { return width_; }
 int FontBitmap::height() const { return height_; }
 
-GLuint FontBitmap::get_texid() const
+unsigned FontBitmap::get_texid() const
 {
   return texid_;
 }
@@ -487,7 +482,7 @@ void Font::LoadLR2BitmapFont(const std::string &path)
       /* need to calculate src pos by texture, so need to get texture. */
       float tex_width = fontbitmap_[g.texidx]->width();
       float tex_height = fontbitmap_[g.texidx]->height();
-      int texid_real = fontbitmap_[g.texidx]->get_texid();
+      unsigned texid_real = fontbitmap_[g.texidx]->get_texid();
 
       /* if width / height is zero, indicates invalid glyph (due to image loading failed) */
       if (tex_width == 0 || tex_height == 0)

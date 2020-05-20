@@ -10,6 +10,18 @@
 #include <algorithm>
 #include <memory.h>
 
+#if USE_GLEW
+# if not USE_GLFW
+#  error GLEW only usable when GLFW is used.
+# endif
+# define GLEW_STATIC
+# include <GL/glew.h>
+#endif
+
+#if USE_GLFW
+# include <GLFW/glfw3.h>
+#endif
+
 #define RENDER_WITH_HLSL 1
 int errorcode_;
 constexpr int kVertexMaxSize = 1024 * 4;
@@ -412,8 +424,7 @@ static void error_callback(int error, const char* description)
 #endif
 
 GraphicGL::GraphicGL()
-  : window_(nullptr),
-    blendmode_(-1), use_multi_texture_(true), texunit_(0),
+  : blendmode_(-1), use_multi_texture_(true), texunit_(0),
     max_texture_count_(0), max_texture_size_(0)
 {
   vi_ = (VertexInfo*)malloc(kVertexMaxSize * sizeof(VertexInfo));
@@ -421,24 +432,11 @@ GraphicGL::GraphicGL()
 
 GraphicGL::~GraphicGL()
 {
-  if (window_)
-  {
-    glfwDestroyWindow(window_);
-    window_ = 0;
-  }
-
-  glfwTerminate();
-
   if (vi_)
   {
     free(vi_);
     vi_ = 0;
   }
-}
-
-GLFWwindow* GraphicGL::window()
-{
-  return window_;
 }
 
 void GraphicGL::Initialize()
@@ -466,7 +464,8 @@ void GraphicGL::Initialize()
 
   // create GL context
   SetVideoMode(p);
-  R_ASSERT(window_);
+  R_ASSERT(GAME->handler());
+  GAME->CenterWindow();
 
   // initialize glew
   GLenum err = glewInit();
@@ -497,31 +496,24 @@ void GraphicGL::Initialize()
 void GraphicGL::Cleanup()
 {
   // TODO: destroy shader, program.
-
-  if (window_)
-  {
-    glfwDestroyWindow(window_);
-    window_ = nullptr;
-  }
-
-  glfwTerminate();
 }
 
 bool GraphicGL::TryVideoMode(const VideoModeParams &p)
 {
+  GLFWwindow *w = (GLFWwindow*)GAME->handler();
+
   // Destroy previous window if exists...
-  if (window_)
+  if (w)
   {
-    glfwDestroyWindow(window_);
-    window_ = nullptr;
+    glfwDestroyWindow(w);
+    w = nullptr;
   }
 
   // create new window and swap context
-  GLFWwindow *w = nullptr;
   if (p.windowed)
   {
     w = glfwCreateWindow(p.width, p.height,
-      Game::getInstance().get_window_title().c_str(), 0, NULL);
+      GAME->get_window_title().c_str(), 0, NULL);
   }
   else
   {
@@ -529,7 +521,7 @@ bool GraphicGL::TryVideoMode(const VideoModeParams &p)
     GLFWmonitor** monitors = glfwGetMonitors(&totalMonitor);
     R_ASSERT(totalMonitor > 0);
     w = glfwCreateWindow(p.width, p.height,
-      Game::getInstance().get_window_title().c_str(), monitors[0], NULL);
+      GAME->get_window_title().c_str(), monitors[0], NULL);
   }
   if (!w)
     return false;
@@ -538,7 +530,7 @@ bool GraphicGL::TryVideoMode(const VideoModeParams &p)
   glfwMakeContextCurrent(w);
   glfwSwapInterval(p.vsync ? 1 : 0);
 
-  window_ = w;
+  GAME->set_handler(w);
   return true;
 }
 
@@ -832,7 +824,7 @@ void GraphicGL::BeginFrame()
 void GraphicGL::EndFrame()
 {
   glFlush();
-  glfwSwapBuffers(window_);
+  glfwSwapBuffers((GLFWwindow*)GAME->handler());
   glfwPollEvents();
 
   ResetMatrix();
@@ -840,35 +832,12 @@ void GraphicGL::EndFrame()
 
 void GraphicGL::SignalWindowClose()
 {
-  glfwSetWindowShouldClose(window_, 1);
+  glfwSetWindowShouldClose((GLFWwindow*)GAME->handler(), 1);
 }
 
 bool GraphicGL::IsWindowShouldClose() const
 {
-  return glfwWindowShouldClose(window_) != 0;
-}
-
-void GraphicGL::CenterWindow()
-{
-  int totalMonitor;
-  GLFWmonitor** monitors = glfwGetMonitors(&totalMonitor);
-  GLFWmonitor* monitor;
-  if (!totalMonitor || !monitors) return;
-  monitor = monitors[0];
-
-  const GLFWvidmode *mode = glfwGetVideoMode(monitor);
-  if (!mode)
-    return;
-
-  int monitorX, monitorY;
-  glfwGetMonitorPos(monitor, &monitorX, &monitorY);
-
-  int windowWidth, windowHeight;
-  glfwGetWindowSize(window_, &windowWidth, &windowHeight);
-
-  glfwSetWindowPos(window_,
-    monitorX + (mode->width - windowWidth) / 2,
-    monitorY + (mode->height - windowHeight) / 2);
+  return glfwWindowShouldClose((GLFWwindow*)GAME->handler()) != 0;
 }
 
 /* Returns single quad vertex buffer. */

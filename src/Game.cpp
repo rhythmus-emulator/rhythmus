@@ -13,11 +13,16 @@
 #include "LR2/LR2Flag.h"        // for updating LR2 flag
 #include "scene/OverlayScene.h" // for invoke MessageBox
 #include "common.h"
+#include "config.h"
 
-#include <GLFW/glfw3.h>
+#if USE_GLFW == 1
+# include <GLFW/glfw3.h>
+#endif
 
 namespace rhythmus
 {
+
+Game *GAME = nullptr;
 
 const char* const sGamemode[] = {
   "none",
@@ -65,15 +70,9 @@ std::map<std::string, std::string> gPrefFileTemp;
 
 /* --------------------------------- class Game */
 
-Game Game::game_;
-
-Game& Game::getInstance()
-{
-  return game_;
-}
-
 Game::Game()
-  : is_running_(false), is_paused_(false), game_boot_mode_(GameBootMode::kBootNormal)
+  : handler_(nullptr), is_running_(false), is_paused_(false),
+    game_boot_mode_(GameBootMode::kBootNormal)
 {
 }
 
@@ -81,8 +80,17 @@ Game::~Game()
 {
 }
 
+void Game::Create()
+{
+  R_ASSERT_M(GAME == nullptr, "Attempt to re-initialize GAME object!");
+  GAME = new Game();
+}
+
 void Game::Initialize()
 {
+  // call Create() first.
+  R_ASSERT(GAME);
+
   // before starting initialization, resource must be initialized
   ResourceManager::Initialize();
 
@@ -103,23 +111,26 @@ void Game::Initialize()
   // Start logging.
   Logger::getInstance().Initialize();
 
+  // Now we can initialize game handler.
+  GAME->InitializeHandler();
+
   // initialize threadpool / graphic / sound
   TaskPool::getInstance().SetPoolSize(4);
   Graphic::CreateGraphic();
   SoundDriver::getInstance().Initialize();
 
-  // initialize all other elements ...
+  // initialize all other modules ...
   EventManager::Initialize();
   Timer::Initialize();
   PlayerManager::Initialize();
   SceneManager::getInstance().Initialize();
 
-  getInstance().is_running_ = true;
+  GAME->is_running_ = true;
 }
 
 void Game::Loop()
 {
-  while (getInstance().is_running_ && !GRAPHIC->IsWindowShouldClose())
+  while (GAME->is_running_ && !GRAPHIC->IsWindowShouldClose())
   {
     /* Update main timer in graphic(main) thread. */
     Timer::Update();
@@ -136,7 +147,7 @@ void Game::Loop()
       EventManager::Flush();
 
       /* Song and movie won't be updated if paused. */
-      if (!Game::IsPaused())
+      if (!GAME->IsPaused())
       {
         SongPlayer::getInstance().Update(delta);
         ResourceManager::Update(delta);
@@ -179,22 +190,64 @@ void Game::Cleanup()
   Setting::Cleanup();
   ResourceManager::Cleanup();
   Logger::getInstance().FinishLogging();
+
+  GAME->DestroyHandler();
+  delete GAME;
+  GAME = nullptr;
 }
 
 /* @warn this method does not exits game instantly;
  * exit after current game loop. */
 void Game::Exit()
 {
-  getInstance().is_running_ = false;
+  GAME->is_running_ = false;
   GRAPHIC->SignalWindowClose();
 }
 
-/* macro to deal with save/load properties */
-/* (var_name, xml_attr_name, type, default value) */
-#define XML_SETTINGS \
-  XMLATTR(width_, "width", uint16_t) \
-  XMLATTR(height_, "height", uint16_t) \
-  XMLATTR(do_logging_, "logging", bool)
+void Game::InitializeHandler()
+{
+#ifdef USE_GLFW
+#endif
+}
+
+void Game::DestroyHandler()
+{
+#ifdef USE_GLFW
+  if (handler_)
+  {
+    glfwDestroyWindow((GLFWwindow*)handler_);
+    handler_ = 0;
+  }
+  glfwTerminate();
+#endif
+}
+
+void Game::CenterWindow()
+{
+  GLFWwindow *window = (GLFWwindow*)handler_;
+  int totalMonitor;
+  GLFWmonitor** monitors = glfwGetMonitors(&totalMonitor);
+  GLFWmonitor* monitor;
+  if (!totalMonitor || !monitors) return;
+  monitor = monitors[0];
+
+  const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+  if (!mode)
+    return;
+
+  int monitorX, monitorY;
+  glfwGetMonitorPos(monitor, &monitorX, &monitorY);
+
+  int windowWidth, windowHeight;
+  glfwGetWindowSize(window, &windowWidth, &windowHeight);
+
+  glfwSetWindowPos(window,
+    monitorX + (mode->width - windowWidth) / 2,
+    monitorY + (mode->height - windowHeight) / 2);
+}
+
+void *Game::handler() { return handler_; }
+void Game::set_handler(void *p) { handler_ = p; }
 
 template<typename A>
 A GetValueConverted(const char* v);
@@ -298,12 +351,12 @@ void Game::CriticalMessageBox(const std::string &title, const std::string &text)
 
 void Game::Pause(bool pause)
 {
-  getInstance().is_paused_ = pause;
+  is_paused_ = pause;
 }
 
 bool Game::IsPaused()
 {
-  return getInstance().is_paused_;
+  return is_paused_;
 }
 
 const std::string &Game::get_window_title()

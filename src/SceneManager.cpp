@@ -34,7 +34,7 @@ void SceneManager::Initialize()
   s->LoadScene();
 
   // create starting scene.
-  switch (Game::getInstance().get_boot_mode())
+  switch (GAME->get_boot_mode())
   {
   case GameBootMode::kBootNormal:
   case GameBootMode::kBootArcade:
@@ -96,17 +96,17 @@ void SceneManager::Update()
   // update main scene
   try
   {
-    if (current_scene_ && !Game::IsPaused())
+    if (current_scene_ && !GAME->IsPaused())
       current_scene_->Update(delta);
   }
   catch (const RetryException& e)
   {
     /* TODO: create retryexception dialog */
-    Game::AlertMessageBox(e.exception_name(), e.what());
+    GAME->AlertMessageBox(e.exception_name(), e.what());
   }
   catch (const RuntimeException& e)
   {
-    Game::AlertMessageBox(e.exception_name(), e.what());
+    GAME->AlertMessageBox(e.exception_name(), e.what());
   }
 }
 

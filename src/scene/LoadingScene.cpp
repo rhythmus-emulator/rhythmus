@@ -45,7 +45,7 @@ void LoadingScene::ProcessInputEvent(const InputEvent& e)
 {
   if (e.type() == InputEvents::kOnKeyUp)
   {
-    if (e.KeyCode() == GLFW_KEY_ESCAPE)
+    if (e.KeyCode() == RI_KEY_ESCAPE)
     {
       // cancel all loading thread and exit game instantly
       Game::Exit();

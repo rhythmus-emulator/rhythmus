@@ -34,15 +34,15 @@ void PlayOption::SetDefault(int gamemode)
   memset(keysetting_.keycode_per_track_, 0, sizeof(KeySetting));
 
   // TODO: provide different properties for each game mode.
-  keysetting_.keycode_per_track_[0][0] = GLFW_KEY_A;
-  keysetting_.keycode_per_track_[1][0] = GLFW_KEY_S;
-  keysetting_.keycode_per_track_[2][0] = GLFW_KEY_D;
-  keysetting_.keycode_per_track_[3][0] = GLFW_KEY_SPACE;
-  keysetting_.keycode_per_track_[4][0] = GLFW_KEY_J;
-  keysetting_.keycode_per_track_[5][0] = GLFW_KEY_K;
-  keysetting_.keycode_per_track_[6][0] = GLFW_KEY_L;
-  keysetting_.keycode_per_track_[7][0] = GLFW_KEY_LEFT_SHIFT;
-  keysetting_.keycode_per_track_[7][1] = GLFW_KEY_SEMICOLON;
+  keysetting_.keycode_per_track_[0][0] = RI_KEY_A;
+  keysetting_.keycode_per_track_[1][0] = RI_KEY_S;
+  keysetting_.keycode_per_track_[2][0] = RI_KEY_D;
+  keysetting_.keycode_per_track_[3][0] = RI_KEY_SPACE;
+  keysetting_.keycode_per_track_[4][0] = RI_KEY_J;
+  keysetting_.keycode_per_track_[5][0] = RI_KEY_K;
+  keysetting_.keycode_per_track_[6][0] = RI_KEY_L;
+  keysetting_.keycode_per_track_[7][0] = RI_KEY_LEFT_SHIFT;
+  keysetting_.keycode_per_track_[7][1] = RI_KEY_SEMICOLON;
 }
 
 // ------------------------------- class Player

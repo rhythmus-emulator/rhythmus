@@ -282,7 +282,7 @@ void Scene::ProcessInputEvent(const InputEvent& e)
 {
   if (e.type() == InputEvents::kOnKeyUp)
   {
-    if (e.KeyCode() == GLFW_KEY_ESCAPE)
+    if (e.KeyCode() == RI_KEY_ESCAPE)
     {
       FadeOutScene(false);
     }

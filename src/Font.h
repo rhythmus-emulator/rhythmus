@@ -54,7 +54,7 @@ struct FontAttribute
 
 struct TextVertexInfo
 {
-  GLuint texid;
+  unsigned texid;
   VertexInfo vi[4];
 };
 
@@ -73,7 +73,8 @@ struct FontGlyph
   int adv_x;
 
   /* texture index(glew) and srcx, srcy */
-  int texidx, srcx, srcy;
+  unsigned texidx;
+  int srcx, srcy;
 
   /* texture position in float (for rendering) */
   float sx1, sy1, sx2, sy2;
@@ -92,7 +93,7 @@ public:
   bool IsWritable(int w, int h) const;
   int width() const;
   int height() const;
-  GLuint get_texid() const;
+  unsigned get_texid() const;
   
   int get_error_code() const;
   const char *get_error_msg() const;
@@ -105,7 +106,7 @@ public:
 
 private:
   uint32_t* bitmap_;
-  GLuint texid_;
+  unsigned texid_;
 
   /* width / height of font bitmap cache */
   int width_, height_;
