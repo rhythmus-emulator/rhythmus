@@ -18,6 +18,11 @@ void SceneTask::wait_for(float wait_time)
   wait_time_ = wait_time;
 }
 
+void SceneTask::wait_for(int wait_time)
+{
+  wait_time_ = (float)wait_time;
+}
+
 void SceneTask::wait_cond(std::function<bool()> cond)
 {
   cond_ = std::move(cond);
@@ -233,7 +238,7 @@ void Scene::Load(const MetricGroup& m)
 
 void Scene::FadeOutScene(bool next)
 {
-  float duration = fade_out_time_;
+  float duration = (float)fade_out_time_;
   if (duration <= 0)
   {
     // immediate close scene
@@ -251,7 +256,7 @@ void Scene::FadeOutScene(bool next)
   SceneTask *task = new SceneTask("fadeoutevent", [this, next] {
     this->CloseScene(next);
   });
-  task->wait_for(fade_out_time_);
+  task->wait_for(duration);
   scenetask_.DeleteAll();
   scenetask_.Enqueue(task);
   scenetask_.IsEnqueueable(false);
@@ -259,7 +264,7 @@ void Scene::FadeOutScene(bool next)
 
 void Scene::TriggerFadeIn()
 {
-  float duration = fade_in_time_;
+  float duration = (float)fade_in_time_;
   if (fade_duration_ != 0) return;
   fade_duration_ = duration;
   fade_time_ = 0;
@@ -280,6 +285,8 @@ void Scene::EnableInput(bool enable_input)
 
 void Scene::ProcessInputEvent(const InputEvent& e)
 {
+  float x = (float)e.GetX();
+  float y = (float)e.GetY();
   if (e.type() == InputEvents::kOnKeyUp)
   {
     if (e.KeyCode() == RI_KEY_ESCAPE)
@@ -291,8 +298,6 @@ void Scene::ProcessInputEvent(const InputEvent& e)
   {
     // only single object can be focused.
     // bool is_hovered = false;
-    float x = e.GetX();
-    float y = e.GetY();
     for (auto i = children_.rbegin(); i != children_.rend(); ++i)
     {
       auto *obj = *i;
@@ -312,8 +317,6 @@ void Scene::ProcessInputEvent(const InputEvent& e)
     // only single object can be focused.
     bool entered = false;
     bool is_focused = false;
-    float x = e.GetX();
-    float y = e.GetY();
     for (auto i = children_.rbegin(); i != children_.rend(); ++i)
     {
       auto *obj = *i;
@@ -374,8 +377,8 @@ void Scene::doRenderAfter()
     if (fade_alpha_ > 1)
       fade_alpha_ = 1;
 
-    float w = GRAPHIC->width();
-    float h = GRAPHIC->height();
+    float w = (float)GRAPHIC->width();
+    float h = (float)GRAPHIC->height();
     vi[1].p.x = w;
     vi[2].p.x = w;
     vi[2].p.y = h;

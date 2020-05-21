@@ -26,39 +26,6 @@ enum PlayerTypes
   kPlayerNetwork,
 };
 
-/* @brief Play properties for each gamemode */
-class PlayOption
-{
-#define USER_PROP(type, varname) \
-public: \
-  type get_##varname() const { return varname##_; } \
-  void set_##varname(type v) { varname##_ = v; } \
-private: \
-  type varname##_; \
-
-  USER_PROP(bool, use_lanecover);
-  USER_PROP(bool, use_hidden);
-  USER_PROP(int, speed_type);
-  USER_PROP(int, speed);
-  USER_PROP(int, lanecover);
-  USER_PROP(int, hidden);
-  USER_PROP(int, option_chart);
-  USER_PROP(int, option_chart_dp); /* only for BMS DP */
-  USER_PROP(int, health_type);
-  USER_PROP(int, assist);
-  USER_PROP(int, pacemaker);
-  USER_PROP(std::string, pacemaker_target);
-  USER_PROP(int, class);
-
-#undef USER_PROP
-public:
-  PlayOption();
-  KeySetting &GetKeysetting();
-  void SetDefault(int gamemode);
-private:
-  KeySetting keysetting_;
-};
-
 class Player
 {
 public:
@@ -73,12 +40,13 @@ public:
   void GetReplayList(const std::vector<std::string> &replay_names);
   void SetRunningCombo(int combo);
   int GetRunningCombo() const;
-
-  /* @brief Get Playoption for current gamemode */
-  PlayOption &GetPlayOption();
+  int GetTrackFromKeycode(int keycode) const;
 
   /* @brief set current playdata for saving (not actually saved) */
   void SetCurrentPlay(const PlayRecord &playrecord);
+
+  /* @brief Initialize playrecord with current player option. */
+  void InitPlayRecord(PlayRecord &pr);
 
   /* @brief store given playrecord. */
   void PostPlayRecord(PlayRecord &pr);
@@ -92,7 +60,6 @@ public:
 private:
   std::string player_name_;
   PlayerTypes player_type_;
-  OptionList config_;
   std::string config_name_;
 
   /* context for current play */
@@ -102,9 +69,25 @@ private:
   int running_combo_;
   int course_combo_;
 
-  /* PlayOption for various gamemode & current gamemode. */
-  PlayOption playoptions_[Gamemode::kGamemodeEnd];
-  PlayOption *current_playoption_;
+  /* PlayOption for current gamemode. */
+  struct PlayOption {
+    bool use_lanecover;
+    bool use_hidden;
+    int speed_type;
+    float speed;
+    float lanecover;
+    float hidden;
+    int option_chart;
+    int option_chart_dp; /* only for BMS DP */
+    int health_type;
+    int assist;
+    int pacemaker;
+    std::string pacemaker_target;
+    int pclass;
+
+    PlayOption();
+  } option_;
+  KeySetting keysetting_;
 
   /* PlayRecord of this player. */
   std::vector<PlayRecord> playrecords_;

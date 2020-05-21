@@ -517,7 +517,7 @@ void Image::Commit()
   }
 }
 
-void Image::Update(float delta)
+void Image::Update(double delta)
 {
   /* update movie */
   if (ffmpeg_ctx_)

@@ -100,7 +100,7 @@ void Menu::Load(const MetricGroup &metric)
   display_count_ = metric.get<int>("BarCount");
 
   // Build items (bar item)
-  while (bar_.size() < display_count_ + kScrollPosMaxDiff * 2)
+  while (bar_.size() < (unsigned)display_count_ + kScrollPosMaxDiff * 2)
   {
     auto *item = CreateMenuItem();
     item->set_parent(this);
@@ -153,7 +153,7 @@ MenuData* Menu::GetMenuDataByName(const std::string& name)
 
 void Menu::SelectMenuByName(const std::string& name)
 {
-  for (int i = 0; i < data_.size(); ++i) if (data_[i]->name == name)
+  for (unsigned i = 0; i < data_.size(); ++i) if (data_[i]->name == name)
   {
     SelectMenuByIndex(i);
     return;
@@ -325,18 +325,22 @@ void Menu::UpdateItemPosByExpr()
   for (i = 0; i < display_count; ++i)
   {
     double pos = i - display_count / 2 + scroll_delta_;
-    x = pos_expr_param_.bar_offset_x + pos_expr_param_.curve_size *
-      (1.0 - cos(pos / pos_expr_param_.curve_level));
-    y = pos_expr_param_.bar_center_y +
+    x = static_cast<int>(
+      pos_expr_param_.bar_offset_x + pos_expr_param_.curve_size *
+      (1.0 - cos(pos / pos_expr_param_.curve_level))
+      );
+    y = static_cast<int>(
+      pos_expr_param_.bar_center_y +
       (pos_expr_param_.bar_height + pos_expr_param_.bar_margin) * pos -
-      pos_expr_param_.bar_height * 0.5f;
+      pos_expr_param_.bar_height * 0.5f
+      );
     bar_[i]->SetPos(x, y);
     bar_[i]->SetSize(pos_expr_param_.bar_width, pos_expr_param_.bar_height);
   }
 
   // decide range of object to show
-  int start_idx_show = kScrollPosMaxDiff + floor(scroll_delta_);
-  int end_idx_show = display_count - kScrollPosMaxDiff + ceil(scroll_delta_);
+  int start_idx_show = kScrollPosMaxDiff +  + (int)floor(scroll_delta_);
+  int end_idx_show = display_count - kScrollPosMaxDiff + (int)ceil(scroll_delta_);
   for (i = 0; i < display_count; ++i)
   {
     if (i < start_idx_show || i > end_idx_show)
@@ -348,8 +352,8 @@ void Menu::UpdateItemPosByExpr()
 
 void Menu::UpdateItemPosByFixed()
 {
-  int scroll_offset = floor(scroll_delta_);
-  double ratio = 1.0 - (scroll_delta_ - scroll_offset);
+  int scroll_offset = (int)floor(scroll_delta_);
+  float ratio = 1.0f - (scroll_delta_ - scroll_offset);
   int ii = 0;
   DrawProperty d;
 
@@ -371,7 +375,7 @@ void Menu::UpdateItemPosByFixed()
       obj1->GetCurrentFrame(),
       obj2->GetCurrentFrame(),
       ratio, EaseTypes::kEaseLinear);
-    bar_[ii]->SetPos(d.pos.x, d.pos.y);
+    bar_[ii]->SetPos((int)d.pos.x, (int)d.pos.y);
     bar_[ii]->Show();
   }
 }

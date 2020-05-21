@@ -220,8 +220,8 @@ void SoundDriver::Initialize()
   }
 
   // check maximum audio source size
-  ALCint numstereo;
-  alcGetIntegerv(device, ALC_STEREO_SOURCES, 1, &numstereo);
+  unsigned numstereo;
+  alcGetIntegerv(device, ALC_STEREO_SOURCES, 1, (ALCint*)&numstereo);
   if (source_count_ > numstereo)
     source_count_ = numstereo;
 
@@ -241,13 +241,17 @@ void SoundDriver::Initialize()
       << "Something wrong happened playing audio.. (" << alGetError() << ")" << Logger::endl;
     is_running_ = false;
   }
+
+  Logger::Info("Audio initialized. Device name: %s, Mode: %uBit, %uHz, %uch",
+    device_name_.c_str(),
+    sinfo_.bitsize, sinfo_.rate, sinfo_.channels);
 }
 
 void SoundDriver::Destroy()
 {
   if (device)
   {
-    for (int i = 0; i < source_count_; ++i)
+    for (unsigned i = 0; i < source_count_; ++i)
       alSourceStop(source_id[i]);
 
     is_running_ = false;

@@ -29,7 +29,7 @@ public:
   std::string get_path() const;
   void Load(const std::string& path);
   void Load(const char* p, size_t len, const char *ext_hint_opt);
-  void Update(float delta_ms);
+  void Update(double delta_ms);
   void Unload();
   bool is_loaded() const;
   int get_error_code() const;
@@ -59,7 +59,7 @@ private:
   void *ffmpeg_ctx_;
 
   /* video target time */
-  float video_time_;
+  double video_time_;
 
   /* loop in case of movie */
   bool loop_movie_;

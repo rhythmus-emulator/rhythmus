@@ -364,7 +364,7 @@ void ImageManager::Unload(Image *image)
   DropResource(image);
 }
 
-void ImageManager::Update(float ms)
+void ImageManager::Update(double ms)
 {
   for (auto *e : *this)
   {
@@ -540,11 +540,11 @@ void FontManager::Unload(Font *font)
   DropResource(font);
 }
 
-void FontManager::Update(float ms)
+void FontManager::Update(double ms)
 {
   for (auto *e : *this)
   {
-    ((Font*)e)->Update(ms);
+    ((Font*)e)->Update((float)ms);
   }
 }
 
@@ -586,7 +586,7 @@ void ResourceManager::Cleanup()
   FONTMAN = nullptr;
 }
 
-void ResourceManager::Update(float ms)
+void ResourceManager::Update(double ms)
 {
   IMAGEMAN->Update(ms);
   FONTMAN->Update(ms);

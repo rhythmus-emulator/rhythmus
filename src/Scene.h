@@ -16,6 +16,7 @@ class SceneTask
 public:
   SceneTask(const std::string& name, std::function<void()> func);
   void wait_for(float wait_time);
+  void wait_for(int wait_time);
   void wait_cond(std::function<bool()> cond);
   void run();
   bool update(float delta);

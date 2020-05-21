@@ -11,16 +11,18 @@
 #include <memory.h>
 
 #if USE_GLEW
-# if not USE_GLFW
-#  error GLEW only usable when GLFW is used.
-# endif
-# define GLEW_STATIC
-# include <GL/glew.h>
+  #if USE_GLFW == 0
+    #error GLEW only usable when GLFW is used.
+  #endif
+  #define GLEW_STATIC
+  #include <GL/glew.h>
 #endif
 
 #if USE_GLFW
-# include <GLFW/glfw3.h>
+  #include <GLFW/glfw3.h>
 #endif
+
+#define PERSPECTIVE_ANGLE 30
 
 constexpr int kVertexMaxSize = 1024 * 4;
 
@@ -321,7 +323,7 @@ void Graphic::CameraLoadPerspective(float fOV, float w, float h, float vanishx, 
   else
   {
     fOV = fOV < 0.1f ? 0.1f : (fOV > 179.0f ? 179.0f : fOV);
-    float theta = fOV / 180.f * 3.1417 / 2;
+    float theta = fOV / 180.f * 3.141592f / 2;
     float fDistCamera = std::tan(theta);
     Matrix &m = mat_proj_.back();
 
@@ -371,7 +373,7 @@ void Graphic::BeginFrame()
   if (last_render_time_ != 0)
   {
     frame_delay_weight_avg_ =
-      frame_delay_weight_avg_ * 0.8 + (time - last_render_time_) * 0.2;
+      frame_delay_weight_avg_ * 0.8f + (time - last_render_time_) * 0.2f;
   }
   last_render_time_ = time;
 }
@@ -429,8 +431,8 @@ void GraphicGL::Initialize()
   {
     std::string w, h;
     Split( *PREFERENCE->resolution, 'x', w, h );
-    p.width = width_ = atoi(w.c_str());
-    p.height = height_ = atoi(h.c_str());
+    p.width = atoi(w.c_str());
+    p.height = atoi(h.c_str());
   }
 
   // create GL context
@@ -738,7 +740,7 @@ void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
   VertexInfo vi_tmp[4];
   if (blendmode_ == 0)
   {
-    for (int i = 0; i < count; ++i)
+    for (unsigned i = 0; i < count; ++i)
     {
       vi_tmp[i].c = vi[i].c;
       vi_tmp[i].p = vi[i].p;
@@ -754,12 +756,16 @@ void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
   glBegin(GL_QUADS);
   glTexCoord2d(vi[0].t.x, vi[0].t.y);   // TL
   glVertex3f(vi[0].p.x, vi[0].p.y, vi[0].p.z);
+  glColor4f(vi[0].c.r, vi[0].c.g, vi[0].c.b, vi[0].c.a);
   glTexCoord2d(vi[1].t.x, vi[1].t.y);   // TR
   glVertex3f(vi[1].p.x, vi[1].p.y, vi[1].p.z);
+  glColor4f(vi[1].c.r, vi[1].c.g, vi[1].c.b, vi[1].c.a);
   glTexCoord2d(vi[2].t.x, vi[2].t.y);   // BR
   glVertex3f(vi[2].p.x, vi[2].p.y, vi[2].p.z);
+  glColor4f(vi[2].c.r, vi[2].c.g, vi[2].c.b, vi[2].c.a);
   glTexCoord2d(vi[3].t.x, vi[3].t.y);   // BL
   glVertex3f(vi[3].p.x, vi[3].p.y, vi[3].p.z);
+  glColor4f(vi[3].c.r, vi[3].c.g, vi[3].c.b, vi[3].c.a);
   glEnd();
 }
 
@@ -775,7 +781,8 @@ void GraphicGL::BeginFrame()
   glEnable(GL_BLEND);
 
   // expect to set View / Proj matrix here and consider it as constant.
-  CameraLoadPerspective(30, vp.width, vp.height, vp.width / 2, vp.height / 2);
+  CameraLoadPerspective(PERSPECTIVE_ANGLE,
+    (float)vp.width, (float)vp.height, vp.width / 2.0f, vp.height / 2.0f);
   glMatrixMode(GL_PROJECTION);
   glLoadMatrixf(&GetProjectionMatrix()[0][0]);
 
@@ -784,7 +791,7 @@ void GraphicGL::BeginFrame()
   glLoadMatrixf(&modelView[0][0]);
 
   // set viewport
-  glViewport(0, 0, width_, height_);
+  glViewport(0, 0, vp.width, vp.height);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -975,7 +982,7 @@ void GraphicGLShader::DrawQuads(const VertexInfo *vi, unsigned count)
   VertexInfo vi_tmp[4];
   if (blendmode_ == 0)
   {
-    for (int i = 0; i < count; ++i)
+    for (unsigned i = 0; i < count; ++i)
     {
       vi_tmp[i].c = vi[i].c;
       vi_tmp[i].p = vi[i].p;
@@ -1006,14 +1013,15 @@ void GraphicGLShader::BeginFrame()
   glBindVertexArray(quad_shader_.VAO_id);
 
   // expect to set View / Proj matrix here and consider it as constant.
-  CameraLoadPerspective(30, vp.width, vp.height, vp.width / 2, vp.height / 2);
+  CameraLoadPerspective(PERSPECTIVE_ANGLE,
+    (float)vp.width, (float)vp.height, vp.width / 2.0f, vp.height / 2.0f);
   glUniformMatrix4fv(shader_mat_Projection_, 1, GL_FALSE, &GetProjectionMatrix()[0][0]); // for HLSL
 
   Matrix modelView = GetViewMatrix() * GetWorldMatrix();
   glUniformMatrix4fv(shader_mat_ModelView_, 1, GL_FALSE, &modelView[0][0]);   // for HLSL
 
   // set viewport
-  glViewport(0, 0, width_, height_);
+  glViewport(0, 0, vp.width, vp.height);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }

@@ -197,7 +197,7 @@ void Animation::GetDrawProperty(DrawProperty &out)
     MakeTween(out,
       frames_[current_frame_].draw_prop,
       frames_[current_frame_ + 1].draw_prop,
-      current_frame_time_ / (frames_[current_frame_ + 1].time - frames_[current_frame_].time),
+      (float)(current_frame_time_ / (frames_[current_frame_ + 1].time - frames_[current_frame_].time)),
       frames_[current_frame_].ease_type);
 }
 
@@ -440,7 +440,7 @@ void BaseObject::RunCommand(const std::string &command, const std::string& value
       CommandArgs args(value);
       it->second(this, args, value);
     }
-    catch (std::out_of_range& e)
+    catch (std::out_of_range&)
     {
       std::cerr << "Error: Command parameter is not enough to execute " << command << std::endl;
     }
@@ -918,7 +918,7 @@ bool BaseObject::IsTweening() const
 
 
 // milisecond
-void BaseObject::Update(float delta)
+void BaseObject::Update(double delta)
 {
   // update tweening
   double t = delta;
@@ -1011,7 +1011,7 @@ void BaseObject::FillVertexInfo(VertexInfo *vi)
   vi[3].c = f.color;
 }
 
-void BaseObject::doUpdate(float delta) {}
+void BaseObject::doUpdate(double delta) {}
 void BaseObject::doRender() {}
 void BaseObject::doUpdateAfter() {}
 void BaseObject::doRenderAfter() {}

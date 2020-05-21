@@ -18,7 +18,7 @@ using SongAuto = std::shared_ptr<rparser::Song>;
 struct SongInvalidateData
 {
   std::string songpath;
-  int modified_date;
+  int64_t modified_date;
   int hit_count;
 };
 
@@ -345,7 +345,7 @@ void SongList::LoadInvalidationList()
     }
     SongListData dat;
     dat.songpath = filepath;
-    for (int i = 0; i < song->GetChartCount(); ++i)
+    for (unsigned i = 0; i < song->GetChartCount(); ++i)
     {
       rparser::Chart* c = nullptr;
       if (chartname.empty())
@@ -403,14 +403,14 @@ void SongList::LoadInvalidationList()
         break;
       }
       dat.level = meta.level;
-      dat.judgediff = meta.judgerank;
+      dat.judgediff = meta.difficulty;
       dat.modified_date = 0; // TODO
       dat.notecount = static_cast<int>(c->GetScoreableNoteCount());
       dat.length_ms = static_cast<int>(c->GetSongLastObjectTime() * 1000);
       dat.is_longnote = c->HasLongnote();
       dat.is_backspin = 0; // TODO
-      dat.bpm_max = c->GetTimingSegmentData().GetMaxBpm();
-      dat.bpm_min = c->GetTimingSegmentData().GetMinBpm();
+      dat.bpm_max = (int)c->GetTimingSegmentData().GetMaxBpm();
+      dat.bpm_min = (int)c->GetTimingSegmentData().GetMinBpm();
 
       {
         std::lock_guard<std::mutex> lock(songlist_mutex_);

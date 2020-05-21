@@ -30,7 +30,7 @@ struct FontAttribute
   std::string name;
 
   /* font size in pixel. (set internally) */
-  int height;
+  unsigned height;
 
   /* height of baseline. set internally if zero */
   int baseline_offset;
@@ -64,7 +64,7 @@ struct FontGlyph
   uint32_t codepoint;
 
   /* bitmap spec */
-  int width, height;
+  unsigned width, height;
 
   /* glyph pos relative to baseline */
   int pos_x, pos_y;

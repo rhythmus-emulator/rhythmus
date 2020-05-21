@@ -367,8 +367,9 @@ void Font::LoadFreetypeFont(const std::string &path)
   // Set font baseline
   if (fontattr_.baseline_offset == 0)
   {
-    //fontattr_.baseline_offset = fntsize_pixel;
-    fontattr_.baseline_offset = fntsize_pixel * (1.0f + (float)ftface->descender / ftface->height);
+    fontattr_.baseline_offset = static_cast<int>(
+      fntsize_pixel * (1.0f + (float)ftface->descender / ftface->height)
+      );
   }
 
   // Prepare some basic glyphs at first ...
@@ -480,8 +481,8 @@ void Font::LoadLR2BitmapFont(const std::string &path)
         continue;
 
       /* need to calculate src pos by texture, so need to get texture. */
-      float tex_width = fontbitmap_[g.texidx]->width();
-      float tex_height = fontbitmap_[g.texidx]->height();
+      float tex_width = (float)fontbitmap_[g.texidx]->width();
+      float tex_height = (float)fontbitmap_[g.texidx]->height();
       unsigned texid_real = fontbitmap_[g.texidx]->get_texid();
 
       /* if width / height is zero, indicates invalid glyph (due to image loading failed) */
@@ -599,8 +600,8 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
       // generate foreground bitmap instantly
       // XXX: need texture option
       uint32_t* bitmap = (uint32_t*)malloc(g.width * g.height * sizeof(uint32_t));
-      for (int x = 0; x < g.width; ++x) {
-        for (int y = 0; y < g.height; ++y) {
+      for (unsigned x = 0; x < g.width; ++x) {
+        for (unsigned y = 0; y < g.height; ++y) {
           char a = bglyph->bitmap.buffer[x + y * g.width];
           bitmap[x + y * g.width] = a << 24 | (0x00ffffff & fontattr_.color);
         }
@@ -621,8 +622,8 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
         uint32_t bit_, fgbit_;
         int border_offset_x = g.pos_x - bglyph->left;
         int border_offset_y = bglyph->top - g.pos_y;
-        for (int x = 0; x < bglyph->bitmap.width && x - border_offset_x < g.width; ++x) {
-          for (int y = 0; y < bglyph->bitmap.rows && y - border_offset_y < g.height; ++y) {
+        for (int x = 0; x < (int)bglyph->bitmap.width && x - border_offset_x < (int)g.width; ++x) {
+          for (int y = 0; y < (int)bglyph->bitmap.rows && y - border_offset_y < (int)g.height; ++y) {
             if (x < border_offset_x || y < border_offset_y) continue;
             char a = bglyph->bitmap.buffer[x + y * bglyph->bitmap.width];
             fgbit_ = a << 24 | (0x00ffffff & fontattr_.outline_color);
@@ -667,7 +668,7 @@ void Font::Commit()
 const FontGlyph* Font::GetGlyph(uint32_t chr) const
 {
   // XXX: linear search, but is there other way to search glyphs faster?
-  for (int i = 0; i < glyph_.size(); ++i)
+  for (unsigned i = 0; i < glyph_.size(); ++i)
     if (glyph_[i].codepoint == chr)
       return &glyph_[i];
   return &null_glyph_;

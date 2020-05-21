@@ -53,10 +53,6 @@ std::string ConvertToString(const T& dst);
  * 2.
  * auto &metric_setting = metric.get_group("Setting");
  * metric_setting.get<int>("debug");
- *
- *
- * Metric is read-only object. It is not supposed to be saved.
- * So we don't provide save method.
  */
 class MetricGroup
 {
@@ -73,6 +69,8 @@ public:
   bool LoadFromIni(const std::string &path);
   bool LoadFromLR2Metric(const std::string &path);
   bool LoadFromLR2SoundMetric(const std::string &path);
+
+  bool Save(const std::string &path);
 
   /* set metric from text. e.g. (attr):(value);(attr):(value) ... */
   void SetFromText(const std::string &metric_text);
@@ -405,8 +403,16 @@ private:
 };
 
 /* @brief Input setting for play. */
-struct KeySetting
+class KeySetting
 {
+public:
+  KeySetting();
+  void Default();
+  void Load(const MetricGroup &metric);
+  void Save(MetricGroup &metric);
+  int GetTrackFromKeycode(int keycode) const;
+
+private:
   int keycode_per_track_[kMaxLaneCount][4];
 };
 

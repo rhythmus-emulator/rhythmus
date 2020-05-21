@@ -175,7 +175,10 @@ void NoteLane::doRender()
   /* 3. draw normal note */
   for (auto *n : nctxs_)
   {
-    note_spr_normal_.tap.SetPos(0, (-n->pos_start) * GetCurrentFrame().pos.y);
+    note_spr_normal_.tap.SetPos(
+      0,
+      static_cast<int>((-n->pos_start) * GetCurrentFrame().pos.y)
+      );
     note_spr_normal_.tap.Render();
   }
 

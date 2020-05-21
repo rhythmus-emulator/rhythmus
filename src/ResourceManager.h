@@ -120,7 +120,7 @@ public:
   Image* Load(const std::string &path);
   Image* Load(const char *p, size_t len, const char *name_opt);
   void Unload(Image *image);
-  void Update(float ms);
+  void Update(double ms);
   void set_load_async(bool load_async);
   
 private:
@@ -152,7 +152,7 @@ public:
   Font* Load(const char *p, size_t len, const char *name_opt);
   Font* Load(const MetricGroup &metrics);
   void Unload(Font *font);
-  void Update(float ms);
+  void Update(double ms);
   void set_load_async(bool load_async);
 
 private:
@@ -179,7 +179,7 @@ public:
    * @brief
    * Update status of registered resource.
    */
-  static void Update(float ms);
+  static void Update(double ms);
 
 private:
   ResourceManager() {};

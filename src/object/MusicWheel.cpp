@@ -365,7 +365,7 @@ void MusicWheel::OnSelectChange(const MenuData *data, int direction)
 
 
   // update pos
-  *info_musicwheelpos = data_index_ * 100.0 / (float)size();
+  *info_musicwheelpos = static_cast<float>(data_index_ * 100.0 / size());
 
 
   // send event

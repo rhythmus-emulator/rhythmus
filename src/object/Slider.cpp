@@ -14,12 +14,12 @@ Slider::~Slider() { }
 
 void Slider::SetNumber(int number)
 {
-  value_ = (number / 100.0) * ratio_;
+  value_ = (number / 100.0f) * ratio_;
 }
 
 void Slider::SetNumber(double number)
 {
-  value_ = number * ratio_;
+  value_ = (float)number * ratio_;
 }
 
 void Slider::Refresh()
@@ -65,20 +65,20 @@ void Slider::doUpdate(float delta)
 {
   Sprite::doUpdate(delta);
 
-  int pos_delta = range_ * value_;
+  int pos_delta = (int)(range_ * value_);
   switch (direction_)
   {
   case 0:
-    SetY(GetCurrentFrame().pos.y - pos_delta);
+    SetY((int)GetCurrentFrame().pos.y - pos_delta);
     break;
   case 1:
-    SetX(GetCurrentFrame().pos.x + pos_delta);
+    SetX((int)GetCurrentFrame().pos.x + pos_delta);
     break;
   case 2:
-    SetY(GetCurrentFrame().pos.y + pos_delta);
+    SetY((int)GetCurrentFrame().pos.y + pos_delta);
     break;
   case 3:
-    SetX(GetCurrentFrame().pos.x - pos_delta);
+    SetX((int)GetCurrentFrame().pos.x - pos_delta);
     break;
   }
 }

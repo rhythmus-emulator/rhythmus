@@ -266,8 +266,6 @@ protected:
   unsigned texunit_;
   unsigned tex_id_;
   unsigned def_tex_id_;
-
-  float width_, height_;
   int current_proj_mode_;
 };
 

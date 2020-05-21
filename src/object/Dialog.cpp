@@ -34,8 +34,8 @@ void Dialog::Load(const MetricGroup &metric)
 
   title_.set_name(get_name() + "_title");
   text_.set_name(get_name() + "_text");
-  title_.SetPos(src_rect_[0].z, src_rect_[0].w);
-  text_.SetPos(src_rect_[0].z, src_rect_[0].w + 50);
+  title_.SetPos((int)src_rect_[0].z, (int)src_rect_[0].w);
+  text_.SetPos((int)src_rect_[0].z, (int)src_rect_[0].w + 50);
 
   const MetricGroup *title_m = metric.get_group("title");
   if (title_m) title_.Load(*title_m);

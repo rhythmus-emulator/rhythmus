@@ -246,7 +246,7 @@ public:
   bool IsTweening() const;
   bool IsVisible() const;
 
-  void Update(float delta);
+  void Update(double delta);
   void Render();
 
   bool operator==(const BaseObject& o) {
@@ -303,7 +303,7 @@ protected:
   std::string debug_;
 
   void FillVertexInfo(VertexInfo *vi);
-  virtual void doUpdate(float delta);
+  virtual void doUpdate(double delta);
   virtual void doRender();
   virtual void doUpdateAfter();
   virtual void doRenderAfter();

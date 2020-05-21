@@ -9,7 +9,6 @@ namespace rhythmus
 
 class InputEvent;
 class Player;
-class KeySetting;
 
 enum ReplayEventTypes
 {
@@ -236,7 +235,6 @@ public:
 
 private:
   Player *player_;
-  KeySetting *keysetting_;
   rparser::TimingSegmentData *timing_seg_data_;
   rparser::MetaData *metadata_;
   unsigned session_;

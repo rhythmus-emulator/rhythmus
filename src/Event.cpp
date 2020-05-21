@@ -106,7 +106,7 @@ void on_cursormove(GLFWwindow *w, double xpos, double ypos)
   InputEvent msg(InputEvents::kOnCursorMove);
   cursor_x = xpos * GRAPHIC->width() / (float)window_x;
   cursor_y = ypos * GRAPHIC->height() / (float)window_y;
-  msg.SetPosition(cursor_x, cursor_y);
+  msg.SetPosition((int)(cursor_x + 0.5), (int)(cursor_y + 0.5));
   {
     std::lock_guard<std::mutex> lock(input_evt_lock);
     input_evt_messages_.push_back(msg);
@@ -118,7 +118,7 @@ void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
   InputEvent msg(
     action == GLFW_PRESS ? InputEvents::kOnCursorDown : InputEvents::kOnCursorClick
   );
-  msg.SetPosition(cursor_x, cursor_y);
+  msg.SetPosition((int)(cursor_x + 0.5), (int)(cursor_y + 0.5));
 
   {
     std::lock_guard<std::mutex> lock(input_evt_lock);

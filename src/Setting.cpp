@@ -96,7 +96,7 @@ bool MetricGroup::LoadFromXml(const std::string &path)
     while (attr)
     {
       const char* v = attr->Value();
-      R_ASSERT(v, "No value given on xml attribute.");
+      R_ASSERT_M(v, "No value given on xml attribute.");
       metric.set(attr->Name(), attr->Value());
       attr = attr->Next();
     }
@@ -545,6 +545,45 @@ bool MetricGroup::LoadFromLR2SoundMetric(const std::string &path)
 #else
   return false;
 #endif
+}
+
+bool MetricGroup::Save(const std::string &path)
+{
+  // @warn  always saved as xml.
+  if (path.empty()) return false;
+  tinyxml2::XMLDocument doc;
+  XMLElement *root = doc.NewElement(kDefaultRootTagName);
+  doc.InsertFirstChild(root);
+
+  std::vector<MetricGroup *> m_stack;
+  std::vector<XMLElement *> node_stack;
+  m_stack.push_back(this);
+  node_stack.push_back(root);
+
+  while (!m_stack.empty())
+  {
+    MetricGroup *m = m_stack.back();
+    XMLElement *n = node_stack.back();
+    if (m->name().empty()) continue;
+    m_stack.pop_back();
+    node_stack.pop_back();
+
+    XMLElement *currnode = doc.NewElement(m->name().c_str());
+    n->InsertEndChild(currnode);
+
+    // write attributes to new node
+    for (auto i : attr_)
+      currnode->SetAttribute(i.first.c_str(), i.second.c_str());
+
+    // push children nodes to stack
+    for (auto &c : m->children_)
+    {
+      m_stack.push_back(&c);
+      node_stack.push_back(currnode);
+    }
+  }
+
+  return true;
 }
 
 bool MetricGroup::exist(const std::string &key) const
@@ -1101,7 +1140,7 @@ void OptionList::AddOptionFromMetric(MetricGroup *metric)
   if (metric->exist("Option"))
   {
     auto count = metric->get<size_t>("Option");
-    for (auto i = 0; i < count; ++i)
+    for (unsigned i = 0; i < count; ++i)
     {
       std::string option_str = metric->get_str("Option" + std::to_string(i+1));
       CommandArgs args(option_str, 2);
@@ -1456,6 +1495,57 @@ SystemPreference::SystemPreference() :
 
 SystemPreference::~SystemPreference()
 {
+}
+
+// ------------------------------------------------------------------ KeyConfig
+
+KeySetting::KeySetting() { Default(); }
+
+void KeySetting::Default()
+{
+  memset(keycode_per_track_, 0, sizeof(keycode_per_track_));
+  keycode_per_track_[0][0] = RI_KEY_LEFT_SHIFT;
+  keycode_per_track_[1][0] = RI_KEY_Z;
+  keycode_per_track_[2][0] = RI_KEY_S;
+  keycode_per_track_[3][0] = RI_KEY_X;
+  keycode_per_track_[4][0] = RI_KEY_D;
+  keycode_per_track_[5][0] = RI_KEY_C;
+  keycode_per_track_[6][0] = RI_KEY_F;
+  keycode_per_track_[7][0] = RI_KEY_V;
+  keycode_per_track_[8][0] = RI_KEY_M;
+  keycode_per_track_[9][0] = RI_KEY_K;
+  keycode_per_track_[10][0] = RI_KEY_COMMA;
+  keycode_per_track_[11][0] = RI_KEY_L;
+  keycode_per_track_[12][0] = RI_KEY_PERIOD;
+  keycode_per_track_[13][0] = RI_KEY_SEMICOLON;
+  keycode_per_track_[14][0] = RI_KEY_SLASH;
+  keycode_per_track_[15][0] = RI_KEY_RIGHT_SHIFT;
+
+  // TODO: gamepad
+  // TODO: midi
+}
+
+void KeySetting::Load(const MetricGroup &metric)
+{
+  for (unsigned i = 0; i < kMaxLaneCount; ++i)
+    for (unsigned j = 0; j < 4; ++j)
+      metric.get_safe(format_string("Key%02u%02u", i, j), keycode_per_track_[i][j]);
+}
+
+void KeySetting::Save(MetricGroup &metric)
+{
+  for (unsigned i = 0; i < kMaxLaneCount; ++i)
+    for (unsigned j = 0; j < 4; ++j)
+      metric.set(format_string("Key%02u%02u", i, j), keycode_per_track_[i][j]);
+}
+
+int KeySetting::GetTrackFromKeycode(int keycode) const
+{
+  if (keycode == 0) return -1;
+  for (unsigned i = 0; i < kMaxLaneCount; ++i)
+    for (unsigned j = 0; j < 4; ++j)
+      if (keycode_per_track_[i][j] == keycode) return i;
+  return -1;
 }
 
 MetricGroup *METRIC = nullptr;

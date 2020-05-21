@@ -21,7 +21,7 @@ int PlayRecord::exscore() const
 // -------------------------- class PlaySession
 
 PlaySession::PlaySession(unsigned session, Player *player, rparser::Chart &c)
-  : player_(player), keysetting_(nullptr), timing_seg_data_(nullptr), metadata_(nullptr),
+  : player_(player), timing_seg_data_(nullptr), metadata_(nullptr),
     session_(session), songtime_(0), measure_(0), beat_(0), track_count_(0),
     is_alive_(0), health_(0.), combo_(0), running_combo_(0), passed_note_(0),
     last_judge_type_(JudgeTypes::kJudgeNone), is_autoplay_(true), is_play_bgm_(true)
@@ -136,24 +136,9 @@ void PlaySession::LoadFromChart(rparser::Chart &c)
 void PlaySession::LoadFromPlayer(Player &player)
 {
   // Set PlayRecord / Replay context
-  auto &poption = player.GetPlayOption();
-  memset(&playrecord_, 0, sizeof(playrecord_));
-  playrecord_.timestamp = 0;  // TODO: get system timestamp from Util
-  playrecord_.seed = 0;   // TODO
-  playrecord_.speed = poption.get_speed();
-  playrecord_.speed_type = poption.get_speed_type();
-  playrecord_.health_type = poption.get_health_type();
-  playrecord_.score = 0;
-  playrecord_.total_note = 0; // TODO: use song class?
-  playrecord_.option = poption.get_option_chart();
-  playrecord_.option_dp = poption.get_option_chart_dp();
-  playrecord_.assist = poption.get_assist();
-  running_combo_ = 0; /* TODO: in case of courseplay? */
+  player.InitPlayRecord(playrecord_);
 
-  /* keysetting */
-  keysetting_ = &poption.GetKeysetting();
-
-  /* Check play record saving allowed, e.g. assist option */
+  // Check play record saving allowed, e.g. assist option
   bool check = (playrecord_.assist == 0);
 }
 
@@ -235,24 +220,11 @@ bool PlaySession::is_finished() const
 
 void PlaySession::ProcessInputEvent(const InputEvent& e)
 {
-  if (is_autoplay_ || !keysetting_)
+  if (is_autoplay_ || !player_)
     return;
 
   // get track from keycode setting
-  int track_no = -1;
-  for (size_t i = 0; i < kMaxLaneCount; ++i)
-  {
-    for (size_t j = 0; j < 4; ++j)
-    {
-      if (keysetting_->keycode_per_track_[i][j] == 0)
-        break;
-      if (keysetting_->keycode_per_track_[i][j] == e.KeyCode())
-      {
-        track_no = i;
-        break;
-      }
-    }
-  }
+  int track_no = player_->GetTrackFromKeycode(e.KeyCode());
 
   if (track_no == -1)
     return;
