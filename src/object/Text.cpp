@@ -30,8 +30,10 @@ Text::~Text()
 
 void Text::Load(const MetricGroup &m)
 {
-  if (m.exist("font"))
-    SetFont(m.get_str("font"));
+  BaseObject::Load(m);
+
+  if (m.exist("path"))
+    SetFont(m);
   if (m.exist("text"))
     SetText(m.get_str("text"));
   if (m.exist("align"))
@@ -249,17 +251,20 @@ void Text::doRender()
   GRAPHIC->Translate(move);
   GRAPHIC->SetBlendMode(blending_);
 
-  // Draw vertex by given quad
+  // Draw vertex by given quad.
   // TODO: alpha?
   float alpha = GetCurrentFrame().color.a;
   for (auto i = tvi_start; i < tvi_end; ++i)
   {
     auto &tvi = text_render_ctx_.textvertex[i];
-    GRAPHIC->SetTexture(0, tvi.texid);
     tvi.vi[0].c.a = alpha;
     tvi.vi[1].c.a = alpha;
     tvi.vi[2].c.a = alpha;
     tvi.vi[3].c.a = alpha;
+    GRAPHIC->SetTexture(0, tvi.texid);
+    // TODO:
+    // need optimizing -- Texture state is always changing, bad performance.
+    // Maybe need to check texture id, and flush at once if same texture.
     GRAPHIC->DrawQuad(tvi.vi);
   }
 

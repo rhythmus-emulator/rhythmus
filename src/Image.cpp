@@ -349,7 +349,8 @@ bool IsMovieFile(const std::string& path)
 Image::Image()
   : bitmap_ctx_(0), data_ptr_(nullptr), width_(0), height_(0),
     textureID_(0), error_code_(0), error_msg_(nullptr),
-    ffmpeg_ctx_(0), video_time_(.0f), loop_movie_(true)
+    ffmpeg_ctx_(0), video_time_(.0f), loop_movie_(true),
+    is_invalid_(true)
 {
 }
 
@@ -520,6 +521,13 @@ void Image::Commit()
 
 void Image::Update(double delta)
 {
+  /* upload texture first. */
+  if (data_ptr_ && is_invalid_)
+  {
+    Commit();
+    is_invalid_ = false;
+  }
+
   /* update movie */
   if (ffmpeg_ctx_)
   {
@@ -575,10 +583,6 @@ void Image::Update(double delta)
       av_frame_free(&frame_conv);
     }
   }
-
-  /* upload texture (if static image) */
-  if (!ffmpeg_ctx_ && data_ptr_)
-    Commit();
 }
 
 void Image::Unload()
@@ -638,6 +642,11 @@ void Image::RestartMovie()
 {
   if (ffmpeg_ctx_)
     static_cast<FFmpegContext*>(ffmpeg_ctx_)->Rewind();
+}
+
+void Image::Invalidate()
+{
+  is_invalid_ = true;
 }
 
 unsigned Image::get_texture_ID() const

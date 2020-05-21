@@ -695,6 +695,14 @@ bool MetricGroup::get_safe(const std::string &key, int &v) const
   return it != attr_.end();
 }
 
+bool MetricGroup::get_safe(const std::string &key, unsigned &v) const
+{
+  auto it = attr_.find(key);
+  if (it != attr_.end())
+    v = (unsigned)atoi(it->second.c_str());
+  return it != attr_.end();
+}
+
 bool MetricGroup::get_safe(const std::string &key, double &v) const
 {
   auto it = attr_.find(key);

@@ -251,6 +251,7 @@ BaseObject::BaseObject()
   SetRGB(1.0f, 1.0f, 1.0f);
   SetAlpha(1.0f);
   SetScale(1.0f, 1.0f);
+  SetCenter(0.5f, 0.5f);
   memset(visible_flag_, 0, sizeof(visible_flag_));
 }
 
@@ -946,19 +947,21 @@ void BaseObject::Render()
   float h = frame_.pos.w - frame_.pos.y;
 
   // set matrix
+  // remind vertex's center coord is (0,0).
+  // (see BaseObject::FillVertexInfo(...) for more detail)
   GRAPHIC->PushMatrix();
   GRAPHIC->Translate(Vector3{
     frame_.pos.x + w * frame_.align.x,
     frame_.pos.y + h * frame_.align.y,
     0 });
-  if (frame_.rotate.x != 0 && frame_.rotate.y != 0 && frame_.rotate.z != 0)
+  if (frame_.rotate.x != 0 || frame_.rotate.y != 0 || frame_.rotate.z != 0)
     GRAPHIC->Rotate(frame_.rotate);
   GRAPHIC->Scale(Vector3{ frame_.scale.x, frame_.scale.y, 1.0f });
   if (frame_.align.x != 0.5f || frame_.align.y != 0.5f)
   {
     GRAPHIC->Translate(Vector3{
-      -frame_.align.x * w,
-      -frame_.align.y * h,
+      (frame_.align.x - 0.5f) * w,
+      (frame_.align.y - 0.5f) * h,
       0 });
   }
   // TODO: texture translate
@@ -998,16 +1001,22 @@ void BaseObject::FillVertexInfo(VertexInfo *vi)
 {
   const DrawProperty &f = GetCurrentFrame();
 
-  vi[0].p = Vector3{ f.pos.x, f.pos.y, 0 };
+  // we use center of vertex as base coord.
+  // remind final drawing position will be determined by world matrix.
+
+  float w = f.pos.z - f.pos.x;
+  float h = f.pos.w - f.pos.y;
+
+  vi[0].p = Vector3{ -w / 2, -h / 2, 0 };
   vi[0].c = f.color;
 
-  vi[1].p = Vector3{ f.pos.z, f.pos.y, 0 };
+  vi[1].p = Vector3{ w / 2, -h / 2, 0 };
   vi[1].c = f.color;
 
-  vi[2].p = Vector3{ f.pos.z, f.pos.w, 0 };
+  vi[2].p = Vector3{ w / 2, h / 2, 0 };
   vi[2].c = f.color;
 
-  vi[3].p = Vector3{ f.pos.x, f.pos.w, 0 };
+  vi[3].p = Vector3{ -w / 2, h / 2, 0 };
   vi[3].c = f.color;
 }
 
@@ -1085,6 +1094,9 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     static auto fn_repeat = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetRepeat(true);
     };
+    static auto fn_rotate = [](void *o, CommandArgs& args, const std::string &) {
+      static_cast<BaseObject*>(o)->SetRotationAsDegree(0.0f, 0.0f, args.Get<float>(0));
+    };
     static auto fn_SetLR2DST = [](void *o, CommandArgs& args, const std::string &v) {
       auto *b = static_cast<BaseObject*>(o);
       ((BaseObject*)o)->SetLR2DST(v);
@@ -1128,6 +1140,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     cmdfnmap_["stop"] = fn_stop;
     cmdfnmap_["loop"] = fn_loop;
     cmdfnmap_["repeat"] = fn_repeat;
+    cmdfnmap_["rotate"] = fn_rotate;
     cmdfnmap_["pos"] = fn_Pos;
     cmdfnmap_["lr2cmd"] = fn_SetLR2DST;
     cmdfnmap_["show"] = fn_Show;

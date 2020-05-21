@@ -40,6 +40,7 @@ public:
   const uint8_t *get_ptr() const;
   void SetLoopMovie(bool loop = true);
   void RestartMovie();
+  void Invalidate();
 
 private:
   std::string path_;
@@ -63,6 +64,9 @@ private:
 
   /* loop in case of movie */
   bool loop_movie_;
+
+  /* is invalid? (should be committed?) */
+  bool is_invalid_;
 
   void Commit();
   void UnloadTexture();

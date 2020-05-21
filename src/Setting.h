@@ -92,6 +92,7 @@ public:
 
   bool get_safe(const std::string &key, std::string &v) const;
   bool get_safe(const std::string &key, int &v) const;
+  bool get_safe(const std::string &key, unsigned &v) const;
   bool get_safe(const std::string &key, double &v) const;
   bool get_safe(const std::string &key, float &v) const;
   bool get_safe(const std::string &key, bool &v) const;

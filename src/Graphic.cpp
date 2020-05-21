@@ -201,7 +201,8 @@ void Graphic::Translate(float x, float y, float z)
 
 void Graphic::Translate(const Vector3 &v)
 {
-  glm::translate(mat_world_.back(), v);
+  Matrix &m = mat_world_.back();
+  m = glm::translate(m, v);
 }
 
 void Graphic::TranslateLocal(float x, float y, float z)
@@ -222,7 +223,8 @@ void Graphic::Scale(float x, float y, float z)
 
 void Graphic::Scale(const Vector3 &v)
 {
-  glm::scale(mat_world_.back(), v);
+  Matrix &m = mat_world_.back();
+  m = glm::scale(m, v);
 }
 
 void Graphic::Rotate(float x, float y, float z)
@@ -232,7 +234,8 @@ void Graphic::Rotate(float x, float y, float z)
 
 void Graphic::Rotate(const Vector3 &v)
 {
-  glm::rotate(mat_world_.back(), 1.0f, v);
+  Matrix &m = mat_world_.back();
+  m = glm::rotate(m, glm::length(v), v);
 }
 
 void Graphic::RotateLocal(float x, float y, float z)
@@ -243,7 +246,7 @@ void Graphic::RotateLocal(float x, float y, float z)
 void Graphic::RotateLocal(const Vector3 &v)
 {
   Matrix &m = mat_world_.back();
-  m = glm::rotate(Matrix(1.0f), 1.0f, v) * m;
+  m = glm::rotate(Matrix(1.0f), glm::length(v), v) * m;
 }
 
 void Graphic::MultiplyMatrix(const Matrix& mat)
@@ -392,7 +395,7 @@ bool Graphic::IsWindowShouldClose() const
   return !is_game_running_;
 }
 
-const char* Graphic::name() { return "Basic"; }
+const char* Graphic::name() { return "Base"; }
 
 #if USE_GLEW == 1
 // ------------------------------------------------------------ class GraphicGL
@@ -751,6 +754,10 @@ void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
   }
 
   // set model matrix
+  Matrix modelView = GetViewMatrix() * GetWorldMatrix();
+  glMatrixMode(GL_MODELVIEW);
+  glLoadMatrixf(&modelView[0][0]);
+
   // TODO: set texture matrix
 
   glBegin(GL_QUADS);
@@ -785,10 +792,6 @@ void GraphicGL::BeginFrame()
     (float)vp.width, (float)vp.height, vp.width / 2.0f, vp.height / 2.0f);
   glMatrixMode(GL_PROJECTION);
   glLoadMatrixf(&GetProjectionMatrix()[0][0]);
-
-  Matrix modelView = GetViewMatrix() * GetWorldMatrix();
-  glMatrixMode(GL_MODELVIEW);
-  glLoadMatrixf(&modelView[0][0]);
 
   // set viewport
   glViewport(0, 0, vp.width, vp.height);
@@ -1012,6 +1015,9 @@ void GraphicGLShader::DrawQuads(const VertexInfo *vi, unsigned count)
   }
 
   // set model matrix
+  Matrix modelView = GetViewMatrix() * GetWorldMatrix();
+  glUniformMatrix4fv(shader_mat_ModelView_, 1, GL_FALSE, &modelView[0][0]);
+
   // TODO: set texture matrix
 
   glBindBuffer(GL_ARRAY_BUFFER, quad_shader_.buffer_id);
@@ -1034,10 +1040,7 @@ void GraphicGLShader::BeginFrame()
   // expect to set View / Proj matrix here and consider it as constant.
   CameraLoadPerspective(PERSPECTIVE_ANGLE,
     (float)vp.width, (float)vp.height, vp.width / 2.0f, vp.height / 2.0f);
-  glUniformMatrix4fv(shader_mat_Projection_, 1, GL_FALSE, &GetProjectionMatrix()[0][0]); // for HLSL
-
-  Matrix modelView = GetViewMatrix() * GetWorldMatrix();
-  glUniformMatrix4fv(shader_mat_ModelView_, 1, GL_FALSE, &modelView[0][0]);   // for HLSL
+  glUniformMatrix4fv(shader_mat_Projection_, 1, GL_FALSE, &GetProjectionMatrix()[0][0]);
 
   // set viewport
   glViewport(0, 0, vp.width, vp.height);
