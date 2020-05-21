@@ -2,6 +2,7 @@
 #include "SongPlayer.h"
 #include "Player.h"
 #include "Event.h"
+#include <algorithm>
 
 namespace rhythmus
 {

@@ -37,7 +37,7 @@ public:
   unsigned get_texture_ID() const;
   uint16_t get_width() const;
   uint16_t get_height() const;
-  const uint8_t *Image::get_ptr() const;
+  const uint8_t *get_ptr() const;
   void SetLoopMovie(bool loop = true);
   void RestartMovie();
 
