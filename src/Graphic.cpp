@@ -935,6 +935,16 @@ bool GraphicGLShader::CompileDefaultShader()
   memset(&quad_shader_, 0, sizeof(ShaderInfo));
 
   quad_shader_.vertex_shader =
+#if USE_GLEW_ES
+    "#version 300 es\n"
+    "in mediump vec3 positionAttribute;"
+    "in mediump vec4 colorAttribute;"
+    "in mediump vec2 texCoordinate;"
+    "out mediump vec4 passColor;"
+    "out mediump vec2 passTextureCoord;"
+    "uniform mat4 projection;"
+    "uniform mat4 modelview;"
+#else
     "#version 330 core\n"
     "in vec3 positionAttribute;"
     "in vec4 colorAttribute;"
@@ -943,6 +953,7 @@ bool GraphicGLShader::CompileDefaultShader()
     "out vec2 passTextureCoord;"
     "uniform mat4 projection;"
     "uniform mat4 modelview;"
+#endif
     ""
     "void main()"
     "{"
@@ -952,11 +963,19 @@ bool GraphicGLShader::CompileDefaultShader()
     "}";
 
   quad_shader_.frag_shader =
+#if USE_GLEW_ES
+    "#version 300 es\n"
+    "in mediump vec4 passColor;"
+    "in mediump vec2 passTextureCoord;"
+    "uniform sampler2D tex;"
+    "out mediump vec4 fragmentColor;"
+#else
     "#version 330 core\n"
     "in vec4 passColor;"
     "in vec2 passTextureCoord;"
     "uniform sampler2D tex;"
     "out vec4 fragmentColor;"
+#endif
     "void main()"
     "{"
     "fragmentColor = texture(tex, passTextureCoord) * passColor;"

@@ -15,7 +15,7 @@ namespace rhythmus
 constexpr const char* kSettingPath = "config/system.xml";
 constexpr const char* kDefaultRootTagName = "setting";
 
-#ifdef USE_LR2_FEATURE == 1
+#if USE_LR2_FEATURE
 constexpr const char* kLR2SubstitutePath = "LR2files/Theme";
 constexpr const char* kSubstitutePath = "themes";
 #endif

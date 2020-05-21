@@ -218,7 +218,7 @@ void Scene::Load(const MetricGroup& m)
 
   // Create objects.
   SetOwnChildren(true);
-  for (auto &c = m.group_cbegin(); c != m.group_cend(); ++c)
+  for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
   {
     BaseObject *o = CreateObject(*c);
     if (o)
