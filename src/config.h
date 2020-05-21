@@ -6,6 +6,7 @@
 // core graphic engine
 // @warn  GLEW is only usable by enabling GLFW.
 #define USE_GLEW 1
+//#define USE_GLEW_ES 0
 
 // compatibility
 #define USE_LR2_FEATURE 1

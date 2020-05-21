@@ -18,3 +18,4 @@ system/*
 sound/*
 player/*
 *.lnk
+.gdb_history

@@ -5,6 +5,11 @@ if (MSVC)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS /SAFESEH:NO")
 endif (MSVC)
 
+# build configs
+if (DEFINED USE_GLEW_ES)
+  add_definitions(-DUSE_GLEW_ES=${USE_GLEW_ES})
+endif()
+
 set (RHYTHMUS_SOURCES
   ResourceManager.cpp
   Image.cpp

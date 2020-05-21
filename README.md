@@ -1,5 +1,5 @@
 # Rhythmus
-A Rhythmgame with general purpose.
+Rhythm-game compatible with major rhythm game format.
 
 ### Under construction
 
@@ -11,3 +11,9 @@ A Rhythmgame with general purpose.
 - Ranking system
 - Multiplay
 - Cross-Platform: Win32 / Linux / Android
+
+### Compiling
+- To compile with ES shader,
+```
+cmake ../ -DUSE_GLEW_ES=1
+```
