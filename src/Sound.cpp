@@ -242,9 +242,12 @@ void SoundDriver::Initialize()
     is_running_ = false;
   }
 
-  Logger::Info("Audio initialized. Device name: %s, Mode: %uBit, %uHz, %uch",
+  Logger::Info("Audio initialized. "
+               "Device name: %s, Mode: %uBit, %uHz, %uch. "
+               "Channel %u",
     device_name_.c_str(),
-    sinfo_.bitsize, sinfo_.rate, sinfo_.channels);
+    sinfo_.bitsize, sinfo_.rate, sinfo_.channels,
+    source_count_);
 }
 
 void SoundDriver::Destroy()
