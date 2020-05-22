@@ -638,7 +638,7 @@ void Image::Update(double delta)
       SwsContext* mod_ctx;
       mod_ctx = sws_getContext(
         frame->width, frame->height, (AVPixelFormat)frame->format,
-        width_, height_, AV_PIX_FMT_RGBA,
+        width_, height_, AV_PIX_FMT_BGRA,
         SWS_BICUBIC, 0, 0, 0);
       sws_scale(mod_ctx, frame->data, frame->linesize, 0, frame->height,
         frame_conv->data, frame_conv->linesize);

@@ -196,9 +196,10 @@ Font *Text::font() { return font_; }
 
 void Text::doUpdate(double delta)
 {
-  counter_ = (counter_ + 1) % 60;
+  counter_ = (counter_ + 1) % 30;
   if (counter_ == 0 && !is_texture_loaded_ && font_)
   {
+    text_render_ctx_.textvertex.clear();
     font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
     UpdateTextRenderContext();
   }

@@ -578,7 +578,7 @@ void GraphicGL::UpdateTexture(unsigned tex_id, const uint8_t *p,
   //glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0,
   //  GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)p);
   glTexSubImage2D(GL_TEXTURE_2D, 0, xoffset, yoffset, width, height,
-    GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)p);
+    GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid*)p);
 }
 
 void GraphicGL::DeleteTexture(unsigned tex_id)
@@ -1031,7 +1031,7 @@ void GraphicGLShader::BeginFrame()
   const VideoModeParams &vp = GetVideoMode();
 
   // To calculate FPS
-  Graphic::BeginFrame();
+  GraphicGL::BeginFrame();
 
   // set shader
   glUseProgram(quad_shader_.prog_id);
