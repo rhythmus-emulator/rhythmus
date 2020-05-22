@@ -18,60 +18,67 @@ using namespace std;
 #define DXA_VERSION 1
 //#define DXA_VERSION 2
 
+// ULONG MUST be 4 bytes
+#ifdef WIN32
+#define ULONG unsigned long
+#else
+#define ULONG unsigned int
+#endif
+
 struct DXAHDR {
   unsigned char signature[4]; // "DX\x03\x00"
-  unsigned long toc_length;
-  unsigned long unknown1;
-  unsigned long toc_offset;
-  unsigned long entries_offset;
-  unsigned long directories_offset;
+  ULONG toc_length;
+  ULONG unknown1;
+  ULONG toc_offset;
+  ULONG entries_offset;
+  ULONG directories_offset;
 #if DXA_VERSION >= 2
-  unsigned long unknown2;
+  ULONG unknown2;
 #endif
 };
 
 struct DXADIRENTRY {
-  unsigned long unknown1;
-  unsigned long unknown2;
-  unsigned long entry_count;
-  unsigned long entries_offset;
+  ULONG unknown1;
+  ULONG unknown2;
+  ULONG entry_count;
+  ULONG entries_offset;
 };
 
 struct DXAENTRY {
-  unsigned long filename_offset;
-  unsigned long unknown1;
-  unsigned long unknown2;
-  unsigned long unknown3;
-  unsigned long unknown4;
-  unsigned long unknown5;
-  unsigned long unknown6;
-  unsigned long unknown7;
-  unsigned long offset;
-  unsigned long original_length;
-  unsigned long length;
+  ULONG filename_offset;
+  ULONG unknown1;
+  ULONG unknown2;
+  ULONG unknown3;
+  ULONG unknown4;
+  ULONG unknown5;
+  ULONG unknown6;
+  ULONG unknown7;
+  ULONG offset;
+  ULONG original_length;
+  ULONG length;
 };
 
 #pragma pack(1)
   struct DXACOMPHDR {
-    unsigned long original_length;
-    unsigned long length;
+    ULONG original_length;
+    ULONG length;
     unsigned char escape;
   };
 #pragma pack()  
 
-void unobfuscate(unsigned long  offset, 
+void unobfuscate(ULONG  offset, 
                  unsigned char* buff, 
-                 unsigned long  len,
+                 ULONG  len,
                  char*          seed)
 {
-  static const unsigned long KEY_LEN = 12;
+  static const ULONG KEY_LEN = 12;
 
   unsigned char key[KEY_LEN] = { 0 };
 
   if (seed) {
     unsigned long seed_len = strlen(seed);
 
-    for (unsigned long i = 0; i < KEY_LEN; i++) {
+    for (ULONG i = 0; i < KEY_LEN; i++) {
       key[i] = seed[i % seed_len];
     }
   } else {
@@ -91,15 +98,15 @@ void unobfuscate(unsigned long  offset,
   key[10]  = ((key[10] << 4) | (key[10] >> 4)) ^ 0xD6;
   key[11] ^= 0xCC;
 
-  for (unsigned long i = 0; i < len; i++) {
+  for (ULONG i = 0; i < len; i++) {
     buff[i] ^= key[(offset + i) % KEY_LEN];
   }
 }
 
 void read_unobfuscate(FILE*         fp, 
-                      unsigned long offset, 
+                      ULONG offset, 
                       void*         buff, 
-                      unsigned long len,
+                      ULONG len,
                       char*         seed)
 {
   fseek(fp, offset, SEEK_SET);
@@ -109,9 +116,9 @@ void read_unobfuscate(FILE*         fp,
 }
 
 void uncompress(unsigned char*  buff,
-                unsigned long   len,
+                ULONG   len,
                 unsigned char*& out_buff,
-                unsigned long&  out_len)
+                ULONG&  out_len)
 {
   DXACOMPHDR* hdr = (DXACOMPHDR*) buff;
 
@@ -140,7 +147,7 @@ void uncompress(unsigned char*  buff,
           c--;
         }
 
-        unsigned long n = c >> 3;
+        ULONG n = c >> 3;
 
         if (c & 4) {
           n |= *buff++ << 5;
@@ -148,7 +155,7 @@ void uncompress(unsigned char*  buff,
 
         n += 4;
 
-        unsigned long p = 0;
+        ULONG p = 0;
 
         switch (c & 3) {
         case 0:
@@ -193,7 +200,7 @@ void uncompress(unsigned char*  buff,
 void process_dir(FILE*          fp,
                  DXAHDR&        hdr,
                  unsigned char* toc_buff, 
-                 unsigned long  dir_offset,
+                 ULONG  dir_offset,
                  const string&  prefix,
                  char*          seed)
 {
@@ -201,9 +208,9 @@ void process_dir(FILE*          fp,
   DXADIRENTRY* dir       = (DXADIRENTRY*) (toc_buff + hdr.directories_offset + dir_offset);
   DXAENTRY*    entries   = (DXAENTRY*) (toc_buff + hdr.entries_offset + dir->entries_offset);
 
-  unsigned long base_offset = sizeof(hdr);
+  ULONG base_offset = sizeof(hdr);
 
-  for (unsigned long i = 0; i < dir->entry_count; i++) {
+  for (ULONG i = 0; i < dir->entry_count; i++) {
     // Not really sure what all the crap and duplicate strings are in the filenames
     char* filename = filenames + entries[i].filename_offset + 4;
 
@@ -211,11 +218,11 @@ void process_dir(FILE*          fp,
 
     if (entries[i].original_length) {
       if (entries[i].length != -1) {
-        unsigned long  len  = entries[i].length;
+        ULONG  len  = entries[i].length;
         unsigned char* buff = new unsigned char[len];    
         read_unobfuscate(fp, base_offset + entries[i].offset, buff, len, seed);
 
-        unsigned long  out_len  = 0;
+        ULONG  out_len  = 0;
         unsigned char* out_buff = NULL;
         uncompress(buff, len, out_buff, out_len);
 
@@ -225,7 +232,7 @@ void process_dir(FILE*          fp,
         delete [] out_buff;
         delete [] buff;
       } else {
-        unsigned long  len  = entries[i].original_length;
+        ULONG  len  = entries[i].original_length;
         unsigned char* buff = new unsigned char[len];    
         read_unobfuscate(fp, base_offset + entries[i].offset, buff, len, seed);
 
@@ -266,7 +273,7 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  unsigned long  toc_len  = hdr.toc_length;
+  ULONG  toc_len  = hdr.toc_length;
   unsigned char* toc_buff = new unsigned char[toc_len];
   read_unobfuscate(fp, hdr.toc_offset, toc_buff, toc_len, seed);
 
@@ -282,7 +289,7 @@ void process_dir_vec
                 (FILE*          fp,
                  DXAHDR&        hdr,
                  unsigned char* toc_buff,
-                 unsigned long  dir_offset,
+                 ULONG  dir_offset,
                  const string&  prefix,
                  char*          seed,
                  std::vector<DXAExtractor::DXAFile> &files)
@@ -291,9 +298,9 @@ void process_dir_vec
   DXADIRENTRY* dir = (DXADIRENTRY*)(toc_buff + hdr.directories_offset + dir_offset);
   DXAENTRY*    entries = (DXAENTRY*)(toc_buff + hdr.entries_offset + dir->entries_offset);
 
-  unsigned long base_offset = sizeof(hdr);
+  ULONG base_offset = sizeof(hdr);
 
-  for (unsigned long i = 0; i < dir->entry_count; i++) {
+  for (ULONG i = 0; i < dir->entry_count; i++) {
     // Not really sure what all the crap and duplicate strings are in the filenames
     char* filename = filenames + entries[i].filename_offset + 4;
 
@@ -302,11 +309,11 @@ void process_dir_vec
 
     if (entries[i].original_length) {
       if (entries[i].length != -1) {
-        unsigned long  len = entries[i].length;
+        ULONG  len = entries[i].length;
         unsigned char* buff = new unsigned char[len];
         read_unobfuscate(fp, base_offset + entries[i].offset, buff, len, seed);
 
-        unsigned long  out_len = 0;
+        ULONG  out_len = 0;
         unsigned char* out_buff = NULL;
         uncompress(buff, len, out_buff, out_len);
 
@@ -320,7 +327,7 @@ void process_dir_vec
         delete[] buff;
       }
       else {
-        unsigned long  len = entries[i].original_length;
+        ULONG  len = entries[i].original_length;
         unsigned char* buff = new unsigned char[len];
         read_unobfuscate(fp, base_offset + entries[i].offset, buff, len, seed);
 
@@ -372,7 +379,7 @@ bool DXAExtractor::Open(const char* path)
     return false;
   }
 
-  unsigned long  toc_len = hdr.toc_length;
+  ULONG  toc_len = hdr.toc_length;
   unsigned char* toc_buff = new unsigned char[toc_len];
   read_unobfuscate(fp, hdr.toc_offset, toc_buff, toc_len, seed);
 

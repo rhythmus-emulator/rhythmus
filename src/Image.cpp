@@ -93,15 +93,13 @@ FFmpegContext::FFmpegContext()
     width_(0), height_(0)
 {
   /* ffmpeg initialization */
-#if FFMPEG_NOT_USE_DEPRECIATED
   static bool is_ffmpeg_initialized_ = false;
   if (!is_ffmpeg_initialized_)
   {
     avcodec_register_all();
-    av_register_all();
+    //av_register_all();
     is_ffmpeg_initialized_ = true;
   }
-#endif
 }
 
 FFmpegContext::~FFmpegContext()
@@ -165,8 +163,10 @@ bool FFmpegContext::Open(const std::string& path)
   video_stream_idx = av_find_best_stream(formatctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
 
   stream = formatctx->streams[video_stream_idx];
-  codec = avcodec_find_decoder(
-    formatctx->streams[video_stream_idx]->codecpar->codec_id);
+  if (stream->codecpar)
+    codec = avcodec_find_decoder(stream->codecpar->codec_id);
+  else
+    codec = nullptr;
   if (!codec)
   {
     error_msg_ = "Movie stream codec failed.";
@@ -187,8 +187,7 @@ bool FFmpegContext::Open(const std::string& path)
   }
 
   context = avcodec_alloc_context3(codec);
-  avcodec_parameters_to_context(context,
-    formatctx->streams[video_stream_idx]->codecpar);
+  avcodec_parameters_to_context(context, stream->codecpar);
   int codec_open_code = avcodec_open2(context, codec, NULL);
   if (codec_open_code < 0)
   {
@@ -200,7 +199,7 @@ bool FFmpegContext::Open(const std::string& path)
 
   // fetch width / height / duration of video
 #if FFMPEG_USE_DEPRECIATED
-  AVCodecContext* pCodecCtx = formatctx->streams[video_stream_idx]->codec;
+  AVCodecContext* pCodecCtx = stream->codec;
   width_ = pCodecCtx->width;
   height_ = pCodecCtx->height;
 #else
