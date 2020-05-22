@@ -61,7 +61,7 @@ private:
   void AllocNumberGlyph(size_t cycles);
   void CreateTextVertexFromSprite();
   void CreateTextVertexFromFont();
-  virtual void doUpdate(float);
+  virtual void doUpdate(double);
 
   Sprite numbersprite_;
   NumberFormatter formatter_;

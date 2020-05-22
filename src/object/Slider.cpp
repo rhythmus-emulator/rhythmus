@@ -61,7 +61,7 @@ void Slider::Load(const MetricGroup &metric)
 #endif
 }
 
-void Slider::doUpdate(float delta)
+void Slider::doUpdate(double delta)
 {
   Sprite::doUpdate(delta);
 

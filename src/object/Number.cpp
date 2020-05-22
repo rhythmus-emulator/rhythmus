@@ -205,9 +205,9 @@ NumberFormatter &Number::GetFormatter()
   return formatter_;
 }
 
-void Number::doUpdate(float delta)
+void Number::doUpdate(double delta)
 {
-  if (formatter_.UpdateNumber(delta))
+  if (formatter_.UpdateNumber((float)delta))
     SetText(formatter_.numstr());
   Text::doUpdate(delta);
 }

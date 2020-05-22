@@ -24,7 +24,7 @@ private:
   float value_;
   float *ref_ptr_;
 
-  virtual void doUpdate(float delta);
+  virtual void doUpdate(double delta);
   virtual void doRender();
 };
 

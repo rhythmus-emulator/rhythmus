@@ -23,7 +23,7 @@ private:
   Dialog *alert_dialog_;
   Dialog *log_dialog_;
 
-  virtual void doUpdate(float delta);
+  virtual void doUpdate(double delta);
 };
 
 enum MessageBoxTypes

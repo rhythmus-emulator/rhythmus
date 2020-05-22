@@ -342,7 +342,7 @@ bool Scene::is_input_available() const
   return is_input_available_;
 }
 
-void Scene::doUpdate(float delta)
+void Scene::doUpdate(double delta)
 {
   // scheduled events
   scenetask_.Update(delta);

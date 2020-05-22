@@ -57,7 +57,7 @@ void LoadingScene::ProcessInputEvent(const InputEvent& e)
   }
 }
 
-void LoadingScene::doUpdate(float)
+void LoadingScene::doUpdate(double)
 {
   static bool check_loaded = false;
 

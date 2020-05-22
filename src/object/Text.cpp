@@ -13,7 +13,8 @@ Text::Text()
   : font_(nullptr),
     text_alignment_(TextAlignments::kTextAlignLeft),
     text_fitting_(TextFitting::kTextFitNone), width_multiply_(1.0f),
-    blending_(0), res_id_(nullptr), do_line_breaking_(true)
+    blending_(0), counter_(0), is_texture_loaded_(true),
+    res_id_(nullptr), do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
@@ -125,6 +126,7 @@ void Text::SetText(const std::string& s)
   font_->PrepareText(s);
   font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
   UpdateTextRenderContext();
+
 }
 
 void Text::ClearText()
@@ -139,10 +141,13 @@ void Text::UpdateTextRenderContext()
   text_render_ctx_.width = 0;
   text_render_ctx_.height = 0;
   // XXX: breaking loop if first cycle is over should be better
+  is_texture_loaded_ = true;
   for (const auto& tvi : text_render_ctx_.textvertex)
   {
     text_render_ctx_.width = std::max(text_render_ctx_.width, (float)tvi.vi[2].p.z);
     text_render_ctx_.height = std::max(text_render_ctx_.height, (float)tvi.vi[2].p.z);
+    if (tvi.texid == 0)
+      is_texture_loaded_ = false;
   }
 }
 
@@ -189,8 +194,15 @@ void Text::SetLineBreaking(bool enable_line_break)
 
 Font *Text::font() { return font_; }
 
-void Text::doUpdate(float delta)
+void Text::doUpdate(double delta)
 {
+  counter_ = (counter_ + 1) % 60;
+  if (counter_ == 0 && !is_texture_loaded_ && font_)
+  {
+    font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
+    UpdateTextRenderContext();
+  }
+
   if (text_render_ctx_.duration)
   {
     text_render_ctx_.time += (size_t)delta;

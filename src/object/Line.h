@@ -21,7 +21,6 @@ private:
   } color_;
   float width_;
 
-  virtual void doUpdate(float delta);
   virtual void doRender();
 };
 

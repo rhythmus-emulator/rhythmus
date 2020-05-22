@@ -288,10 +288,10 @@ void Menu::NavigateLeft() {}
 
 void Menu::NavigateRight() {}
 
-void Menu::doUpdate(float delta)
+void Menu::doUpdate(double delta)
 {
   // Update scroll pos
-  scroll_time_remain_ = std::max(.0f, scroll_time_remain_ - delta);
+  scroll_time_remain_ = std::max(.0f, scroll_time_remain_ - (float)delta);
   scroll_delta_ = scroll_delta_init_ * std::pow(scroll_time_remain_ / scroll_time_, 2);
   if (scroll_delta_init_ != 0 && scroll_delta_ == 0)
   {

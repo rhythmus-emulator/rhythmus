@@ -40,8 +40,6 @@ void Line::SetWidth(float width)
   width_ = width;
 }
 
-void Line::doUpdate(float delta) { }
-
 void Line::doRender()
 {
   // XXX: is this even work?

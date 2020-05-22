@@ -72,7 +72,7 @@ protected:
   // texture attribute (TODO)
   float tex_attribute_;
 
-  virtual void doUpdate(float delta);
+  virtual void doUpdate(double);
   virtual void doRender();
 };
 

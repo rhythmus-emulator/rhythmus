@@ -47,7 +47,7 @@ void OverlayScene::ProcessInputEvent(const InputEvent& e)
     alert_dialog_->RunCommandByName("Close");
 }
 
-void OverlayScene::doUpdate(float delta)
+void OverlayScene::doUpdate(double delta)
 {
   Scene::doUpdate(delta);
 

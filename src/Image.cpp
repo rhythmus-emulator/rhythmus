@@ -92,6 +92,7 @@ FFmpegContext::FFmpegContext()
     is_eof_(false), is_eof_packet_(false), is_image_(false),
     width_(0), height_(0)
 {
+#if FFMPEG_USE_DEPRECIATED
   /* ffmpeg initialization */
   static bool is_ffmpeg_initialized_ = false;
   if (!is_ffmpeg_initialized_)
@@ -100,6 +101,7 @@ FFmpegContext::FFmpegContext()
     //av_register_all();
     is_ffmpeg_initialized_ = true;
   }
+#endif
 }
 
 FFmpegContext::~FFmpegContext()
@@ -141,13 +143,14 @@ bool FFmpegContext::Open(const std::string& path)
 {
   // should not open it again ...
   R_ASSERT(formatctx == 0);
+  int ret = 0;
   error_msg_.clear();
   error_code_ = 0;
 
-  if (avformat_open_input(&formatctx, path.c_str(), 0, 0) != 0)
+  if ((ret = avformat_open_input(&formatctx, path.c_str(), 0, 0)) != 0)
   {
     error_msg_ = "Movie file open failed.";
-    error_code_ = -1;
+    error_code_ = ret;
     return false;
   }
 

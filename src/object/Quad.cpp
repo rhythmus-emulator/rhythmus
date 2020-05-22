@@ -39,8 +39,6 @@ void Quad::SetAlpha(const Vector4 &alpha)
   vi_[3].c.a = alpha.w;
 }
 
-void Quad::doUpdate(float delta) { }
-
 void Quad::doRender()
 {
   GRAPHIC->SetTexture(0, 0);

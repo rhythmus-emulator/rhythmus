@@ -58,6 +58,8 @@ struct TextVertexInfo
   VertexInfo vi[4];
 };
 
+class FontBitmap;
+
 struct FontGlyph
 {
   /* codepoint of the glyph */
@@ -72,11 +74,13 @@ struct FontGlyph
   /* advancing pos x for next character (pixel) */
   int adv_x;
 
+  /* font bitmap (for getting texture id) */
+  FontBitmap* fbitmap;
+
   /* texture index(glew) and srcx, srcy */
-  unsigned texidx;
   int srcx, srcy;
 
-  /* texture position in float (for rendering) */
+  /* texture coord in float (for rendering) */
   float sx1, sy1, sx2, sy2;
 };
 
@@ -89,7 +93,7 @@ public:
   FontBitmap(const uint32_t* bitmap, int w, int h);
   ~FontBitmap();
   void Write(uint32_t* bitmap, int w, int h, FontGlyph &glyph_out);
-  void Update();
+  bool Update();
   bool IsWritable(int w, int h) const;
   int width() const;
   int height() const;

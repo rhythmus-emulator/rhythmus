@@ -20,7 +20,7 @@ private:
   Text current_file_text_;
   Sprite loading_bar_;
 
-  virtual void doUpdate(float);
+  virtual void doUpdate(double);
 };
 
 }

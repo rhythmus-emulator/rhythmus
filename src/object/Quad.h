@@ -16,7 +16,6 @@ private:
   VertexInfo vi_[4];
   RectF alpha_;
 
-  virtual void doUpdate(float delta);
   virtual void doRender();
 };
 

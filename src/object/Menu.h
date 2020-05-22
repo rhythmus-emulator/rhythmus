@@ -166,7 +166,7 @@ protected:
   void UpdateItemPos();
   void UpdateItemPosByExpr();
   void UpdateItemPosByFixed();
-  virtual void doUpdate(float delta);
+  virtual void doUpdate(double);
   virtual MenuItem* CreateMenuItem();
 };
 

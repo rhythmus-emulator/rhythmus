@@ -57,6 +57,12 @@ public:
         img_to_load_->Load(p_, len_,
           filename_.empty() ? nullptr : filename_.c_str());
       img_to_load_->set_parent_task(nullptr);
+      if (img_to_load_->get_error_code() != 0)
+      {
+        Logger::Error("Cannot read image %s: %s (%d)",
+            filename_.c_str(), img_to_load_->get_error_msg(),
+            img_to_load_->get_error_code());
+      }
     }
     else if (font_to_load_)
     {

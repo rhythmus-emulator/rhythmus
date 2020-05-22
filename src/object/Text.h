@@ -60,7 +60,7 @@ public:
 protected:
   virtual void SetLR2Alignment(int alignment);
   virtual void doRender();
-  virtual void doUpdate(float);
+  virtual void doUpdate(double);
   void UpdateTextRenderContext();
   TextVertexInfo& AddTextVertex(const TextVertexInfo &tvi);
   void SetTextVertexCycle(size_t cycle, size_t duration);
@@ -100,6 +100,13 @@ private:
   float width_multiply_;
 
   int blending_;
+
+  // is font texture is loaded?
+  // (if not, need to be refreshed few moments.)
+  bool is_texture_loaded_;
+
+  // internal counter for updating Text object intervally.
+  unsigned counter_;
 
   std::string *res_id_;
 

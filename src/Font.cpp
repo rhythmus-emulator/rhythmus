@@ -172,19 +172,17 @@ void FontBitmap::GetGlyphTexturePos(FontGlyph &glyph_out)
   glyph_out.sy2 = (float)(cur_y_ + h) / height_;
 }
 
-void FontBitmap::Update()
+bool FontBitmap::Update()
 {
-  if (committed_ || !bitmap_) return;
+  if (committed_ || !bitmap_) return false;
 
   // commit bitmap
   texid_ = GRAPHIC->CreateTexture((uint8_t*)bitmap_, width_, height_);
   if (texid_ == 0)
   {
     Logger::Error("Font - Allocating texture failed.");
-    return;
+    return false;
   }
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   committed_ = true;
 }
@@ -501,10 +499,11 @@ void Font::LoadLR2BitmapFont(const std::string &path)
     else if (col[0] == "#R")
     {
       /* glyphnum, texid, x, y, width, height */
+      unsigned bitmapidx = atoi(col[2].c_str());
       FontGlyph g;
       g.codepoint = atoi(col[1].c_str());
       g.codepoint = ConvertLR2JIStoUTF16(g.codepoint);
-      g.texidx = atoi(col[2].c_str());
+      g.fbitmap = 0;
       g.srcx = atoi(col[3].c_str());
       g.srcy = atoi(col[4].c_str());
       g.width = atoi(col[5].c_str());
@@ -514,13 +513,13 @@ void Font::LoadLR2BitmapFont(const std::string &path)
       g.pos_y = g.height;
 
       /* in case of unexpected texture */
-      if (g.texidx >= fontbitmap_.size())
+      if (bitmapidx >= fontbitmap_.size())
         continue;
+      g.fbitmap = fontbitmap_[bitmapidx];
 
       /* need to calculate src pos by texture, so need to get texture. */
-      float tex_width = (float)fontbitmap_[g.texidx]->width();
-      float tex_height = (float)fontbitmap_[g.texidx]->height();
-      unsigned texid_real = fontbitmap_[g.texidx]->get_texid();
+      float tex_width = (float)fontbitmap_[bitmapidx]->width();
+      float tex_height = (float)fontbitmap_[bitmapidx]->height();
 
       /* if width / height is zero, indicates invalid glyph (due to image loading failed) */
       if (tex_width == 0 || tex_height == 0)
@@ -530,7 +529,6 @@ void Font::LoadLR2BitmapFont(const std::string &path)
       g.sx2 = (float)(g.srcx + g.width) / tex_width;
       g.sy1 = (float)g.srcy / tex_height;
       g.sy2 = (float)(g.srcy + g.height) / tex_height;
-      g.texidx = texid_real; /* change to real one */
 
       glyph_.push_back(g);
     }
@@ -601,12 +599,19 @@ void Font::PrepareText(const std::string& s)
 {
   uint32_t s32[1024];
   int s32len = 0;
+
+  /* only available when TTF font */
+  if (!ftface_) return;
+
   ConvertStringToCodepoint(s, s32, s32len, 1024);
   PrepareGlyph(s32, s32len);
 }
 
 void Font::PrepareGlyph(uint32_t *chrs, int count)
 {
+  /* only available when TTF font */
+  if (!ftface_) return;
+
   FT_Face ftface = (FT_Face)ftface_;
   FT_Stroker ftStroker = (FT_Stroker)ftstroker_;
   FT_Glyph glyph;
@@ -629,7 +634,8 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
     g.pos_x = bglyph->left;
     g.pos_y = bglyph->top;
     g.adv_x = ftface->glyph->advance.x >> 6;
-    g.srcx = g.srcy = g.texidx = 0;
+    g.srcx = g.srcy = 0;
+    g.fbitmap = 0;
 
     /* generate bitmap only when size is valid */
     if (ftface->glyph->bitmap.width > 0)
@@ -677,10 +683,11 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
       if (g.height > fontattr_.height)
         g.height = fontattr_.height;
 
-      /* upload bitmap to cache */
+      /* upload bitmap */
       auto* cache = GetWritableBitmapCache(g.width, g.height);
+      R_ASSERT(cache);
       cache->Write(bitmap, g.width, g.height, g);
-      g.texidx = cache->get_texid();
+      g.fbitmap = cache;
       free(bitmap);
     }
 
@@ -796,7 +803,10 @@ void Font::GetTextVertexInfo(const std::string& s,
     vi[3].t = Vector2{ g->sx1, g->sy2 };
 
     cur_x += g->adv_x - g->pos_x;
-    tvi.texid = g->texidx;
+    if (g->fbitmap)
+      tvi.texid = g->fbitmap->get_texid();
+    else
+      tvi.texid = 0;
 
     // skip in case of special character
     if (g->codepoint == ' ' || g->codepoint == '\r')

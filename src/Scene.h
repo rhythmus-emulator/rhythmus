@@ -84,7 +84,7 @@ protected:
   // is event triggered at valid time, so it need to be processed?
   // (e.g. input event during scene loading or #IGNOREINPUT --> ignore)
   bool is_input_available() const;
-  virtual void doUpdate(float delta);
+  virtual void doUpdate(double delta);
   virtual void doRenderAfter();
 
   std::string prev_scene_, next_scene_;

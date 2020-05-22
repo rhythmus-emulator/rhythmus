@@ -19,7 +19,7 @@ public:
   virtual void ProcessInputEvent(const InputEvent& e);
 
 private:
-  virtual void doUpdate(float delta);
+  virtual void doUpdate(double delta);
 
   /* task for playscene */
   SceneTaskQueue playscenetask_;

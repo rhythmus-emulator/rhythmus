@@ -139,7 +139,7 @@ void PlayScene::ProcessInputEvent(const InputEvent& e)
   SongPlayer::getInstance().ProcessInputEvent(e);
 }
 
-void PlayScene::doUpdate(float delta)
+void PlayScene::doUpdate(double delta)
 {
   Scene::doUpdate(delta);
   playscenetask_.Update(delta);

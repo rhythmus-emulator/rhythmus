@@ -124,7 +124,7 @@ void Sprite::Refresh()
 }
 
 // milisecond
-void Sprite::doUpdate(float delta)
+void Sprite::doUpdate(double delta)
 {
   // update sprite frame
   if (sprani_.duration > 0)
