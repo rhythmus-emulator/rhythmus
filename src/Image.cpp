@@ -11,7 +11,11 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
+#include <libavutil/imgutils.h>
 }
+
+#define FFMPEG_USE_DEPRECIATED 0
+#define FFMPEG_USE_DECODE_DEPRECIATED 1
 
 /* rutil for some string functions */
 #include "rparser.h"
@@ -36,7 +40,7 @@ public:
   int get_height() { return height_; }
   bool is_eof() { return is_eof_ && is_eof_packet_; }
   bool is_image() { return is_image_; }
-  float get_duration() { return duration_; }
+  double get_duration() { return duration_; }
   AVFrame* get_frame() { return frame; }
 
   int get_error_code() const { return error_code_; }
@@ -52,10 +56,10 @@ private:
   int video_stream_idx;
 
   // microsecond duration
-  float duration_;
+  double duration_;
 
   // current video frame time
-  float time_;
+  double time_;
 
   // timestamp offset for current movie
   int time_offset_;
@@ -75,9 +79,6 @@ private:
   // is file image actually, not video.
   bool is_image_;
 
-  // last frame duration
-  float last_frame_duration;
-
   // video width / height
   int width_, height_;
 
@@ -89,9 +90,10 @@ FFmpegContext::FFmpegContext()
   : codec(0), context(0), formatctx(0), stream(0), packet(0), frame(0), video_stream_idx(0),
     duration_(0), time_(0), time_offset_(0), packet_offset(-1), frame_no_(0),
     is_eof_(false), is_eof_packet_(false), is_image_(false),
-    last_frame_duration(0), width_(0), height_(0)
+    width_(0), height_(0)
 {
   /* ffmpeg initialization */
+#if FFMPEG_NOT_USE_DEPRECIATED
   static bool is_ffmpeg_initialized_ = false;
   if (!is_ffmpeg_initialized_)
   {
@@ -99,6 +101,7 @@ FFmpegContext::FFmpegContext()
     av_register_all();
     is_ffmpeg_initialized_ = true;
   }
+#endif
 }
 
 FFmpegContext::~FFmpegContext()
@@ -184,6 +187,8 @@ bool FFmpegContext::Open(const std::string& path)
   }
 
   context = avcodec_alloc_context3(codec);
+  avcodec_parameters_to_context(context,
+    formatctx->streams[video_stream_idx]->codecpar);
   int codec_open_code = avcodec_open2(context, codec, NULL);
   if (codec_open_code < 0)
   {
@@ -194,18 +199,22 @@ bool FFmpegContext::Open(const std::string& path)
   }
 
   // fetch width / height / duration of video
-  AVCodecContext* codecctx = formatctx->streams[video_stream_idx]->codec;
-  duration_ = formatctx->duration / 1000;
+#if FFMPEG_USE_DEPRECIATED
+  AVCodecContext* pCodecCtx = formatctx->streams[video_stream_idx]->codec;
+  width_ = pCodecCtx->width;
+  height_ = pCodecCtx->height;
+#else
+  width_ = context->width;
+  height_ = context->height;
+#endif
+  duration_ = formatctx->duration / 1000.0;
   packet_offset = -1;
   is_eof_ = false;
-  last_frame_duration = 0;
   time_ = 0;
   frame = av_frame_alloc();
   packet = av_packet_alloc();
   frame_no_ = 0;
 
-  width_ = codecctx->width;
-  height_ = codecctx->height;
 
   return true;
 }
@@ -213,7 +222,7 @@ bool FFmpegContext::Open(const std::string& path)
 /* may multiple frame reside in same packet. */
 int FFmpegContext::DecodePacket(float target_time)
 {
-  /* No packet. Read first. */
+  /* No packet. Read packet and attempt again. */
   if (!is_eof_ && packet_offset == -1)
     return 0;
 
@@ -225,8 +234,11 @@ int FFmpegContext::DecodePacket(float target_time)
   if (target_time < time_ - time_offset_)
     return 2;
 
-  int got_frame, decode_len;
+  double pts, last_frame_duration;
   bool skip_this_frame = true;
+  int ret;
+#if FFMPEG_USE_DECODE_DEPRECIATED
+  int decode_len, got_frame;
   while (packet_offset < packet->size)
   {
     skip_this_frame = true;
@@ -252,12 +264,20 @@ int FFmpegContext::DecodePacket(float target_time)
 
     // calculate time
     if (frame->pkt_dts != AV_NOPTS_VALUE)
-      /* XXX: Not use CodecContext time base! (It means FPS) */
-      time_ = (float)(frame->pkt_dts * av_q2d(stream->time_base)) * 1000;
+      pts = (double)frame->best_effort_timestamp;
     else
+      pts = 0;
+    if (pts != 0)
+    {
+      /* XXX: Not use CodecContext time base! (It means FPS) */
+      time_ = (pts * av_q2d(stream->time_base)) * 1000;
+    }
+    else
+    {
+      last_frame_duration = av_q2d(stream->time_base);
+      last_frame_duration += frame->repeat_pict * (last_frame_duration * 0.5f);
       time_ += last_frame_duration * 1000;
-    last_frame_duration = (float)av_q2d(stream->time_base);
-    last_frame_duration += frame->repeat_pict * (last_frame_duration * 0.5f);
+    }
 
     /* I don't know this code is necessary... */
 #if 0
@@ -272,12 +292,55 @@ int FFmpegContext::DecodePacket(float target_time)
 
     // now, should we need to skip this frame?
     if (target_time <= time_)
+    {
       skip_this_frame = false;
-
-    // packet decoding is done.
-    // shall we break at this packet, or peek next?
-    if (!skip_this_frame) break;
+      break;
+    }
   }
+#else
+  ret = avcodec_send_packet(context, packet);
+  if (ret < 0)
+  {
+    is_eof_packet_ = true;
+    return 0;
+  }
+  while ((ret = avcodec_receive_frame(context, frame)) >= 0)
+  {
+    // calculate time
+    if (frame->pkt_dts != AV_NOPTS_VALUE)
+      pts = (double)frame->best_effort_timestamp;
+    else
+      pts = 0;
+    if (pts != 0)
+    {
+      /* XXX: Not use CodecContext time base! (It means FPS) */
+      time_ = (pts * av_q2d(stream->time_base)) * 1000;
+    }
+    else
+    {
+      last_frame_duration = av_q2d(stream->time_base);
+      last_frame_duration += frame->repeat_pict * (last_frame_duration * 0.5f);
+      time_ += last_frame_duration * 1000;
+    }
+
+    frame_no_++;
+
+    // now, should we need to skip this frame?
+    if (target_time <= time_)
+    {
+      // XXX: exiting here will result in bad-quality frame.
+      // how to get 'complete' frame?
+      skip_this_frame = false;
+      break;
+    }
+  }
+  if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+  {
+    // try again with new packet.
+    is_eof_packet_ = true;
+    return 0;
+  }
+#endif
 
   /* return: skip this frame(0) or decode this frame(1) */
   return skip_this_frame ? 0 : 1;
@@ -313,7 +376,7 @@ int FFmpegContext::ReadPacket()
   if (ret < 0)
   {
     is_eof_ = true;
-    packet->size = 0;
+    //packet->size = 0;
     return 1; /* anyway, we read packet. */
   }
 
@@ -330,7 +393,6 @@ void FFmpegContext::Rewind()
   packet_offset = -1;
   is_eof_ = false;
   is_eof_packet_ = false;
-  last_frame_duration = 0;
   time_ = 0;
   frame_no_ = 0;
 }
@@ -549,7 +611,7 @@ void Image::Update(double delta)
       // DecodePacket == 0 --> EOF or decoding failure.
       // We read next packet in this case.
       // If successfully decode packet, exit loop.
-      if (ret = fctx->DecodePacket(video_time_))
+      if (ret = fctx->DecodePacket((float)video_time_))
         break;
 
       // ReadPacket() might fail, But we can retry.
@@ -562,7 +624,13 @@ void Image::Update(double delta)
     {
       AVFrame *frame = fctx->get_frame();
       AVFrame *frame_conv = av_frame_alloc();
+      R_ASSERT(frame->pict_type != AV_PICTURE_TYPE_NONE);
+#if FFMPEG_USE_DEPRECIATED
       avpicture_fill((AVPicture*)frame_conv, data_ptr_, AV_PIX_FMT_RGBA, width_, height_);
+#else
+      av_image_fill_arrays(frame_conv->data, frame_conv->linesize, data_ptr_,
+        AV_PIX_FMT_RGBA, width_, height_, 1);
+#endif
 
       // convert frame to RGB24
       SwsContext* mod_ctx;
