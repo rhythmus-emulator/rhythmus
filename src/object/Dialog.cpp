@@ -13,7 +13,7 @@ Dialog::~Dialog() {}
 
 void StringToRect(const std::string &s, Vector4 &out)
 {
-  CommandArgs a(s, 4);
+  CommandArgs a(s, 4, true);
   out = Vector4{ a.Get<int>(0), a.Get<int>(1), a.Get<int>(2), a.Get<int>(3) };
 }
 

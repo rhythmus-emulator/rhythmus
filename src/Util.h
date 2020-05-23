@@ -85,25 +85,34 @@ bool CompareFilename(const std::string &path1, const std::string &path2);
 std::string GetUtf8FromWString(const std::wstring& wstring);
 #endif
 
+constexpr size_t kMaxCommandArgs = 128;
+
 /** @brief Argument for object command. */
 class CommandArgs
 {
 public:
   CommandArgs() = default;
   CommandArgs(const std::string &argv);
-  CommandArgs(const std::string &argv, size_t arg_count);
+  CommandArgs(const std::string &argv, size_t arg_count, bool fit_size);
 
-  void Set(const std::string &argv);
-  void Set(const std::string &argv, size_t arg_count);
+  void Parse(const std::string &argv);
+  void Parse(const std::string &argv, size_t arg_count, bool fit_size);
   void set_separator(char sep);
+  void set_trim(bool enable);
 
   template <typename T>
   T Get(size_t arg_index) const;
 
+  const char* Get_str(size_t arg_index) const;
+
   size_t size() const;
+
 private:
-  std::vector<std::string> args_;
+  std::string s_;
   char sep_;
+  const char *args_[kMaxCommandArgs];
+  size_t len_;
+  bool trim_;
 };
 
 void Sleep(size_t milisecond);

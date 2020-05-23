@@ -353,6 +353,11 @@ bool SoundData::Load(const char *p, size_t len, const char *name_opt)
   return sound_ != nullptr;
 }
 
+bool SoundData::Load(const MetricGroup &m)
+{
+  return Load(m.get_str("path"));
+}
+
 void SoundData::Unload()
 {
   if (sound_)

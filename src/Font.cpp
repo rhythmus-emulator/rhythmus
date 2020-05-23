@@ -185,6 +185,7 @@ bool FontBitmap::Update()
   }
 
   committed_ = true;
+  return true;
 }
 
 bool FontBitmap::IsWritable(int w, int h) const

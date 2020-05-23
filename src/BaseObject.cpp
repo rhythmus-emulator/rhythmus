@@ -351,7 +351,7 @@ void BaseObject::Load(const MetricGroup &m)
     CommandArgs la;
     m.get_safe("lr2cmd", lr2cmd);
     la.set_separator(',');
-    la.Set(lr2cmd, 21);
+    la.Parse(lr2cmd, 21, true);
 
     debug_ = la.Get<std::string>(20);
 
@@ -704,14 +704,14 @@ void BaseObject::SetLR2DST(const std::string &cmd)
   int time_prev = 0;
   CommandArgs cmds;
   cmds.set_separator(';');
-  cmds.Set(cmd);
+  cmds.Parse(cmd);
   ani_.emplace_back(Animation(nullptr));
   Animation &ani = ani_.back();
 
   for (unsigned i = 0; i < cmds.size(); ++i)
   {
     std::string v = cmds.Get<std::string>(i);
-    CommandArgs params(v, 20);
+    CommandArgs params(v, 20, true);
     int time = params.Get<int>(1);
     int x = params.Get<int>(2);
     int y = params.Get<int>(3);

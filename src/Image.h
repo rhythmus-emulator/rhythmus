@@ -16,6 +16,8 @@ enum ImageErrorCode
   kImageMovieFailed,
 };
 
+class MetricGroup;
+
 /**
  * @brief Contains loaded bitmap image / texture.
  * @warn After Commit(), image data will be deleted to save memory space.
@@ -29,11 +31,10 @@ public:
   std::string get_path() const;
   void Load(const std::string& path);
   void Load(const char* p, size_t len, const char *ext_hint_opt);
+  void Load(const MetricGroup &m);
   void Update(double delta_ms);
   void Unload();
   bool is_loaded() const;
-  int get_error_code() const;
-  const char* get_error_msg() const;
   unsigned get_texture_ID() const;
   uint16_t get_width() const;
   uint16_t get_height() const;
@@ -49,8 +50,6 @@ private:
   uint8_t *data_ptr_;
   uint16_t width_, height_;
   unsigned textureID_;
-  int error_code_;
-  const char *error_msg_;
   std::string error_msg_buf_;
 
   /*

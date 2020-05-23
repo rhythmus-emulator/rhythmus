@@ -21,21 +21,19 @@ namespace rhythmus
 std::mutex gResourceLoadLock;
 
 /* @brief Loader thread. */
+template <typename T>
 class ResourceLoaderTask : public Task
 {
 public:
-  ResourceLoaderTask(Image *img)
-    : p_(0), len_(0), img_to_load_(img), font_to_load_(nullptr), sound_to_load_(nullptr) {}
-  ResourceLoaderTask(Font *font)
-    : p_(0), len_(0), img_to_load_(nullptr), font_to_load_(font), sound_to_load_(nullptr) {}
-  ResourceLoaderTask(SoundData *sound)
-    : p_(0), len_(0), img_to_load_(nullptr), font_to_load_(nullptr), sound_to_load_(sound) {}
+  ResourceLoaderTask(T *obj)
+    : obj_(obj), p_(0), len_(0), metric_(nullptr) {}
 
   void SetData(const char *p, size_t len, const char *name_optional)
   {
     p_ = p;
     len_ = len;
     filename_ = name_optional;
+    metric_ = nullptr;
   }
 
   void SetFilename(const std::string &filename)
@@ -43,74 +41,60 @@ public:
     p_ = nullptr;
     len_ = 0;
     filename_ = filename;
+    metric_ = nullptr;
+  }
+
+  void SetMetric(const MetricGroup &m)
+  {
+    p_ = nullptr;
+    len_ = 0;
+    filename_.clear();
+    metric_ = &m;
   }
 
   virtual void run()
   {
     std::lock_guard<std::mutex> resource_lock(gResourceLoadLock);
 
-    if (img_to_load_)
+    if (obj_)
     {
       if (p_ == nullptr)
-        img_to_load_->Load(filename_);
+        obj_->Load(filename_);
+      else if (metric_ != nullptr)
+        obj_->Load(*metric_);
       else
-        img_to_load_->Load(p_, len_,
+        obj_->Load(p_, len_,
           filename_.empty() ? nullptr : filename_.c_str());
-      img_to_load_->set_parent_task(nullptr);
-      if (img_to_load_->get_error_code() != 0)
+      obj_->set_parent_task(nullptr);
+      if (obj_->get_error_code() != 0)
       {
         Logger::Error("Cannot read image %s: %s (%d)",
-            filename_.c_str(), img_to_load_->get_error_msg(),
-            img_to_load_->get_error_code());
+            filename_.c_str(), obj_->get_error_msg(),
+          obj_->get_error_code());
+        obj_->clear_error();
       }
-    }
-    else if (font_to_load_)
-    {
-      if (p_ == nullptr)
-        font_to_load_->Load(filename_);
-      else
-        font_to_load_->Load(p_, len_,
-          filename_.empty() ? nullptr : filename_.c_str());
-      font_to_load_->set_parent_task(nullptr);
-    }
-    else if (sound_to_load_)
-    {
-      if (p_ == nullptr)
-        sound_to_load_->Load(filename_);
-      else
-        sound_to_load_->Load(p_, len_,
-          filename_.empty() ? nullptr : filename_.c_str());
-      sound_to_load_->set_parent_task(nullptr);
     }
   }
 
   virtual void abort()
   {
     std::lock_guard<std::mutex> resource_lock(gResourceLoadLock);
-
-    if (img_to_load_)
-      img_to_load_->set_parent_task(nullptr);
-    else if (font_to_load_)
-      font_to_load_->set_parent_task(nullptr);
-    else if (sound_to_load_)
-      sound_to_load_->set_parent_task(nullptr);
-    img_to_load_ = nullptr;
-    font_to_load_ = nullptr;
-    sound_to_load_ = nullptr;
+    if (obj_)
+      obj_->set_parent_task(nullptr);
+    obj_ = nullptr;
   }
 
 private:
-  Image *img_to_load_;
-  Font *font_to_load_;
-  SoundData *sound_to_load_;
-
+  T *obj_;
   const char *p_;
   size_t len_;
   std::string filename_;
+  const MetricGroup *metric_;
 };
 
 
-ResourceElement::ResourceElement() : parent_task_(0), ref_count_(1) {}
+ResourceElement::ResourceElement()
+  : parent_task_(0), ref_count_(1), error_msg_(0), error_code_(0) {}
 
 ResourceElement::~ResourceElement() {}
 
@@ -130,6 +114,22 @@ Task *ResourceElement::get_parent_task() { return parent_task_; }
 bool ResourceElement::is_loading() const
 {
   return parent_task_ != nullptr;
+}
+
+const char *ResourceElement::get_error_msg() const
+{
+  return error_msg_;
+}
+
+int ResourceElement::get_error_code() const
+{
+  return error_code_;
+}
+
+void ResourceElement::clear_error()
+{
+  error_msg_ = 0;
+  error_code_ = 0;
 }
 
 void ResourceContainer::AddResource(ResourceElement *elem)
@@ -324,7 +324,7 @@ Image* ImageManager::Load(const std::string &path)
     r->set_name(newpath);
     if (load_async_)
     {
-      ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      auto *task = new ResourceLoaderTask<Image>(r);
       task->SetFilename(newpath);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
@@ -350,7 +350,7 @@ Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
     if (name_opt) r->set_name(name_opt);
     if (load_async_)
     {
-      ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      auto *task = new ResourceLoaderTask<Image>(r);
       task->SetData(p, len, name_opt);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
@@ -375,6 +375,12 @@ void ImageManager::Update(double ms)
   for (auto *e : *this)
   {
     ((Image*)e)->Update(ms);
+    if (e->get_error_code())
+    {
+      Logger::Error("Image object error: %s (%d)",
+        e->get_error_msg(), e->get_error_code());
+      e->clear_error();
+    }
   }
 }
 
@@ -403,7 +409,7 @@ SoundData* SoundManager::Load(const std::string &path)
     r->set_name(newpath);
     if (load_async_)
     {
-      ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      auto *task = new ResourceLoaderTask<SoundData>(r);
       task->SetFilename(newpath);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
@@ -429,7 +435,7 @@ SoundData* SoundManager::Load(const char *p, size_t len, const char *name_opt)
     if (name_opt) r->set_name(name_opt);
     if (load_async_)
     {
-      ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      auto *task = new ResourceLoaderTask<SoundData>(r);
       task->SetData(p, len, name_opt);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
@@ -474,7 +480,7 @@ Font* FontManager::Load(const std::string &path)
     r->set_name(newpath);
     if (load_async_)
     {
-      ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      auto *task = new ResourceLoaderTask<Font>(r);
       task->SetFilename(newpath);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
@@ -500,7 +506,7 @@ Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
     if (name_opt) r->set_name(name_opt);
     if (load_async_)
     {
-      ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      auto *task = new ResourceLoaderTask<Font>(r);
       task->SetData(p, len, name_opt);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
@@ -527,7 +533,8 @@ Font* FontManager::Load(const MetricGroup &metrics)
     if (!name.empty()) r->set_name(name);
     if (load_async_)
     {
-      ResourceLoaderTask *task = new ResourceLoaderTask(r);
+      auto *task = new ResourceLoaderTask<Font>(r);
+      task->SetMetric(metrics);
       r->set_parent_task(task);
       TaskPool::getInstance().EnqueueTask(task);
     }
@@ -551,6 +558,12 @@ void FontManager::Update(double ms)
   for (auto *e : *this)
   {
     ((Font*)e)->Update((float)ms);
+    if (e->get_error_code())
+    {
+      Logger::Error("Font object error: %s (%d)",
+        e->get_error_msg(), e->get_error_code());
+      e->clear_error();
+    }
   }
 }
 

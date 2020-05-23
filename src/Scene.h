@@ -93,7 +93,7 @@ private:
   // fade in/out specified time
   // fade_duration with positive: fade-in
   // fade_duration with negative: fade-out
-  float fade_time_, fade_duration_;
+  double fade_time_, fade_duration_;
 
   // fade in / out time
   int fade_in_time_, fade_out_time_;

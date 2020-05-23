@@ -147,7 +147,7 @@ std::string Lower(const std::string &s)
 std::string Substitute(const std::string& path_, const std::string& startswith, const std::string& relplacewith)
 {
   std::string path = path_;
-  for (int i = 0; i < path.size(); ++i)
+  for (unsigned i = 0; i < path.size(); ++i)
     if (path[i] == '\\') path[i] = '/';
   if (strncmp(path.c_str(), "./", 2) == 0)
     path = path.substr(2);
@@ -166,7 +166,7 @@ std::string Replace(const std::string& org, const std::string& target, const std
     return org;
 
   std::string s;
-  for (int i = 0; i < org.size(); ++i)
+  for (unsigned i = 0; i < org.size(); ++i)
   {
     if (strcmp(org.c_str(), target.c_str()) == 0)
     {
@@ -326,57 +326,56 @@ std::string GetUtf8FromWString(const std::wstring& wstring)
 // -------------------------------- CommandArgs
 
 CommandArgs::CommandArgs(const std::string &argv)
-  : sep_(',') { Set(argv); }
+  : sep_(','), len_(0), trim_(true) { Parse(argv); }
 
-CommandArgs::CommandArgs(const std::string &argv, size_t arg_count)
-  : sep_(',') { Set(argv, arg_count); }
+CommandArgs::CommandArgs(const std::string &argv, size_t arg_count, bool fit_size)
+  : sep_(','), len_(0), trim_(true) { Parse(argv, arg_count, true); }
 
-void CommandArgs::Set(const std::string &argv)
+void CommandArgs::Parse(const std::string &argv)
 {
-  size_t a = 0, b = 0;
-  args_.clear();
-  while (1)
-  {
-    if (argv[b] == sep_ || argv[b] == 0)
-    {
-      args_.push_back(argv.substr(a, b - a));
-      if (argv[b] == 0)
-        break;
-      a = b = b + 1;
-    }
-    else b++;
-  }
+  Parse(argv, kMaxCommandArgs, false);
 }
 
-void CommandArgs::Set(const std::string &argv, size_t arg_count)
+void CommandArgs::Parse(const std::string &argv, size_t arg_count, bool fit_size)
 {
   size_t a = 0, b = 0;
-  args_.clear();
-  if (arg_count == 0) return; /* prevent underflow */
+  memset(args_, 0, sizeof(args_));
+  len_ = 0;
+  s_ = argv;
+  if (arg_count > kMaxCommandArgs) arg_count = kMaxCommandArgs;
 
-  while (args_.size() < arg_count && b <= argv.size())
+  if (trim_)
   {
-    if (args_.size() == arg_count - 1)
-    {
-      std::string sa, sb;
-      Split(argv.substr(a), sep_, sa, sb);
-      args_.push_back(sa);
-      break;
-    }
+    while (s_[b] && (s_[b] == ' ' || s_[b] == '\t' || s_[b] == '\r' || s_[b] == '\n'))
+      b++;
+    a = b;
+  }
 
-    if (argv[b] == sep_ || argv[b] == 0)
+  while (len_ < arg_count)
+  {
+    if (s_[b] == sep_ || s_[b] == 0)
     {
-      args_.push_back(argv.substr(a, b - a));
-      if (argv[b] == 0)
+      args_[len_++] = s_.c_str() + a;
+      if (s_[b] == 0)
         break;
+      s_[b] = 0;
       a = b = b + 1;
+      if (trim_)
+      {
+        while (s_[b] && (s_[b] == ' ' || s_[b] == '\t' || s_[b] == '\r' || s_[b] == '\n'))
+          b++;
+        a = b;
+      }
     }
     else b++;
   }
-  while (args_.size() < arg_count)
+
+  if (fit_size)
   {
-    args_.emplace_back(std::string());
-    ++b;
+    while (len_ < arg_count)
+    {
+      args_[len_++] = "";
+    }
   }
 }
 
@@ -388,34 +387,47 @@ void CommandArgs::set_separator(char sep)
 template <>
 int CommandArgs::Get(size_t arg_index) const
 {
-  return atoi(args_[arg_index].c_str());
+  if (kMaxCommandArgs <= arg_index) return 0;
+  return atoi(args_[arg_index]);
 }
 
 template <>
 size_t CommandArgs::Get(size_t arg_index) const
 {
-  return (size_t)atoi(args_[arg_index].c_str());
+  if (kMaxCommandArgs <= arg_index) return 0;
+  return (size_t)atoi(args_[arg_index]);
 }
 
 template <>
 double CommandArgs::Get(size_t arg_index) const
 {
-  return atof(args_[arg_index].c_str());
+  if (kMaxCommandArgs <= arg_index) return 0;
+  return atof(args_[arg_index]);
 }
 
 template <>
 float CommandArgs::Get(size_t arg_index) const
 {
-  return atof(args_[arg_index].c_str());
+  if (kMaxCommandArgs <= arg_index) return 0;
+  return (float)atof(args_[arg_index]);
 }
 
 template <>
 std::string CommandArgs::Get(size_t arg_index) const
 {
+  if (kMaxCommandArgs <= arg_index) return "";
   return args_[arg_index];
 }
 
-size_t CommandArgs::size() const { return args_.size(); }
+const char* CommandArgs::Get_str(size_t arg_index) const
+{
+  if (kMaxCommandArgs <= arg_index) return "";
+  return args_[arg_index];
+}
+
+size_t CommandArgs::size() const { return len_; }
+
+void CommandArgs::set_trim(bool v) { trim_ = v; }
 
 void Sleep(size_t milisecond)
 {

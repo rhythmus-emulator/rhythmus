@@ -142,7 +142,7 @@ void PlayScene::ProcessInputEvent(const InputEvent& e)
 void PlayScene::doUpdate(double delta)
 {
   Scene::doUpdate(delta);
-  playscenetask_.Update(delta);
+  playscenetask_.Update((float)delta);
 }
 
 }

@@ -49,6 +49,7 @@ public:
   ~SoundData();
   bool Load(const std::string &path);
   bool Load(const char *p, size_t len, const char *name_opt);
+  bool Load(const MetricGroup &m);
   void Unload();
   int get_result() const;
   rmixer::Sound *get_sound();

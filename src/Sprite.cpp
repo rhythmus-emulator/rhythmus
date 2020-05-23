@@ -37,7 +37,7 @@ void Sprite::Load(const MetricGroup& metric)
   {
     /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
     std::string lr2src;
-    CommandArgs args(lr2src, 10);
+    CommandArgs args(lr2src, 10, true);
 
     SetImage(args.Get<std::string>(0));
 
@@ -132,7 +132,7 @@ void Sprite::doUpdate(double delta)
     time_ += delta;
     frame_ = (int)(time_ * sprani_.divx * sprani_.divy / sprani_.duration)
       % sprani_.cnt;
-    time_ = fmod(time_, (float)sprani_.duration);
+    time_ = fmod(time_, (double)sprani_.duration);
   }
 }
 

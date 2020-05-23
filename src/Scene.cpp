@@ -345,7 +345,7 @@ bool Scene::is_input_available() const
 void Scene::doUpdate(double delta)
 {
   // scheduled events
-  scenetask_.Update(delta);
+  scenetask_.Update((float)delta);
 
   // fade in/out processing
   if (fade_duration_ != 0)
@@ -371,7 +371,7 @@ void Scene::doRenderAfter()
   // implementation of fadeout effect
   if (fade_duration_ != 0)
   {
-    float fade_alpha_ = fade_duration_ > 0 ?
+    double fade_alpha_ = fade_duration_ > 0 ?
       1.0f - fade_time_ / fade_duration_ :
       fade_time_ / -fade_duration_;
     if (fade_alpha_ > 1)
@@ -383,7 +383,7 @@ void Scene::doRenderAfter()
     vi[2].p.x = w;
     vi[2].p.y = h;
     vi[3].p.y = h;
-    vi[0].c.a = vi[1].c.a = vi[2].c.a = vi[3].c.a = fade_alpha_;
+    vi[0].c.a = vi[1].c.a = vi[2].c.a = vi[3].c.a = (float)fade_alpha_;
 
     GRAPHIC->SetTexture(0, 0);
     GRAPHIC->SetBlendMode(1);

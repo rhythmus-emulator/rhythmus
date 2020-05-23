@@ -1,6 +1,7 @@
 #include "ResourceManager.h"
 #include "Image.h"
 #include "Timer.h"
+#include "Setting.h"
 #include "Util.h"
 #include "common.h"
 #include <FreeImage.h>
@@ -412,8 +413,7 @@ bool IsMovieFile(const std::string& path)
 
 Image::Image()
   : bitmap_ctx_(0), data_ptr_(nullptr), width_(0), height_(0),
-    textureID_(0), error_code_(0), error_msg_(nullptr),
-    ffmpeg_ctx_(0), video_time_(.0f), loop_movie_(true),
+    textureID_(0), ffmpeg_ctx_(0), video_time_(.0f), loop_movie_(true),
     is_invalid_(true)
 {
 }
@@ -556,6 +556,11 @@ void Image::Load(const char* p, size_t len, const char *ext_hint_opt)
     if (!LoadImageFromMemory(p, len))
       LoadMovieFromMemory(p, len);
   }
+}
+
+void Image::Load(const MetricGroup &m)
+{
+  Load(m.get_str("path"));
 }
 
 void Image::Commit()
@@ -703,10 +708,6 @@ bool Image::is_loaded() const
 {
   return textureID_ > 0;
 }
-
-int Image::get_error_code() const { return error_code_; }
-
-const char* Image::get_error_msg() const { return error_msg_; }
 
 void Image::RestartMovie()
 {

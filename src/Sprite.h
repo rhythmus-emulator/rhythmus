@@ -52,7 +52,7 @@ protected:
   SpriteAnimationInfo sprani_;
 
   // current sprite time
-  float time_;
+  double time_;
 
   // current sprite frame
   int frame_;

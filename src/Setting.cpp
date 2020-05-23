@@ -1056,9 +1056,9 @@ void OptionList::LoadFromMetrics(const MetricGroup &metric)
   for (int i = 0; i < optioncount; ++i)
   {
     /* attr,default,select list */
-    CommandArgs args(metric.get_str("Option" + std::to_string(i)), 3);
-    auto &option = SetOption(args.Get<std::string>(0), args.Get<std::string>(2));
-    option.SetDefault(args.Get<std::string>(1));
+    CommandArgs args(metric.get_str("Option" + std::to_string(i)), 3, true);
+    auto &option = SetOption(args.Get_str(0), args.Get_str(2));
+    option.SetDefault(args.Get_str(1));
   }
 }
 
@@ -1151,8 +1151,8 @@ void OptionList::AddOptionFromMetric(MetricGroup *metric)
     for (unsigned i = 0; i < count; ++i)
     {
       std::string option_str = metric->get_str("Option" + std::to_string(i+1));
-      CommandArgs args(option_str, 2);
-      SetOption(args.Get<std::string>(0), args.Get<std::string>(1));
+      CommandArgs args(option_str, 2, true);
+      SetOption(args.Get_str(0), args.Get_str(0));
     }
   }
 }

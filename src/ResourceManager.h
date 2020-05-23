@@ -27,11 +27,20 @@ public:
   Task *get_parent_task();
   virtual bool is_loading() const;
 
+  const char *get_error_msg() const;
+  int get_error_code() const;
+  void clear_error();
+
   friend class ResourceContainer;
+
 private:
   Task *parent_task_;
   std::string name_;
   int ref_count_;
+
+protected:
+  const char* error_msg_;
+  int error_code_;
 };
 
 /* @brief Base container for ResourceElement. */
