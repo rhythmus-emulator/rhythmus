@@ -308,6 +308,12 @@ protected:
   virtual void doUpdateAfter();
   virtual void doRenderAfter();
 
+  // Usually, this function do nothing.
+  // but in some case, an object's size specification
+  // should be updated by some case (e.g. LR2Text Height)
+  // Override this method in that case.
+  virtual void UpdateRenderingSize(Vector2 &d, Vector3 &p);
+
   virtual const CommandFnMap& GetCommandFnMap();
 };
 

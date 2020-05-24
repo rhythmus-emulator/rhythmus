@@ -11,17 +11,14 @@ RHYTHMUS_NAMESPACE_BEGIN
 
 Text::Text()
   : font_(nullptr),
-    text_alignment_(TextAlignments::kTextAlignLeft),
-    text_fitting_(TextFitting::kTextFitNone), width_multiply_(1.0f),
-    blending_(0), counter_(0), is_texture_loaded_(true),
+    text_fitting_(TextFitting::kTextFitNone), set_xy_aligncenter_(false), use_height_as_font_height_(false),
+    width_multiply_(1.0f), blending_(0), counter_(0), is_texture_loaded_(true),
     res_id_(nullptr), do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
   text_render_ctx_.width = text_render_ctx_.height = .0f;
-  text_render_ctx_.cycles = 1;
-  text_render_ctx_.duration = 0;
-  text_render_ctx_.time = 0;
+  text_alignment_ = Vector2(0.0f, 0.0f);  // TOPLEFT
 }
 
 Text::~Text()
@@ -37,8 +34,6 @@ void Text::Load(const MetricGroup &m)
     SetFont(m);
   if (m.exist("text"))
     SetText(m.get_str("text"));
-  if (m.exist("align"))
-    SetTextAlignment((TextAlignments)m.get<int>("align"));
 
 #if USE_LR2_FEATURE == 1
   if (m.exist("lr2src"))
@@ -46,6 +41,8 @@ void Text::Load(const MetricGroup &m)
     std::string lr2src;
     m.get_safe("lr2src", lr2src);
     CommandArgs args(lr2src);
+
+    /* fetch font size from lr2dst ... */
     SetFont(args.Get<std::string>(0));
 
     /* track change of text table */
@@ -58,7 +55,30 @@ void Text::Load(const MetricGroup &m)
     Refresh();
 
     /* alignment */
-    SetLR2Alignment(args.Get<int>(2));
+    const int lr2align = args.Get<int>(2);
+    switch (lr2align)
+    {
+    case 0:
+      // topleft
+      SetTextFitting(TextFitting::kTextFitMaxSize);
+      GetCurrentFrame().align.x = 0.0;
+      GetCurrentFrame().align.y = 0.0;
+      break;
+    case 1:
+      // topcenter
+      SetTextFitting(TextFitting::kTextFitMaxSize);
+      GetCurrentFrame().align.x = 0.5;
+      GetCurrentFrame().align.y = 0.0;
+      break;
+    case 2:
+      // topright
+      SetTextFitting(TextFitting::kTextFitMaxSize);
+      GetCurrentFrame().align.x = 1.0;
+      GetCurrentFrame().align.y = 0.0;
+      break;
+    }
+    set_xy_aligncenter_ = true;
+    use_height_as_font_height_ = true;
 
     /* editable */
     //args.Get<int>(2);
@@ -88,18 +108,16 @@ void Text::SetFont(const MetricGroup &m)
     SetText(text_);
 }
 
+/* @DEPRECIATED */
 void Text::SetSystemFont()
 {
-  // TODO
-  R_ASSERT(0);
-#if 0
-  ClearFont();
-  SetFont(FONTMAN->Load("TODO"));
-
-  /* if text previously exists, call SetText() internally */
-  if (!text_.empty())
-    SetText(text_);
-#endif
+  MetricGroup sysfont;
+  sysfont.set("path", "system/default.ttf");
+  sysfont.set("size", 16);
+  sysfont.set("color", "#FFFFFFFF");
+  sysfont.set("border-size", 1);
+  sysfont.set("border-color", "#FF000000");
+  SetFont(sysfont);
 }
 
 void Text::ClearFont()
@@ -120,34 +138,128 @@ void Text::SetText(const std::string& s)
 {
   if (!font_) return;
 
-  ClearText();
-
   text_ = s;
   font_->PrepareText(s);
-  font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
   UpdateTextRenderContext();
-
 }
 
 void Text::ClearText()
 {
   text_render_ctx_.textvertex.clear();
+  text_render_ctx_.vi.clear();
   text_render_ctx_.height = text_render_ctx_.width = 0;
   text_.clear();
 }
 
 void Text::UpdateTextRenderContext()
 {
+  text_render_ctx_.textvertex.clear();
+  text_render_ctx_.vi.clear();
+
+  if (!font_ || text_.empty())
+  {
+    // don't attempt again.
+    is_texture_loaded_ = true;
+    return;
+  }
+
+  is_texture_loaded_ = font_ && font_->is_loaded();
+  if (!is_texture_loaded_) return;
+
+  font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
   text_render_ctx_.width = 0;
   text_render_ctx_.height = 0;
-  // XXX: breaking loop if first cycle is over should be better
-  is_texture_loaded_ = true;
+  text_render_ctx_.drawsize = Vector2(
+    GetWidth(GetCurrentFrame().pos),
+    GetHeight(GetCurrentFrame().pos)
+  );
+
+  // 1. calculate whole text width and height.
+  // XXX: breaking loop if first cycle is over should be better?
   for (const auto& tvi : text_render_ctx_.textvertex)
   {
-    text_render_ctx_.width = std::max(text_render_ctx_.width, (float)tvi.vi[2].p.z);
-    text_render_ctx_.height = std::max(text_render_ctx_.height, (float)tvi.vi[2].p.z);
-    if (tvi.texid == 0)
-      is_texture_loaded_ = false;
+    text_render_ctx_.width = std::max(text_render_ctx_.width, (float)tvi.vi[2].p.x);
+    text_render_ctx_.height = std::max(text_render_ctx_.height, (float)tvi.vi[2].p.y);
+  }
+
+  R_ASSERT(text_render_ctx_.width != 0 && text_render_ctx_.height != 0);
+
+  // 2. resize textsize area (if necessary)
+  if (use_height_as_font_height_)
+  {
+    text_render_ctx_.height = (float)font_->GetAttribute().height;
+  }
+
+  Vector3 scale(1.0f, 1.0f, 1.0f);
+  Vector3 centerpos(text_render_ctx_.width / 2.0f, text_render_ctx_.height / 2.0f, 0);
+  switch (text_fitting_)
+  {
+  case TextFitting::kTextFitMaxSize:
+    if (text_render_ctx_.drawsize.x != 0)
+      scale.x = std::min(1.0f, text_render_ctx_.drawsize.x / text_render_ctx_.width);
+    if (text_render_ctx_.drawsize.y != 0)
+      scale.y = std::min(1.0f, text_render_ctx_.drawsize.y / text_render_ctx_.height);
+    break;
+  case TextFitting::kTextFitStretch:
+    if (text_render_ctx_.drawsize.x != 0)
+      scale.x = text_render_ctx_.drawsize.x / text_render_ctx_.width;
+    if (text_render_ctx_.drawsize.y != 0)
+      scale.y = text_render_ctx_.drawsize.y / text_render_ctx_.height;
+    break;
+  case TextFitting::kTextFitNone:
+  default:
+    text_render_ctx_.drawsize.x = text_render_ctx_.width;
+    text_render_ctx_.drawsize.y = text_render_ctx_.height;
+    break;
+  }
+
+  // 3. move text vertices (alignment)
+  // consider newline if x == 0.
+  unsigned newline_idx = 0;
+  if (text_alignment_.x != 0)
+  {
+    for (unsigned i = 0; i < text_render_ctx_.textvertex.size(); ++i)
+    {
+      bool end_of_line = false;
+      if (i == text_render_ctx_.textvertex.size() - 1
+        || text_render_ctx_.textvertex[i + 1].vi[0].p.x == 0)
+        end_of_line = true;
+      if (end_of_line)
+      {
+        float m =
+          (text_render_ctx_.width - text_render_ctx_.textvertex[i].vi[1].p.x)
+          * text_alignment_.x;
+        for (unsigned j = newline_idx; j <= i; ++j)
+        {
+          auto &tvi = text_render_ctx_.textvertex[j];
+          for (unsigned k = 0; k < 4; ++k)
+            tvi.vi[k].p.x += m;
+        }
+        newline_idx = i + 1;
+      }
+    }
+  }
+  if (text_alignment_.y != 0)
+  {
+    float m =
+      (text_render_ctx_.height- text_render_ctx_.textvertex.back().vi[2].p.y)
+      * text_alignment_.y;
+    for (auto& tvi : text_render_ctx_.textvertex)
+    {
+      for (unsigned k = 0; k < 4; ++k)
+        tvi.vi[k].p.y += m;
+    }
+  }
+
+  // 4. move (centering) and resize text vertices.
+  for (auto& tvi : text_render_ctx_.textvertex)
+  {
+    for (unsigned i = 0; i < 4; ++i)
+    {
+      tvi.vi[i].p -= centerpos;
+      tvi.vi[i].p *= scale;
+      text_render_ctx_.vi.push_back(tvi.vi[i]);
+    }
   }
 }
 
@@ -155,14 +267,6 @@ TextVertexInfo& Text::AddTextVertex(const TextVertexInfo &tvi)
 {
   text_render_ctx_.textvertex.push_back(tvi);
   return text_render_ctx_.textvertex.back();
-}
-
-void Text::SetTextVertexCycle(size_t cycle, size_t duration)
-{
-  R_ASSERT_M(cycle == 0 || text_render_ctx_.textvertex.size() % cycle == 0,
-    "TextVertexCycle is invalid; cycle number is not correct.");
-  text_render_ctx_.cycles = cycle;
-  text_render_ctx_.duration = duration;
 }
 
 void Text::SetWidthMultiply(float multiply)
@@ -174,12 +278,6 @@ void Text::Refresh()
 {
   if (res_id_)
     SetText(*res_id_);
-}
-
-// XXX: Font alignment to right won't work when text is multiline.
-void Text::SetTextAlignment(TextAlignments align)
-{
-  text_alignment_ = align;
 }
 
 void Text::SetTextFitting(TextFitting fitting)
@@ -197,88 +295,39 @@ Font *Text::font() { return font_; }
 void Text::doUpdate(double delta)
 {
   counter_ = (counter_ + 1) % 30;
+
+  // attempt to reload font texture periodically if not completely loaded
   if (counter_ == 0 && !is_texture_loaded_ && font_)
   {
-    text_render_ctx_.textvertex.clear();
-    font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
     UpdateTextRenderContext();
-  }
-
-  if (text_render_ctx_.duration)
-  {
-    text_render_ctx_.time += (size_t)delta;
-    text_render_ctx_.time %= text_render_ctx_.duration;
   }
 }
 
 void Text::doRender()
 {
-  // for cycle attribute of animated text(lr2number type)
-  size_t tvi_start, tvi_end, tvi_delta;
-  tvi_delta = text_render_ctx_.textvertex.size() / text_render_ctx_.cycles;
-  if (text_render_ctx_.duration == 0)
-    tvi_start = 0;
-  else
-    tvi_start = tvi_delta * text_render_ctx_.time * text_render_ctx_.cycles / text_render_ctx_.duration;
-  tvi_end = tvi_start + tvi_delta;
-
-
-  // additional transition for text (alignment)
   GRAPHIC->PushMatrix();
-  const float width = GetWidth(GetCurrentFrame().pos);
-  Vector3 scale{ 1.0f, 1.0f, 1.0f };
-  Vector3 move{ 0.0f, 0.0f, 0.0f };
-  if (width > 0 && text_render_ctx_.width > 0 && text_render_ctx_.height > 0)
-  {
-    switch (text_fitting_)
-    {
-    case TextFitting::kTextFitNone:
-      break;
-    case TextFitting::kTextFitStretch:
-      scale.x = width / text_render_ctx_.width;
-      break;
-    case TextFitting::kTextFitMaxSize:
-      scale.x = std::min(1.0f, width / text_render_ctx_.width);
-      break;
-    }
-
-    switch (text_alignment_)
-    {
-    case TextAlignments::kTextAlignLeft:
-      break;
-    case TextAlignments::kTextAlignRight:
-      move.x += std::max(width * width_multiply_ - text_render_ctx_.width, 0.0f);
-      break;
-    case TextAlignments::kTextAlignCenter:
-      move.x += std::max(width * width_multiply_ - text_render_ctx_.width, 0.0f) / 2;
-      break;
-    case TextAlignments::kTextAlignLR2Right:
-      move.x -= width * width_multiply_ - std::max(width * width_multiply_ - text_render_ctx_.width, 0.0f);
-      break;
-    case TextAlignments::kTextAlignLR2Center:
-      move.x -= (width * width_multiply_ - std::max(width * width_multiply_ - text_render_ctx_.width, 0.0f)) / 2;
-      break;
-    }
-  }
-  GRAPHIC->Scale(scale);
-  GRAPHIC->Translate(move);
   GRAPHIC->SetBlendMode(blending_);
 
   // Draw vertex by given quad.
-  // TODO: alpha?
   float alpha = GetCurrentFrame().color.a;
-  for (auto i = tvi_start; i < tvi_end; ++i)
+  unsigned last_i = 0, last_texid = 0;
+  for (unsigned i = 0; i < text_render_ctx_.textvertex.size(); ++i)
   {
     auto &tvi = text_render_ctx_.textvertex[i];
-    tvi.vi[0].c.a = alpha;
-    tvi.vi[1].c.a = alpha;
-    tvi.vi[2].c.a = alpha;
-    tvi.vi[3].c.a = alpha;
-    GRAPHIC->SetTexture(0, tvi.texid);
-    // TODO:
-    // need optimizing -- Texture state is always changing, bad performance.
-    // Maybe need to check texture id, and flush at once if same texture.
-    GRAPHIC->DrawQuad(tvi.vi);
+    text_render_ctx_.vi[i * 4 + 0].c.a = alpha;
+    text_render_ctx_.vi[i * 4 + 1].c.a = alpha;
+    text_render_ctx_.vi[i * 4 + 2].c.a = alpha;
+    text_render_ctx_.vi[i * 4 + 3].c.a = alpha;
+    if (last_texid != tvi.texid || i == text_render_ctx_.textvertex.size() - 1)
+    {
+      if (i > 0)
+      {
+        GRAPHIC->SetTexture(0, last_texid);
+        GRAPHIC->DrawQuads(&text_render_ctx_.vi[last_i * 4], (i - last_i) * 4);
+      }
+      last_texid = tvi.texid;
+      last_i = i;
+    }
   }
 
   GRAPHIC->PopMatrix();
@@ -318,26 +367,24 @@ void Text::doRender()
 #endif
 }
 
-/* do LR2 type alignment. */
-void Text::SetLR2Alignment(int alignment)
+void Text::UpdateRenderingSize(Vector2 &d, Vector3 &p)
 {
-  switch (alignment)
+  // calculate scale and apply
+  // and transition in case of width is smaller than text size
+  const float width = GetWidth(GetCurrentFrame().pos);
+  const float height = GetHeight(GetCurrentFrame().pos);
+  if (text_render_ctx_.drawsize.x > width)
+    p.x = (text_render_ctx_.drawsize.x - width) * (0.5f - text_alignment_.x);
+  if (text_render_ctx_.drawsize.y > height)
+    p.y = (text_render_ctx_.drawsize.y - height) * (0.5f - text_alignment_.y);
+
+  // -- don't consider about scale here
+  // as width/height purposes for alignment, not size of text.
+
+  // simulate align center as topleft by making drawing size as zero
+  if (set_xy_aligncenter_)
   {
-  case 0:
-    // left
-    SetTextFitting(TextFitting::kTextFitMaxSize);
-    SetTextAlignment(TextAlignments::kTextAlignLeft);
-    break;
-  case 1:
-    // center
-    SetTextFitting(TextFitting::kTextFitMaxSize);
-    SetTextAlignment(TextAlignments::kTextAlignLR2Center);
-    break;
-  case 2:
-    // right
-    SetTextFitting(TextFitting::kTextFitMaxSize);
-    SetTextAlignment(TextAlignments::kTextAlignLR2Right);
-    break;
+    d.x = d.y = 0.0f;
   }
 }
 

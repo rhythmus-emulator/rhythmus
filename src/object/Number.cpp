@@ -308,7 +308,7 @@ void Number::CreateTextVertexFromFont()
     tvi_glyphs_[i].vi[2].t = Vector2{ g->sx2, g->sy2 };
     tvi_glyphs_[i].vi[3].t = Vector2{ g->sx1, g->sy2 };
   }
-  SetTextVertexCycle(1, 0);
+  //SetTextVertexCycle(1, 0);
 }
 
 }

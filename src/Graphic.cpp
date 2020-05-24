@@ -736,6 +736,7 @@ void GraphicGL::SetZWrite(bool enable)
 
 void GraphicGL::DrawQuads(const VertexInfo *vi, unsigned count)
 {
+  if (count == 0) return;
   R_ASSERT(count >= 4);
   
   // pre-process for special blendmode
@@ -793,7 +794,6 @@ void GraphicGL::BeginFrame()
   glMatrixMode(GL_PROJECTION);
   glLoadMatrixf(&GetProjectionMatrix()[0][0]);
 
-  // set viewport
   glViewport(0, 0, vp.width, vp.height);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -817,6 +817,19 @@ void GraphicGL::EndFrame()
   glfwPollEvents();
 
   ResetMatrix();
+}
+
+void GraphicGL::ClipViewArea(const Vector4 &area)
+{
+  // bottomleft is the origin.
+  const VideoModeParams &vp = GetVideoMode();
+  glEnable(GL_SCISSOR_TEST);
+  glScissor((int)area.x, vp.height - (int)area.w, (int)(area.z - area.x), (int)(area.w - area.y));
+}
+
+void GraphicGL::ResetViewArea()
+{
+  glDisable(GL_SCISSOR_TEST);
 }
 
 void GraphicGL::SignalWindowClose()
@@ -997,13 +1010,15 @@ bool GraphicGLShader::CompileDefaultShader()
 
 void GraphicGLShader::DrawQuads(const VertexInfo *vi, unsigned count)
 {
+  if (count == 0) return;
   R_ASSERT(count >= 4);
 
   // pre-process for special blendmode
   // - See SetBlendMode() function for detail.
-  VertexInfo vi_tmp[4];
+  VertexInfo *vi_tmp = nullptr;
   if (blendmode_ == 0)
   {
+    vi_tmp = get_vertex_buffer(count);
     for (unsigned i = 0; i < count; ++i)
     {
       vi_tmp[i].c = vi[i].c;
@@ -1031,7 +1046,11 @@ void GraphicGLShader::BeginFrame()
   const VideoModeParams &vp = GetVideoMode();
 
   // To calculate FPS
-  GraphicGL::BeginFrame();
+  Graphic::BeginFrame();
+
+  SetDefaultRenderState();
+  glEnable(GL_TEXTURE_2D);
+  glEnable(GL_BLEND);
 
   // set shader
   glUseProgram(quad_shader_.prog_id);
@@ -1042,7 +1061,6 @@ void GraphicGLShader::BeginFrame()
     (float)vp.width, (float)vp.height, vp.width / 2.0f, vp.height / 2.0f);
   glUniformMatrix4fv(shader_mat_Projection_, 1, GL_FALSE, &GetProjectionMatrix()[0][0]);
 
-  // set viewport
   glViewport(0, 0, vp.width, vp.height);
   glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1051,22 +1069,15 @@ void GraphicGLShader::BeginFrame()
 /* Returns single quad vertex buffer. */
 VertexInfo* GraphicGLShader::get_vertex_buffer()
 {
-  return get_vertex_buffer(1);
+  return get_vertex_buffer(4);
 }
 
 VertexInfo* GraphicGLShader::get_vertex_buffer(int size)
 {
+  R_ASSERT(size < kVertexMaxSize);
+  if (vi_idx_ + size >= kVertexMaxSize) vi_idx_ = 0;
   int _ = vi_idx_;
   vi_idx_ += size;
-  if (vi_idx_ >= kVertexMaxSize)
-  {
-    R_ASSERT(size < kVertexMaxSize);
-    // prevent vertex buffer overflow
-    DrawQuads(vi_, size);
-    // now flushed buffer. clear vertex index.
-    vi_idx_ = 0;
-    return get_vertex_buffer(size);
-  }
   return vi_ + _;
 }
 

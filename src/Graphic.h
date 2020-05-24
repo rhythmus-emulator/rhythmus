@@ -166,7 +166,6 @@ public:
 
   void ResetMatrix();
 
-
   /* rendering */
   virtual void DrawQuads(const VertexInfo *vi, unsigned count);
   void DrawQuad(const VertexInfo *vi);
@@ -174,6 +173,8 @@ public:
   virtual void BeginFrame();
   virtual void EndFrame();
 
+  virtual void ClipViewArea(const Vector4 &area) = 0;
+  virtual void ResetViewArea() = 0;
 
   /* status */
   float GetFPS() const;
@@ -245,6 +246,8 @@ public:
   virtual void DrawQuads(const VertexInfo *vi, unsigned count);
   virtual void BeginFrame();
   virtual void EndFrame();
+  virtual void ClipViewArea(const Vector4 &area);
+  virtual void ResetViewArea();
 
   virtual void SignalWindowClose();
   virtual bool IsWindowShouldClose() const;

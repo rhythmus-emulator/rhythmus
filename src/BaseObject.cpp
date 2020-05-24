@@ -165,9 +165,9 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
     // don't update if frame_time is less than first frame
     return;
   }
-  for (current_frame_ = 0; current_frame_ < frames_.size(); ++current_frame_)
+  for (current_frame_ = 0; current_frame_ < frames_.size() - 1; ++current_frame_)
   {
-    if (frame_time_ >= frames_[current_frame_].time)
+    if (frame_time_ < frames_[current_frame_ + 1].time)
       break;
   }
   if (!repeat_ && frame_time_ >= frames_.back().time)
@@ -244,8 +244,8 @@ bool Animation::is_finished() const { return is_finished_; }
 
 BaseObject::BaseObject()
   : parent_(nullptr), own_children_(true), draw_order_(0), visible_(true),
-    ignore_visible_group_(true),
-    is_focusable_(false), is_focused_(false), is_hovered_(false), do_clipping_(false)
+    ignore_visible_group_(true), is_focusable_(false), is_focused_(false),
+    is_hovered_(false), do_clipping_(false)
 {
   memset(&frame_, 0, sizeof(DrawProperty));
   SetRGB(1.0f, 1.0f, 1.0f);
@@ -259,7 +259,8 @@ BaseObject::BaseObject(const BaseObject& obj)
   : name_(obj.name_), own_children_(true), parent_(obj.parent_), ani_(obj.ani_),
     draw_order_(obj.draw_order_), visible_(obj.visible_),
     ignore_visible_group_(obj.ignore_visible_group_),
-    is_focusable_(obj.is_focusable_), is_focused_(false), is_hovered_(false), do_clipping_(false)
+    is_focusable_(obj.is_focusable_), is_focused_(false),
+    is_hovered_(false), do_clipping_(false)
 {
   // XXX: childrens won't copied by now
   frame_ = obj.frame_;
@@ -342,6 +343,7 @@ void BaseObject::Load(const MetricGroup &m)
   m.get_safe("name", name_);
   m.get_safe("zindex", draw_order_);
   m.get_safe("focus", is_focusable_);
+  m.get_safe("clipping", do_clipping_);
 
 #if USE_LR2_FEATURE == 1
   // Load LR2 properties
@@ -943,16 +945,20 @@ void BaseObject::Render()
   if (!IsVisible())
     return;
 
-  float w = frame_.pos.z - frame_.pos.x;
-  float h = frame_.pos.w - frame_.pos.y;
+  Vector2 size(frame_.pos.z - frame_.pos.x,
+               frame_.pos.w - frame_.pos.y);
+  Vector3 trans(0.0f, 0.0f, 0.0f);
+  UpdateRenderingSize(size, trans);
 
   // set matrix
   // remind vertex's center coord is (0,0).
   // (see BaseObject::FillVertexInfo(...) for more detail)
   GRAPHIC->PushMatrix();
+  if (trans.x != 0.0f || trans.y != 0.0f || trans.z != 0.0f)
+    GRAPHIC->Translate(trans);
   GRAPHIC->Translate(Vector3{
-    frame_.pos.x + w * frame_.align.x,
-    frame_.pos.y + h * frame_.align.y,
+    frame_.pos.x + size.x * frame_.align.x,
+    frame_.pos.y + size.y * frame_.align.y,
     0 });
   if (frame_.rotate.x != 0 || frame_.rotate.y != 0 || frame_.rotate.z != 0)
     GRAPHIC->Rotate(frame_.rotate);
@@ -960,19 +966,17 @@ void BaseObject::Render()
   if (frame_.align.x != 0.5f || frame_.align.y != 0.5f)
   {
     GRAPHIC->Translate(Vector3{
-      (frame_.align.x - 0.5f) * w,
-      (frame_.align.y - 0.5f) * h,
+      (frame_.align.x - 0.5f) * size.x,
+      (frame_.align.y - 0.5f) * size.y,
       0 });
   }
+
   // TODO: texture translate
 
-  // TODO: clip implementation (prevent content overflowing)
-#if 0
+  // clip implementation (prevent content overflowing)
+  // XXX: nested clipping support?
   if (do_clipping_)
-  {
-    Graphic::SetRenderToTexture();
-  }
-#endif
+    GRAPHIC->ClipViewArea(frame_.pos);
 
   // render vertices
   doRender();
@@ -982,17 +986,9 @@ void BaseObject::Render()
 
   doRenderAfter();
 
-#if 0
-  // clip implementation (rendering texture)
+  // reset clipping
   if (do_clipping_)
-  {
-    Rect r{ current_prop_.x, current_prop_.y, current_prop_.w, current_prop_.h };
-    Graphic::SetOffscreenTextureId();
-    Graphic::SetRenderToScreen();
-    FillVertexInfo(Graphic::get_vertex_buffer());
-    Graphic::RenderQuad();
-  }
-#endif
+    GRAPHIC->ResetViewArea();
 
   GRAPHIC->PopMatrix();
 }
@@ -1024,6 +1020,7 @@ void BaseObject::doUpdate(double delta) {}
 void BaseObject::doRender() {}
 void BaseObject::doUpdateAfter() {}
 void BaseObject::doRenderAfter() {}
+void BaseObject::UpdateRenderingSize(Vector2&, Vector3&) {}
 
 
 /* ---------------------------- Command related */

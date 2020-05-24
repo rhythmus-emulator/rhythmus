@@ -149,6 +149,7 @@ public:
   void PrepareText(const std::string& text_utf8);
   void PrepareGlyph(uint32_t *chrs, int count);
 
+  const FontAttribute &GetAttribute() const;
   const FontGlyph* GetGlyph(uint32_t chr) const;
   bool IsNullGlyph(const FontGlyph* g) const;
   void SetNullGlyphAsCodePoint(uint32_t chr);

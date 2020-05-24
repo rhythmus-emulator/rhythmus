@@ -235,6 +235,8 @@ Font::Font()
       return;
     }
   }
+
+  ClearFontAttribute(fontattr_);
 }
 
 Font::~Font()
@@ -332,7 +334,6 @@ void Font::Clear()
 {
   ClearGlyph();
   ReleaseFont();
-  ClearFontAttribute(fontattr_);
 }
 
 void Font::Update(float)
@@ -397,7 +398,6 @@ void Font::LoadFreetypeFont(const std::string &path)
 
   // Set size to load glyphs as
   const int fntsize_pixel = fontattr_.height;
-  fontattr_. height = fntsize_pixel;
   FT_Set_Pixel_Sizes(ftface, 0, fntsize_pixel);
 
   // Set font baseline
@@ -706,6 +706,8 @@ void Font::Commit()
     status_ = 3;
 }
 
+const FontAttribute &Font::GetAttribute() const { return fontattr_; }
+
 /**
  * Get glyph from codepoint.
  * NullGlyph is returned if codepoint not found(cached).
@@ -879,7 +881,7 @@ void Font::ReleaseFont()
   path_.clear();
   name_.clear();
   is_ttf_font_ = false;
-  fontattr_ = FontAttribute();
+  fontattr_.name.clear(); // clear name only
   status_ = 0;
   error_code_ = 0;
   error_msg_ = 0;
