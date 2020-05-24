@@ -161,7 +161,6 @@ public:
   const std::string& get_path() const;
   bool is_ttf_font() const;
   int height() const;
-  const std::string &name() const;
 
 private:
   void LoadFreetypeFont(const std::string &path);
@@ -172,9 +171,6 @@ private:
 
   // Font data path. used for identification.
   std::string path_;
-
-  // Font name
-  std::string name_;
 
   // is bitmap font or ttf font?
   bool is_ttf_font_;

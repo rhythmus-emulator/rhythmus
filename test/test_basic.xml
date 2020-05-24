@@ -6,12 +6,33 @@
   <text path="test/gyeonggi.ttf" size="24" color="#FFFFFFFF" border-width="1" border-color="#FF666666"
         text="Hello World!\nWith Line breaking\nあえいおう가나다ㅏ"
         OnLoad="x:30;y:10;time:1000;scale:1.2,1.0;repeat" />
-  <text path="test/artistfnt.dxa"
+  <text path="test/artistfnt.dxa" align="left"
         text="1234abcdΘΙΚΛあえいおう楽しい熙ⅷ黑"
-        OnLoad="x:30;y:200;acc:2;rotate:-20;time:1000;rotate:20;time:2000;rotate:-20;repeat" />
+        OnLoad="x:30;y:200;w:300;acc:2;rotate:-20;time:1000;rotate:20;time:2000;rotate:-20;repeat" />
   <text path="test/artistfnt.dxa" clipping="true"
         text="CLIPPINGTESTCLIPPINGTESTCLIPPINGTESTCLIPPINGTEST"
         OnLoad="x:30;y:240;w:200;h:100" />
+  
+  <text path="test/artistfnt.dxa" align="left"
+        text="ABCD" OnLoad="x:300;y:100;w:120;h:100" />
+  <text path="test/artistfnt.dxa" align="center"
+        text="ABCD" OnLoad="x:300;y:120;w:120;h:100" />
+  <text path="test/artistfnt.dxa" align="right"
+        text="ABCD" OnLoad="x:300;y:140;w:120;h:100" />
+  
+  <text path="test/artistfnt.dxa" align="left"
+        text="DEFG" OnLoad="x:600;y:100;w:0;h:100" />
+  <text path="test/artistfnt.dxa" align="center"
+        text="DEFG" OnLoad="x:600;y:120;w:0;h:100" />
+  <text path="test/artistfnt.dxa" align="right"
+        text="DEFG" OnLoad="x:600;y:140;w:0;h:100" />
+  
+  <text path="test/artistfnt.dxa" fit="max"
+        text="ABCD" OnLoad="x:300;y:200;w:120;h:100" />
+  <text path="test/artistfnt.dxa" fit="max"
+        text="ABCDABCDABCDABCDABCD" OnLoad="x:300;y:220;w:120;h:100" />
+  <text path="test/artistfnt.dxa" fit="stretch"
+        text="ABCD" OnLoad="x:300;y:240;w:120;h:20" />
   <!-- image -->
   <image path="test/test.png"
          OnLoad="acc:2;x:0;y:0;w:100;h:100;time:1500;x:100;y:100;w:150;h:150;rotate:30;loop:1000" />

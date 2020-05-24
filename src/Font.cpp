@@ -327,6 +327,10 @@ void Font::Load(const MetricGroup& metrics)
   fontattr_.color = StringToColor(s_color);
   fontattr_.outline_color = StringToColor(s_border_color);
 
+  // set font name if exists
+  if (metrics.exist("name"))
+    set_name(metrics.get_str("name"));
+
   Load(metrics.get_str("path"));
 }
 
@@ -354,7 +358,7 @@ bool Font::is_loaded() const
 
 bool Font::is_empty() const
 {
-  return ftface_ == 0 && glyph_.empty() && name_.empty();
+  return ftface_ == 0 && glyph_.empty();
 }
 
 void Font::LoadFreetypeFont(const std::string &path)
@@ -419,6 +423,8 @@ void Font::LoadFreetypeFont(const std::string &path)
 void Font::LoadLR2BitmapFont(const std::string &path)
 {
   R_ASSERT(is_empty());
+  // its name is always path itself.
+  set_name(path);
 
 #if USE_LR2_FONT == 1
   DXAExtractor dxa;
@@ -427,7 +433,7 @@ void Font::LoadLR2BitmapFont(const std::string &path)
     error_msg_ = "LR2Font : Cannot open file.";
     error_code_ = -1;
     return;
-}
+  }
 
   std::map<std::string, const DXAExtractor::DXAFile*> dxa_file_mapper;
   const DXAExtractor::DXAFile* dxa_file_lr2font;
@@ -879,7 +885,6 @@ void Font::ReleaseFont()
   }
 
   path_.clear();
-  name_.clear();
   is_ttf_font_ = false;
   fontattr_.name.clear(); // clear name only
   status_ = 0;
@@ -900,11 +905,6 @@ bool Font::is_ttf_font() const
 int Font::height() const
 {
   return fontattr_.height;
-}
-
-const std::string &Font::name() const
-{
-  return name_;
 }
 
 }
