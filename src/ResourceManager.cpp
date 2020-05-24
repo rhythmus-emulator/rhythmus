@@ -157,10 +157,10 @@ void ResourceContainer::DropResource(ResourceElement *elem)
 {
   auto ii = std::find(elems_.begin(), elems_.end(), elem);
   R_ASSERT(ii != elems_.end());
-  elems_.erase(ii);
   if (elem->ref_count_ == 0)
   {
     std::lock_guard<std::mutex> resource_lock(gResourceLoadLock);
+    elems_.erase(ii);
     delete elem;
   }
 }
@@ -526,6 +526,8 @@ Font* FontManager::Load(const MetricGroup &metrics)
   Font *r = nullptr;
   std::string name;
   if (metrics.get_safe("name", name) && !name.empty())
+    r = (Font*)SearchResource(name);
+  if (metrics.get_safe("path", name) && !name.empty())
     r = (Font*)SearchResource(name);
   if (!r)
   {

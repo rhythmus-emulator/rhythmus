@@ -34,6 +34,24 @@ void Text::Load(const MetricGroup &m)
     SetFont(m);
   if (m.exist("text"))
     SetText(m.get_str("text"));
+  if (m.exist("align"))
+  {
+    std::string alignstr = Upper(m.get_str("align"));
+    if (alignstr == "CENTER") text_alignment_.x = 0.5f;
+    else if (alignstr == "RIGHT") text_alignment_.x = 1.0f;
+  }
+  if (m.exist("valign"))
+  {
+    std::string alignstr = Upper(m.get_str("valign"));
+    if (alignstr == "CENTER") text_alignment_.y = 0.5f;
+    else if (alignstr == "RIGHT") text_alignment_.y = 1.0f;
+  }
+  if (m.exist("fit"))
+  {
+    std::string alignstr = Upper(m.get_str("fit"));
+    if (alignstr == "MAX") text_fitting_ = TextFitting::kTextFitMaxSize;
+    else if (alignstr == "STRETCH") text_fitting_ = TextFitting::kTextFitStretch;
+  }
 
 #if USE_LR2_FEATURE == 1
   if (m.exist("lr2src"))
@@ -191,7 +209,7 @@ void Text::UpdateTextRenderContext()
   }
 
   Vector3 scale(1.0f, 1.0f, 1.0f);
-  Vector3 centerpos(text_render_ctx_.width / 2.0f, text_render_ctx_.height / 2.0f, 0);
+  Vector3 centerpos(text_render_ctx_.drawsize.x / 2.0f, text_render_ctx_.drawsize.y / 2.0f, 0);
   switch (text_fitting_)
   {
   case TextFitting::kTextFitMaxSize:
@@ -208,8 +226,6 @@ void Text::UpdateTextRenderContext()
     break;
   case TextFitting::kTextFitNone:
   default:
-    text_render_ctx_.drawsize.x = text_render_ctx_.width;
-    text_render_ctx_.drawsize.y = text_render_ctx_.height;
     break;
   }
 
@@ -227,7 +243,7 @@ void Text::UpdateTextRenderContext()
       if (end_of_line)
       {
         float m =
-          (text_render_ctx_.width - text_render_ctx_.textvertex[i].vi[1].p.x)
+          (text_render_ctx_.drawsize.x - text_render_ctx_.textvertex[i].vi[1].p.x)
           * text_alignment_.x;
         for (unsigned j = newline_idx; j <= i; ++j)
         {
@@ -242,7 +258,7 @@ void Text::UpdateTextRenderContext()
   if (text_alignment_.y != 0)
   {
     float m =
-      (text_render_ctx_.height- text_render_ctx_.textvertex.back().vi[2].p.y)
+      (text_render_ctx_.drawsize.y - text_render_ctx_.textvertex.back().vi[2].p.y)
       * text_alignment_.y;
     for (auto& tvi : text_render_ctx_.textvertex)
     {
@@ -256,11 +272,15 @@ void Text::UpdateTextRenderContext()
   {
     for (unsigned i = 0; i < 4; ++i)
     {
-      tvi.vi[i].p -= centerpos;
       tvi.vi[i].p *= scale;
-      text_render_ctx_.vi.push_back(tvi.vi[i]);
+      tvi.vi[i].p -= centerpos;
     }
   }
+
+  // copy calculated glyph vertices.
+  for (auto &tvi : text_render_ctx_.textvertex)
+    for (unsigned i = 0; i < 4; ++i)
+      text_render_ctx_.vi.push_back(tvi.vi[i]);
 }
 
 TextVertexInfo& Text::AddTextVertex(const TextVertexInfo &tvi)
@@ -305,78 +325,42 @@ void Text::doUpdate(double delta)
 
 void Text::doRender()
 {
-  GRAPHIC->PushMatrix();
   GRAPHIC->SetBlendMode(blending_);
 
   // Draw vertex by given quad.
+  // optimize: draw glyph in group with same texid.
   float alpha = GetCurrentFrame().color.a;
-  unsigned last_i = 0, last_texid = 0;
-  for (unsigned i = 0; i < text_render_ctx_.textvertex.size(); ++i)
+  unsigned charsize = (unsigned)text_render_ctx_.textvertex.size();
+  for (unsigned i = 0; i < charsize; )
   {
     auto &tvi = text_render_ctx_.textvertex[i];
-    text_render_ctx_.vi[i * 4 + 0].c.a = alpha;
-    text_render_ctx_.vi[i * 4 + 1].c.a = alpha;
-    text_render_ctx_.vi[i * 4 + 2].c.a = alpha;
-    text_render_ctx_.vi[i * 4 + 3].c.a = alpha;
-    if (last_texid != tvi.texid || i == text_render_ctx_.textvertex.size() - 1)
+    unsigned j = i;
+    for (; j < charsize; ++j)
     {
-      if (i > 0)
-      {
-        GRAPHIC->SetTexture(0, last_texid);
-        GRAPHIC->DrawQuads(&text_render_ctx_.vi[last_i * 4], (i - last_i) * 4);
-      }
-      last_texid = tvi.texid;
-      last_i = i;
+      text_render_ctx_.vi[j * 4 + 0].c.a = alpha;
+      text_render_ctx_.vi[j * 4 + 1].c.a = alpha;
+      text_render_ctx_.vi[j * 4 + 2].c.a = alpha;
+      text_render_ctx_.vi[j * 4 + 3].c.a = alpha;
+      if (j == i) continue;
+      if (text_render_ctx_.textvertex[i].texid != text_render_ctx_.textvertex[j].texid)
+        break;
     }
+    GRAPHIC->SetTexture(0, text_render_ctx_.textvertex[i].texid);
+    GRAPHIC->DrawQuads(&text_render_ctx_.vi[i * 4], (j - i) * 4);
+    i = j;
   }
-
-  GRAPHIC->PopMatrix();
-
-  /* TESTCODE for rendering whole glyph texture */
-#if 0
-  if (text_render_ctx_.textvertex.empty())
-    return;
-  Graphic::SetTextureId(text_render_ctx_.textvertex[0].texid);
-  VertexInfo *vi = Graphic::get_vertex_buffer();
-  vi[0].x = 10;
-  vi[0].y = 10;
-  vi[0].sx = .0f;
-  vi[0].sy = .0f;
-
-  vi[1].x = 200;
-  vi[1].y = 10;
-  vi[1].sx = 1.0f;
-  vi[1].sy = .0f;
-
-  vi[2].x = 200;
-  vi[2].y = 200;
-  vi[2].sx = 1.0f;
-  vi[2].sy = 1.0f;
-
-  vi[3].x = 10;
-  vi[3].y = 200;
-  vi[3].sx = .0f;
-  vi[3].sy = 1.0f;
-
-  vi[0].r = vi[0].g = vi[0].b = vi[0].a = 1.0f;
-  vi[1].r = vi[1].g = vi[1].b = vi[1].a = 1.0f;
-  vi[2].r = vi[2].g = vi[2].b = vi[2].a = 1.0f;
-  vi[3].r = vi[3].g = vi[3].b = vi[3].a = 1.0f;
-
-  Graphic::RenderQuad();
-#endif
 }
 
 void Text::UpdateRenderingSize(Vector2 &d, Vector3 &p)
 {
   // calculate scale and apply
   // and transition in case of width is smaller than text size
-  const float width = GetWidth(GetCurrentFrame().pos);
-  const float height = GetHeight(GetCurrentFrame().pos);
-  if (text_render_ctx_.drawsize.x > width)
-    p.x = (text_render_ctx_.drawsize.x - width) * (0.5f - text_alignment_.x);
-  if (text_render_ctx_.drawsize.y > height)
-    p.y = (text_render_ctx_.drawsize.y - height) * (0.5f - text_alignment_.y);
+  //const float width = GetWidth(GetCurrentFrame().pos);
+  //const float height = GetHeight(GetCurrentFrame().pos);
+  //if (text_render_ctx_.width > width)
+  //  p.x = (text_render_ctx_.width - width) * (0.5f - text_alignment_.x);
+  //if (text_render_ctx_.height > height)
+  //  p.y = (text_render_ctx_.height - height) * (0.5f - text_alignment_.y);
 
   // -- don't consider about scale here
   // as width/height purposes for alignment, not size of text.
