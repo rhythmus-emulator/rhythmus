@@ -645,7 +645,7 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
     g.fbitmap = 0;
 
     /* generate bitmap only when size is valid */
-    if (ftface->glyph->bitmap.width > 0)
+    if (bglyph->bitmap.width > 0)
     {
       // generate foreground bitmap instantly
       // XXX: need texture option
