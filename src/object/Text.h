@@ -84,7 +84,7 @@ private:
     float tx, ty;
   } alignment_attrs_;
 
-  float width_multiply_;
+  bool autosize_;
 
   int blending_;
 

@@ -12,7 +12,7 @@ RHYTHMUS_NAMESPACE_BEGIN
 Text::Text()
   : font_(nullptr),
     text_fitting_(TextFitting::kTextFitNone), set_xy_aligncenter_(false), use_height_as_font_height_(false),
-    width_multiply_(1.0f), blending_(0), counter_(0), is_texture_loaded_(true),
+    autosize_(false), blending_(0), counter_(0), is_texture_loaded_(true),
     res_id_(nullptr), do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
@@ -29,6 +29,9 @@ Text::~Text()
 void Text::Load(const MetricGroup &m)
 {
   BaseObject::Load(m);
+
+  // Load autosize first before loading text.
+  m.get_safe("autosize", autosize_);
 
   if (m.exist("path"))
     SetFont(m);
@@ -207,6 +210,13 @@ void Text::UpdateTextRenderContext()
   {
     text_render_ctx_.height = (float)font_->GetAttribute().height;
   }
+  if (autosize_)
+  {
+    text_render_ctx_.drawsize.x = text_render_ctx_.width;
+    text_render_ctx_.drawsize.y = text_render_ctx_.height;
+    GetCurrentFrame().pos.z = GetCurrentFrame().pos.x + text_render_ctx_.drawsize.x;
+    GetCurrentFrame().pos.w = GetCurrentFrame().pos.y + text_render_ctx_.drawsize.y;
+  }
 
   Vector3 scale(1.0f, 1.0f, 1.0f);
   Vector3 centerpos(text_render_ctx_.drawsize.x / 2.0f, text_render_ctx_.drawsize.y / 2.0f, 0);
@@ -287,11 +297,6 @@ TextVertexInfo& Text::AddTextVertex(const TextVertexInfo &tvi)
 {
   text_render_ctx_.textvertex.push_back(tvi);
   return text_render_ctx_.textvertex.back();
-}
-
-void Text::SetWidthMultiply(float multiply)
-{
-  width_multiply_ = multiply;
 }
 
 void Text::Refresh()
