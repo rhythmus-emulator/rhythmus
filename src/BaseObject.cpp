@@ -362,7 +362,9 @@ void BaseObject::Load(const MetricGroup &m)
     SetVisibleFlag(
       la.Get<std::string>(17), la.Get<std::string>(18), la.Get<std::string>(19), ""
     );
-    AddCommand(format_string("LR%d", la.Get<int>(16)), "lr2cmd:" + lr2cmd);
+
+    if (m.exist("lr2dst"))
+      AddCommand(format_string("LR%d", la.Get<int>(16)), "lr2cmd:" + m.get_str("lr2dst"));
   }
 #endif
 
@@ -705,8 +707,9 @@ void BaseObject::SetLR2DST(const std::string &cmd)
 
   int time_prev = 0;
   CommandArgs cmds;
-  cmds.set_separator(';');
+  cmds.set_separator('|');
   cmds.Parse(cmd);
+
   ani_.emplace_back(Animation(nullptr));
   Animation &ani = ani_.back();
 
@@ -735,7 +738,7 @@ void BaseObject::SetLR2DST(const std::string &cmd)
     // set attributes
     DrawProperty f;
     f.pos = Vector4{ x, y, x + w, y + h };
-    f.color = Vector4{ r, g, b, a };
+    f.color = Vector4{ r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f };
     f.rotate.z = glm::radians((float)angle);
     f.scale = Vector2{ 1.0f, 1.0f };
 
