@@ -347,11 +347,11 @@ void BaseObject::Load(const MetricGroup &m)
 
 #if USE_LR2_FEATURE == 1
   // Load LR2 properties
-  if (m.exist("lr2cmd"))
+  if (m.exist("lr2src"))
   {
     std::string lr2cmd;
     CommandArgs la;
-    m.get_safe("lr2cmd", lr2cmd);
+    m.get_safe("lr2src", lr2cmd);
     la.set_separator(',');
     la.Parse(lr2cmd, 21, true);
 
@@ -362,7 +362,7 @@ void BaseObject::Load(const MetricGroup &m)
     SetVisibleFlag(
       la.Get<std::string>(17), la.Get<std::string>(18), la.Get<std::string>(19), ""
     );
-    AddCommand(format_string("LR%dOn", la.Get<int>(16)), lr2cmd);
+    AddCommand(format_string("LR%d", la.Get<int>(16)), "lr2cmd:" + lr2cmd);
   }
 #endif
 
@@ -770,7 +770,12 @@ void BaseObject::SetLR2DST(const std::string &cmd)
 void BaseObject::SetVisibleFlag(const std::string& group0, const std::string& group1,
   const std::string& group2, const std::string& group3)
 {
+  static const int alwaystrue = 1;
   ignore_visible_group_ = false;
+  visible_flag_[0] = &alwaystrue;
+  visible_flag_[1] = &alwaystrue;
+  visible_flag_[2] = &alwaystrue;
+  visible_flag_[3] = &alwaystrue;
   if (!group0.empty())
   {
     KeyData<int> k1 = KEYPOOL->GetInt(group0);

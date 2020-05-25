@@ -279,7 +279,7 @@ protected:
 
   // group for visibility
   // @warn 4th group: for special use (e.g. panel visibility of onmouse)
-  int *visible_flag_[4];
+  const int *visible_flag_[4];
 
   // ignoring visible group
   bool ignore_visible_group_;
