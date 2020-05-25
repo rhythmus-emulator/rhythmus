@@ -159,9 +159,9 @@ void ResourceContainer::DropResource(ResourceElement *elem)
   R_ASSERT(ii != elems_.end());
   if (--elem->ref_count_ == 0)
   {
+    elems_.erase(ii);
     auto *t = elem->get_parent_task();
     if (t) t->abort();
-    elems_.erase(ii);
     delete elem;
   }
 }
