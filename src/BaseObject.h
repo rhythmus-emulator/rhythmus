@@ -41,7 +41,7 @@ struct DrawProperty
 {
   Vector4 pos;    // x1, y1, x2, y2
   Vector4 color;  // a, r, g, b
-  Vector4 rotate; // rotation
+  Vector3 rotate; // rotation
   Point align;    // center(align) of object (.0f ~ .1f)
   Point scale;    // object scale
 };
@@ -105,9 +105,17 @@ public:
   bool empty() const;
   bool is_finished() const;
 
+  // used if currently tweening.
+  // ex) if 500~1500 tween (not starting from zero),
+  //     then if tween time is
+  // 50ms   : false
+  // 700ms  : true
+  // 1600ms : false (actually, animation is already finished)
+  bool is_tweening() const;
+
 private:
   std::vector<AnimationFrame> frames_;
-  unsigned current_frame_;    // current frame
+  int current_frame_;         // current frame. if -1, then time is yet to first frame.
   double current_frame_time_; // current frame eclipsed time
   double frame_time_;         // eclipsed time of whole animation
   bool is_finished_;
@@ -276,6 +284,10 @@ protected:
   DrawProperty frame_;
 
   bool visible_;
+
+  // hide if current object is not tweening.
+  // (LR2 only)
+  bool hide_if_not_tweening_;
 
   // group for visibility
   // @warn 4th group: for special use (e.g. panel visibility of onmouse)
