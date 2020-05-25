@@ -306,18 +306,18 @@ void Game::LoadArgument(const std::string& argv)
   if (argv[0] != '-') return;
   Split(argv, '=', cmd, v);
 
-  if (cmd == "-test")
+  if (cmd == "--test")
   {
     game_boot_mode_ = GameBootMode::kBootTest;
     gPrefFileTemp["TestScene"] = v;
   }
-  else if (cmd == "-reset")
+  else if (cmd == "--reset")
   {
   } // TODO
-  else if (cmd == "-reloadsong")
+  else if (cmd == "--reloadsong")
   {
   } // TODO
-  else if (cmd == "-play")
+  else if (cmd == "--play")
   {
     game_boot_mode_ = GameBootMode::kBootPlay;
     SongPlayer::getInstance().SetSongtoPlay(v, "");

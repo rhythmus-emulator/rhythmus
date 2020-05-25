@@ -159,7 +159,8 @@ void ResourceContainer::DropResource(ResourceElement *elem)
   R_ASSERT(ii != elems_.end());
   if (--elem->ref_count_ == 0)
   {
-    std::lock_guard<std::mutex> resource_lock(gResourceLoadLock);
+    auto *t = elem->get_parent_task();
+    if (t) t->abort();
     elems_.erase(ii);
     delete elem;
   }
