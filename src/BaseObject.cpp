@@ -91,7 +91,7 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
 // ---------------------------------------------------------------- class Tween
 
 Animation::Animation(const DrawProperty *initial_state)
-  : current_frame_(0), current_frame_time_(0), frame_time_(0),
+  : current_frame_(-1), current_frame_time_(0), frame_time_(0),
     is_finished_(false), repeat_(false), repeat_time_(0)
 {
   if (initial_state)
@@ -165,15 +165,23 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
     // don't update if frame_time is less than first frame
     return;
   }
-  for (current_frame_ = 0; current_frame_ < frames_.size() - 1; ++current_frame_)
+  for (current_frame_ = -1; current_frame_ < (int)frames_.size() - 1; ++current_frame_)
   {
     if (frame_time_ < frames_[current_frame_ + 1].time)
       break;
   }
-  if (!repeat_ && frame_time_ >= frames_.back().time)
+  if (current_frame_ < 0)
+  {
+    // if not yet to first frame, then exit.
+    current_frame_time_ = 0;
+    ms = 0;
+    return;
+  }
+  else if (!repeat_ && frame_time_ >= frames_.back().time)
   {
     // stop animation as it had reached its end.
     current_frame_ = (unsigned)frames_.size() - 1;
+    current_frame_time_ = 0;
     ms = frame_time_ - frames_.back().time;
     command_to_invoke = command;
     is_finished_ = true;
@@ -239,11 +247,17 @@ size_t Animation::size() const { return frames_.size(); }
 bool Animation::empty() const { return frames_.empty(); }
 bool Animation::is_finished() const { return is_finished_; }
 
+bool Animation::is_tweening() const
+{
+  return !frames_.empty() && current_frame_ >= 0;
+}
+
 
 // ----------------------------------------------------------- class BaseObject
 
 BaseObject::BaseObject()
-  : parent_(nullptr), own_children_(true), draw_order_(0), visible_(true),
+  : parent_(nullptr), own_children_(true), draw_order_(0),
+    visible_(true), hide_if_not_tweening_(false),
     ignore_visible_group_(true), is_focusable_(false), is_focused_(false),
     is_hovered_(false), do_clipping_(false)
 {
@@ -252,12 +266,13 @@ BaseObject::BaseObject()
   SetAlpha(1.0f);
   SetScale(1.0f, 1.0f);
   SetCenter(0.5f, 0.5f);
+  SetRotation(0, 0, 0);
   memset(visible_flag_, 0, sizeof(visible_flag_));
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
-  : name_(obj.name_), own_children_(true), parent_(obj.parent_), ani_(obj.ani_),
-    draw_order_(obj.draw_order_), visible_(obj.visible_),
+  : name_(obj.name_), own_children_(true), parent_(obj.parent_), ani_(obj.ani_), draw_order_(obj.draw_order_),
+    visible_(obj.visible_), hide_if_not_tweening_(obj.hide_if_not_tweening_),
     ignore_visible_group_(obj.ignore_visible_group_),
     is_focusable_(obj.is_focusable_), is_focused_(false),
     is_hovered_(false), do_clipping_(false)
@@ -357,14 +372,26 @@ void BaseObject::Load(const MetricGroup &m)
 
     debug_ = la.Get<std::string>(20);
 
-    // XXX: move this flag to Sprite,
-    // as LR2_TEXT object don't work with this..?
-    SetVisibleFlag(
-      la.Get<std::string>(17), la.Get<std::string>(18), la.Get<std::string>(19), ""
-    );
-
     if (m.exist("lr2dst"))
-      AddCommand(format_string("LR%d", la.Get<int>(16)), "lr2cmd:" + m.get_str("lr2dst"));
+    {
+      std::string d = m.get_str("lr2dst");
+      CommandArgs args_dst(d);
+
+      // XXX: move this flag to Sprite,
+      // as LR2_TEXT object don't work with this..?
+      SetVisibleFlag(
+        "F" + args_dst.Get<std::string>(17), "F" + args_dst.Get<std::string>(18),
+        "F" + args_dst.Get<std::string>(19), ""
+      );
+
+      AddCommand(format_string("LR%d", la.Get<int>(16)), "lr2cmd:" + d);
+      AddCommand(format_string("LR%dOff", la.Get<int>(16)), "stop");
+    }
+
+    // Hide by default.
+    Hide();
+
+    // Hide if not tweening.
   }
 #endif
 
@@ -739,7 +766,7 @@ void BaseObject::SetLR2DST(const std::string &cmd)
     DrawProperty f;
     f.pos = Vector4{ x, y, x + w, y + h };
     f.color = Vector4{ r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f };
-    f.rotate.z = glm::radians((float)angle);
+    f.rotate = Vector3{ 0.0f, 0.0f, glm::radians((float)angle) };
     f.scale = Vector2{ 1.0f, 1.0f };
 
     switch (lr2acc)
@@ -764,9 +791,12 @@ void BaseObject::SetLR2DST(const std::string &cmd)
     SetCenter(center);
 
     // if first loop, then set loop.
-    if (i == 0 && loop > 0)
+    if (i == 0 && loop >= 0)
       ani.SetLoop(loop);
   }
+
+  // show at beginning.
+  Show();
 #endif
 }
 
@@ -897,6 +927,9 @@ bool BaseObject::IsVisible() const
                               || *visible_flag_[1] == 0
                               || *visible_flag_[2] == 0
                               || *visible_flag_[3] == 0))
+    return false;
+
+  if (hide_if_not_tweening_ && (ani_.empty() || !ani_.front().is_tweening()))
     return false;
 
   return visible_/* &&
