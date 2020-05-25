@@ -55,7 +55,7 @@ find_package(GLFW)
 find_package(GLEW)
 find_package(FreeImage)
 find_package(Freetype)
-find_package(FFMPEG COMPONENTS avcodec avformat avutil swscale)
+find_package(FFMPEG COMPONENTS avfilter avformat avcodec avutil swscale swresample)
 find_package(OGG)
 find_package(Vorbis)
 find_package(VorbisEnc QUIET)   # Not necessary for Windows cmake

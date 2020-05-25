@@ -143,10 +143,12 @@ include_directories(SYSTEM
   ${SQLITE_INCLUDE_DIR}
   )
 
+set(BIN_LIB "")
 if (WIN32)
   add_executable(rhythmus_bin WIN32 ${RHYTHMUS_SOURCES} ${RHYTHMUS_HEADERS})
 else ()
   add_executable(rhythmus_bin ${RHYTHMUS_SOURCES} ${RHYTHMUS_HEADERS})
+  set(BIN_LIB X11 lzma va va-drm va-x11 vdpau)
 endif ()
 
 target_link_libraries(rhythmus_bin
@@ -166,4 +168,5 @@ target_link_libraries(rhythmus_bin
   ${OPENAL_LIBRARY}
   ${ZIP_LIBRARY}
   ${CMAKE_DL_LIBS}
+  ${BIN_LIB}
   )

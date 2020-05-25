@@ -15,6 +15,7 @@ extern "C"
 #include <libavutil/imgutils.h>
 }
 
+#define FFMPEG_REGISTER_CODEC 0
 #define FFMPEG_USE_DEPRECIATED 0
 #define FFMPEG_USE_DECODE_DEPRECIATED 1
 
@@ -93,13 +94,13 @@ FFmpegContext::FFmpegContext()
     is_eof_(false), is_eof_packet_(false), is_image_(false),
     width_(0), height_(0)
 {
-#if FFMPEG_USE_DEPRECIATED
+#if FFMPEG_REGISTER_CODEC
   /* ffmpeg initialization */
   static bool is_ffmpeg_initialized_ = false;
   if (!is_ffmpeg_initialized_)
   {
+    av_register_all();
     avcodec_register_all();
-    //av_register_all();
     is_ffmpeg_initialized_ = true;
   }
 #endif
@@ -155,11 +156,11 @@ bool FFmpegContext::Open(const std::string& path)
     return false;
   }
 
-  int sinfo_ret = avformat_find_stream_info(formatctx, NULL);
-  if (sinfo_ret < 0)
+  ret = avformat_find_stream_info(formatctx, NULL);
+  if (ret < 0)
   {
-    error_msg_ = "Movie stream search failed (code " + std::to_string(sinfo_ret) + ")";
-    error_code_ = -1;
+    error_msg_ = "Movie stream search failed.";
+    error_code_ = ret;
     Unload();
     return false;
   }
@@ -170,7 +171,11 @@ bool FFmpegContext::Open(const std::string& path)
   if (stream->codecpar)
     codec = avcodec_find_decoder(stream->codecpar->codec_id);
   else
-    codec = nullptr;
+  {
+    std::string ext = GetExtension(path);
+    codec = avcodec_find_decoder_by_name(ext.c_str());
+  }
+
   if (!codec)
   {
     error_msg_ = "Movie stream codec failed.";
