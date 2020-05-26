@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Sprite.h"
+#include "Image.h"
 #include "ResourceManager.h"
 #include <stdint.h>
 #include <stddef.h>
@@ -10,7 +11,6 @@
 namespace rhythmus
 {
 
-class Image;
 class MetricGroup;
 
 // @brief Bitmap property for filling font outline or foreground
@@ -54,8 +54,8 @@ struct FontAttribute
 
 struct TextVertexInfo
 {
-  unsigned texid;
   VertexInfo vi[4];
+  const Texture* tex;
 };
 
 class FontBitmap;
@@ -98,6 +98,7 @@ public:
   int width() const;
   int height() const;
   unsigned get_texid() const;
+  const Texture* get_texture() const;
   
   int get_error_code() const;
   const char *get_error_msg() const;
@@ -110,7 +111,7 @@ public:
 
 private:
   uint32_t* bitmap_;
-  unsigned texid_;
+  Texture texture_;
 
   /* width / height of font bitmap cache */
   int width_, height_;

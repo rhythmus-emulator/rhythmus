@@ -84,8 +84,7 @@ void SetFontAttributeFromCommand(FontAttribute &fontattr, const std::string &com
 // --------------------------- class FontBitmap
 
 FontBitmap::FontBitmap(int w, int h)
-  : bitmap_(0), texid_(0), committed_(false),
-    error_code_(0), error_msg_(0)
+  : bitmap_(0), committed_(false), error_code_(0), error_msg_(0)
 {
   width_ = w;
   height_ = h;
@@ -99,7 +98,7 @@ FontBitmap::FontBitmap(int w, int h)
 
 // bitmap is moved into memory.
 FontBitmap::FontBitmap(uint32_t* bitmap, int w, int h)
-  : bitmap_(bitmap), texid_(0), committed_(false),
+  : bitmap_(bitmap), committed_(false),
     width_(w), height_(h), cur_x_(0), cur_y_(0), cur_line_height_(0),
     error_code_(0), error_msg_(0)
 {
@@ -107,7 +106,7 @@ FontBitmap::FontBitmap(uint32_t* bitmap, int w, int h)
 
 // bitmap is copied into memory.
 FontBitmap::FontBitmap(const uint32_t* bitmap, int w, int h)
-  : bitmap_(0), texid_(0), committed_(false),
+  : bitmap_(0), committed_(false),
     width_(w), height_(h), cur_x_(0), cur_y_(0), cur_line_height_(0),
     error_code_(0), error_msg_(0)
 {
@@ -117,10 +116,10 @@ FontBitmap::FontBitmap(const uint32_t* bitmap, int w, int h)
 
 FontBitmap::~FontBitmap()
 {
-  if (texid_)
+  if (*texture_)
   {
-    GRAPHIC->DeleteTexture(texid_);
-    texid_ = 0;
+    GRAPHIC->DeleteTexture(*texture_);
+    texture_.set(0);
   }
 
   if (bitmap_)
@@ -177,8 +176,8 @@ bool FontBitmap::Update()
   if (committed_ || !bitmap_) return false;
 
   // commit bitmap
-  texid_ = GRAPHIC->CreateTexture((uint8_t*)bitmap_, width_, height_);
-  if (texid_ == 0)
+  texture_.set(GRAPHIC->CreateTexture((uint8_t*)bitmap_, width_, height_));
+  if (*texture_ == 0)
   {
     Logger::Error("Font - Allocating texture failed.");
     return false;
@@ -200,7 +199,12 @@ int FontBitmap::height() const { return height_; }
 
 unsigned FontBitmap::get_texid() const
 {
-  return texid_;
+  return *texture_;
+}
+
+const Texture* FontBitmap::get_texture() const
+{
+  return &texture_;
 }
 
 int FontBitmap::get_error_code() const { return error_code_; }
@@ -791,6 +795,8 @@ void Font::GetTextVertexInfo(const std::string& s,
     // no-size glyph is ignored
     if (g->codepoint == 0)
       continue;
+    if (g->fbitmap)
+      continue;
 
     cur_x += g->pos_x;
     cur_y = line_y + fontattr_.baseline_offset - g->pos_y;
@@ -812,10 +818,7 @@ void Font::GetTextVertexInfo(const std::string& s,
     vi[3].t = Vector2{ g->sx1, g->sy2 };
 
     cur_x += g->adv_x - g->pos_x;
-    if (g->fbitmap)
-      tvi.texid = g->fbitmap->get_texid();
-    else
-      tvi.texid = 0;
+    tvi.tex = g->fbitmap->get_texture();
 
     // skip in case of special character
     if (g->codepoint == ' ' || g->codepoint == '\r')

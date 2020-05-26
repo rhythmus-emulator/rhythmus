@@ -322,10 +322,10 @@ void Text::doUpdate(double delta)
   counter_ = (counter_ + 1) % 30;
 
   // attempt to reload font texture periodically if not completely loaded
-  if (counter_ == 0 && !is_texture_loaded_ && font_)
-  {
-    UpdateTextRenderContext();
-  }
+  //if (counter_ == 0 && !is_texture_loaded_ && font_)
+  //{
+  //  UpdateTextRenderContext();
+  //}
 }
 
 void Text::doRender()
@@ -347,10 +347,11 @@ void Text::doRender()
       text_render_ctx_.vi[j * 4 + 2].c.a = alpha;
       text_render_ctx_.vi[j * 4 + 3].c.a = alpha;
       if (j == i) continue;
-      if (text_render_ctx_.textvertex[i].texid != text_render_ctx_.textvertex[j].texid)
+      // XXX: should compare texture id, or just pointer?
+      if (text_render_ctx_.textvertex[i].tex != text_render_ctx_.textvertex[j].tex)
         break;
     }
-    GRAPHIC->SetTexture(0, text_render_ctx_.textvertex[i].texid);
+    GRAPHIC->SetTexture(0, **text_render_ctx_.textvertex[i].tex);
     GRAPHIC->DrawQuads(&text_render_ctx_.vi[i * 4], (j - i) * 4);
     i = j;
   }

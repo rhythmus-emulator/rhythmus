@@ -18,6 +18,20 @@ enum ImageErrorCode
 
 class MetricGroup;
 
+/* @brief Contains texture id which is used for rendering. */
+class Texture
+{
+public:
+  Texture();
+  void set(unsigned texid);
+  const unsigned get() const;
+  unsigned operator*();
+  const unsigned operator*() const;
+
+private:
+  unsigned id_;
+};
+
 /**
  * @brief Contains loaded bitmap image / texture.
  * @warn After Commit(), image data will be deleted to save memory space.
@@ -36,6 +50,7 @@ public:
   void Unload();
   bool is_loaded() const;
   unsigned get_texture_ID() const;
+  const Texture* get_texture() const;
   uint16_t get_width() const;
   uint16_t get_height() const;
   const uint8_t *get_ptr() const;
@@ -49,7 +64,7 @@ private:
   void* bitmap_ctx_;
   uint8_t *data_ptr_;
   uint16_t width_, height_;
-  unsigned textureID_;
+  Texture tex_;
   std::string error_msg_buf_;
 
   /*

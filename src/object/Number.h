@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Sprite.h"
-#include "Text.h"
+#include "Font.h"
 
 namespace rhythmus
 {
@@ -41,9 +41,10 @@ private:
   char num_str_[16];
 };
 
-/* @brief Number based on Text object
- * TODO: separate it with NumberSprite */
-class Number : public Text
+constexpr size_t kMaxNumberVertex = 64;
+
+/* @brief Optimized for displaying number. */
+class Number : public BaseObject
 {
 public:
   Number();
@@ -51,29 +52,69 @@ public:
 
   virtual void Load(const MetricGroup& metric);
 
+  virtual void SetGlyphFromFont(const MetricGroup &m);
+  virtual void SetGlyphFromLR2SRC(const std::string &lr2src);
+
   virtual void SetNumber(int number);
   virtual void SetNumber(double number);
   virtual void SetText(const std::string &s);
   virtual void Refresh();
-  NumberFormatter &GetFormatter();
 
 private:
-  void AllocNumberGlyph(size_t cycles);
-  void CreateTextVertexFromSprite();
-  void CreateTextVertexFromFont();
-  virtual void doUpdate(double);
-
-  Sprite numbersprite_;
-  NumberFormatter formatter_;
-  int *res_ptr_;
+  Image *img_;
+  Font *font_;
 
   /* 0 ~ 9 : positive number glyphs
    * 10 : positive zero(empty) number glyph 
    * 11 : plus glyph
    * 12 ~ 21 : negative number glyphs
    * 22 : negative zero(empty) number glyph
-   * 23 : minus glyph */
+   * 23 : minus glyph
+   * multiply by cycle_count. */
   TextVertexInfo *tvi_glyphs_;
+
+  /* number glyphs to render. */
+  VertexInfo render_glyphs_[kMaxNumberVertex][4];
+  const Texture* tex_[kMaxNumberVertex];
+
+  /* number glyphs vertex size. */
+  unsigned render_glyphs_count_;
+
+  // cycle count for number sprite
+  // @warn  must modified by AllocNumberGlyph(...)
+  unsigned cycle_count_;
+
+  // time per cycle (zero is non-cycle)
+  unsigned cycle_time_;
+
+  // number characters to display
+  char num_chrs[256];
+
+  // reference to value (if necessary)
+  int *val_ptr_;
+
+  // font display style (for LR2 alignment)
+  int display_style_;
+
+  // width multiply (for LR2 specification)
+  int keta_;
+
+  // displaying value
+  struct {
+    double start;
+    double end;
+    double curr;
+    double time;
+    double rollingtime; // number rolling time
+    int max_int;        // maximum size of integer area
+    int max_decimal;    // maximum size of decimal area
+  } value_params_;
+
+  void AllocNumberGlyph(unsigned cycles);
+  void ClearAll();
+  void UpdateVertex();
+  virtual void doUpdate(double);
+  virtual void UpdateRenderingSize(Vector2 &d, Vector3 &p);
 };
 
 }

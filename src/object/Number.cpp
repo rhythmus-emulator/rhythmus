@@ -1,6 +1,8 @@
 #include "Number.h"
 #include "Script.h"
+#include "Util.h"
 #include "config.h"
+#include <algorithm>
 
 namespace rhythmus
 {
@@ -87,145 +89,173 @@ const char* NumberFormatter::numstr() const
 }
 
 
-// --------------------------- class NumberText
+// ------------------------------- class Number
 
-Number::Number() : tvi_glyphs_(nullptr), res_ptr_(nullptr) {}
+Number::Number() :
+  img_(nullptr), font_(nullptr), tvi_glyphs_(nullptr),
+  cycle_count_(0), cycle_time_(0), val_ptr_(nullptr), display_style_(0), keta_(1)
+{
+  *num_chrs = 0;
+  UpdateVertex();
+}
 
-Number::~Number() { AllocNumberGlyph(0); }
+Number::~Number()
+{
+  ClearAll();
+}
 
 void Number::Load(const MetricGroup& metric)
 {
-  Text::Load(metric);
+  BaseObject::Load(metric);
 
-#if USE_LR2_FEATURE == 1
-#if 0
+  // use font if exists
+  // XXX: need to use 'path' attribute?
+  if (metric.exist("font"))
+    SetGlyphFromFont(metric);
+
   if (metric.exist("lr2src"))
   {
-    // This method only supports number with sprite, not font.
-    numbersprite_.LoadFromLR2SRC(cmd);
+    SetGlyphFromLR2SRC(metric.get_str("lr2src"));
+  }
+}
 
-    // (image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align)
-    CommandArgs args(cmd);
+void Number::SetGlyphFromFont(const MetricGroup &m)
+{
+  ClearAll();
+  font_ = FONTMAN->Load(m);
+  if (!font_)
+    return;
+  AllocNumberGlyph(1);
 
-    /* track change of number table */
-    int eventid = args.Get<int>(9);
-    std::string eventname = "Number" + args.Get<std::string>(9);
-    AddCommand(eventname, "refresh");
-    SubscribeTo(eventname);
+  std::vector<TextVertexInfo> textvertex;
+  font_->GetTextVertexInfo("0123456789+-0123456789+-", textvertex, false);
+  for (unsigned i = 0; i < 24; ++i)
+    tvi_glyphs_[i] = textvertex[i];
+}
 
-    /* set value instantly */
-    SetResourceId(eventid);
-    Refresh();
+void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
+{
+#if USE_LR2_FEATURE == 1
+  // (null),(image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align),(keta)
+  CommandArgs args(lr2src);
 
-    /* alignment (not use LR2 alignment here) */
-    switch (args.Get<int>(10))
+  ClearAll();
+  img_ = IMAGEMAN->Load(args.Get_str(1));
+  if (!img_)
+    return;
+
+  /* add glyphs */
+  Vector4 imgcoord{
+    args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), args.Get<int>(5)
+  };
+  int divx = args.Get<int>(6);
+  int divy = args.Get<int>(7);
+  unsigned cnt = (unsigned)(divx * divy);
+  AllocNumberGlyph(cnt);
+  for (unsigned j = 0; j < divy; ++j)
+  {
+    for (unsigned i = 0; i < divx; ++i)
     {
-    case 0:
-      SetTextAlignment(TextAlignments::kTextAlignLeft);
-      break;
-    case 1:
-      SetTextAlignment(TextAlignments::kTextAlignRight);
-      break;
-    case 2:
-      SetTextAlignment(TextAlignments::kTextAlignCenter);
-      break;
+      auto &tvi = tvi_glyphs_[j * divx + i];
+      // XXX: sprite must be loaded first, or invalid texcoord..
+      tvi.vi[0].t = Vector2(0.0f, 0.0f);
+      tvi.vi[1].t = Vector2(0.0f, 0.0f);
+      tvi.vi[2].t = Vector2(0.0f, 0.0f);
+      tvi.vi[3].t = Vector2(0.0f, 0.0f);
+      tvi.vi[0].c = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+      tvi.vi[1].c = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+      tvi.vi[2].c = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+      tvi.vi[3].c = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+      tvi.vi[0].p = Vector3(0.0f, 0.0f, 0.0f);
+      tvi.vi[1].p = Vector3(0.0f, 0.0f, 0.0f);
+      tvi.vi[2].p = Vector3(0.0f, 0.0f, 0.0f);
+      tvi.vi[3].p = Vector3(0.0f, 0.0f, 0.0f);
     }
+  }
 
-    /* keta processing: tween width multiply & set number formatter */
-    int keta = args.Get<int>(11);
-    SetWidthMultiply((float)keta);
-  }
-#endif
-#endif
+  /* track change of number table */
+  int eventid = args.Get<int>(9);
+  std::string eventname = "Number" + args.Get<std::string>(9);
+  AddCommand(eventname, "refresh");
+  SubscribeTo(eventname);
 
-  /* Use font if loaded (by Text::Load).
-   * If not, use texture if necessary (by Number::LoadFromLR2SRC). */
-  if (font())
+  /* alignment (not use LR2 alignment here) */
+  switch (args.Get<int>(11))
   {
-    CreateTextVertexFromFont();
+  case 0:
+    GetCurrentFrame().align.x = 0.0f;
+    display_style_ = 0;
+    break;
+  case 1:
+    GetCurrentFrame().align.x = 1.0f;
+    display_style_ = 1;
+    break;
+  case 2:
+    // XXX: different from LR2 if keta enabled
+    GetCurrentFrame().align.x = 0.5f;
+    display_style_ = 0;
+    break;
   }
-  else if (numbersprite_.image())
-  {
-    CreateTextVertexFromSprite();
-  }
+
+  /* keta processing: tween width multiply & set number formatter */
+  int keta = args.Get<int>(12);
+  keta_ = keta;
+  value_params_.max_int = keta;
+  value_params_.max_decimal = 0;
+
+  /* set value instantly: TODO */
+  //SetResourceId(eventid);
+  //Refresh();
+#endif
 }
 
 void Number::SetNumber(int number)
 {
-  formatter_.SetNumber(number);
-  SetText(formatter_.numstr());
+  UpdateVertex();
 }
 
 void Number::SetNumber(double number)
 {
-  formatter_.SetNumber(number);
-  SetText(formatter_.numstr());
+  UpdateVertex();
 }
 
 void Number::SetText(const std::string &num)
 {
-  if (!tvi_glyphs_)
-    return;
-  ClearText();
-  if (num.empty())
-    return;
-
-  size_t gidx = 0;
-  bool is_positive = (num[0] != '-');
-  float x = 0;
-
-  for (size_t i = 0; i < num.size(); ++i)
-  {
-    if (num[i] >= '0' && num[i] <= '9')
-      gidx = num[i] - '0';
-    else if (num[i] == '-' || num[i] == '+')
-      gidx = 11;
-    else if (num[i] == 'O') /* transparent zero */
-      gidx = 10;
-    if (!is_positive)
-      gidx += 12;
-    if (tvi_glyphs_[gidx].texid == 0)
-      continue;
-
-    auto *vi = AddTextVertex(tvi_glyphs_[gidx]).vi;
-    vi[0].p.x += x;
-    vi[1].p.x += x;
-    vi[2].p.x += x;
-    vi[3].p.x += x;
-    x += vi[1].p.x - vi[0].p.x;
-  }
-
-  // TODO: cycle property, add tvi with cycles
-
-  UpdateTextRenderContext();
-}
-
-NumberFormatter &Number::GetFormatter()
-{
-  return formatter_;
-}
-
-void Number::doUpdate(double delta)
-{
-  if (formatter_.UpdateNumber((float)delta))
-    SetText(formatter_.numstr());
-  Text::doUpdate(delta);
+  strcpy(num_chrs, num.c_str());
+  UpdateVertex();
 }
 
 void Number::Refresh()
 {
   /* kind of trick to compatible with LR2:
    * if value is UINT_MAX, then set with empty value. */
-  if (res_ptr_)
+  if (val_ptr_)
   {
-    if (*res_ptr_ == 0xFFFFFFFF)
+    if (*val_ptr_ == 0xFFFFFFFF)
       SetText(std::string());
     else
-      SetNumber(*res_ptr_);
+      SetNumber(*val_ptr_);
   }
 }
 
-void Number::AllocNumberGlyph(size_t cycles)
+void Number::ClearAll()
+{
+  AllocNumberGlyph(0);
+
+  if (font_)
+  {
+    FONTMAN->Unload(font_);
+    font_ = nullptr;
+  }
+
+  if (img_)
+  {
+    IMAGEMAN->Unload(img_);
+    img_ = nullptr;
+  }
+}
+
+void Number::AllocNumberGlyph(unsigned cycles)
 {
   if (tvi_glyphs_)
   {
@@ -235,80 +265,41 @@ void Number::AllocNumberGlyph(size_t cycles)
   if (cycles == 0)
     return;
   tvi_glyphs_ = (TextVertexInfo*)calloc(24 * cycles, sizeof(TextVertexInfo));
+  cycle_count_ = cycles;
 }
 
-void Number::CreateTextVertexFromSprite()
+void Number::UpdateVertex()
 {
-#if 0
-  /* register glyphs by divx / divy. */
-  int divx = numbersprite_.GetSpriteAnimationInfo().divx;
-  int divy = numbersprite_.GetSpriteAnimationInfo().divy;
-  float divw = (float)numbersprite_.GetImageCoordRect().width() / divx;
-  float divh = (float)numbersprite_.GetImageCoordRect().height() / divy;
-  int cycle_sprite = numbersprite_.GetSpriteAnimationInfo().cnt;
-  int cycle_number = 0;
-  if (cycle_sprite % 10 == 0)
+  if (tvi_glyphs_ == nullptr)
   {
-    cycle_number = cycle_sprite / 10;
-    AllocNumberGlyph(cycle_number);
-    for (int i = 0; i < cycle_number; ++i)
-    {
-      for (int j = 0; j < 10; ++j)
-      {
-        const int ii = i * 24 + j;
-        tvi_glyphs_[ii].texid = numbersprite_.image()->get_texture_ID();
-        tvi_glyphs_[ii].vi[0].c = Vector4{ 1.0f };
-        tvi_glyphs_[ii].vi[1].c = Vector4{ 1.0f };
-        tvi_glyphs_[ii].vi[2].c = Vector4{ 1.0f };
-        tvi_glyphs_[ii].vi[3].c = Vector4{ 1.0f };
-        tvi_glyphs_[ii].vi[0].p = Vector3{ 0.0f, 0.0f, 0.0f };
-        tvi_glyphs_[ii].vi[1].p = Vector3{ divw, 0.0f, 0.0f };
-        tvi_glyphs_[ii].vi[2].p = Vector3{ divw, divh, 0.0f };
-        tvi_glyphs_[ii].vi[3].p = Vector3{ 0.0f, divh, 0.0f };
-        numbersprite_.FillTextureCoordToVertexInfo(tvi_glyphs_[ii].vi, ii);
-      }
-    }
+    render_glyphs_count_ = 0;
+    return;
   }
-  else if (cycle_sprite % 11 == 0)
-  {
-    cycle_number = cycle_sprite / 11;
-    AllocNumberGlyph(cycle_number);
-    // TODO: fill glyphs
-  }
-  else if (cycle_sprite % 24 == 0)
-  {
-    cycle_number = cycle_sprite / 24;
-    AllocNumberGlyph(cycle_number);
-    // TODO: fill glyphs
-  }
-  else return;
-  SetTextVertexCycle(cycle_number, 0);
-#endif
+
+  // vertex alignment.
 }
 
-void Number::CreateTextVertexFromFont()
+void Number::doUpdate(double delta)
 {
-  AllocNumberGlyph(1);
-  for (int i = 0; i < 10; ++i)
+  // update current number
+  if (!value_params_.time > 0)
   {
-    auto *g = font()->GetGlyph('0' + i);
-    if (!g) continue;
+    value_params_.time -= delta;
+    if (value_params_.time < 0) value_params_.time = 0;
 
-    tvi_glyphs_[i].texid = numbersprite_.image()->get_texture_ID();
-    tvi_glyphs_[i].vi[0].c = Vector4{ 1.0f };
-    tvi_glyphs_[i].vi[1].c = Vector4{ 1.0f };
-    tvi_glyphs_[i].vi[2].c = Vector4{ 1.0f };
-    tvi_glyphs_[i].vi[3].c = Vector4{ 1.0f };
-    tvi_glyphs_[i].vi[0].p = Vector3{ 0.0f, 0.0f, 0.0f };
-    tvi_glyphs_[i].vi[1].p = Vector3{ g->width, 0.0f, 0.0f };
-    tvi_glyphs_[i].vi[2].p = Vector3{ g->width, g->height, 0.0f };
-    tvi_glyphs_[i].vi[3].p = Vector3{ 0.0f, g->height, 0.0f };
-    tvi_glyphs_[i].vi[0].t = Vector2{ g->sx1, g->sy1 };
-    tvi_glyphs_[i].vi[1].t = Vector2{ g->sx2, g->sy1 };
-    tvi_glyphs_[i].vi[2].t = Vector2{ g->sx2, g->sy2 };
-    tvi_glyphs_[i].vi[3].t = Vector2{ g->sx1, g->sy2 };
+    // since number is updated here, need to update displaying glyphs.
+    // TODO: more detailed spec ...
+    if (value_params_.max_decimal == 0)
+      itoa((int)value_params_.curr, num_chrs, 10);
+    else
+      gcvt(value_params_.curr, 10, num_chrs);
+    UpdateVertex();
   }
-  //SetTextVertexCycle(1, 0);
+}
+
+void Number::UpdateRenderingSize(Vector2 &d, Vector3 &p)
+{
+  d.x *= keta_;
 }
 
 }

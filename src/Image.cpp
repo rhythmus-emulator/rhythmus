@@ -413,12 +413,17 @@ bool IsMovieFile(const std::string& path)
 }
 
 
+Texture::Texture() : id_(0) {}
+void Texture::set(unsigned texid) { id_ = texid; }
+const unsigned Texture::get() const { return id_; }
+unsigned Texture::operator*() { return id_; }
+const unsigned Texture::operator*() const { return id_; }
 
 // -------------------------------- class Image
 
 Image::Image()
   : bitmap_ctx_(0), data_ptr_(nullptr), width_(0), height_(0),
-    textureID_(0), ffmpeg_ctx_(0), video_time_(.0f), loop_movie_(true),
+    ffmpeg_ctx_(0), video_time_(.0f), loop_movie_(true),
     is_invalid_(true)
 {
 }
@@ -577,9 +582,9 @@ void Image::Commit()
     return;
   }
 
-  textureID_ = GRAPHIC->CreateTexture(data_ptr_, width_, height_);
+  tex_.set(GRAPHIC->CreateTexture(data_ptr_, width_, height_));
 
-  if (textureID_ == 0)
+  if (*tex_ == 0)
   {
     error_msg_ = "Allocating textureID failed";
     error_code_ = -2;
@@ -657,7 +662,7 @@ void Image::Update(double delta)
       // XXX: need to flip but I don't know why. should check about this problem
 
       // Upload texture
-      GRAPHIC->UpdateTexture(textureID_, data_ptr_, 0, 0, width_, height_);
+      GRAPHIC->UpdateTexture(*tex_, data_ptr_, 0, 0, width_, height_);
 
       // Free mem
       av_frame_free(&frame_conv);
@@ -701,17 +706,17 @@ void Image::UnloadMovie()
 
 void Image::UnloadTexture()
 {
-  if (textureID_)
+  if (*tex_)
   {
-    GRAPHIC->DeleteTexture(textureID_);
-    textureID_ = 0;
+    GRAPHIC->DeleteTexture(*tex_);
+    tex_.set(0);
   }
 }
 
 /* @brief Is texture loaded into graphic memory? */
 bool Image::is_loaded() const
 {
-  return textureID_ > 0;
+  return *tex_ > 0;
 }
 
 void Image::RestartMovie()
@@ -727,7 +732,7 @@ void Image::Invalidate()
 
 unsigned Image::get_texture_ID() const
 {
-  return textureID_;
+  return *tex_;
 }
 
 uint16_t Image::get_width() const
