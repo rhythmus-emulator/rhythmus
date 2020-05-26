@@ -58,13 +58,13 @@ public:
 
     if (obj_)
     {
-      if (p_ == nullptr)
-        obj_->Load(filename_);
+      if (p_ != nullptr && len_ > 0)
+        obj_->Load(p_, len_,
+          filename_.empty() ? nullptr : filename_.c_str());
       else if (metric_ != nullptr)
         obj_->Load(*metric_);
       else
-        obj_->Load(p_, len_,
-          filename_.empty() ? nullptr : filename_.c_str());
+        obj_->Load(filename_);
       obj_->set_parent_task(nullptr);
       if (obj_->get_error_code() != 0)
       {
@@ -130,6 +130,12 @@ void ResourceElement::clear_error()
 {
   error_msg_ = 0;
   error_code_ = 0;
+}
+
+void SleepUntilLoadFinish(const ResourceElement *e)
+{
+  if (!e) return;
+  while (e->is_loading()) Sleep(1);
 }
 
 void ResourceContainer::AddResource(ResourceElement *elem)
@@ -461,7 +467,7 @@ void SoundManager::set_load_async(bool load_async) { load_async_ = load_async; }
 
 // ---------------------------------------------------------- class FontManager
 
-FontManager::FontManager() : load_async_(false) {}
+FontManager::FontManager() : load_async_(true) {}
 
 FontManager::~FontManager()
 {

@@ -75,6 +75,7 @@ void Sprite::SetImage(const std::string &path)
   img_ = IMAGEMAN->Load(path);
   if (!img_)
     return;
+  SleepUntilLoadFinish(img_);
 
   /* default image texture coord set */
   use_texture_coord_ = true;

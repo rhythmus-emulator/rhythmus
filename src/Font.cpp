@@ -795,7 +795,7 @@ void Font::GetTextVertexInfo(const std::string& s,
     // no-size glyph is ignored
     if (g->codepoint == 0)
       continue;
-    if (g->fbitmap)
+    if (!g->fbitmap)
       continue;
 
     cur_x += g->pos_x;

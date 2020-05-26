@@ -39,7 +39,6 @@ protected:
   virtual void doUpdate(double);
   void UpdateTextRenderContext();
   TextVertexInfo& AddTextVertex(const TextVertexInfo &tvi);
-  void SetWidthMultiply(float multiply); /* special API for LR2 */
 
 private:
   // Font.
@@ -87,10 +86,6 @@ private:
   bool autosize_;
 
   int blending_;
-
-  // is font texture is loaded?
-  // (if not, need to be refreshed few moments.)
-  bool is_texture_loaded_;
 
   // internal counter for updating Text object intervally.
   unsigned counter_;

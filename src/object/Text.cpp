@@ -11,8 +11,8 @@ RHYTHMUS_NAMESPACE_BEGIN
 
 Text::Text()
   : font_(nullptr),
-    text_fitting_(TextFitting::kTextFitNone), set_xy_aligncenter_(false), use_height_as_font_height_(false),
-    autosize_(false), blending_(0), counter_(0), is_texture_loaded_(true),
+    text_fitting_(TextFitting::kTextFitNone), set_xy_aligncenter_(false),
+    use_height_as_font_height_(false), autosize_(false), blending_(0), counter_(0),
     res_id_(nullptr), do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
@@ -35,8 +35,6 @@ void Text::Load(const MetricGroup &m)
 
   if (m.exist("path"))
     SetFont(m);
-  if (m.exist("text"))
-    SetText(m.get_str("text"));
   if (m.exist("align"))
   {
     std::string alignstr = Upper(m.get_str("align"));
@@ -55,6 +53,10 @@ void Text::Load(const MetricGroup &m)
     if (alignstr == "MAX") text_fitting_ = TextFitting::kTextFitMaxSize;
     else if (alignstr == "STRETCH") text_fitting_ = TextFitting::kTextFitStretch;
   }
+
+  // set text after align/fit property is read
+  if (m.exist("text"))
+    SetText(m.get_str("text"));
 
 #if USE_LR2_FEATURE == 1
   if (m.exist("lr2src"))
@@ -113,6 +115,7 @@ void Text::SetFont(const std::string& path)
 {
   ClearFont();
   font_ = FONTMAN->Load(path);
+  SleepUntilLoadFinish(font_);
 
   /* if text previously exists, call SetText() internally */
   if (!text_.empty())
@@ -123,6 +126,7 @@ void Text::SetFont(const MetricGroup &m)
 {
   ClearFont();
   font_ = FONTMAN->Load(m);
+  SleepUntilLoadFinish(font_);
 
   /* if text previously exists, call SetText() internally */
   if (!text_.empty())
@@ -177,16 +181,6 @@ void Text::UpdateTextRenderContext()
   text_render_ctx_.textvertex.clear();
   text_render_ctx_.vi.clear();
 
-  if (!font_ || text_.empty())
-  {
-    // don't attempt again.
-    is_texture_loaded_ = true;
-    return;
-  }
-
-  is_texture_loaded_ = font_ && font_->is_loaded();
-  if (!is_texture_loaded_) return;
-
   font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
   text_render_ctx_.width = 0;
   text_render_ctx_.height = 0;
@@ -219,7 +213,7 @@ void Text::UpdateTextRenderContext()
   }
 
   Vector3 scale(1.0f, 1.0f, 1.0f);
-  Vector3 centerpos(text_render_ctx_.drawsize.x / 2.0f, text_render_ctx_.drawsize.y / 2.0f, 0);
+  Vector3 centerpos(text_render_ctx_.width / 2.0f, text_render_ctx_.height / 2.0f, 0);
   switch (text_fitting_)
   {
   case TextFitting::kTextFitMaxSize:
@@ -320,12 +314,6 @@ Font *Text::font() { return font_; }
 void Text::doUpdate(double delta)
 {
   counter_ = (counter_ + 1) % 30;
-
-  // attempt to reload font texture periodically if not completely loaded
-  //if (counter_ == 0 && !is_texture_loaded_ && font_)
-  //{
-  //  UpdateTextRenderContext();
-  //}
 }
 
 void Text::doRender()
@@ -361,12 +349,12 @@ void Text::UpdateRenderingSize(Vector2 &d, Vector3 &p)
 {
   // calculate scale and apply
   // and transition in case of width is smaller than text size
-  //const float width = GetWidth(GetCurrentFrame().pos);
-  //const float height = GetHeight(GetCurrentFrame().pos);
-  //if (text_render_ctx_.width > width)
-  //  p.x = (text_render_ctx_.width - width) * (0.5f - text_alignment_.x);
-  //if (text_render_ctx_.height > height)
-  //  p.y = (text_render_ctx_.height - height) * (0.5f - text_alignment_.y);
+  const float width = GetWidth(GetCurrentFrame().pos);
+  const float height = GetHeight(GetCurrentFrame().pos);
+  if (text_render_ctx_.width > width)
+    p.x = (text_render_ctx_.width - width) * (0.5f - text_alignment_.x);
+  if (text_render_ctx_.height > height)
+    p.y = (text_render_ctx_.height - height) * (0.5f - text_alignment_.y);
 
   // -- don't consider about scale here
   // as width/height purposes for alignment, not size of text.

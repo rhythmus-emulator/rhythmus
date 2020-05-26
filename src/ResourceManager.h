@@ -43,6 +43,8 @@ protected:
   int error_code_;
 };
 
+void SleepUntilLoadFinish(const ResourceElement *e);
+
 /* @brief Base container for ResourceElement. */
 class ResourceContainer
 {

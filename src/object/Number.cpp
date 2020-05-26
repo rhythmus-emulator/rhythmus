@@ -125,6 +125,7 @@ void Number::SetGlyphFromFont(const MetricGroup &m)
   font_ = FONTMAN->Load(m);
   if (!font_)
     return;
+  SleepUntilLoadFinish(font_);
   AllocNumberGlyph(1);
 
   std::vector<TextVertexInfo> textvertex;
@@ -143,6 +144,7 @@ void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
   img_ = IMAGEMAN->Load(args.Get_str(1));
   if (!img_)
     return;
+  SleepUntilLoadFinish(img_);
 
   /* add glyphs */
   Vector4 imgcoord{

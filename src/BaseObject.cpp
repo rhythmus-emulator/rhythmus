@@ -392,6 +392,7 @@ void BaseObject::Load(const MetricGroup &m)
     Hide();
 
     // Hide if not tweening.
+    hide_if_not_tweening_ = true;
   }
 #endif
 
