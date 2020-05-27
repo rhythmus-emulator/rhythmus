@@ -192,6 +192,8 @@ public:
    */
   static void Update(double ms);
 
+  static bool IsLoading();
+
 private:
   ResourceManager() {};
 };

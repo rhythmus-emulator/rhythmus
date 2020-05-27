@@ -375,6 +375,7 @@ public:
 
   Preference<int> gamemode;
   Preference<int> logging;
+  Preference<int> maximum_thread;
 
   Preference<std::string> soundset;
   Preference<std::string> theme;
@@ -384,6 +385,7 @@ public:
   Preference<std::string> theme_play_7key;
   Preference<std::string> theme_result;
   Preference<std::string> theme_courseresult;
+  Preference<int> theme_load_async;
 
   Preference<int> select_sort_type;
   Preference<int> select_difficulty_mode;

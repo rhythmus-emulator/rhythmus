@@ -182,12 +182,6 @@ void Sprite::doRender()
   GRAPHIC->SetTexture(0, img_->get_texture_ID());
   GRAPHIC->SetBlendMode(blending_);
   GRAPHIC->DrawQuad(vi);
-
-#if 0
-  // for predefined src width / height (-1 means use whole texture)
-  if (ti.sw == -1) sx1 = 0.0, sx2 = 1.0;
-  if (ti.sh == -1) sy1 = 0.0, sy2 = 1.0;
-#endif
 }
 
 }

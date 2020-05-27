@@ -132,6 +132,10 @@ void ResourceElement::clear_error()
   error_code_ = 0;
 }
 
+// This function must be called when an object need to be loaded for sure
+// Even if ResourceContainer::load_async is true, because shared object
+// can be fetch although it isn't loaded.
+// (actually being loaded by other thread)
 void SleepUntilLoadFinish(const ResourceElement *e)
 {
   if (!e) return;
@@ -618,6 +622,11 @@ void ResourceManager::Update(double ms)
 {
   IMAGEMAN->Update(ms);
   FONTMAN->Update(ms);
+}
+
+bool ResourceManager::IsLoading()
+{
+  return TaskPool::getInstance().is_idle() == false;
 }
 
 

@@ -114,6 +114,9 @@ private:
   // @brief enable scene resource caching for fast reload for this scene.
   bool enable_caching_;
 
+  // theme-specific metric data used for loading scene.
+  MetricGroup metric_;
+
   // currently focused object (if exists)
   BaseObject* focused_object_;
 };

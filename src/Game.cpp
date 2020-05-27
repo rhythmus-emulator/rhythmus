@@ -96,6 +96,7 @@ void Game::Initialize()
 
   // load settings before logging.
   Setting::Initialize();
+  Setting::Reload();
 
   // flush temporary variables into setting.
   for (auto i : gMetricTemp)

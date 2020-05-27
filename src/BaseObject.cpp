@@ -349,6 +349,7 @@ void BaseObject::SetOwnChildren(bool v)
   own_children_ = v;
 }
 
+
 void BaseObject::Load(const MetricGroup &m)
 {
   // Load command
@@ -402,7 +403,8 @@ void BaseObject::Load(const MetricGroup &m)
     for (auto i = m.group_cbegin(); i != m.group_cend(); ++i)
     {
       BaseObject *obj = CreateObject(*i);
-      if (obj) AddChild(obj);
+      if (obj)
+        AddChild(obj);
     }
   }
 }
@@ -1198,11 +1200,36 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
 
 }
 
+#include "TaskPool.h"
 #include "Sprite.h"
 #include "object/Text.h"
 
 namespace rhythmus
 {
+
+// @brief
+// ObjectLoaderTask used for creating children in BaseObject::Load(...)
+class ObjectLoaderTask : public Task
+{
+public:
+  ObjectLoaderTask(BaseObject &o_, const MetricGroup &m_)
+    : o(&o_), m(&m_) {}
+
+  virtual void run()
+  {
+    if (!o) return;
+    o->Load(*m);
+  }
+
+  virtual void abort()
+  {
+    o = nullptr;
+  }
+
+private:
+  BaseObject *o;
+  const MetricGroup *m;
+};
 
 BaseObject* CreateObject(const MetricGroup &m)
 {
@@ -1238,7 +1265,26 @@ BaseObject* CreateObject(const MetricGroup &m)
   }
 
   if (object)
-    object->Load(m);
+  {
+    if (*PREFERENCE->theme_load_async == 0)
+    {
+      object->Load(m);
+    }
+    else
+    {
+      // @warn
+      // If async loaded, then load_async of ResourceContainer
+      // must be turned off.
+      // If not, too much thread would be used for loading object
+      // and Resource loader task cannot run, which will cause deadlock.
+      SOUNDMAN->set_load_async(false);
+      IMAGEMAN->set_load_async(false);
+      FONTMAN->set_load_async(false);
+
+      ObjectLoaderTask *t = new ObjectLoaderTask(*object, m);
+      TaskPool::getInstance().EnqueueTask(t);
+    }
+  }
 
   return object;
 }

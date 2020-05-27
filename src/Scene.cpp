@@ -136,11 +136,13 @@ void Scene::LoadScene()
   if (!get_name().empty())
   {
     // attempt to load custom scene
+    // @warn
+    // Metric data should be alive after Scene::Load(...) method
+    // since this could be async method. Do not clear metric while loading.
     auto *pref = PREFERENCE->GetFile(get_name());
-    MetricGroup m;
-    if (pref && m.Load(**pref))
+    if (pref && metric_.Load(**pref))
     {
-      Scene::Load(m);
+      Scene::Load(metric_);
       return;
     }
     else
@@ -152,7 +154,7 @@ void Scene::LoadScene()
   // fallback: default metric data
   Scene::Load(*METRIC);
 
-  EventManager::SendEvent("Load");
+  EventManager::SendEvent("Loadstart");
 }
 
 void Scene::StartScene()
@@ -193,6 +195,9 @@ void Scene::StartScene()
     scenetask_.Enqueue(task);
     event_time += next_scene_time_;
   }
+
+  // Now trigger actual 'OnLoad' event.
+  EventManager::SendEvent("Load");
 }
 
 void Scene::Load(const MetricGroup& m)

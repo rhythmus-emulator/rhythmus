@@ -67,21 +67,30 @@ void SceneManager::Cleanup()
 
 void SceneManager::Update()
 {
-  // check is it necessary to change scene
+  bool loading_next_scene = false;
+
+  // Check is it okay to change scene (when loading is done)
   // StartScene is called here. (time critical process)
+  // XXX: Checking scene loading by ResourceManager is too naive...
   if (next_scene_)
   {
-    delete current_scene_;
-    current_scene_ = next_scene_;
-    next_scene_ = nullptr;
+    loading_next_scene = true;
+    if (!ResourceManager::IsLoading())
+    {
+      delete current_scene_;
+      current_scene_ = next_scene_;
+      next_scene_ = nullptr;
 
-    current_scene_->StartScene();
+      current_scene_->StartScene();
 
-    // Need to refresh game timer & clear out delta
-    // to set exact scene start timing,
-    // as much time passed due to scene loading.
-    Timer::Update();
-    Timer::SystemTimer().ClearDelta();
+      // Need to refresh game timer & clear out delta
+      // to set exact scene start timing,
+      // as much time passed due to scene loading.
+      Timer::Update();
+      Timer::SystemTimer().ClearDelta();
+
+      loading_next_scene = false;
+    }
   }
 
   float delta = static_cast<float>(Timer::SystemTimer().GetDeltaTime() * 1000);
@@ -96,7 +105,7 @@ void SceneManager::Update()
   // update main scene
   try
   {
-    if (current_scene_ && !GAME->IsPaused())
+    if (!loading_next_scene && current_scene_ && !GAME->IsPaused())
       current_scene_->Update(delta);
   }
   catch (const RetryException& e)
@@ -180,8 +189,7 @@ void SceneManager::ChangeScene(const std::string &scene_name)
   inst.next_scene_ = it->second();
 
   // LoadScene is done here
-  // (time-consuming loading is done which is not time critical
-  //  e.g. Texture loading)
+  // @warn 
   inst.next_scene_->LoadScene();
 }
 

@@ -1475,6 +1475,7 @@ SystemPreference::SystemPreference() :
     "512,1024,2048,3072,4096,8192", true),
   gamemode(3, "Set gamemode to play.", "ALL,4Key,5Key,6Key,7Key,8Key,Popn,10Key,14Key", true),
   logging(1, "For development.", "0,1", true),
+  maximum_thread(4, "Maximum working thread count that program will use", "0,1,2,3,4,6,8,12,16", true),
   soundset("", "Soundset file.", "sound/*.lr2ss", true),
   theme("themes/_fallback/theme.xml", "Set game theme file.", "themes/**.xml", true),
   theme_test("", "Test theme file (for debug purpose).", "", true),
@@ -1483,6 +1484,7 @@ SystemPreference::SystemPreference() :
   theme_play_7key("", "Set game theme file for 7key play.", "themes/**.lr2skin", true),
   theme_result("", "Set game theme file for result scene.", "themes/**.lr2skin", true),
   theme_courseresult("", "Set game theme file for course result scene.", "themes/**.lr2skin", true),
+  theme_load_async(1, "Load theme more faster using multithread.", "0,1", true),
   select_sort_type(0, "Song sort type", "NOSORT,LEVEL,NAME,DIFFICULT,CLEARLAMP,CLEARRATE,JUDGERATE", true),
   select_difficulty_mode(0, "Song difficulty mode", "ALL,BEGINNER,NORMAL,HYPER,HARD,EXPERT,CHALLENGE", true)
 {
@@ -1490,6 +1492,7 @@ SystemPreference::SystemPreference() :
   AddInt("sound_buffer_size", &sound_buffer_size);
   AddInt("mode", &gamemode);
   AddInt("logging", &logging);
+  AddInt("maxthreadcount", &maximum_thread);
   AddFile("theme", &theme);
   AddFile("TestScene", &theme_test);
   AddFile("SelectScene", &theme_select);
@@ -1497,6 +1500,7 @@ SystemPreference::SystemPreference() :
   AddFile("Play7Key", &theme_play_7key);
   AddFile("ResultScene", &theme_result);
   AddFile("CourseResultScene", &theme_courseresult);
+  AddInt("themeloadasync", &theme_load_async);
   AddInt("sortmode", &select_sort_type);
   AddInt("difficulty", &select_difficulty_mode);
 }
