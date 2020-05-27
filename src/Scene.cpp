@@ -154,7 +154,8 @@ void Scene::LoadScene()
   // fallback: default metric data
   Scene::Load(*METRIC);
 
-  EventManager::SendEvent("Loadstart");
+  // Load start event : Loading
+  EventManager::SendEvent("Loading");
 }
 
 void Scene::StartScene()
