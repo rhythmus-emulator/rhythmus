@@ -60,6 +60,7 @@ public:
   
 private:
   std::list<ResourceElement*> elems_;
+  std::mutex lock_;
 };
 
 /* @brief Cache directory/files managed by program. */

@@ -189,7 +189,9 @@ void SceneManager::ChangeScene(const std::string &scene_name)
   inst.next_scene_ = it->second();
 
   // LoadScene is done here
-  // @warn 
+  // @warn
+  // This process might be async.
+  // StartScene() will be called after LoadScene is complete.
   inst.next_scene_->LoadScene();
 }
 

@@ -64,6 +64,7 @@ public:
   void run();
   void abort();
   void set_task(Task* task);
+  bool is_idle() const;
 
   friend class TaskPool;
 

@@ -23,6 +23,9 @@ constexpr int kPreCacheEventCount = 64;
 // lock used when using cached_events_
 std::mutex input_evt_lock;
 
+// lock used when subscribe/unsubscribe event
+std::mutex gSubscribeLock;
+
 // cached events.
 // stored from input thread, flushed in rendering thread.
 std::vector<InputEvent> input_evt_messages_;
@@ -174,6 +177,7 @@ EventReceiver::~EventReceiver()
 void EventReceiver::SubscribeTo(const std::string &name)
 {
   EventManager& em = EventManager::getInstance();
+  std::lock_guard<std::mutex> l(gSubscribeLock);
   subscription_.push_back(name);
   em.event_subscribers_[name].insert(this);
 }
@@ -181,6 +185,7 @@ void EventReceiver::SubscribeTo(const std::string &name)
 void EventReceiver::UnsubscribeAll()
 {
   EventManager& em = EventManager::getInstance();
+  std::lock_guard<std::mutex> l(gSubscribeLock);
   for (auto eid : subscription_)
   {
     auto& sublist = em.event_subscribers_[eid];

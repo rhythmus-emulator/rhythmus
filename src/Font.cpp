@@ -175,15 +175,23 @@ bool FontBitmap::Update()
 {
   if (committed_ || !bitmap_) return false;
 
+  // must clear out committed_ flag first.
+  // if not, Write(...) request will be ignored
+  // while occured in Update(...).
+  committed_ = true;
+
   // commit bitmap
-  texture_.set(GRAPHIC->CreateTexture((uint8_t*)bitmap_, width_, height_));
+  if (*texture_ == 0)
+    texture_.set(GRAPHIC->CreateTexture((uint8_t*)bitmap_, width_, height_));
+  else
+    GRAPHIC->UpdateTexture(*texture_, (uint8_t*)bitmap_, 0, 0, width_, height_);
+
   if (*texture_ == 0)
   {
     Logger::Error("Font - Allocating texture failed.");
     return false;
   }
 
-  committed_ = true;
   return true;
 }
 
@@ -708,6 +716,7 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
 
 void Font::Commit()
 {
+  std::lock_guard<std::mutex> lock(fontmutex_);
   for (auto* b : fontbitmap_)
   {
     b->Update();
@@ -852,6 +861,7 @@ FontBitmap* Font::GetWritableBitmapCache(int w, int h)
   {
     if (!fontbitmap_.empty())
       fontbitmap_.back()->SetToReadOnly();
+    std::lock_guard<std::mutex> lock(fontmutex_);
     fontbitmap_.push_back(new FontBitmap(defFontCacheWidth, defFontCacheHeight));
   }
   return fontbitmap_.back();
@@ -859,6 +869,8 @@ FontBitmap* Font::GetWritableBitmapCache(int w, int h)
 
 void Font::ClearGlyph()
 {
+  std::lock_guard<std::mutex> lock(fontmutex_);
+
   // release texture and bitmap
   for (auto *b : fontbitmap_)
     delete b;

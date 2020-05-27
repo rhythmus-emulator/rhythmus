@@ -145,6 +145,7 @@ void SleepUntilLoadFinish(const ResourceElement *e)
 
 void ResourceContainer::AddResource(ResourceElement *elem)
 {
+  std::lock_guard<std::mutex> l(lock_);
   elems_.push_back(elem);
 }
 
@@ -152,6 +153,7 @@ ResourceElement* ResourceContainer::SearchResource(const std::string &name)
 {
   if (!name.empty())
   {
+    std::lock_guard<std::mutex> l(lock_);
     for (auto *e : elems_)
     {
       if (e->name_ == name)
@@ -334,6 +336,8 @@ Image* ImageManager::Load(const std::string &path)
   {
     r = new Image();
     r->set_name(newpath);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
     /* if not main thread, it's still "async";
      * don't need to create other thread. */
     if (load_async_ && GAME->is_main_thread())
@@ -347,8 +351,6 @@ Image* ImageManager::Load(const std::string &path)
     {
       r->Load(newpath);
     }
-    // register resource regardless it is succeed to load or not.
-    AddResource(r);
   }
   return r;
 }
@@ -362,6 +364,8 @@ Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
   {
     r = new Image();
     if (name_opt) r->set_name(name_opt);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
     /* if not main thread, it's still "async";
      * don't need to create other thread. */
     if (load_async_ && GAME->is_main_thread())
@@ -375,8 +379,6 @@ Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
     {
       r->Load(p, len, name_opt);
     }
-    // register resource regardless it is succeed to load or not.
-    AddResource(r);
   }
   return r;
 }
@@ -423,6 +425,8 @@ SoundData* SoundManager::Load(const std::string &path)
   {
     r = new SoundData();
     r->set_name(newpath);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
     /* if not main thread, it's still "async";
      * don't need to create other thread. */
     if (load_async_ && GAME->is_main_thread())
@@ -436,8 +440,6 @@ SoundData* SoundManager::Load(const std::string &path)
     {
       r->Load(newpath);
     }
-    // register resource regardless it is succeed to load or not.
-    AddResource(r);
   }
   return r;
 }
@@ -451,6 +453,8 @@ SoundData* SoundManager::Load(const char *p, size_t len, const char *name_opt)
   {
     r = new SoundData();
     if (name_opt) r->set_name(name_opt);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
     /* if not main thread, it's still "async";
      * don't need to create other thread. */
     if (load_async_ && GAME->is_main_thread())
@@ -464,8 +468,6 @@ SoundData* SoundManager::Load(const char *p, size_t len, const char *name_opt)
     {
       r->Load(p, len, name_opt);
     }
-    // register resource regardless it is succeed to load or not.
-    AddResource(r);
   }
   return r;
 }
@@ -498,6 +500,8 @@ Font* FontManager::Load(const std::string &path)
   {
     r = new Font();
     r->set_name(newpath);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
     /* if not main thread, it's still "async";
      * don't need to create other thread. */
     if (load_async_ && GAME->is_main_thread())
@@ -511,8 +515,6 @@ Font* FontManager::Load(const std::string &path)
     {
       r->Load(newpath);
     }
-    // register resource regardless it is succeed to load or not.
-    AddResource(r);
   }
   return r;
 }
@@ -526,6 +528,8 @@ Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
   {
     r = new Font();
     if (name_opt) r->set_name(name_opt);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
     /* if not main thread, it's still "async";
      * don't need to create other thread. */
     if (load_async_ && GAME->is_main_thread())
@@ -539,8 +543,6 @@ Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
     {
       r->Load(p, len, name_opt);
     }
-    // register resource regardless it is succeed to load or not.
-    AddResource(r);
   }
   return r;
 }
@@ -557,6 +559,8 @@ Font* FontManager::Load(const MetricGroup &metrics)
   {
     r = new Font();
     if (!name.empty()) r->set_name(name);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
     /* if not main thread, it's still "async";
      * don't need to create other thread. */
     if (load_async_ && GAME->is_main_thread())
@@ -570,8 +574,6 @@ Font* FontManager::Load(const MetricGroup &metrics)
     {
       r->Load(metrics);
     }
-    // register resource regardless it is succeed to load or not.
-    AddResource(r);
   }
   return r;
 }

@@ -189,6 +189,11 @@ void Text::UpdateTextRenderContext()
     GetHeight(GetCurrentFrame().pos)
   );
 
+  // If no glyph, then maybe font is not loaded yet.
+  // TODO: need to retry later.
+  if (text_render_ctx_.textvertex.size() == 0)
+    return;
+
   // 1. calculate whole text width and height.
   // XXX: breaking loop if first cycle is over should be better?
   for (const auto& tvi : text_render_ctx_.textvertex)

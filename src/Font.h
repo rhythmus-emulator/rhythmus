@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <string>
 #include <vector>
+#include <mutex>
 
 namespace rhythmus
 {
@@ -200,6 +201,9 @@ private:
 
   int error_code_;
   const char *error_msg_;
+
+  // Used for multi-threading Update(...)
+  std::mutex fontmutex_;
 
   void ConvertStringToCodepoint(const std::string& s, uint32_t *cp, int& lenout, int maxlen = -1) const;
   FontBitmap* GetWritableBitmapCache(int w, int h);

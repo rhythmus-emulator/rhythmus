@@ -85,16 +85,18 @@ void TaskThread::run()
   });
 }
 
-void TaskThread::set_task(Task* task)
-{
-  current_task_ = task;
-}
-
 void TaskThread::abort()
 {
   if (current_task_)
     current_task_->abort();
 }
+
+void TaskThread::set_task(Task* task)
+{
+  current_task_ = task;
+}
+
+bool TaskThread::is_idle() const { return current_task_ == nullptr; }
 
 // ----------------------------- class TaskPool
 
@@ -193,7 +195,10 @@ void TaskPool::WaitAllTask()
 
 bool TaskPool::is_idle() const
 {
-  return task_pool_.empty();
+  if (!task_pool_.empty()) return false;
+  for (auto *tt : worker_pool_)
+    if (!tt->is_idle()) return false;
+  return true;
 }
 
 TaskPool& TaskPool::getInstance()
