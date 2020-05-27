@@ -1277,9 +1277,13 @@ BaseObject* CreateObject(const MetricGroup &m)
       // must be turned off.
       // If not, too much thread would be used for loading object
       // and Resource loader task cannot run, which will cause deadlock.
-      SOUNDMAN->set_load_async(false);
-      IMAGEMAN->set_load_async(false);
-      FONTMAN->set_load_async(false);
+      //SOUNDMAN->set_load_async(false);
+      //IMAGEMAN->set_load_async(false);
+      //FONTMAN->set_load_async(false);
+      //
+      // Now, ResourceManager module automatically won't create new thread
+      // If loading thread isn't main thread.
+      // So don't need to turn of async property manually.
 
       ObjectLoaderTask *t = new ObjectLoaderTask(*object, m);
       TaskPool::getInstance().EnqueueTask(t);

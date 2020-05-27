@@ -14,6 +14,7 @@
 #include "scene/OverlayScene.h" // for invoke MessageBox
 #include "common.h"
 #include "config.h"
+#include <thread>
 
 #if USE_GLFW == 1
 # include <GLFW/glfw3.h>
@@ -23,6 +24,8 @@ namespace rhythmus
 {
 
 Game *GAME = nullptr;
+
+std::thread::id main_thread_id;
 
 const char* const sGamemode[] = {
   "none",
@@ -90,6 +93,9 @@ void Game::Initialize()
 {
   // call Create() first.
   R_ASSERT(GAME);
+
+  // thread id initialize
+  main_thread_id = std::this_thread::get_id();
 
   // before starting initialization, resource must be initialized
   ResourceManager::Initialize();
@@ -369,6 +375,11 @@ const std::string &Game::get_window_title()
 GameBootMode Game::get_boot_mode() const
 {
   return game_boot_mode_;
+}
+
+bool Game::is_main_thread() const
+{
+  return main_thread_id == std::this_thread::get_id();
 }
 
 }

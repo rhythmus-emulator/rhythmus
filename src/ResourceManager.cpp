@@ -1,4 +1,5 @@
 #include "ResourceManager.h"
+#include "Game.h"
 #include "Image.h"
 #include "Font.h"
 #include "Sound.h"
@@ -333,7 +334,9 @@ Image* ImageManager::Load(const std::string &path)
   {
     r = new Image();
     r->set_name(newpath);
-    if (load_async_)
+    /* if not main thread, it's still "async";
+     * don't need to create other thread. */
+    if (load_async_ && GAME->is_main_thread())
     {
       auto *task = new ResourceLoaderTask<Image>(r);
       task->SetFilename(newpath);
@@ -359,7 +362,9 @@ Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
   {
     r = new Image();
     if (name_opt) r->set_name(name_opt);
-    if (load_async_)
+    /* if not main thread, it's still "async";
+     * don't need to create other thread. */
+    if (load_async_ && GAME->is_main_thread())
     {
       auto *task = new ResourceLoaderTask<Image>(r);
       task->SetData(p, len, name_opt);
@@ -418,7 +423,9 @@ SoundData* SoundManager::Load(const std::string &path)
   {
     r = new SoundData();
     r->set_name(newpath);
-    if (load_async_)
+    /* if not main thread, it's still "async";
+     * don't need to create other thread. */
+    if (load_async_ && GAME->is_main_thread())
     {
       auto *task = new ResourceLoaderTask<SoundData>(r);
       task->SetFilename(newpath);
@@ -444,7 +451,9 @@ SoundData* SoundManager::Load(const char *p, size_t len, const char *name_opt)
   {
     r = new SoundData();
     if (name_opt) r->set_name(name_opt);
-    if (load_async_)
+    /* if not main thread, it's still "async";
+     * don't need to create other thread. */
+    if (load_async_ && GAME->is_main_thread())
     {
       auto *task = new ResourceLoaderTask<SoundData>(r);
       task->SetData(p, len, name_opt);
@@ -489,7 +498,9 @@ Font* FontManager::Load(const std::string &path)
   {
     r = new Font();
     r->set_name(newpath);
-    if (load_async_)
+    /* if not main thread, it's still "async";
+     * don't need to create other thread. */
+    if (load_async_ && GAME->is_main_thread())
     {
       auto *task = new ResourceLoaderTask<Font>(r);
       task->SetFilename(newpath);
@@ -515,7 +526,9 @@ Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
   {
     r = new Font();
     if (name_opt) r->set_name(name_opt);
-    if (load_async_)
+    /* if not main thread, it's still "async";
+     * don't need to create other thread. */
+    if (load_async_ && GAME->is_main_thread())
     {
       auto *task = new ResourceLoaderTask<Font>(r);
       task->SetData(p, len, name_opt);
@@ -544,7 +557,9 @@ Font* FontManager::Load(const MetricGroup &metrics)
   {
     r = new Font();
     if (!name.empty()) r->set_name(name);
-    if (load_async_)
+    /* if not main thread, it's still "async";
+     * don't need to create other thread. */
+    if (load_async_ && GAME->is_main_thread())
     {
       auto *task = new ResourceLoaderTask<Font>(r);
       task->SetMetric(metrics);

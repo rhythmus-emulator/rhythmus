@@ -62,6 +62,7 @@ public:
 
   void CenterWindow();
 
+  /* Generally low-level API handler. */
   void *handler();
   void set_handler(void *p);
 
@@ -79,8 +80,8 @@ public:
   bool IsPaused();
 
   GameBootMode get_boot_mode() const;
-
   static const std::string &get_window_title();
+  bool is_main_thread() const;
 
 private:
   Game();
