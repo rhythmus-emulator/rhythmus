@@ -2,6 +2,7 @@
 #include "Script.h"
 #include "Util.h"
 #include "config.h"
+#include <string.h>
 #include <algorithm>
 
 namespace rhythmus
@@ -292,7 +293,7 @@ void Number::doUpdate(double delta)
     // since number is updated here, need to update displaying glyphs.
     // TODO: more detailed spec ...
     if (value_params_.max_decimal == 0)
-      itoa((int)value_params_.curr, num_chrs, 10);
+      sprintf(num_chrs, "%d", (int)value_params_.curr);
     else
       gcvt(value_params_.curr, 10, num_chrs);
     UpdateVertex();
