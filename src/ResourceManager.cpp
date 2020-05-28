@@ -95,7 +95,7 @@ private:
 
 
 ResourceElement::ResourceElement()
-  : parent_task_(0), ref_count_(1), error_msg_(0), error_code_(0) {}
+  : parent_task_(0), ref_count_(1), is_loading_(false), error_msg_(0), error_code_(0) {}
 
 ResourceElement::~ResourceElement() {}
 
@@ -109,12 +109,19 @@ const std::string &ResourceElement::get_name() const
   return name_;
 }
 
-void ResourceElement::set_parent_task(Task *task) { parent_task_ = task; }
+void ResourceElement::set_parent_task(Task *task)
+{
+  parent_task_ = task;
+  is_loading_ = (task != nullptr);
+}
+
 Task *ResourceElement::get_parent_task() { return parent_task_; }
 
 bool ResourceElement::is_loading() const
 {
-  return parent_task_ != nullptr;
+  // parent_task_ : loader task used by async load method.
+  // is_loading_ : flag used by sync load method
+  return parent_task_ != nullptr || is_loading_;
 }
 
 const char *ResourceElement::get_error_msg() const
@@ -151,9 +158,9 @@ void ResourceContainer::AddResource(ResourceElement *elem)
 
 ResourceElement* ResourceContainer::SearchResource(const std::string &name)
 {
+  std::lock_guard<std::mutex> l(lock_);
   if (!name.empty())
   {
-    std::lock_guard<std::mutex> l(lock_);
     for (auto *e : elems_)
     {
       if (e->name_ == name)
@@ -168,6 +175,7 @@ ResourceElement* ResourceContainer::SearchResource(const std::string &name)
 
 void ResourceContainer::DropResource(ResourceElement *elem)
 {
+  std::lock_guard<std::mutex> l(lock_);
   auto ii = std::find(elems_.begin(), elems_.end(), elem);
   R_ASSERT(ii != elems_.end());
   if (--elem->ref_count_ == 0)
@@ -358,6 +366,7 @@ Image* ImageManager::Load(const std::string &path)
 Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
 {
   Image *r = nullptr;
+  lock_.lock();
   if (name_opt)
     r = (Image*)SearchResource(name_opt);
   if (!r)
@@ -377,9 +386,15 @@ Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
     }
     else
     {
+      r->is_loading_ = true;
+      // unlock here first, as this method takes long
+      lock_.unlock();
       r->Load(p, len, name_opt);
+      lock_.lock();
+      r->is_loading_ = false;
     }
   }
+  lock_.unlock();
   return r;
 }
 
@@ -420,6 +435,7 @@ SoundData* SoundManager::Load(const std::string &path)
   if (path.empty()) return nullptr;
   SoundData *r = nullptr;
   std::string newpath = PATH->GetPath(path);
+  lock_.lock();
   r = (SoundData*)SearchResource(newpath.c_str());
   if (!r)
   {
@@ -438,15 +454,22 @@ SoundData* SoundManager::Load(const std::string &path)
     }
     else
     {
+      r->is_loading_ = true;
+      // unlock here first, as this method takes long
+      lock_.unlock();
       r->Load(newpath);
+      lock_.lock();
+      r->is_loading_ = false;
     }
   }
+  lock_.unlock();
   return r;
 }
 
 SoundData* SoundManager::Load(const char *p, size_t len, const char *name_opt)
 {
   SoundData *r = nullptr;
+  lock_.lock();
   if (name_opt)
     r = (SoundData*)SearchResource(name_opt);
   if (!r)
@@ -466,9 +489,15 @@ SoundData* SoundManager::Load(const char *p, size_t len, const char *name_opt)
     }
     else
     {
+      r->is_loading_ = true;
+      // unlock here first, as this method takes long
+      lock_.unlock();
       r->Load(p, len, name_opt);
+      lock_.lock();
+      r->is_loading_ = false;
     }
   }
+  lock_.unlock();
   return r;
 }
 
@@ -494,6 +523,7 @@ Font* FontManager::Load(const std::string &path)
 {
   if (path.empty()) return nullptr;
   Font *r = nullptr;
+  lock_.lock();
   std::string newpath = PATH->GetPath(path);
   r = (Font*)SearchResource(newpath.c_str());
   if (!r)
@@ -513,25 +543,34 @@ Font* FontManager::Load(const std::string &path)
     }
     else
     {
+      r->is_loading_ = true;
+      // unlock here first, as this method takes long
+      lock_.unlock();
       r->Load(newpath);
+      lock_.lock();
+      r->is_loading_ = false;
     }
   }
+  lock_.unlock();
   return r;
 }
 
 Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
 {
   Font *r = nullptr;
+  lock_.lock();
   if (name_opt)
     r = (Font*)SearchResource(name_opt);
+
   if (!r)
   {
     r = new Font();
     if (name_opt) r->set_name(name_opt);
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
+
     /* if not main thread, it's still "async";
-     * don't need to create other thread. */
+      * don't need to create other thread. */
     if (load_async_ && GAME->is_main_thread())
     {
       auto *task = new ResourceLoaderTask<Font>(r);
@@ -541,9 +580,15 @@ Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
     }
     else
     {
+      r->is_loading_ = true;
+      // unlock here first, as this method takes long
+      lock_.unlock();
       r->Load(p, len, name_opt);
+      lock_.lock();
+      r->is_loading_ = false;
     }
   }
+  lock_.unlock();
   return r;
 }
 
@@ -551,9 +596,10 @@ Font* FontManager::Load(const MetricGroup &metrics)
 {
   Font *r = nullptr;
   std::string name;
+  lock_.lock();
   if (metrics.get_safe("name", name) && !name.empty())
     r = (Font*)SearchResource(name);
-  if (metrics.get_safe("path", name) && !name.empty())
+  if (!r && metrics.get_safe("path", name) && !name.empty())
     r = (Font*)SearchResource(name);
   if (!r)
   {
@@ -572,9 +618,15 @@ Font* FontManager::Load(const MetricGroup &metrics)
     }
     else
     {
+      r->is_loading_ = true;
+      // unlock here first, as this method takes long
+      lock_.unlock();
       r->Load(metrics);
+      lock_.lock();
+      r->is_loading_ = false;
     }
   }
+  lock_.unlock();
   return r;
 }
 

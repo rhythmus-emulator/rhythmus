@@ -25,18 +25,22 @@ public:
   const std::string &get_name() const;
   void set_parent_task(Task *task);
   Task *get_parent_task();
-  virtual bool is_loading() const;
+  bool is_loading() const;
 
   const char *get_error_msg() const;
   int get_error_code() const;
   void clear_error();
 
   friend class ResourceContainer;
+  friend class ImageManager;
+  friend class FontManager;
+  friend class SoundManager;
 
 private:
   Task *parent_task_;
   std::string name_;
   int ref_count_;
+  bool is_loading_;
 
 protected:
   const char* error_msg_;
@@ -137,6 +141,7 @@ public:
   
 private:
   bool load_async_;
+  std::mutex lock_;
 };
 
 /* @brief Font object manager. */
@@ -152,6 +157,7 @@ public:
 
 private:
   bool load_async_;
+  std::mutex lock_;
 };
 
 /* @brief Font object manager. */
@@ -169,6 +175,7 @@ public:
 
 private:
   bool load_async_;
+  std::mutex lock_;
 };
 
 
