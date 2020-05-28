@@ -650,11 +650,12 @@ void Image::Update(double delta)
 #endif
 
       // convert frame to RGB24
+      // XXX: SWS_FAST_BILINEAR for speed, SWS_BICUBIC for general purpose.
       SwsContext* mod_ctx;
       mod_ctx = sws_getContext(
         frame->width, frame->height, (AVPixelFormat)frame->format,
         width_, height_, AV_PIX_FMT_BGRA,
-        SWS_BICUBIC, 0, 0, 0);
+        SWS_FAST_BILINEAR, 0, 0, 0);
       sws_scale(mod_ctx, frame->data, frame->linesize, 0, frame->height,
         frame_conv->data, frame_conv->linesize);
       sws_freeContext(mod_ctx);
