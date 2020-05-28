@@ -84,7 +84,7 @@ void SetFontAttributeFromCommand(FontAttribute &fontattr, const std::string &com
 // --------------------------- class FontBitmap
 
 FontBitmap::FontBitmap(int w, int h)
-  : bitmap_(0), committed_(false), error_code_(0), error_msg_(0)
+  : bitmap_(0), error_code_(0), error_msg_(0)
 {
   width_ = w;
   height_ = h;
@@ -98,17 +98,15 @@ FontBitmap::FontBitmap(int w, int h)
 
 // bitmap is moved into memory.
 FontBitmap::FontBitmap(uint32_t* bitmap, int w, int h)
-  : bitmap_(bitmap), committed_(false),
-    width_(w), height_(h), cur_x_(0), cur_y_(0), cur_line_height_(0),
-    error_code_(0), error_msg_(0)
+  : bitmap_(bitmap), width_(w), height_(h), cur_x_(0), cur_y_(0),
+    cur_line_height_(0), error_code_(0), error_msg_(0)
 {
 }
 
 // bitmap is copied into memory.
 FontBitmap::FontBitmap(const uint32_t* bitmap, int w, int h)
-  : bitmap_(0), committed_(false),
-    width_(w), height_(h), cur_x_(0), cur_y_(0), cur_line_height_(0),
-    error_code_(0), error_msg_(0)
+  : bitmap_(0), width_(w), height_(h), cur_x_(0), cur_y_(0),
+    cur_line_height_(0), error_code_(0), error_msg_(0)
 {
   bitmap_ = (uint32_t*)malloc(width_ * height_ * sizeof(uint32_t));
   memcpy(bitmap_, bitmap, width_ * height_ * sizeof(uint32_t));
@@ -155,9 +153,6 @@ void FontBitmap::Write(uint32_t* bitmap, int w, int h, FontGlyph &glyph_out)
 
   // update x pos
   cur_x_ += w + 1 /* padding */;
-
-  // clear commit flag
-  committed_ = false;
 }
 
 /* Get designated area(current x, y with given width / height) as texture position. */
@@ -173,12 +168,7 @@ void FontBitmap::GetGlyphTexturePos(FontGlyph &glyph_out)
 
 bool FontBitmap::Update()
 {
-  if (committed_ || !bitmap_) return false;
-
-  // must clear out committed_ flag first.
-  // if not, Write(...) request will be ignored
-  // while occured in Update(...).
-  committed_ = true;
+  if (!bitmap_) return false;
 
   // commit bitmap
   if (*texture_ == 0)
@@ -236,7 +226,7 @@ void FontBitmap::SetToReadOnly()
 
 Font::Font()
   : is_ttf_font_(true), ftface_(0), ftstroker_(0),
-    status_(0), error_code_(0), error_msg_(0)
+    error_code_(0), error_msg_(0)
 {
   if (ftLibCnt++ == 0)
   {
@@ -266,7 +256,6 @@ void Font::Load(const std::string &path)
   Clear();
   error_msg_ = 0;
   error_code_ = 0;
-  status_ = 1;
 
   std::string ext = GetExtension(path);
   path_ = path;
@@ -288,7 +277,6 @@ void Font::Load(const std::string &path)
   {
     error_msg_ = "Unsupported type of font.";
     error_code_ = -1;
-    status_ = 0;
   }
 }
 
@@ -354,18 +342,23 @@ void Font::Clear()
 
 void Font::Update(float)
 {
-  // XXX: optimize commit() method more
-  Commit();
+  if (fbitmap_commitlist_.size() != 0)
+  {
+    std::lock_guard<std::mutex> lock(fbitmap_commitlock_);
+    for (auto* b : fbitmap_commitlist_)
+    {
+      b->Update();
+    }
+    fbitmap_commitlist_.clear();
+  }
 }
 
-bool Font::is_glyph_loaded() const
+void Font::CommitBitmap(FontBitmap *fbitmap)
 {
-  return status_ >= 2;
-}
-
-bool Font::is_loaded() const
-{
-  return status_ >= 3;
+  std::lock_guard<std::mutex> lock(fbitmap_commitlock_);
+  for (auto *b : fbitmap_commitlist_)
+    if (b == fbitmap) return;   // duplication check
+  fbitmap_commitlist_.push_back(fbitmap);
 }
 
 bool Font::is_empty() const
@@ -429,7 +422,6 @@ void Font::LoadFreetypeFont(const std::string &path)
   for (int i = 0; i < 128; i++)
     glyph_init[i] = i;
   PrepareGlyph(glyph_init, 128);
-  status_ = 2;
 }
 
 void Font::LoadLR2BitmapFont(const std::string &path)
@@ -514,6 +506,7 @@ void Font::LoadLR2BitmapFont(const std::string &path)
         (const uint32_t*)img->get_ptr(), img->get_width(), img->get_height()
       );
       fontbitmap_.push_back(fbitmap);
+      CommitBitmap(fbitmap);
     }
     else if (col[0] == "#R")
     {
@@ -522,7 +515,7 @@ void Font::LoadLR2BitmapFont(const std::string &path)
       FontGlyph g;
       g.codepoint = atoi(col[1].c_str());
       g.codepoint = ConvertLR2JIStoUTF16(g.codepoint);
-      g.fbitmap = 0;
+      g.texture = 0;
       g.srcx = atoi(col[3].c_str());
       g.srcy = atoi(col[4].c_str());
       g.width = atoi(col[5].c_str());
@@ -534,7 +527,7 @@ void Font::LoadLR2BitmapFont(const std::string &path)
       /* in case of unexpected texture */
       if (bitmapidx >= fontbitmap_.size())
         continue;
-      g.fbitmap = fontbitmap_[bitmapidx];
+      g.texture = fontbitmap_[bitmapidx]->get_texture();
 
       /* need to calculate src pos by texture, so need to get texture. */
       float tex_width = (float)fontbitmap_[bitmapidx]->width();
@@ -552,7 +545,6 @@ void Font::LoadLR2BitmapFont(const std::string &path)
       glyph_.push_back(g);
     }
   }
-  status_ = 2;
 #else
   error_msg_ = "LR2font is not supported.";
   error_code_ = -1;
@@ -654,7 +646,7 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
     g.pos_y = bglyph->top;
     g.adv_x = ftface->glyph->advance.x >> 6;
     g.srcx = g.srcy = 0;
-    g.fbitmap = 0;
+    g.texture = 0;
 
     /* generate bitmap only when size is valid */
     if (bglyph->bitmap.width > 0)
@@ -706,23 +698,13 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
       auto* cache = GetWritableBitmapCache(g.width, g.height);
       R_ASSERT(cache);
       cache->Write(bitmap, g.width, g.height, g);
-      g.fbitmap = cache;
+      g.texture = cache->get_texture();
       free(bitmap);
+      CommitBitmap(cache);
     }
 
     glyph_.push_back(g);
   }
-}
-
-void Font::Commit()
-{
-  std::lock_guard<std::mutex> lock(fontmutex_);
-  for (auto* b : fontbitmap_)
-  {
-    b->Update();
-  }
-  if (status_ == 2)
-    status_ = 3;
 }
 
 const FontAttribute &Font::GetAttribute() const { return fontattr_; }
@@ -802,9 +784,7 @@ void Font::GetTextVertexInfo(const std::string& s,
     }
 
     // no-size glyph is ignored
-    if (g->codepoint == 0)
-      continue;
-    if (!g->fbitmap)
+    if (g->codepoint == 0 || g->texture == 0)
       continue;
 
     cur_x += g->pos_x;
@@ -827,7 +807,7 @@ void Font::GetTextVertexInfo(const std::string& s,
     vi[3].t = Vector2{ g->sx1, g->sy2 };
 
     cur_x += g->adv_x - g->pos_x;
-    tvi.tex = g->fbitmap->get_texture();
+    tvi.tex = g->texture;
 
     // skip in case of special character
     if (g->codepoint == ' ' || g->codepoint == '\r')
@@ -861,7 +841,6 @@ FontBitmap* Font::GetWritableBitmapCache(int w, int h)
   {
     if (!fontbitmap_.empty())
       fontbitmap_.back()->SetToReadOnly();
-    std::lock_guard<std::mutex> lock(fontmutex_);
     fontbitmap_.push_back(new FontBitmap(defFontCacheWidth, defFontCacheHeight));
   }
   return fontbitmap_.back();
@@ -869,9 +848,10 @@ FontBitmap* Font::GetWritableBitmapCache(int w, int h)
 
 void Font::ClearGlyph()
 {
-  std::lock_guard<std::mutex> lock(fontmutex_);
+  std::lock_guard<std::mutex> lock(fbitmap_commitlock_);
 
   // release texture and bitmap
+  fbitmap_commitlist_.clear();
   for (auto *b : fontbitmap_)
     delete b;
   fontbitmap_.clear();
@@ -902,7 +882,6 @@ void Font::ReleaseFont()
   path_.clear();
   is_ttf_font_ = false;
   fontattr_.name.clear(); // clear name only
-  status_ = 0;
   error_code_ = 0;
   error_msg_ = 0;
 }

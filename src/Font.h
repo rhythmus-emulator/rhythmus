@@ -75,8 +75,8 @@ struct FontGlyph
   /* advancing pos x for next character (pixel) */
   int adv_x;
 
-  /* font bitmap (for getting texture id) */
-  FontBitmap* fbitmap;
+  /* font bitmap texture */
+  const Texture* texture;
 
   /* texture index(glew) and srcx, srcy */
   int srcx, srcy;
@@ -119,7 +119,6 @@ private:
 
   int cur_line_height_;
   int cur_x_, cur_y_;
-  bool committed_;
 
   int error_code_;
   const char *error_msg_;
@@ -138,13 +137,6 @@ public:
   void Load(const MetricGroup& metrics);
   void Clear();
   void Update(float ms);
-
-  // This indicates glyph and bitmap info is loaded,
-  // but texture might not be loaded.
-  bool is_glyph_loaded() const;
-
-  // This indicates is font fully loaded, including texture.
-  bool is_loaded() const;
 
   bool is_empty() const;
 
@@ -169,7 +161,7 @@ private:
   void LoadLR2BitmapFont(const std::string &path);
   void ClearGlyph();
   void ReleaseFont();
-  void Commit();
+  void CommitBitmap(FontBitmap *fbitmap);
 
   // Font data path. used for identification.
   std::string path_;
@@ -189,21 +181,21 @@ private:
   // cached glyph
   std::vector<FontGlyph> glyph_;
 
-  // store bitmap / texture
+  // stored bitmap / texture.
+  // once created bitmap is not deleted only if Clear() method is called.
+  // TODO: thread lock for fontbitmap/glyph in case of text attribute?
   std::vector<FontBitmap*> fontbitmap_;
 
-  // status of current font.
-  // 0: is not loaded
-  // 1: loading
-  // 2: loaded, but texture is not prepared
-  // 3: fully loaded, ready to render.
-  int status_;
+  // stored bitmap for commit.
+  // Flushed out when Update(...) is called.
+  std::vector<FontBitmap*> fbitmap_commitlist_;
+
+  // Used for multi-threading: accessing fbitmap_commitlist_
+  // Calling PrepareText(...) and Update(...) at the same time
+  std::mutex fbitmap_commitlock_;
 
   int error_code_;
   const char *error_msg_;
-
-  // Used for multi-threading Update(...)
-  std::mutex fontmutex_;
 
   void ConvertStringToCodepoint(const std::string& s, uint32_t *cp, int& lenout, int maxlen = -1) const;
   FontBitmap* GetWritableBitmapCache(int w, int h);
