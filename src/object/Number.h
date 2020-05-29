@@ -64,6 +64,8 @@ private:
   Image *img_;
   Font *font_;
 
+  int blending_;
+
   /* 0 ~ 9 : positive number glyphs
    * 10 : positive zero(empty) number glyph 
    * 11 : plus glyph
@@ -114,6 +116,7 @@ private:
   void ClearAll();
   void UpdateVertex();
   virtual void doUpdate(double);
+  virtual void doRender();
   virtual void UpdateRenderingSize(Vector2 &d, Vector3 &p);
 };
 

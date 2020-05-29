@@ -155,15 +155,10 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
   {
     const double actual_loop_time = frames_.back().time - (double)repeat_time_;
     if (actual_loop_time == 0)
-      frame_time_ = 0;
+      frame_time_ = std::min(frame_time_, (double)repeat_time_);
     else if (frame_time_ > repeat_time_)
       frame_time_ = fmod(frame_time_ - repeat_time_, actual_loop_time) + repeat_time_;
     ms = 0;
-  }
-  if (frame_time_ < frames_.front().time)
-  {
-    // don't update if frame_time is less than first frame
-    return;
   }
   for (current_frame_ = -1; current_frame_ < (int)frames_.size() - 1; ++current_frame_)
   {
@@ -376,7 +371,10 @@ void BaseObject::Load(const MetricGroup &m)
     if (m.exist("lr2dst"))
     {
       std::string d = m.get_str("lr2dst");
-      CommandArgs args_dst(d);
+      const char *sep_d2 = d.c_str();
+      while (*sep_d2 && *sep_d2 != '|') sep_d2++;
+      std::string d2 = d.substr(0, sep_d2 - d.c_str());
+      CommandArgs args_dst(d2);
 
       // XXX: move this flag to Sprite,
       // as LR2_TEXT object don't work with this..?
@@ -1203,6 +1201,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
 #include "TaskPool.h"
 #include "Sprite.h"
 #include "object/Text.h"
+#include "object/Number.h"
 
 namespace rhythmus
 {
@@ -1254,6 +1253,10 @@ BaseObject* CreateObject(const MetricGroup &m)
   else if (type == "text")
   {
     object = new Text();
+  }
+  else if (type == "number")
+  {
+    object = new Number();
   }
   else if (type == "slider")
   {

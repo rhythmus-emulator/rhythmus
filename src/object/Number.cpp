@@ -93,7 +93,7 @@ const char* NumberFormatter::numstr() const
 // ------------------------------- class Number
 
 Number::Number() :
-  img_(nullptr), font_(nullptr), tvi_glyphs_(nullptr),
+  img_(nullptr), font_(nullptr), blending_(0), tvi_glyphs_(nullptr),
   cycle_count_(0), cycle_time_(0), val_ptr_(nullptr), display_style_(0), keta_(1)
 {
   *num_chrs = 0;
@@ -148,31 +148,31 @@ void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
   SleepUntilLoadFinish(img_);
 
   /* add glyphs */
+  int divx = std::max(1, args.Get<int>(6));
+  int divy = std::max(1, args.Get<int>(7));
   Vector4 imgcoord{
     args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), args.Get<int>(5)
   };
-  int divx = args.Get<int>(6);
-  int divy = args.Get<int>(7);
+  Vector2 gsize{ (imgcoord.z - imgcoord.x) / divx, (imgcoord.w - imgcoord.y) / divy };
   unsigned cnt = (unsigned)(divx * divy);
   AllocNumberGlyph(cnt);
-  for (unsigned j = 0; j < divy; ++j)
+  for (unsigned j = 0; j < (unsigned)divy; ++j)
   {
-    for (unsigned i = 0; i < divx; ++i)
+    for (unsigned i = 0; i < (unsigned)divx; ++i)
     {
       auto &tvi = tvi_glyphs_[j * divx + i];
-      // XXX: sprite must be loaded first, or invalid texcoord..
-      tvi.vi[0].t = Vector2(0.0f, 0.0f);
-      tvi.vi[1].t = Vector2(0.0f, 0.0f);
-      tvi.vi[2].t = Vector2(0.0f, 0.0f);
-      tvi.vi[3].t = Vector2(0.0f, 0.0f);
+      tvi.vi[0].t = Vector2(imgcoord.x + gsize.x * i, imgcoord.y + gsize.y * j);
+      tvi.vi[1].t = Vector2(imgcoord.x + gsize.x * (i+1), imgcoord.y + gsize.y * j);
+      tvi.vi[2].t = Vector2(imgcoord.x + gsize.x * (i+1), imgcoord.y + gsize.y * (j+1));
+      tvi.vi[3].t = Vector2(imgcoord.x + gsize.x * i, imgcoord.y + gsize.y * (j+1));
       tvi.vi[0].c = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
       tvi.vi[1].c = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
       tvi.vi[2].c = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
       tvi.vi[3].c = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
       tvi.vi[0].p = Vector3(0.0f, 0.0f, 0.0f);
-      tvi.vi[1].p = Vector3(0.0f, 0.0f, 0.0f);
-      tvi.vi[2].p = Vector3(0.0f, 0.0f, 0.0f);
-      tvi.vi[3].p = Vector3(0.0f, 0.0f, 0.0f);
+      tvi.vi[1].p = Vector3(gsize.x, 0.0f, 0.0f);
+      tvi.vi[2].p = Vector3(gsize.x, gsize.y, 0.0f);
+      tvi.vi[3].p = Vector3(0.0f, gsize.y, 0.0f);
     }
   }
 
@@ -273,19 +273,41 @@ void Number::AllocNumberGlyph(unsigned cycles)
 
 void Number::UpdateVertex()
 {
-  if (tvi_glyphs_ == nullptr)
-  {
-    render_glyphs_count_ = 0;
-    return;
-  }
+  render_glyphs_count_ = 0;
 
-  // vertex alignment.
+  if (tvi_glyphs_ == nullptr)
+    return;
+
+  // copy glyphs to print
+  float left = 0;
+  float width = 0;
+  float height = 0;
+  while (num_chrs[render_glyphs_count_] > 0)
+  {
+    unsigned chridx = num_chrs[render_glyphs_count_] - '0';
+    for (unsigned i = 0; i < 4; ++i)
+      render_glyphs_[render_glyphs_count_][i] = tvi_glyphs_[chridx].vi[i];
+    for (unsigned i = 0; i < 4; ++i)
+      render_glyphs_[render_glyphs_count_][i].p.x += left;
+    left += tvi_glyphs_[chridx].vi[2].p.x;
+    tex_[render_glyphs_count_] = tvi_glyphs_[chridx].tex;
+    ++render_glyphs_count_;
+  }
+  width = left;
+  height = render_glyphs_[0][2].p.x;
+
+  // glyph vertex to centered
+  for (unsigned i = 0; i < render_glyphs_count_; ++i)
+  {
+    for (unsigned j = 0; j < 4; ++j)
+      render_glyphs_[i][j].p.x -= width;
+  }
 }
 
 void Number::doUpdate(double delta)
 {
   // update current number
-  if (!value_params_.time > 0)
+  if (value_params_.time > 0)
   {
     value_params_.time -= delta;
     if (value_params_.time < 0) value_params_.time = 0;
@@ -297,6 +319,21 @@ void Number::doUpdate(double delta)
     else
       gcvt(value_params_.curr, 10, num_chrs);
     UpdateVertex();
+  }
+}
+
+void Number::doRender()
+{
+  GRAPHIC->SetBlendMode(blending_);
+
+  // optimizing: flush glyph with same texture at once
+  for (unsigned i = 0; i < render_glyphs_count_; ++i)
+  {
+    unsigned j = i + 1;
+    for (; j < render_glyphs_count_; ++j)
+      if (tex_[i] != tex_[j]) break;
+    GRAPHIC->DrawQuads(render_glyphs_[i], (j - i) * 4);
+    i = j;
   }
 }
 
