@@ -161,10 +161,12 @@ float Text::GetTextWidth() const
 
 void Text::SetText(const std::string& s)
 {
+  ClearText();
   if (!font_) return;
 
   text_ = s;
   font_->PrepareText(s);
+  font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
   UpdateTextRenderContext();
 }
 
@@ -176,12 +178,12 @@ void Text::ClearText()
   text_.clear();
 }
 
+// @warn
+// Text position is set by this function, e.g. word warp
+// So, If width/height changed after calling this function,
+// text won't be displayed as expected.
 void Text::UpdateTextRenderContext()
 {
-  text_render_ctx_.textvertex.clear();
-  text_render_ctx_.vi.clear();
-
-  font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
   text_render_ctx_.width = 0;
   text_render_ctx_.height = 0;
   text_render_ctx_.drawsize = Vector2(
@@ -189,17 +191,22 @@ void Text::UpdateTextRenderContext()
     GetHeight(GetCurrentFrame().pos)
   );
 
-  // If no glyph, then maybe font is not loaded yet.
-  // TODO: need to retry later.
+  // If no glyph, then maybe no glyph supported by this font.
+  // XXX: Font must be loaded at Load(...) method. (synchronized)
   if (text_render_ctx_.textvertex.size() == 0)
     return;
 
+  // copy calculated glyph vertices.
+  for (const auto &tvi : text_render_ctx_.textvertex)
+    for (unsigned i = 0; i < 4; ++i)
+      text_render_ctx_.vi.push_back(tvi.vi[i]);
+
   // 1. calculate whole text width and height.
   // XXX: breaking loop if first cycle is over should be better?
-  for (const auto& tvi : text_render_ctx_.textvertex)
+  for (const auto &tvi : text_render_ctx_.textvertex)
   {
-    text_render_ctx_.width = std::max(text_render_ctx_.width, (float)tvi.vi[2].p.x);
-    text_render_ctx_.height = std::max(text_render_ctx_.height, (float)tvi.vi[2].p.y);
+    text_render_ctx_.width = std::max(text_render_ctx_.width, tvi.vi[2].p.x);
+    text_render_ctx_.height = std::max(text_render_ctx_.height, tvi.vi[2].p.y);
   }
 
   R_ASSERT(text_render_ctx_.width != 0 && text_render_ctx_.height != 0);
@@ -219,6 +226,8 @@ void Text::UpdateTextRenderContext()
 
   Vector3 scale(1.0f, 1.0f, 1.0f);
   Vector3 centerpos(text_render_ctx_.width / 2.0f, text_render_ctx_.height / 2.0f, 0);
+#if 0
+  // text fitting/stretching
   switch (text_fitting_)
   {
   case TextFitting::kTextFitMaxSize:
@@ -240,6 +249,7 @@ void Text::UpdateTextRenderContext()
 
   // 3. move text vertices (alignment)
   // consider newline if x == 0.
+  // NOTE: default vertical alignment of text vertex is center.
   unsigned newline_idx = 0;
   if (text_alignment_.x != 0)
   {
@@ -256,40 +266,29 @@ void Text::UpdateTextRenderContext()
           * text_alignment_.x;
         for (unsigned j = newline_idx; j <= i; ++j)
         {
-          auto &tvi = text_render_ctx_.textvertex[j];
           for (unsigned k = 0; k < 4; ++k)
-            tvi.vi[k].p.x += m;
+            text_render_ctx_.vi[j*4+k].p.x += m;
         }
         newline_idx = i + 1;
       }
     }
   }
-  if (text_alignment_.y != 0)
+  if (text_alignment_.y != 0.5f)
   {
     float m =
-      (text_render_ctx_.drawsize.y - text_render_ctx_.textvertex.back().vi[2].p.y)
-      * text_alignment_.y;
-    for (auto& tvi : text_render_ctx_.textvertex)
-    {
-      for (unsigned k = 0; k < 4; ++k)
-        tvi.vi[k].p.y += m;
-    }
+      (text_render_ctx_.drawsize.y - text_render_ctx_.height)
+      * (0.5f - text_alignment_.y);
+    for (auto& vi : text_render_ctx_.vi)
+      vi.p.y += m;
   }
+#endif
 
   // 4. move (centering) and resize text vertices.
-  for (auto& tvi : text_render_ctx_.textvertex)
+  for (auto& vi : text_render_ctx_.vi)
   {
-    for (unsigned i = 0; i < 4; ++i)
-    {
-      tvi.vi[i].p *= scale;
-      tvi.vi[i].p -= centerpos;
-    }
+    vi.p *= scale;
+    vi.p -= centerpos;
   }
-
-  // copy calculated glyph vertices.
-  for (auto &tvi : text_render_ctx_.textvertex)
-    for (unsigned i = 0; i < 4; ++i)
-      text_render_ctx_.vi.push_back(tvi.vi[i]);
 }
 
 TextVertexInfo& Text::AddTextVertex(const TextVertexInfo &tvi)
@@ -302,6 +301,8 @@ void Text::Refresh()
 {
   if (res_id_)
     SetText(*res_id_);
+  else
+    UpdateTextRenderContext();
 }
 
 void Text::SetTextFitting(TextFitting fitting)
@@ -323,6 +324,38 @@ void Text::doUpdate(double delta)
 
 void Text::doRender()
 {
+  if (!font_) return;
+  const float width = GetWidth(GetCurrentFrame().pos);
+  const float height = GetHeight(GetCurrentFrame().pos);
+  float twidth = text_render_ctx_.width;
+  float theight = text_render_ctx_.height;
+
+  // calculate text scale (in case of stretch)
+  Vector3 scale(1.0f, 1.0f, 1.0f);
+  switch (text_fitting_)
+  {
+  case TextFitting::kTextFitMaxSize:
+    scale.x = std::min(1.0f, width / text_render_ctx_.width);
+    twidth = std::min(width, text_render_ctx_.width);
+    break;
+  case TextFitting::kTextFitStretch:
+    scale.x = width / text_render_ctx_.width;
+    twidth = width;
+    break;
+  case TextFitting::kTextFitNone:
+  default:
+    break;
+  }
+  if (scale.x != 1.0f)
+    GRAPHIC->Scale(scale);
+
+  // calculate text content position.
+  Vector3 trans_content(0.0f, 0.0f, 0.0f);
+  trans_content.x = (twidth - width) * (0.5f - text_alignment_.x);
+  trans_content.y = (theight/2 - height) * (0.5f - text_alignment_.y) + theight/2;
+  if (trans_content.x != 0 || trans_content.y != 0)
+    GRAPHIC->Translate(trans_content);
+
   GRAPHIC->SetBlendMode(blending_);
 
   // Draw vertex by given quad.
@@ -352,18 +385,6 @@ void Text::doRender()
 
 void Text::UpdateRenderingSize(Vector2 &d, Vector3 &p)
 {
-  // calculate scale and apply
-  // and transition in case of width is smaller than text size
-  const float width = GetWidth(GetCurrentFrame().pos);
-  const float height = GetHeight(GetCurrentFrame().pos);
-  if (text_render_ctx_.width > width)
-    p.x = (text_render_ctx_.width - width) * (0.5f - text_alignment_.x);
-  if (text_render_ctx_.height > height)
-    p.y = (text_render_ctx_.height - height) * (0.5f - text_alignment_.y);
-
-  // -- don't consider about scale here
-  // as width/height purposes for alignment, not size of text.
-
   // simulate align center as topleft by making drawing size as zero
   if (set_xy_aligncenter_)
   {

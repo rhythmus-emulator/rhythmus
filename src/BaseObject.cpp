@@ -994,7 +994,7 @@ void BaseObject::Render()
   Vector3 trans(0.0f, 0.0f, 0.0f);
   UpdateRenderingSize(size, trans);
 
-  // set matrix
+  // set matrix for rotation/translation
   // remind vertex's center coord is (0,0).
   // (see BaseObject::FillVertexInfo(...) for more detail)
   GRAPHIC->PushMatrix();
