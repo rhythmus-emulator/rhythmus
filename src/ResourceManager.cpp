@@ -339,6 +339,7 @@ Image* ImageManager::Load(const std::string &path)
   if (path.empty()) return nullptr;
   Image *r = nullptr;
   std::string newpath = PATH->GetPath(path);
+  lock_.lock();
   r = (Image*)SearchResource(newpath.c_str());
   if (!r)
   {
@@ -357,9 +358,15 @@ Image* ImageManager::Load(const std::string &path)
     }
     else
     {
+      r->is_loading_ = true;
+      // unlock here first, as this method takes long
+      lock_.unlock();
       r->Load(newpath);
+      lock_.lock();
+      r->is_loading_ = false;
     }
   }
+  lock_.unlock();
   return r;
 }
 

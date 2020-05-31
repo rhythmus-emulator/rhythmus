@@ -286,23 +286,6 @@ void Font::Load(const char *p, size_t len, const char *ext_hint_opt)
   error_code_ = -1;
 }
 
-uint32_t HexStringToColor(const char *p)
-{
-  uint32_t r = 0;
-  while (*p)
-  {
-    r <<= 4;
-    if (*p >= 'a' && *p <= 'f')
-      r += *p - 'a' + 10;
-    else if (*p >= 'A' && *p <= 'F')
-      r += *p - 'A' + 10;
-    else if (*p >= '0' && *p <= '9')
-      r += *p - '0';
-    ++p;
-  }
-  return r;
-}
-
 uint32_t StringToColor(const std::string &color_str)
 {
   if (!color_str.empty() && color_str[0] == '#')

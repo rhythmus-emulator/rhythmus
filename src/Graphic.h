@@ -48,6 +48,12 @@ struct VertexInfo {
 
 void ResetVertexInfo(VertexInfo &v);
 
+/* @brief Fill color from string (ex. #FF000000) */
+uint32_t HexStringToColor(const char *p);
+uint32_t HexStringToColor(const std::string &s);
+void FillColorFromString(Vector4 &color, const char* s);
+void FillColorFromString(Vector4 &color, const std::string &s);
+
 enum BlendMode {
   kBlendNone,
   kBlendAlpha,

@@ -6,42 +6,7 @@
 namespace rhythmus
 {
 
-class NumberFormatter
-{
-public:
-  NumberFormatter();
-  void SetNumber(int number);
-  void SetNumber(double number);
-  template <typename T> T GetNumber() const;
-  void SetNumberChangeTime(float msec);
-
-  /**
-   * Set number format
-   * e.g. %04d : show number always 4 digits
-   *      %3d : show number at least 3 digits
-   *      +%03d : show number always 3 digits with plus/minus sign always
-   *      %03f : show number always 3 digits + decimal (if decimal exists)
-   *      %02.2f : show number in form of 2 digits + 2 decimal always.
-   *      %f : show number in full digits
-   */
-  void SetFormat(const std::string& number_format);
-
-  /* @brief Update number text. return true if text is updated. */
-  bool UpdateNumber(float delta);
-
-  const char* numstr() const;
-
-private:
-  double number_, from_number_;
-  double disp_number_;
-  float number_change_duration_;
-  float number_change_remain_;
-  bool need_update_;
-  std::string number_format_;
-  char num_str_[16];
-};
-
-constexpr size_t kMaxNumberVertex = 64;
+constexpr size_t kMaxNumberVertex = 16;
 
 /* @brief Optimized for displaying number. */
 class Number : public BaseObject
@@ -78,6 +43,8 @@ private:
   /* number glyphs to render. */
   VertexInfo render_glyphs_[kMaxNumberVertex][4];
   const Texture* tex_[kMaxNumberVertex];
+  float text_width_;
+  float text_height_;
 
   /* number glyphs vertex size. */
   unsigned render_glyphs_count_;
@@ -88,6 +55,7 @@ private:
 
   // time per cycle (zero is non-cycle)
   unsigned cycle_time_;
+  double cycle_curr_time_;
 
   // number characters to display
   char num_chrs[256];
@@ -95,25 +63,26 @@ private:
   // reference to value (if necessary)
   int *val_ptr_;
 
-  // font display style (for LR2 alignment)
-  int display_style_;
-
   // width multiply (for LR2 specification)
   int keta_;
 
   // displaying value
   struct {
-    double start;
-    double end;
-    double curr;
+    int start;
+    int end;
+    int curr;
     double time;
-    double rollingtime; // number rolling time
-    int max_int;        // maximum size of integer area
-    int max_decimal;    // maximum size of decimal area
+    double rollingtime;   // number rolling time
+    int max_string;       // maximum size of whole glyph
+    int max_decimal;      // maximum size of decimal area
+    int fill_empty_zero;  // fill empty zero when string is less than max_string
+                          // (0: none, 1: left, 2: center, 3: right)
   } value_params_;
 
+  void SetNumberInternal(int number);
   void AllocNumberGlyph(unsigned cycles);
   void ClearAll();
+  void UpdateNumberStr();
   void UpdateVertex();
   virtual void doUpdate(double);
   virtual void doRender();

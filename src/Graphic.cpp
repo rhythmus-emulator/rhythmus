@@ -63,6 +63,45 @@ void ResetVertexInfo(VertexInfo &v)
   v.c.a = v.c.r = v.c.g = v.c.b = 1.f;
 }
 
+
+uint32_t HexStringToColor(const char *p)
+{
+  if (p[0] == '#') return HexStringToColor(p + 1);
+
+  uint32_t r = 0;
+  while (*p)
+  {
+    r <<= 4;
+    if (*p >= 'a' && *p <= 'f')
+      r += *p - 'a' + 10;
+    else if (*p >= 'A' && *p <= 'F')
+      r += *p - 'A' + 10;
+    else if (*p >= '0' && *p <= '9')
+      r += *p - '0';
+    ++p;
+  }
+  return r;
+}
+
+uint32_t HexStringToColor(const std::string &s)
+{
+  return HexStringToColor(s.c_str());
+}
+
+void FillColorFromString(Vector4 &color, const char* s)
+{
+  uint32_t c = HexStringToColor(s);
+  color.b = (c & 0xFF) / 255.0f;
+  color.g = ((c >> 8) & 0xFF) / 255.0f;
+  color.r = ((c >> 16) & 0xFF) / 255.0f;
+  color.a = ((c >> 24) & 0xFF) / 255.0f;
+}
+
+void FillColorFromString(Vector4 &color, const std::string &s)
+{
+  FillColorFromString(color, s.c_str());
+}
+
 void StringSafeAssign(std::string &s, const void *p)
 {
   if (p) s = (const char*)p;

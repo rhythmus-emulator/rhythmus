@@ -308,6 +308,9 @@ protected:
   // do clipping when rendering object, including children?
   bool do_clipping_;
 
+  // background color.
+  Vector4 bg_color_;
+
   // commands to be called
   std::map<std::string, std::string> commands_;
 

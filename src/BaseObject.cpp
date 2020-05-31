@@ -263,6 +263,7 @@ BaseObject::BaseObject()
   SetCenter(0.5f, 0.5f);
   SetRotation(0, 0, 0);
   memset(visible_flag_, 0, sizeof(visible_flag_));
+  memset(&bg_color_, 0, sizeof(Vector4));
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
@@ -275,6 +276,7 @@ BaseObject::BaseObject(const BaseObject& obj)
   // XXX: childrens won't copied by now
   frame_ = obj.frame_;
   memcpy(visible_flag_, obj.visible_flag_, sizeof(visible_flag_));
+  bg_color_ = obj.bg_color_;
 }
 
 BaseObject::~BaseObject()
@@ -355,6 +357,8 @@ void BaseObject::Load(const MetricGroup &m)
   m.get_safe("zindex", draw_order_);
   m.get_safe("focus", is_focusable_);
   m.get_safe("clipping", do_clipping_);
+  if (m.exist("background"))
+    FillColorFromString(bg_color_, m.get_str("background"));
 
 #if USE_LR2_FEATURE == 1
   // Load LR2 properties
@@ -1019,6 +1023,25 @@ void BaseObject::Render()
   // XXX: nested clipping support?
   if (do_clipping_)
     GRAPHIC->ClipViewArea(frame_.pos);
+
+  // render background if necessary.
+  // XXX: you can check rendering area by using background property.
+  if (bg_color_.a > 0)
+  {
+    VertexInfo vi[4];
+    vi[0].p = Vector3(-size.x / 2, -size.y / 2, 0.0f);
+    vi[1].p = Vector3(size.x / 2, -size.y / 2, 0.0f);
+    vi[2].p = Vector3(size.x / 2, size.y / 2, 0.0f);
+    vi[3].p = Vector3(-size.x / 2, size.y / 2, 0.0f);
+    vi[0].t = Vector2(0.0f, 0.0f);
+    vi[1].t = Vector2(1.0f, 0.0f);
+    vi[2].t = Vector2(1.0f, 1.0f);
+    vi[3].t = Vector2(0.0f, 1.0f);
+    vi[0].c = vi[1].c = vi[2].c = vi[3].c = bg_color_;
+    GRAPHIC->SetBlendMode(1);
+    GRAPHIC->SetTexture(0, 1);
+    GRAPHIC->DrawQuad(vi);
+  }
 
   // render vertices
   doRender();

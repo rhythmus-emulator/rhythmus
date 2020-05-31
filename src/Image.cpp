@@ -736,6 +736,11 @@ unsigned Image::get_texture_ID() const
   return *tex_;
 }
 
+const Texture* Image::get_texture() const
+{
+  return &tex_;
+}
+
 uint16_t Image::get_width() const
 {
   return width_;
