@@ -8,29 +8,27 @@ namespace rhythmus
 {
 
 Slider::Slider()
-  : direction_(0), range_(0), ratio_(1.0f), value_(.0f), ref_ptr_(nullptr) { }
+  : maxvalue_(1.0f), value_(.0f), ref_ptr_(nullptr)
+{
+  memset(&range_, 0, sizeof(Vector2));
+}
 
 Slider::~Slider() { }
 
 void Slider::SetNumber(int number)
 {
-  value_ = (number / 100.0f) * ratio_;
+  value_ = number / 100.0f;
 }
 
 void Slider::SetNumber(double number)
 {
-  value_ = (float)number * ratio_;
+  value_ = (float)number;
 }
 
 void Slider::Refresh()
 {
   if (ref_ptr_)
     SetNumber( *ref_ptr_);
-}
-
-void Slider::SetRatio(float ratio)
-{
-  ratio_ = ratio;
 }
 
 void Slider::Load(const MetricGroup &metric)
@@ -44,11 +42,27 @@ void Slider::Load(const MetricGroup &metric)
     metric.get_safe("lr2src", cmd);
     CommandArgs args(cmd);
 
-    direction_ = args.Get<int>(9);
-    range_ = args.Get<int>(10);
+    int direction = args.Get<int>(10);
+    int range = args.Get<int>(11);
+    switch (direction)
+    {
+    case 0:
+    default:
+      range_.y -= (float)range;
+      break;
+    case 1:
+      range_.x += (float)range;
+      break;
+    case 2:
+      range_.y += (float)range;
+      break;
+    case 3:
+      range_.x -= (float)range;
+      break;
+    }
 
     /* track change of text table */
-    int eventid = args.Get<int>(11) + 1500;
+    int eventid = args.Get<int>(12) + 1500;
     std::string eventname = "Number" + std::to_string(eventid);
     AddCommand(eventname, "refresh");
     SubscribeTo(eventname);
@@ -64,27 +78,14 @@ void Slider::Load(const MetricGroup &metric)
 void Slider::doUpdate(double delta)
 {
   Sprite::doUpdate(delta);
-
-  int pos_delta = (int)(range_ * value_);
-  switch (direction_)
-  {
-  case 0:
-    SetY((int)GetCurrentFrame().pos.y - pos_delta);
-    break;
-  case 1:
-    SetX((int)GetCurrentFrame().pos.x + pos_delta);
-    break;
-  case 2:
-    SetY((int)GetCurrentFrame().pos.y + pos_delta);
-    break;
-  case 3:
-    SetX((int)GetCurrentFrame().pos.x - pos_delta);
-    break;
-  }
 }
 
 void Slider::doRender()
 {
+  // translate and render
+  Vector3 tv(range_.x * value_, range_.y * value_, 0.0f);
+  GRAPHIC->Translate(tv);
+
   Sprite::doRender();
 }
 

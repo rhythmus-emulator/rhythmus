@@ -1225,6 +1225,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
 #include "Sprite.h"
 #include "object/Text.h"
 #include "object/Number.h"
+#include "object/Slider.h"
 
 namespace rhythmus
 {
@@ -1283,7 +1284,7 @@ BaseObject* CreateObject(const MetricGroup &m)
   }
   else if (type == "slider")
   {
-
+    object = new Slider();
   }
   else if (type == "line")
   {
