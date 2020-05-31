@@ -1,6 +1,7 @@
 #include "Number.h"
 #include "Script.h"
 #include "Util.h"
+#include "KeyPool.h"
 #include "config.h"
 #include <string.h>
 #include <algorithm>
@@ -12,7 +13,8 @@ namespace rhythmus
 
 Number::Number() :
   img_(nullptr), font_(nullptr), blending_(0), tvi_glyphs_(nullptr),
-  cycle_count_(0), cycle_time_(0), cycle_curr_time_(0), val_ptr_(nullptr), keta_(1)
+  cycle_count_(0), cycle_time_(0), cycle_curr_time_(0), val_ptr_(nullptr),
+  keta_(1), resize_to_box_(false)
 {
   memset(&value_params_, 0, sizeof(value_params_));
   *num_chrs = 0;
@@ -118,7 +120,7 @@ void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
   // fill empty glyphs
   if (multiply_mode == 10)
   {
-    for (int i = 0; i < cnt / multiply_mode; ++i)
+    for (unsigned i = 0; i < cnt / multiply_mode; ++i)
     {
       auto &tvi = tvi_glyphs_[i * 24 + 10];
       memcpy(&tvi, &tvi_glyphs_[i * 24], sizeof(TextVertexInfo));
@@ -133,10 +135,10 @@ void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
   }
   else if (multiply_mode == 11)
   {
-    for (int i = 0; i < cnt / multiply_mode; ++i)
+    for (unsigned i = 0; i < cnt / multiply_mode; ++i)
     {
       memset(&tvi_glyphs_[i * 24 + 11], 0, sizeof(TextVertexInfo));
-      for (int j = 12; j < 24; ++j)
+      for (unsigned j = 12; j < 24; ++j)
       {
         memcpy(&tvi_glyphs_[i * 24 + 12 + j], &tvi_glyphs_[i * 24 + j],
           sizeof(TextVertexInfo));
@@ -177,9 +179,13 @@ void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
   value_params_.max_string = keta;
   value_params_.max_decimal = 0;
 
+  resize_to_box_ = true;
+
   /* set value instantly: TODO */
-  //SetResourceId(eventid);
-  //Refresh();
+  std::string resname = "N" + args.Get<std::string>(1);
+  KeyData<int> kdata = KEYPOOL->GetInt(resname);
+  val_ptr_ = &*kdata;
+  Refresh();
 #endif
 }
 
@@ -408,12 +414,15 @@ void Number::doRender()
   GRAPHIC->SetBlendMode(blending_);
 
   // Set scale before rendering to fit textbox
-  Vector3 scale(
-    GetWidth(GetCurrentFrame().pos) * keta_ / text_width_,
-    GetHeight(GetCurrentFrame().pos) / text_height_,
-    1.0f);
-  if (scale.x != 1.0f || scale.y != 1.0f)
-    GRAPHIC->Scale(scale);
+  if (resize_to_box_)
+  {
+    Vector3 scale(
+      GetWidth(GetCurrentFrame().pos) * keta_ / text_width_,
+      GetHeight(GetCurrentFrame().pos) / text_height_,
+      1.0f);
+    if (scale.x != 1.0f || scale.y != 1.0f)
+      GRAPHIC->Scale(scale);
+  }
 
   // optimizing: flush glyph with same texture at once
   for (unsigned i = 0; i < render_glyphs_count_;)

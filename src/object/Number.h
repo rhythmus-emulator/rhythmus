@@ -66,6 +66,9 @@ private:
   // width multiply (for LR2 specification)
   int keta_;
 
+  // resize to drawing box
+  bool resize_to_box_;
+
   // displaying value
   struct {
     int start;
