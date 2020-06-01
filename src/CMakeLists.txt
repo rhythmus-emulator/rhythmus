@@ -53,6 +53,7 @@ set (RHYTHMUS_SOURCES
   object/Text.cpp
   object/Number.cpp
   object/Slider.cpp
+  object/Bargraph.cpp
   object/Quad.cpp
   object/Line.cpp
   object/Button.cpp
@@ -108,6 +109,7 @@ set (RHYTHMUS_HEADERS
   object/Text.h
   object/Number.h
   object/Slider.h
+  object/Bargraph.h
   object/Quad.h
   object/Line.h
   object/Button.h

@@ -1226,6 +1226,9 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
 #include "object/Text.h"
 #include "object/Number.h"
 #include "object/Slider.h"
+#include "object/Bargraph.h"
+#include "object/Button.h"
+#include "object/OnMouse.h"
 
 namespace rhythmus
 {
@@ -1285,6 +1288,18 @@ BaseObject* CreateObject(const MetricGroup &m)
   else if (type == "slider")
   {
     object = new Slider();
+  }
+  else if (type == "bargraph")
+  {
+    object = new Bargraph();
+  }
+  else if (type == "onmouse")
+  {
+    object = new OnMouse();
+  }
+  else if (type == "button")
+  {
+    object = new Button();
   }
   else if (type == "line")
   {
