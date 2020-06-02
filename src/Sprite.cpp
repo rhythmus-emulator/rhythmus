@@ -35,33 +35,39 @@ void Sprite::Load(const MetricGroup& metric)
 #if USE_LR2_FEATURE == 1
   if (metric.exist("lr2src"))
   {
-    /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
     std::string lr2src;
     metric.get_safe("lr2src", lr2src);
-    CommandArgs args(lr2src, 10, true);
-
-    SetImage(args.Get<std::string>(1));
-
-    Vector4 r{
-      args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), args.Get<int>(5)
-    };
-    // Use whole image if width/height is zero.
-    if (r.z <= 0 || r.w <= 0)
-      SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
-    else
-      SetImageCoord(Vector4{r.x, r.y, r.x+r.z, r.y+r.w});
-
-    int divx = args.Get<int>(6);
-    int divy = args.Get<int>(7);
-
-    sprani_.divx = divx > 0 ? divx : 1;
-    sprani_.divy = divy > 0 ? divy : 1;
-    sprani_.cnt = sprani_.divx *  sprani_.divy;
-    sprani_.duration = args.Get<int>(8);
+    LoadLR2SRC(lr2src);
   }
   // TODO: load blending from lr2dst property
   // TODO: load resource id
 #endif
+}
+
+void Sprite::LoadLR2SRC(const std::string &lr2src)
+{
+  /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
+  CommandArgs args(lr2src, 10, true);
+
+  SetImage(args.Get<std::string>(1));
+  SleepUntilLoadFinish(img_);
+
+  Vector4 r{
+    args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), args.Get<int>(5)
+  };
+  // Use whole image if width/height is zero.
+  if (r.z <= 0 || r.w <= 0)
+    SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
+  else
+    SetImageCoord(Vector4{ r.x, r.y, r.x + r.z, r.y + r.w });
+
+  int divx = args.Get<int>(6);
+  int divy = args.Get<int>(7);
+
+  sprani_.divx = divx > 0 ? divx : 1;
+  sprani_.divy = divy > 0 ? divy : 1;
+  sprani_.cnt = sprani_.divx *  sprani_.divy;
+  sprani_.duration = args.Get<int>(8);
 }
 
 void Sprite::SetImage(const std::string &path)
