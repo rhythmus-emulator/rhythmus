@@ -29,6 +29,8 @@ public:
 
   virtual void Load(const MetricGroup &metric);
 
+  void LoadLR2SRC(const std::string &lr2src);
+
   /* Set sprite's image by path */
   void SetImage(const std::string &path);
 

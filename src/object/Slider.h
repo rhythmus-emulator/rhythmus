@@ -4,7 +4,7 @@
 namespace rhythmus
 {
 
-class Slider : public Sprite
+class Slider : public BaseObject
 {
 public:
   Slider();
@@ -16,15 +16,30 @@ public:
   virtual void Load(const MetricGroup &metric);
 
 private:
-  // Movement range of the Slider.
+  // Slider cursor.
+  Sprite cursor_;
+
+  // Movement range of the slider (overriding)
   Vector2 range_;
+
+  // movement type
+  // 0: vertical
+  // 1: horizontal
+  // 2: vertical (bottom to top)
+  // 3: horizontal (right to left)
+  // if 0x10/0x11, then it uses 'range' overriding for slider property
+  // (LR2 specific property)
+  int type_;
 
   float maxvalue_;
   float value_;
-  float *ref_ptr_;
+  float *val_ptr_;
 
-  virtual void doUpdate(double delta);
+  bool editable_;
+
+  virtual void doUpdateAfter();
   virtual void doRender();
+  virtual void UpdateRenderingSize(Vector2 &d, Vector3 &p);
 };
 
 }

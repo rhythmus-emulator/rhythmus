@@ -107,8 +107,13 @@ void on_text(GLFWwindow *w, uint32_t codepoint)
 void on_cursormove(GLFWwindow *w, double xpos, double ypos)
 {
   InputEvent msg(InputEvents::kOnCursorMove);
-  cursor_x = xpos * GRAPHIC->width() / (float)window_x;
-  cursor_y = ypos * GRAPHIC->height() / (float)window_y;
+  cursor_x = xpos;
+  cursor_y = ypos;
+  if (window_x && window_y)
+  {
+    cursor_x = cursor_x / GRAPHIC->width() * window_x;
+    cursor_y = cursor_y / GRAPHIC->height() * window_y;
+  }
   msg.SetPosition((int)(cursor_x + 0.5), (int)(cursor_y + 0.5));
   {
     std::lock_guard<std::mutex> lock(input_evt_lock);

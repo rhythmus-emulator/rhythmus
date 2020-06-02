@@ -251,7 +251,7 @@ bool Animation::is_tweening() const
 // ----------------------------------------------------------- class BaseObject
 
 BaseObject::BaseObject()
-  : parent_(nullptr), own_children_(true), draw_order_(0),
+  : parent_(nullptr), own_children_(true), draw_order_(0), position_prop_(0),
     visible_(true), hide_if_not_tweening_(false),
     ignore_visible_group_(true), is_focusable_(false), is_focused_(false),
     is_hovered_(false), do_clipping_(false)
@@ -1000,8 +1000,11 @@ void BaseObject::Render()
   // remind vertex's center coord is (0,0).
   // (see BaseObject::FillVertexInfo(...) for more detail)
   GRAPHIC->PushMatrix();
-  if (trans.x != 0.0f || trans.y != 0.0f || trans.z != 0.0f)
-    GRAPHIC->Translate(trans);
+  if (position_prop_ == 0)
+  {
+    if (trans.x != 0.0f || trans.y != 0.0f || trans.z != 0.0f)
+      GRAPHIC->Translate(trans);
+  }
   GRAPHIC->Translate(Vector3{
     frame_.pos.x + size.x * frame_.align.x,
     frame_.pos.y + size.y * frame_.align.y,
@@ -1226,6 +1229,9 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
 #include "object/Text.h"
 #include "object/Number.h"
 #include "object/Slider.h"
+#include "object/Bargraph.h"
+#include "object/Button.h"
+#include "object/OnMouse.h"
 
 namespace rhythmus
 {
@@ -1285,6 +1291,18 @@ BaseObject* CreateObject(const MetricGroup &m)
   else if (type == "slider")
   {
     object = new Slider();
+  }
+  else if (type == "bargraph")
+  {
+    object = new Bargraph();
+  }
+  else if (type == "onmouse")
+  {
+    object = new OnMouse();
+  }
+  else if (type == "button")
+  {
+    object = new Button();
   }
   else if (type == "line")
   {

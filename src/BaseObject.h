@@ -277,6 +277,11 @@ protected:
   // drawing order
   int draw_order_;
 
+  // position property of object
+  // 0: inherited/relative (default)
+  // 1: absolute
+  int position_prop_;
+
   // queued animation list
   std::list<Animation> ani_;
 
