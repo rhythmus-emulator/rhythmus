@@ -3,6 +3,7 @@
 #include "KeyPool.h"
 #include "Util.h"
 #include "config.h"
+#include <memory.h>
 
 namespace rhythmus
 {
