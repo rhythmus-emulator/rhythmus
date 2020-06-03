@@ -39,16 +39,28 @@ void Slider::Load(const MetricGroup &metric)
   AddChild(&cursor_);
   BaseObject::Load(metric);
 
-  cursor_.Load(metric);
-
   metric.get_safe("direction", type_);
+
+  if (metric.exist("path"))
+    cursor_.SetImage(metric.get_str("path"));
+
+  // TODO: sprite 'src' attribute
 
 #if USE_LR2_FEATURE == 1
   if (metric.exist("lr2src"))
   {
+    /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
     std::string cmd;
     metric.get_safe("lr2src", cmd);
     CommandArgs args(cmd);
+
+    // only load texture path & texture coord for cursor
+    // TODO: set cycle for image
+    cursor_.SetImage(args.Get_str(1));
+    cursor_.SetImageCoord(Rect{
+      args.Get<float>(2), args.Get<float>(3),
+      args.Get<float>(2) + args.Get<float>(4),
+      args.Get<float>(3) + args.Get<float>(5) });
 
     int direction = args.Get<int>(10);
     int range = args.Get<int>(11);
@@ -91,31 +103,13 @@ void Slider::Load(const MetricGroup &metric)
 #endif
 }
 
-void Slider::doUpdateAfter()
+void Slider::doUpdate(double)
 {
   int type = (type_ & 0xF);
   int use_range_override = (type_ & 0xF0);
-  auto f = GetCurrentFrame();
+  auto &f = GetCurrentFrame();
 
-  // in case of range override 
-  if (use_range_override)
-  {
-    switch (type)
-    {
-    case 0:
-    case 2:
-      f.pos.w = f.pos.y + range_.y;
-      break;
-    case 1:
-    case 3:
-      f.pos.z = f.pos.x + range_.x;
-      break;
-    }
-  }
-
-  // Set position of the sprite cursor
-  // Must use doUpdateAfter() since slider position should be set
-  // after animation.
+  // Set position of the sprite cursor.
   switch (type)
   {
   case 0:
@@ -134,6 +128,26 @@ void Slider::doUpdateAfter()
     cursor_.SetX(GetWidth(f.pos) * value_);
     cursor_.SetY(0);
     break;
+  }
+
+  cursor_.SetWidth(GetWidth(f.pos));
+  cursor_.SetHeight(GetHeight(f.pos));
+
+  // in case of range override
+  // TODO: only update actual size?
+  if (use_range_override)
+  {
+    switch (type)
+    {
+    case 0:
+    case 2:
+      f.pos.w = f.pos.y + range_.y;
+      break;
+    case 1:
+    case 3:
+      f.pos.z = f.pos.x + range_.x;
+      break;
+    }
   }
 }
 

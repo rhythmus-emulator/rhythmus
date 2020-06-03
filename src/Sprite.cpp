@@ -29,8 +29,11 @@ void Sprite::Load(const MetricGroup& metric)
   BaseObject::Load(metric);
 
   metric.get_safe("blend", blending_);
+
   if (metric.exist("path"))
     SetImage(metric.get_str("path"));
+
+  // TODO: sprite 'src' attribute
 
 #if USE_LR2_FEATURE == 1
   if (metric.exist("lr2src"))
