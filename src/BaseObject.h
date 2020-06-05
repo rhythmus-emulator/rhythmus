@@ -282,6 +282,11 @@ protected:
   // 1: absolute
   int position_prop_;
 
+  // set translation center by xy pos.
+  // if true - xy is the center of object.
+  // if false - xy is the topleft of object.
+  bool set_xy_as_center_;
+
   // queued animation list
   std::list<Animation> ani_;
 

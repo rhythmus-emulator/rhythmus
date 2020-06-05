@@ -13,6 +13,7 @@ Slider::Slider()
     val_ptr_(nullptr), editable_(false)
 {
   memset(&range_, 0, sizeof(Vector2));
+  set_xy_as_center_ = false;
 }
 
 Slider::~Slider() { }

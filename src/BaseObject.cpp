@@ -252,7 +252,7 @@ bool Animation::is_tweening() const
 
 BaseObject::BaseObject()
   : parent_(nullptr), own_children_(true), draw_order_(0), position_prop_(0),
-    visible_(true), hide_if_not_tweening_(false),
+    set_xy_as_center_(true), visible_(true), hide_if_not_tweening_(false),
     ignore_visible_group_(true), is_focusable_(false), is_focused_(false),
     is_hovered_(false), do_clipping_(false)
 {
@@ -268,7 +268,7 @@ BaseObject::BaseObject()
 
 BaseObject::BaseObject(const BaseObject& obj)
   : name_(obj.name_), own_children_(true), parent_(obj.parent_), ani_(obj.ani_), draw_order_(obj.draw_order_),
-    visible_(obj.visible_), hide_if_not_tweening_(obj.hide_if_not_tweening_),
+    set_xy_as_center_(obj.set_xy_as_center_), visible_(obj.visible_), hide_if_not_tweening_(obj.hide_if_not_tweening_),
     ignore_visible_group_(obj.ignore_visible_group_),
     is_focusable_(obj.is_focusable_), is_focused_(false),
     is_hovered_(false), do_clipping_(false)
@@ -1012,12 +1012,25 @@ void BaseObject::Render()
   if (frame_.rotate.x != 0 || frame_.rotate.y != 0 || frame_.rotate.z != 0)
     GRAPHIC->Rotate(frame_.rotate);
   GRAPHIC->Scale(Vector3{ frame_.scale.x, frame_.scale.y, 1.0f });
-  if (frame_.align.x != 0.5f || frame_.align.y != 0.5f)
+  if (set_xy_as_center_)
   {
-    GRAPHIC->Translate(Vector3{
-      (frame_.align.x - 0.5f) * size.x,
-      (frame_.align.y - 0.5f) * size.y,
-      0 });
+    if (frame_.align.x != 0.5f || frame_.align.y != 0.5f)
+    {
+      GRAPHIC->Translate(Vector3{
+        (0.5f-frame_.align.x) * size.x,
+        (0.5f-frame_.align.y) * size.y,
+        0 });
+    }
+  }
+  else
+  {
+    if (frame_.align.x != 0.0f || frame_.align.y != 0.0f)
+    {
+      GRAPHIC->Translate(Vector3{
+        -frame_.align.x * size.x,
+        -frame_.align.y * size.y,
+        0 });
+    }
   }
 
   // TODO: texture translate
