@@ -377,6 +377,15 @@ void Number::UpdateVertex()
   }
 }
 
+void Number::OnAnimation(DrawProperty &frame)
+{
+  if (keta_ > 1)
+  {
+    float w = GetWidth(frame.pos);
+    frame.pos.z = frame.pos.x + w * keta_;
+  }
+}
+
 void Number::doUpdate(double delta)
 {
   bool updated = false;
@@ -413,6 +422,7 @@ void Number::doRender()
 {
   GRAPHIC->SetBlendMode(blending_);
 
+#if 0
   // Set scale before rendering to fit textbox
   if (resize_to_box_)
   {
@@ -423,6 +433,7 @@ void Number::doRender()
     if (scale.x != 1.0f || scale.y != 1.0f)
       GRAPHIC->Scale(scale);
   }
+#endif
 
   // optimizing: flush glyph with same texture at once
   for (unsigned i = 0; i < render_glyphs_count_;)
@@ -437,11 +448,6 @@ void Number::doRender()
     }
     i = j;
   }
-}
-
-void Number::UpdateRenderingSize(Vector2 &d, Vector3 &p)
-{
-  d.x *= keta_;
 }
 
 }

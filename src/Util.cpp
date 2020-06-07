@@ -314,6 +314,76 @@ bool CompareFilename(const std::string &path1, const std::string &path2)
   return rutil::GetAlternativeFilename(path1) == rutil::GetAlternativeFilename(path2);
 }
 
+size_t FindUtf8FirstByteReversed(const std::string &str)
+{
+  // find character which is 11xxxxxx or 0xxxxxxx (startpoint)
+  if (str.empty()) return 0;
+  const char *s = str.c_str();
+  const char *p = s + str.size() - 1;
+  while (p > s)
+  {
+    if (*p & 0b11000000 == 0b11000000 || *p & 0b10000000 == 0)
+      break;
+    --p;
+  }
+  return p - s;
+}
+
+// borrowed from XMLUtil library.
+void ConvertUTF32ToUTF8(uint32_t input, char* output, unsigned* length)
+{
+  const unsigned long BYTE_MASK = 0xBF;
+  const unsigned long BYTE_MARK = 0x80;
+  const unsigned long FIRST_BYTE_MARK[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
+
+  if (input < 0x80) {
+    *length = 1;
+  }
+  else if (input < 0x800) {
+    *length = 2;
+  }
+  else if (input < 0x10000) {
+    *length = 3;
+  }
+  else if (input < 0x200000) {
+    *length = 4;
+  }
+  else {
+    *length = 0;    // This code won't convert this correctly anyway.
+    return;
+  }
+
+  output += *length;
+
+  // Scary scary fall throughs are annotated with carefully designed comments
+  // to suppress compiler warnings such as -Wimplicit-fallthrough in gcc
+  switch (*length) {
+  case 4:
+    --output;
+    *output = (char)((input | BYTE_MARK) & BYTE_MASK);
+    input >>= 6;
+    //fall through
+  case 3:
+    --output;
+    *output = (char)((input | BYTE_MARK) & BYTE_MASK);
+    input >>= 6;
+    //fall through
+  case 2:
+    --output;
+    *output = (char)((input | BYTE_MARK) & BYTE_MASK);
+    input >>= 6;
+    //fall through
+  case 1:
+    --output;
+    *output = (char)(input | FIRST_BYTE_MARK[*length]);
+    break;
+  default:
+    // Invalid but NOTHROW, just ignore the character.
+    *length = 0;
+    break;
+  }
+}
+
 #if WIN32
 std::string GetUtf8FromWString(const std::wstring& wstring)
 {

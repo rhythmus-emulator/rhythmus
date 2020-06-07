@@ -254,7 +254,10 @@ public:
   bool IsFocusable() const;
   bool IsDraggable() const;
   virtual void Click();
+
   virtual void OnDrag(float dx, float dy);
+  virtual void OnText(uint32_t codepoint);
+  virtual void OnAnimation(DrawProperty &frame);
 
   void SetDeltaTime(double time);
   void Stop();
@@ -343,12 +346,6 @@ protected:
   virtual void doRender();
   virtual void doUpdateAfter();
   virtual void doRenderAfter();
-
-  // Usually, this function do nothing.
-  // but in some case, an object's size specification
-  // should be updated by some case (e.g. LR2Text Height)
-  // Override this method in that case.
-  virtual void UpdateRenderingSize(Vector2 &d, Vector3 &p);
 
   virtual const CommandFnMap& GetCommandFnMap();
 };

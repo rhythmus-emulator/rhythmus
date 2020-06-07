@@ -2,6 +2,7 @@
 #include "ResourceManager.h"
 #include "Script.h"
 #include "KeyPool.h"
+#include "Util.h"
 #include "common.h"
 #include "config.h"
 
@@ -12,7 +13,7 @@ RHYTHMUS_NAMESPACE_BEGIN
 Text::Text()
   : font_(nullptr),
     text_fitting_(TextFitting::kTextFitNone), set_xy_aligncenter_(false),
-    use_height_as_font_height_(false), autosize_(false), blending_(0), counter_(0),
+    use_height_as_font_height_(false), autosize_(false), blending_(0),
     res_id_(nullptr), do_line_breaking_(true)
 {
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
@@ -54,10 +55,6 @@ void Text::Load(const MetricGroup &m)
     else if (alignstr == "STRETCH") text_fitting_ = TextFitting::kTextFitStretch;
   }
 
-  // set text after align/fit property is read
-  if (m.exist("text"))
-    SetText(m.get_str("text"));
-
 #if USE_LR2_FEATURE == 1
   if (m.exist("lr2src"))
   {
@@ -66,49 +63,58 @@ void Text::Load(const MetricGroup &m)
     CommandArgs args(lr2src);
 
     /* fetch font size from lr2dst ... */
-    SetFont(args.Get<std::string>(0));
+    SetFont(args.Get<std::string>(1));
 
     /* track change of text table */
-    std::string eventname = "Text" + args.Get<std::string>(1);
+    std::string eventname = "Text" + args.Get<std::string>(2);
     AddCommand(eventname, "refresh");
     SubscribeTo(eventname);
-    std::string resname = "S" + args.Get<std::string>(1);
+    std::string resname = "S" + args.Get<std::string>(2);
     KeyData<std::string> kdata = KEYPOOL->GetString(resname);
     res_id_ = &*kdata;
     Refresh();
 
     /* alignment */
-    const int lr2align = args.Get<int>(2);
+    const int lr2align = args.Get<int>(3);
     switch (lr2align)
     {
     case 0:
       // topleft
       SetTextFitting(TextFitting::kTextFitMaxSize);
-      GetCurrentFrame().align.x = 0.0;
-      GetCurrentFrame().align.y = 0.0;
+      text_alignment_.x = 0.0;
+      text_alignment_.y = 0.0;
       break;
     case 1:
       // topcenter
       SetTextFitting(TextFitting::kTextFitMaxSize);
-      GetCurrentFrame().align.x = 0.5;
-      GetCurrentFrame().align.y = 0.0;
+      text_alignment_.x = 0.5;
+      text_alignment_.y = 0.0;
       break;
     case 2:
       // topright
       SetTextFitting(TextFitting::kTextFitMaxSize);
-      GetCurrentFrame().align.x = 1.0;
-      GetCurrentFrame().align.y = 0.0;
+      text_alignment_.x = 1.0;
+      text_alignment_.y = 0.0;
       break;
     }
     set_xy_aligncenter_ = true;
     use_height_as_font_height_ = true;
 
-    /* editable */
-    //args.Get<int>(2);
+    /* editable (focusable) */
+    if (args.Get<int>(4) > 0)
+      SetFocusable(true);
+
+    /* TODO: panel */
   }
 
   // TODO: load blending from LR2DST
 #endif
+
+  // set text after align/fit property is read
+  if (m.exist("value"))
+    SetText(m.get_str("value"));
+  else if (m.exist("text"))
+    SetText(m.get_str("text"));
 }
 
 void Text::SetFont(const std::string& path)
@@ -315,11 +321,59 @@ void Text::SetLineBreaking(bool enable_line_break)
   do_line_breaking_ = enable_line_break;
 }
 
+void Text::OnText(uint32_t codepoint)
+{
+  if (!editable_) return;
+
+  if (codepoint == 0xFFFFFFFF)
+  {
+    // backspace; reserved codepoint
+    // manually detect UTF8 start byte from end and delete.
+    size_t pos = FindUtf8FirstByteReversed(text_);
+    text_ = text_.substr(0, pos);
+  }
+  else
+  {
+    // convert between wchar <-> utf8
+    char buf[6];
+    unsigned size;
+    ConvertUTF32ToUTF8(codepoint, buf, &size);
+    for (unsigned i = 0; i < size; ++i)
+      text_.push_back(buf[i]);
+  }
+
+  if (res_id_)
+    *res_id_ = text_;
+
+  // clear and update text vertex
+  text_render_ctx_.textvertex.clear();
+  text_render_ctx_.vi.clear();
+  text_render_ctx_.height = text_render_ctx_.width = 0;
+  font_->PrepareText(text_);
+  font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
+  UpdateTextRenderContext();
+}
+
 Font *Text::font() { return font_; }
+
+void Text::OnAnimation(DrawProperty &frame)
+{
+  // simulate align center as topleft by making drawing size as zero
+  if (set_xy_aligncenter_)
+  {
+    float dw = GetWidth(frame.pos) * text_alignment_.x;
+    float dh = GetHeight(frame.pos) * text_alignment_.y;
+    frame.pos.x -= dw;
+    frame.pos.z -= dw;
+    frame.pos.y -= dh;
+    frame.pos.w -= dh;
+  }
+}
 
 void Text::doUpdate(double delta)
 {
-  counter_ = (counter_ + 1) % 30;
+  // hook animation position for LR2
+  // (TODO)
 }
 
 void Text::doRender()
@@ -380,15 +434,6 @@ void Text::doRender()
     GRAPHIC->SetTexture(0, **text_render_ctx_.textvertex[i].tex);
     GRAPHIC->DrawQuads(&text_render_ctx_.vi[i * 4], (j - i) * 4);
     i = j;
-  }
-}
-
-void Text::UpdateRenderingSize(Vector2 &d, Vector3 &p)
-{
-  // simulate align center as topleft by making drawing size as zero
-  if (set_xy_aligncenter_)
-  {
-    d.x = d.y = 0.0f;
   }
 }
 

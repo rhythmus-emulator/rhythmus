@@ -106,14 +106,33 @@ void Slider::Load(const MetricGroup &metric)
 #endif
 }
 
+void Slider::OnAnimation(DrawProperty &frame)
+{
+  // We need to modify 'slider size'
+  // to receive event in case of LR2 object,
+  // as it's slider object drawing property is different from
+  // actual size of slider.
+
+  int type = (type_ & 0xF);
+  int use_range_override = (type_ & 0xF0);
+  if (use_range_override)
+  {
+    // TODO: also cursor size reset when OnResize()
+    cursor_.SetWidth(GetWidth(frame.pos));
+    cursor_.SetHeight(GetHeight(frame.pos));
+
+    if (type == 0)
+      frame.pos.w = frame.pos.y + range_.y;
+    else if (type == 1)
+      frame.pos.z = frame.pos.x + range_.x;
+  }
+}
+
 void Slider::doUpdate(double)
 {
   int type = (type_ & 0xF);
   int use_range_override = (type_ & 0xF0);
   auto &f = GetCurrentFrame();
-
-  cursor_.SetWidth(GetWidth(f.pos));
-  cursor_.SetHeight(GetHeight(f.pos));
 
   // Update updated value if editable.
   if (editable_ && cursor_.IsDragging())
@@ -160,24 +179,6 @@ void Slider::doUpdate(double)
 
 void Slider::doRender()
 {
-}
-
-void Slider::UpdateRenderingSize(Vector2 &d, Vector3 &p)
-{
-  // We need to modify 'slider size'
-  // to receive event in case of LR2 object,
-  // as it's slider object drawing property is different from
-  // actual size of slider.
-
-  int type = (type_ & 0xF);
-  int use_range_override = (type_ & 0xF0);
-  if (use_range_override)
-  {
-    if (type == 0)
-      d.y = range_.y;
-    else if (type == 1)
-      d.x = range_.x;
-  }
 }
 
 }

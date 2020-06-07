@@ -37,9 +37,9 @@ private:
 
   bool editable_;
 
+  virtual void OnAnimation(DrawProperty &frame);
   virtual void doUpdate(double);
   virtual void doRender();
-  virtual void UpdateRenderingSize(Vector2 &d, Vector3 &p);
 };
 
 }

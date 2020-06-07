@@ -980,6 +980,14 @@ void BaseObject::OnDrag(float dx, float dy)
   frame_.pos.w += dy;
 }
 
+void BaseObject::OnText(uint32_t codepoint)
+{
+}
+
+void BaseObject::OnAnimation(DrawProperty &frame)
+{
+}
+
 bool BaseObject::IsVisible() const
 {
   if (!ignore_visible_group_ && (*visible_flag_[0] == 0
@@ -1026,12 +1034,16 @@ void BaseObject::Update(double delta)
   // update tweening
   double t = delta;
   std::string cmd;
-  while (!ani_.empty() && t > 0)
+  if (!ani_.empty())
   {
-    auto &ani = ani_.front();
-    ani.Update(t, cmd, &frame_);
-    if (ani.is_finished())
-      ani_.pop_front();
+    while (!ani_.empty() && t > 0)
+    {
+      auto &ani = ani_.front();
+      ani.Update(t, cmd, &frame_);
+      if (ani.is_finished())
+        ani_.pop_front();
+    }
+    OnAnimation(frame_);
   }
 
   doUpdate(delta);
@@ -1047,18 +1059,15 @@ void BaseObject::Render()
 
   Vector2 size(frame_.pos.z - frame_.pos.x,
                frame_.pos.w - frame_.pos.y);
-  Vector3 trans(0.0f, 0.0f, 0.0f);
-  UpdateRenderingSize(size, trans);
 
   // set matrix for rotation/translation
   // remind vertex's center coord is (0,0).
   // (see BaseObject::FillVertexInfo(...) for more detail)
   GRAPHIC->PushMatrix();
+  /*
   if (position_prop_ == 0)
   {
-    if (trans.x != 0.0f || trans.y != 0.0f || trans.z != 0.0f)
-      GRAPHIC->Translate(trans);
-  }
+  }*/
   GRAPHIC->Translate(Vector3{
     frame_.pos.x + size.x * frame_.align.x,
     frame_.pos.y + size.y * frame_.align.y,
@@ -1155,7 +1164,6 @@ void BaseObject::doUpdate(double delta) {}
 void BaseObject::doRender() {}
 void BaseObject::doUpdateAfter() {}
 void BaseObject::doRenderAfter() {}
-void BaseObject::UpdateRenderingSize(Vector2&, Vector3&) {}
 
 
 /* ---------------------------- Command related */

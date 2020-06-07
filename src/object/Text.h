@@ -32,9 +32,12 @@ public:
   void SetTextFitting(TextFitting fitting);
   void SetLineBreaking(bool enable_line_break);
 
+  virtual void OnText(uint32_t codepoint);
+
   Font *font();
 
 protected:
+  virtual void OnAnimation(DrawProperty &frame);
   virtual void doRender();
   virtual void doUpdate(double);
   void UpdateTextRenderContext();
@@ -83,6 +86,8 @@ private:
     float tx, ty;
   } alignment_attrs_;
 
+  bool editable_;
+
   bool autosize_;
 
   int blending_;
@@ -94,8 +99,6 @@ private:
 
   // is line-breaking enabled?
   bool do_line_breaking_;
-
-  virtual void UpdateRenderingSize(Vector2 &d, Vector3 &p);
 };
 
 RHYTHMUS_NAMESPACE_END

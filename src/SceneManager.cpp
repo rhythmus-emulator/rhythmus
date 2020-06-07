@@ -177,13 +177,18 @@ void SceneManager::OnInputEvent(const InputEvent& e)
     }
     if (!curr_hover_object && current_scene_ && current_scene_->IsInputAvailable())
       curr_hover_object = current_scene_->GetChildAtPosition(x, y);
+
+    if (hovered_obj_ != curr_hover_object)
+    {
+      if (hovered_obj_) hovered_obj_->SetHovered(false);
+      if (curr_hover_object) curr_hover_object->SetHovered(true);
+      hovered_obj_ = curr_hover_object;
+    }
   }
-  if (hovered_obj_ != curr_hover_object)
-  {
-    if (hovered_obj_) hovered_obj_->SetHovered(false);
-    if (curr_hover_object) curr_hover_object->SetHovered(true);
-    hovered_obj_ = curr_hover_object;
-  }
+
+  // If searched object is go-through object (propagate click event),
+  // then search for clickable object again.
+  // TODO
 
   // If object is focusable, then it get focus status.
   // If object is draggable, it is only focused while dragging.
@@ -218,13 +223,16 @@ void SceneManager::OnInputEvent(const InputEvent& e)
   else if (e.type() == InputEvents::kOnCursorClick /* Up */)
   {
     if (dragging_obj_)
+    {
+      dragging_obj_->OnDrag(x - px, y - py);
       dragging_obj_ = nullptr;
+    }
     if (hovered_obj_)
       hovered_obj_->Click();
   }
   else if (e.type() == InputEvents::kOnText && focused_obj_)
   {
-    // TODO: SetText()
+    focused_obj_->OnText(e.Codepoint());
   }
 
   px = x;

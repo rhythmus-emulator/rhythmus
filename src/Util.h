@@ -81,6 +81,10 @@ bool CheckMasking(const std::string& path, const std::string& mask);
 
 bool CompareFilename(const std::string &path1, const std::string &path2);
 
+size_t FindUtf8FirstByteReversed(const std::string &s);
+
+void ConvertUTF32ToUTF8(uint32_t u32, char *out, unsigned *len);
+
 #if WIN32
 std::string GetUtf8FromWString(const std::wstring& wstring);
 #endif
