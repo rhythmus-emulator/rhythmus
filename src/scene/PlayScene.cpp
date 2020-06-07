@@ -133,9 +133,6 @@ void PlayScene::ProcessInputEvent(const InputEvent& e)
     }
   }
 
-  if (!is_input_available())
-    return;
-
   SongPlayer::getInstance().ProcessInputEvent(e);
 }
 

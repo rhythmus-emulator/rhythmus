@@ -21,9 +21,17 @@ void TestScene::ProcessInputEvent(const InputEvent& e)
 {
   Scene::ProcessInputEvent(e);
 
-  if (e.type() == InputEvents::kOnKeyUp && e.KeyCode() == RI_KEY_ESCAPE)
+  if (e.type() == InputEvents::kOnKeyUp)
   {
-    Game::Exit();
+    switch (e.KeyCode())
+    {
+    case RI_KEY_ESCAPE:
+      Game::Exit();
+      break;
+    case RI_KEY_SPACE:
+      EventManager::SendEvent("Load");
+      break;
+    }
   }
 }
 

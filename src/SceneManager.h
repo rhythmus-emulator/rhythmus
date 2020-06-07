@@ -6,18 +6,32 @@
 namespace rhythmus
 {
 
+class BaseObject;
+
 class SceneManager : public InputEventReceiver
 {
 public:
-  void Initialize();
-  void Cleanup();
+  static void Initialize();
+  static void Cleanup();
+
   void Update();
   void Render();
 
-  static Scene* get_current_scene();
-  static SceneManager& getInstance();
+  Scene* get_current_scene();
 
-  static void ChangeScene(const std::string &scene_name);
+  void ChangeScene(const std::string &scene_name);
+
+  /* clear out focus */
+  void ClearFocus();
+
+  /* clear out focus of specific object
+   * This must be called before deleting object.
+   * If not, SceneManager may refer to dangling pointer. */
+  void ClearFocus(BaseObject *obj);
+
+  BaseObject *GetHoveredObject();
+  BaseObject *GetFocusedObject();
+  BaseObject *GetDraggingObject();
 
   /* from InputEventReceiver */
   virtual void OnInputEvent(const InputEvent& e);
@@ -38,10 +52,22 @@ private:
 
   // next scene cached
   Scene *next_scene_;
+
+  // currently hovered object
+  BaseObject *hovered_obj_;
+
+  // currently focused object
+  BaseObject *focused_obj_;
+
+  // currently dragging object
+  BaseObject *dragging_obj_;
+
+  // previous x, y coordinate (for dragging event)
+  float px, py;
 };
 
 /* singleton object. */
-extern class SceneManager gSceneManager;
+extern SceneManager *SCENEMAN;
 
 }
 

@@ -130,7 +130,7 @@ void Game::Initialize()
   EventManager::Initialize();
   Timer::Initialize();
   PlayerManager::Initialize();
-  SceneManager::getInstance().Initialize();
+  SceneManager::Initialize();
 
   GAME->is_running_ = true;
 }
@@ -161,9 +161,9 @@ void Game::Loop()
       }
 
       /* Scene update & rendering */
-      SceneManager::getInstance().Update();
+      SCENEMAN->Update();
       GRAPHIC->BeginFrame();
-      SceneManager::getInstance().Render();
+      SCENEMAN->Render();
       GRAPHIC->EndFrame();
 
       /* Flush stdout into log message */
@@ -189,7 +189,7 @@ void Game::Cleanup()
 {
   SongPlayer::getInstance().Stop();
   PlayerManager::Cleanup();
-  SceneManager::getInstance().Cleanup();
+  SceneManager::Cleanup();
   TaskPool::getInstance().ClearTaskPool();
   Graphic::DeleteGraphic();
   SoundDriver::getInstance().Destroy();

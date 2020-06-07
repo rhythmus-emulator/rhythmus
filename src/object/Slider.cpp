@@ -20,7 +20,7 @@ Slider::~Slider() { }
 
 void Slider::SetNumber(int number)
 {
-  value_ = number / 100.0f;
+  SetNumber(number / 100.0f);
 }
 
 void Slider::SetNumber(double number)
@@ -37,6 +37,7 @@ void Slider::Refresh()
 void Slider::Load(const MetricGroup &metric)
 {
   SetOwnChildren(false);
+  cursor_.SetDraggable(true);
   AddChild(&cursor_);
   BaseObject::Load(metric);
 
@@ -98,6 +99,7 @@ void Slider::Load(const MetricGroup &metric)
     Refresh();
 
     /* disabled? */
+    editable_ = true;
     if (args.Get_str(13))
       editable_ = (args.Get<int>(13) == 0);
   }
@@ -109,6 +111,13 @@ void Slider::doUpdate(double)
   int type = (type_ & 0xF);
   int use_range_override = (type_ & 0xF0);
   auto &f = GetCurrentFrame();
+
+  cursor_.SetWidth(GetWidth(f.pos));
+  cursor_.SetHeight(GetHeight(f.pos));
+
+  // Update updated value if editable.
+  if (editable_ && cursor_.IsDragging())
+    value_ = cursor_.GetY() / GetHeight(f.pos);
 
   // Set position of the sprite cursor.
   switch (type)
@@ -130,9 +139,6 @@ void Slider::doUpdate(double)
     cursor_.SetY(0);
     break;
   }
-
-  cursor_.SetWidth(GetWidth(f.pos));
-  cursor_.SetHeight(GetHeight(f.pos));
 
   // in case of range override
   // TODO: only update actual size?

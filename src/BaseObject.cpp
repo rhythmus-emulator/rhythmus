@@ -253,8 +253,8 @@ bool Animation::is_tweening() const
 BaseObject::BaseObject()
   : parent_(nullptr), own_children_(true), draw_order_(0), position_prop_(0),
     set_xy_as_center_(true), visible_(true), hide_if_not_tweening_(false),
-    ignore_visible_group_(true), is_focusable_(false), is_focused_(false),
-    is_hovered_(false), do_clipping_(false)
+    ignore_visible_group_(true), is_draggable_(false), is_focusable_(false),
+    is_focused_(false), is_hovered_(false), do_clipping_(false)
 {
   memset(&frame_, 0, sizeof(DrawProperty));
   SetRGB(1.0f, 1.0f, 1.0f);
@@ -270,7 +270,7 @@ BaseObject::BaseObject(const BaseObject& obj)
   : name_(obj.name_), own_children_(true), parent_(obj.parent_), ani_(obj.ani_), draw_order_(obj.draw_order_),
     set_xy_as_center_(obj.set_xy_as_center_), visible_(obj.visible_), hide_if_not_tweening_(obj.hide_if_not_tweening_),
     ignore_visible_group_(obj.ignore_visible_group_),
-    is_focusable_(obj.is_focusable_), is_focused_(false),
+    is_focusable_(obj.is_focusable_), is_draggable_(false), is_focused_(false),
     is_hovered_(false), do_clipping_(false)
 {
   // XXX: childrens won't copied by now
@@ -281,6 +281,7 @@ BaseObject::BaseObject(const BaseObject& obj)
 
 BaseObject::~BaseObject()
 {
+  SCENEMAN->ClearFocus(this);
   RemoveAllChild();
 }
 
@@ -339,6 +340,21 @@ BaseObject* BaseObject::GetLastChild()
   if (children_.size() > 0)
     return children_.back();
   else return nullptr;
+}
+
+BaseObject *BaseObject::GetChildAtPosition(float x, float y)
+{
+  for (auto i = children_.rbegin(); i != children_.rend(); ++i)
+  {
+    auto *obj = *i;
+    if (/*obj->IsVisible() &&*/ obj->IsEntered(x, y))
+    {
+      auto *childobj = obj->GetChildAtPosition(x - obj->GetX(), y - obj->GetY());
+      if (childobj) return childobj;
+      else return obj;
+    }
+  }
+  return nullptr;
 }
 
 void BaseObject::SetOwnChildren(bool v)
@@ -727,6 +743,16 @@ void BaseObject::SetAcceleration(int acc)
   ani_.back().SetEaseType(acc);
 }
 
+float BaseObject::GetX() const
+{
+  return frame_.pos.x;
+}
+
+float BaseObject::GetY() const
+{
+  return frame_.pos.y;
+}
+
 void BaseObject::SetLR2DST(const std::string &cmd)
 {
 #if USE_LR2_FEATURE == 1
@@ -874,6 +900,11 @@ void BaseObject::SetFocusable(bool is_focusable)
   is_focusable_ = is_focusable;
 }
 
+void BaseObject::SetDraggable(bool is_draggable)
+{
+  is_draggable_ = is_draggable;
+}
+
 bool BaseObject::IsEntered(float x, float y)
 {
   // TODO: in case of rotation?
@@ -915,6 +946,21 @@ bool BaseObject::IsFocused() const
   return is_focused_;
 }
 
+bool BaseObject::IsDragging() const
+{
+  return this == SCENEMAN->GetDraggingObject();
+}
+
+bool BaseObject::IsFocusable() const
+{
+  return is_focusable_;
+}
+
+bool BaseObject::IsDraggable() const
+{
+  return is_draggable_;
+}
+
 void BaseObject::Click()
 {
   if (!is_focusable_)
@@ -924,6 +970,14 @@ void BaseObject::Click()
   SetFocused(true);
 
   RunCommandByName("click");
+}
+
+void BaseObject::OnDrag(float dx, float dy)
+{
+  frame_.pos.x += dx;
+  frame_.pos.z += dx;
+  frame_.pos.y += dy;
+  frame_.pos.w += dy;
 }
 
 bool BaseObject::IsVisible() const

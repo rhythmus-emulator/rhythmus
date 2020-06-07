@@ -14,9 +14,6 @@ ResultScene::ResultScene()
 
 void ResultScene::ProcessInputEvent(const InputEvent& e)
 {
-  if (!is_input_available())
-    return;
-
   if (e.type() == InputEvents::kOnKeyUp)
   {
     FadeOutScene(true);

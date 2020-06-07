@@ -73,8 +73,9 @@ public:
   virtual void CloseScene(bool next);
 
   void EnableInput(bool enable_input);
+  bool IsInputAvailable() const;
 
-  /* @brief Event processing */
+  /* @brief Event processing for scene specific action */
   virtual void ProcessInputEvent(const InputEvent& e);
 
 protected:
@@ -83,7 +84,6 @@ protected:
 
   // is event triggered at valid time, so it need to be processed?
   // (e.g. input event during scene loading or #IGNOREINPUT --> ignore)
-  bool is_input_available() const;
   virtual void doUpdate(double delta);
   virtual void doRenderAfter();
 

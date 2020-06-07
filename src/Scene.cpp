@@ -279,9 +279,7 @@ void Scene::TriggerFadeIn()
 // XXX: change this method name to finishscene?
 void Scene::CloseScene(bool next)
 {
-  SceneManager::ChangeScene(
-    next ? next_scene_ : prev_scene_
-  );
+  SCENEMAN->ChangeScene(next ? next_scene_ : prev_scene_);
 }
 
 void Scene::EnableInput(bool enable_input)
@@ -289,10 +287,14 @@ void Scene::EnableInput(bool enable_input)
   is_input_available_ = enable_input;
 }
 
+bool Scene::IsInputAvailable() const
+{
+  // TODO: check scene start time also
+  return is_input_available_;
+}
+
 void Scene::ProcessInputEvent(const InputEvent& e)
 {
-  float x = (float)e.GetX();
-  float y = (float)e.GetY();
   if (e.type() == InputEvents::kOnKeyUp)
   {
     if (e.KeyCode() == RI_KEY_ESCAPE)
@@ -300,52 +302,6 @@ void Scene::ProcessInputEvent(const InputEvent& e)
       FadeOutScene(false);
     }
   }
-  else if (e.type() == InputEvents::kOnCursorMove)
-  {
-    // only single object can be focused.
-    // bool is_hovered = false;
-    for (auto i = children_.rbegin(); i != children_.rend(); ++i)
-    {
-      auto *obj = *i;
-      obj->SetHovered(
-        /**
-         * Comment out hover-for-single-object,
-         * as object hovering is not working as expected for LR2.
-         *
-         * is_hovered ? false : (is_hovered = obj->IsEntered(x, y))
-         */
-        obj->IsEntered(x, y)
-      );
-    }
-  }
-  else if (e.type() == InputEvents::kOnCursorClick)
-  {
-    // only single object can be focused.
-    bool entered = false;
-    bool is_focused = false;
-    for (auto i = children_.rbegin(); i != children_.rend(); ++i)
-    {
-      auto *obj = *i;
-      if (!obj->IsVisible())
-        continue;
-      if (is_focused)
-        obj->SetFocused(false);
-      else
-      {
-        entered = obj->IsEntered(x, y);
-        if (entered)
-          obj->Click();
-        else
-          obj->SetFocused(false);
-        is_focused = obj->IsFocused();
-      }
-    }
-  }
-}
-
-bool Scene::is_input_available() const
-{
-  return is_input_available_;
 }
 
 void Scene::doUpdate(double delta)

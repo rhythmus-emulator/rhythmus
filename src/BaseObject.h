@@ -152,6 +152,7 @@ public:
   void set_parent(BaseObject* obj);
   BaseObject* get_parent();
   BaseObject* GetLastChild();
+  BaseObject *GetChildAtPosition(float x, float y);
   void SetOwnChildren(bool v);
 
   // Load object property from metric info.
@@ -210,6 +211,8 @@ public:
   void SetRotationAsDegree(float x, float y, float z);
   void SetRepeat(bool repeat);
   void SetLoop(unsigned loop_start_time);
+  float GetX() const;
+  float GetY() const;
   void SetLR2DST(const std::string &cmd);
 
   /**
@@ -241,12 +244,17 @@ public:
   virtual void Refresh();
 
   void SetFocusable(bool is_focusable);
+  void SetDraggable(bool is_draggable);
   bool IsEntered(float x, float y);
   void SetHovered(bool is_hovered);
   void SetFocused(bool is_focused);
   bool IsHovered() const;
   bool IsFocused() const;
+  bool IsDragging() const;
+  bool IsFocusable() const;
+  bool IsDraggable() const;
   virtual void Click();
+  virtual void OnDrag(float dx, float dy);
 
   void SetDeltaTime(double time);
   void Stop();
@@ -305,6 +313,9 @@ protected:
 
   // ignoring visible group
   bool ignore_visible_group_;
+
+  // is object is draggable?
+  bool is_draggable_;
 
   // is this object focusable?
   bool is_focusable_;

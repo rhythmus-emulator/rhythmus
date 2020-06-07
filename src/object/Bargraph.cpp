@@ -9,6 +9,7 @@ namespace rhythmus
 
 Bargraph::Bargraph() : direction_(0), value_(0), val_ptr_(nullptr)
 {
+  set_xy_as_center_ = false;
   SetOwnChildren(false);
   AddChild(&bar_);
 }

@@ -17,43 +17,12 @@ namespace rhythmus
 // ------------------------- class SceneManager
 
 SceneManager::SceneManager()
-  : current_scene_(nullptr), background_scene_(nullptr), next_scene_(nullptr)
+  : current_scene_(nullptr), background_scene_(nullptr), next_scene_(nullptr),
+    hovered_obj_(nullptr), focused_obj_(nullptr), dragging_obj_(nullptr)
 {
 }
 
 SceneManager::~SceneManager()
-{
-  Cleanup();
-}
-
-void SceneManager::Initialize()
-{
-  // create system-default overlay scene.
-  Scene *s = new OverlayScene();
-  overlay_scenes_.push_back(s);
-  s->LoadScene();
-
-  // create starting scene.
-  switch (GAME->get_boot_mode())
-  {
-  case GameBootMode::kBootNormal:
-  case GameBootMode::kBootArcade:
-  case GameBootMode::kBootLR2:
-  case GameBootMode::kBootRefresh:
-    SceneManager::ChangeScene("LoadingScene");
-    break;
-  case GameBootMode::kBootTest:
-    SceneManager::ChangeScene("TestScene");
-    break;
-  case GameBootMode::kBootPlay:
-    SceneManager::ChangeScene("PlayScene");
-    break;
-  default:
-    R_ASSERT(0);
-  }
-}
-
-void SceneManager::Cleanup()
 {
   if (current_scene_)
   {
@@ -63,6 +32,45 @@ void SceneManager::Cleanup()
   for (auto *s : overlay_scenes_)
     delete s;
   overlay_scenes_.clear();
+}
+
+void SceneManager::Initialize()
+{
+  // create object.
+  // The object will be automatically registered to InputEventManager,
+  // so be careful to call this method after initializing Event module.
+  R_ASSERT(SCENEMAN == nullptr);
+  SCENEMAN = new SceneManager();
+
+  // create system-default overlay scene.
+  Scene *s = new OverlayScene();
+  SCENEMAN->overlay_scenes_.push_back(s);
+  s->LoadScene();
+
+  // create starting scene.
+  switch (GAME->get_boot_mode())
+  {
+  case GameBootMode::kBootNormal:
+  case GameBootMode::kBootArcade:
+  case GameBootMode::kBootLR2:
+  case GameBootMode::kBootRefresh:
+    SCENEMAN->ChangeScene("LoadingScene");
+    break;
+  case GameBootMode::kBootTest:
+    SCENEMAN->ChangeScene("TestScene");
+    break;
+  case GameBootMode::kBootPlay:
+    SCENEMAN->ChangeScene("PlayScene");
+    break;
+  default:
+    R_ASSERT(0);
+  }
+}
+
+void SceneManager::Cleanup()
+{
+  delete SCENEMAN;
+  SCENEMAN = nullptr;
 }
 
 void SceneManager::Update()
@@ -131,22 +139,107 @@ void SceneManager::Render()
     s->Render();
 }
 
+void SceneManager::ClearFocus()
+{
+  hovered_obj_ = nullptr;
+  focused_obj_ = nullptr;
+}
+
+void SceneManager::ClearFocus(BaseObject *obj)
+{
+  if (hovered_obj_ == obj) hovered_obj_ = nullptr;
+  if (focused_obj_ == obj) focused_obj_ = nullptr;
+}
+
+BaseObject *SceneManager::GetHoveredObject() { return hovered_obj_; }
+BaseObject *SceneManager::GetFocusedObject() { return focused_obj_; }
+BaseObject *SceneManager::GetDraggingObject() { return dragging_obj_; }
+
 void SceneManager::OnInputEvent(const InputEvent& e)
 {
-  if (current_scene_)
+  //
+  // Check out focusing of objects
+  // Check hovering on object at the same time.
+  //
+  float x = (float)e.GetX();
+  float y = (float)e.GetY();
+  BaseObject *curr_hover_object = nullptr;
+
+  // XXX: on touch event on mobile?
+  if (e.type() == InputEvents::kOnCursorMove
+   || e.type() == InputEvents::kOnCursorDown)
+  {
+    for (auto *os : overlay_scenes_)
+    {
+      if (curr_hover_object) break;
+      if (!os->IsInputAvailable()) continue;
+      curr_hover_object = os->GetChildAtPosition(x, y);
+    }
+    if (!curr_hover_object && current_scene_ && current_scene_->IsInputAvailable())
+      curr_hover_object = current_scene_->GetChildAtPosition(x, y);
+  }
+  if (hovered_obj_ != curr_hover_object)
+  {
+    if (hovered_obj_) hovered_obj_->SetHovered(false);
+    if (curr_hover_object) curr_hover_object->SetHovered(true);
+    hovered_obj_ = curr_hover_object;
+  }
+
+  // If object is focusable, then it get focus status.
+  // If object is draggable, it is only focused while dragging.
+  if (e.type() == InputEvents::kOnCursorDown && focused_obj_ != hovered_obj_)
+  {
+    if (focused_obj_)
+    {
+      focused_obj_->SetFocused(false);
+      focused_obj_ = nullptr;
+    }
+
+    if (hovered_obj_)
+    {
+      if (hovered_obj_->IsFocusable())
+      {
+        focused_obj_ = hovered_obj_;
+        focused_obj_->SetFocused(true);
+      }
+      if (hovered_obj_->IsDraggable())
+      {
+        dragging_obj_ = hovered_obj_;
+      }
+    }
+  }
+  else if (e.type() == InputEvents::kOnCursorMove)
+  {
+    if (dragging_obj_)
+    {
+      dragging_obj_->OnDrag(x - px, y - py);
+    }
+  }
+  else if (e.type() == InputEvents::kOnCursorClick /* Up */)
+  {
+    if (dragging_obj_)
+      dragging_obj_ = nullptr;
+    if (hovered_obj_)
+      hovered_obj_->Click();
+  }
+  else if (e.type() == InputEvents::kOnText && focused_obj_)
+  {
+    // TODO: SetText()
+  }
+
+  px = x;
+  py = y;
+
+  //
+  // propagate event to scene
+  //
+  if (current_scene_ && current_scene_->IsInputAvailable())
     current_scene_->ProcessInputEvent(e);
 }
 
 Scene* SceneManager::get_current_scene()
 {
-  return getInstance().current_scene_;
-}
-
-
-SceneManager& SceneManager::getInstance()
-{
-  static SceneManager scenemanager_;
-  return scenemanager_;
+  return current_scene_;
 }
 
 void SceneManager::ChangeScene(const std::string &scene_name)
@@ -163,10 +256,9 @@ void SceneManager::ChangeScene(const std::string &scene_name)
     //sceneCreateFn["CourseResultScene"] = []() { return new CourseResultScene(); };
   }
 
-  auto &inst = getInstance();
   bool is_exit = false;
 
-  if (inst.next_scene_)
+  if (next_scene_)
   {
     std::cout << "Warning: Next scene is already set & cached." << std::endl;
     return;
@@ -186,13 +278,15 @@ void SceneManager::ChangeScene(const std::string &scene_name)
     return;
   }
 
-  inst.next_scene_ = it->second();
+  next_scene_ = it->second();
 
   // LoadScene is done here
   // @warn
   // This process might be async.
   // StartScene() will be called after LoadScene is complete.
-  inst.next_scene_->LoadScene();
+  next_scene_->LoadScene();
 }
+
+SceneManager *SCENEMAN = nullptr;
 
 }

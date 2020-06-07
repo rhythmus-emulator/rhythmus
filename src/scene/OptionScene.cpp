@@ -136,9 +136,6 @@ void OptionScene::CloseScene(bool next)
 
 void OptionScene::ProcessInputEvent(const InputEvent& e)
 {
-  if (is_input_available())
-    return;
-
   if (e.type() == InputEvents::kOnKeyUp)
   {
     /*if (e.KeyCode() == RI_KEY_ENTER)

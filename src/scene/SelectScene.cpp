@@ -52,9 +52,6 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
     return;
   }
 
-  if (!is_input_available())
-    return;
-
   Scene::ProcessInputEvent(e);
 
   if (e.type() == InputEvents::kOnKeyDown || e.type() == InputEvents::kOnKeyPress)
