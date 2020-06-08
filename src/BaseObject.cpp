@@ -633,6 +633,14 @@ void BaseObject::SetPos(int x, int y)
   SetY(y);
 }
 
+void BaseObject::SetPos(const Vector4& pos)
+{
+  auto &p = GetLastFrame().pos;
+  p = pos;
+  p.z += p.x;
+  p.w += p.y;
+}
+
 void BaseObject::MovePos(int x, int y)
 {
   auto &p = GetLastFrame();
@@ -1307,6 +1315,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
 #include "object/Bargraph.h"
 #include "object/Button.h"
 #include "object/OnMouse.h"
+#include "object/Dialog.h"
 
 namespace rhythmus
 {
@@ -1378,6 +1387,10 @@ BaseObject* CreateObject(const MetricGroup &m)
   else if (type == "button")
   {
     object = new Button();
+  }
+  else if (type == "dialog")
+  {
+    object = new Dialog();
   }
   else if (type == "line")
   {

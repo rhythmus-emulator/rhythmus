@@ -1,0 +1,12 @@
+<theme>
+  <!-- declare fonts -->
+  <metric type="font" name="dialog_title" path="test/gyeonggi.ttf" size="30" color="#FF000000" />
+  <metric type="font" name="dialog_text" path="test/gyeonggi.ttf" size="24" color="#FF333333" />
+  
+  <!-- dialog TODO: yes,no,retry,ok button -->
+  <dialog src="test/dialog.png" padding="30,50,50,30"
+          x="100" y="100" w="600" h="400"
+          text_font="dialog_title" title_font="dialog_text"
+          title_height="50" button_height="65"
+          title="Test Dialog" text="Hello world!" type="ok" />
+</theme>

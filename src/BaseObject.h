@@ -200,6 +200,7 @@ public:
   void SetOpacity(float opa);
   void SetClip(bool clip);
   void SetPos(int x, int y);
+  void SetPos(const Vector4& pos);    // x, y, w, h
   void MovePos(int x, int y);
   void SetSize(int w, int h);
   void SetAlpha(unsigned a);

@@ -4,48 +4,63 @@
 namespace rhythmus
 {
 
-Dialog::Dialog()
+Dialog::Dialog() : title_height_(0), dialog_type_(DialogType::kOkDialog)
 {
-  memset(src_rect_, 0, sizeof(src_rect_));
+  memset(&padding_, 0, sizeof(padding_));
 }
 
 Dialog::~Dialog() {}
 
-void StringToRect(const std::string &s, Vector4 &out)
-{
-  CommandArgs a(s, 4, true);
-  out = Vector4{ a.Get<int>(0), a.Get<int>(1), a.Get<int>(2), a.Get<int>(3) };
-}
-
 void Dialog::Load(const MetricGroup &metric)
 {
-  static const char* _attrs[] = {
-    "tl", "t", "tr", "l", "body", "r", "bl", "b", "br"
-  };
+  // Add childs with fixed member
+  SetOwnChildren(false);
+  AddChild(&title_);
+  AddChild(&text_);
 
-  BaseObject::Load(metric);
-  std::string src = metric.get_str("src");
-  for (size_t i = 0; i < 9; ++i)
-  {
-    StringToRect(metric.get_str(_attrs[i]), src_rect_[i]);
-    sprites_[i].SetImage(src);
-    sprites_[i].SetImageCoord(src_rect_[i]);
-  }
+  Sprite::Load(metric);
 
-  title_.set_name(get_name() + "_title");
-  text_.set_name(get_name() + "_text");
-  title_.SetPos((int)src_rect_[0].z, (int)src_rect_[0].w);
-  text_.SetPos((int)src_rect_[0].z, (int)src_rect_[0].w + 50);
+  // Load fonts
+  if (metric.exist("title_font"))
+    title_.SetFont(metric.get_str("title_font"));
+  if (metric.exist("text_font"))
+    text_.set_name("text_font");
 
+  // check for additional attribute
   const MetricGroup *title_m = metric.get_group("title");
   if (title_m) title_.Load(*title_m);
   const MetricGroup *text_m = metric.get_group("text");
   if (text_m) text_.Load(*text_m);
 
-  for (size_t i = 0; i < 9; ++i)
-    AddChild(&sprites_[i]);
-  AddChild(&title_);
-  AddChild(&text_);
+  // Load other metrics
+  if (metric.exist("padding"))
+  {
+    CommandArgs args(metric.get_str("padding"), 4, true);
+    padding_ = Vector4{ args.Get<float>(0), args.Get<float>(1),
+                        args.Get<float>(2), args.Get<float>(3) };
+  }
+  if (metric.exist("dialog_type"))
+  {
+    std::string dtype;
+    metric.get_safe("dialog_type", dtype);
+    if (dtype == "yesno") {
+      SetDialogType(DialogType::kYesNoDialog);
+    }
+    else if (dtype == "retry") {
+      SetDialogType(DialogType::kRetryDialog);
+    }
+    else /*if (dtype == "ok")*/ {
+      SetDialogType(DialogType::kOkDialog);
+    }
+  }
+  metric.get_safe("title_height", title_height_);
+  metric.get_safe("button_height", button_height_);
+}
+
+void Dialog::SetDialogType(DialogType type)
+{
+  // TODO: hide/show yes,no,retry button
+  dialog_type_ = type;
 }
 
 void Dialog::SetTitle(const std::string &text)
@@ -60,34 +75,19 @@ void Dialog::SetText(const std::string &text)
 
 void Dialog::doUpdate(float delta)
 {
-  BaseObject::doUpdate(delta);
-#if 0
-  // do later
-  int body_w = GetCurrentFrame().w - src_rect_[0].width() - src_rect_[2].width();
-  int body_h = current_prop_.h - src_rect_[0].height() - src_rect_[6].height();
-  if (body_w < 0) body_w = 0;
-  if (body_h < 0) body_h = 0;
-  src_rect_[1].set_width(body_w);
-  src_rect_[4].set_width(body_w);
-  src_rect_[7].set_width(body_w);
-  src_rect_[3].set_height(body_h);
-  src_rect_[4].set_height(body_h);
-  src_rect_[5].set_height(body_h);
-  int xpos, ypos=0;
-  for (int i = 0; i < 3; ++i)
-  {
-    xpos = 0;
-    for (int j = 0; j < 3; ++j)
-    {
-      const int idx = i * 3 + j;
-      const Rect &_r = src_rect_[idx];
-      sprites_[idx].SetPos(xpos, ypos);
-      sprites_[idx].SetSize(_r.width(), _r.height());
-      xpos += _r.width();
-    }
-    ypos += src_rect_[i * 3].height();
-  }
-#endif
+  // update size of title / text
+  float width = GetWidth(GetCurrentFrame().pos) - padding_[1] - padding_[3];
+  float height = GetHeight(GetCurrentFrame().pos) - padding_[0] - padding_[2];
+  title_.SetPos(Vector4{ padding_[1], padding_[0],
+    width, title_height_ });
+  text_.SetPos(Vector4{ padding_[1], padding_[0] + title_height_,
+    width, height - title_height_ - button_height_ });
+
+  // TODO: set pos, visibility of dialog_type
 }
+
+// TODO: need to check InputEvent per BaseObject.
+// If it receives, return true.
+// Dialog should receive event, and set focus for itself.
 
 }

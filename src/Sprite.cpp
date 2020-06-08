@@ -32,8 +32,21 @@ void Sprite::Load(const MetricGroup& metric)
 
   if (metric.exist("path"))
     SetImage(metric.get_str("path"));
+  else if (metric.exist("src"))
+    SetImage(metric.get_str("src"));
 
-  // TODO: sprite 'src' attribute
+  if (metric.exist("crop"))
+  {
+    CommandArgs args(metric.get_str("crop"), 4, true);
+    SetImageCoord(Vector4{ args.Get<int>(0), args.Get<int>(1),
+      args.Get<int>(2), args.Get<int>(3) });
+  }
+  else if (metric.exist("croptex"))
+  {
+    CommandArgs args(metric.get_str("croptex"), 4, true);
+    SetTextureCoord(Vector4{ args.Get<int>(0), args.Get<int>(1),
+      args.Get<int>(2), args.Get<int>(3) });
+  }
 
 #if USE_LR2_FEATURE == 1
   if (metric.exist("lr2src"))
@@ -53,7 +66,6 @@ void Sprite::LoadLR2SRC(const std::string &lr2src)
   CommandArgs args(lr2src, 10, true);
 
   SetImage(args.Get<std::string>(1));
-  SleepUntilLoadFinish(img_);
 
   Vector4 r{
     args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), args.Get<int>(5)
