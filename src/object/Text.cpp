@@ -35,7 +35,17 @@ void Text::Load(const MetricGroup &m)
   m.get_safe("autosize", autosize_);
 
   if (m.exist("path"))
+  {
     SetFont(m);
+  }
+  else if (m.exist("name"))
+  {
+    // search for font MetricGroup with given name
+    MetricGroup *fontmetric = FONTMAN->GetFontMetricFromName(m.get_str("name"));
+    if (fontmetric)
+      SetFont(*fontmetric);
+  }
+
   if (m.exist("align"))
   {
     std::string alignstr = Upper(m.get_str("align"));

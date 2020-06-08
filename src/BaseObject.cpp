@@ -375,6 +375,12 @@ void BaseObject::Load(const MetricGroup &m)
   m.get_safe("clipping", do_clipping_);
   if (m.exist("background"))
     FillColorFromString(bg_color_, m.get_str("background"));
+  m.get_safe("x", frame_.pos.x);
+  m.get_safe("y", frame_.pos.y);
+  if (m.exist("w"))
+    frame_.pos.z = frame_.pos.x + m.get<float>("w");
+  if (m.exist("h"))
+    frame_.pos.w = frame_.pos.y + m.get<float>("h");
 
 #if USE_LR2_FEATURE == 1
   // Load LR2 properties
@@ -1357,7 +1363,7 @@ BaseObject* CreateObject(const MetricGroup &m)
   else if (objname == "text") type = "text";
   else if (objname == "slider") type = "slider";*/
   // fetch type from attribute (explicit)
-  m.get_safe("type", type);
+  //m.get_safe("type", type);
 
   // create object from type string
   if (type == "image" || type == "sprite")

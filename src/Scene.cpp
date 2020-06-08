@@ -152,7 +152,7 @@ void Scene::LoadScene()
   }
 
   // fallback: default metric data
-  Scene::Load(*METRIC);
+  //Scene::Load(*METRIC);
 
   // Load start event : Loading
   EventManager::SendEvent("Loading");
@@ -219,6 +219,16 @@ void Scene::Load(const MetricGroup& m)
   if (m.exist("script"))
   {
     Script::Execute(m.get_str("script"));
+  }
+
+
+  // Register fonts to global THEMEMETRIC
+  for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
+  {
+    if (c->name() == "font")
+    {
+      FONTMAN->CacheFontMetrics(*c);
+    }
   }
 
 
