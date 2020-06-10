@@ -16,6 +16,7 @@ Text::Text()
     use_height_as_font_height_(false), autosize_(false), blending_(0),
     res_id_(nullptr), do_line_breaking_(true)
 {
+  set_xy_as_center_ = true;
   alignment_attrs_.sx = alignment_attrs_.sy = 1.0f;
   alignment_attrs_.tx = alignment_attrs_.ty = .0f;
   text_render_ctx_.width = text_render_ctx_.height = .0f;
@@ -130,10 +131,20 @@ void Text::Load(const MetricGroup &m)
 void Text::SetFont(const std::string& path)
 {
   ClearFont();
+
+  // Search for font MetricGroup with given name.
+  MetricGroup *fontmetric = FONTMAN->GetFontMetricFromName(path);
+  if (fontmetric)
+  {
+    SetFont(*fontmetric);
+    return;
+  }
+
+  // if not, then load from path directly.
   font_ = FONTMAN->Load(path);
   SleepUntilLoadFinish(font_);
 
-  /* if text previously exists, call SetText() internally */
+  // if text previously exists, call SetText() internally.
   if (!text_.empty())
     SetText(text_);
 }

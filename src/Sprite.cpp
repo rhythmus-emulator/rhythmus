@@ -13,6 +13,7 @@ Sprite::Sprite()
   : img_(nullptr), time_(0), frame_(0), res_id_(nullptr),
     blending_(0), use_texture_coord_(true), tex_attribute_(0)
 {
+  set_xy_as_center_ = true;
   sprani_.divx = sprani_.divy = sprani_.cnt = 1;
   sprani_.duration = 0;
   texcoord_ = Rect{ 0.0f, 0.0f, 1.0f, 1.0f };

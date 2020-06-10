@@ -13,7 +13,7 @@ enum class DialogType
   kRetryDialog
 };
 
-class Dialog : public Sprite
+class Dialog : public BaseObject
 {
 public:
   Dialog();
@@ -24,6 +24,9 @@ public:
   void SetText(const std::string &text);
 
 private:
+  /* Background */
+  Sprite background_;
+
   /* type of dialog */
   DialogType dialog_type_;
 
@@ -35,7 +38,7 @@ private:
   /* Text */
   Text title_, text_;
 
-  virtual void doUpdate(float delta);
+  virtual void doUpdate(double delta);
 };
 
 }

@@ -252,7 +252,7 @@ bool Animation::is_tweening() const
 
 BaseObject::BaseObject()
   : parent_(nullptr), own_children_(true), draw_order_(0), position_prop_(0),
-    set_xy_as_center_(true), visible_(true), hide_if_not_tweening_(false),
+    set_xy_as_center_(false), visible_(true), hide_if_not_tweening_(false),
     ignore_visible_group_(true), is_draggable_(false), is_focusable_(false),
     is_focused_(false), is_hovered_(false), do_clipping_(false)
 {
