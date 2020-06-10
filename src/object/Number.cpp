@@ -16,6 +16,7 @@ Number::Number() :
   cycle_count_(0), cycle_time_(0), cycle_curr_time_(0), val_ptr_(nullptr),
   keta_(1), resize_to_box_(false)
 {
+  set_xy_as_center_ = true;
   memset(&value_params_, 0, sizeof(value_params_));
   *num_chrs = 0;
   UpdateVertex();

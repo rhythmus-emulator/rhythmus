@@ -3,6 +3,7 @@
 #include "KeyPool.h"
 #include "Util.h"
 #include "config.h"
+#include <algorithm>
 #include <memory.h>
 
 namespace rhythmus
@@ -136,7 +137,10 @@ void Slider::doUpdate(double)
 
   // Update updated value if editable.
   if (editable_ && cursor_.IsDragging())
+  {
     value_ = cursor_.GetY() / GetHeight(f.pos);
+    value_ = std::max(std::min(1.0f, value_), 0.0f);
+  }
 
   // Set position of the sprite cursor.
   switch (type)
