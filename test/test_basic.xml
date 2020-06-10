@@ -3,8 +3,8 @@
   <image path="test/msel.mpg"
          OnLoad="x:0;y:0;w:800;h:480" />
   <!-- text -->
-  <text path="test/gyeonggi.ttf" size="24" color="#FFFFFFFF" border-width="1" border-color="#FF666666"
-        text="Hello World!\nWith Line breaking\nあえいおう가나다ㅏ"
+  <text path="test/Boku2-Bold.otf;test/gyeonggi.ttf" size="24" color="#FFFFFFFF" border-width="1" border-color="#FF666666"
+        text="Hello World!\nWith Line breaking\nあえいおう黑熙가나다ㅏ"
         OnLoad="x:30;y:10;time:1000;scale:1.2,1.0;repeat" />
   <text path="test/artistfnt.dxa" align="left" autosize="true"
         text="1234abcdΘΙΚΛあえいおう楽しい熙ⅷ黑"

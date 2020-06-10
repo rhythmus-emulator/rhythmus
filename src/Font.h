@@ -12,6 +12,7 @@
 namespace rhythmus
 {
 
+constexpr unsigned kMaxFallbackFonts = 8;
 class MetricGroup;
 
 // @brief Bitmap property for filling font outline or foreground
@@ -170,7 +171,10 @@ private:
   bool is_ttf_font_;
 
   // FT_Face, FT_Stroker type
-  void *ftface_, *ftstroker_;
+  void *ftface_[kMaxFallbackFonts], *ftstroker_;
+
+  // Loaded font count
+  unsigned ftface_count_;
 
   // font attribute
   FontAttribute fontattr_;

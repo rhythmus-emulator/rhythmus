@@ -225,9 +225,10 @@ void FontBitmap::SetToReadOnly()
 // --------------------------------- class Font
 
 Font::Font()
-  : is_ttf_font_(true), ftface_(0), ftstroker_(0),
+  : is_ttf_font_(true), ftface_count_(0), ftstroker_(0),
     error_code_(0), error_msg_(0)
 {
+  memset(&ftface_, 0, sizeof(ftface_));
   if (ftLibCnt++ == 0)
   {
     if (FT_Init_FreeType(&ftLib))
@@ -259,7 +260,7 @@ void Font::Load(const std::string &path)
 
   std::string ext = GetExtension(path);
   path_ = path;
-  if (ext == "ttf")
+  if (ext == "ttf" || ext == "ttc" || ext == "otf" || ext == "woff")
   {
     LoadFreetypeFont(path);
   }
@@ -346,12 +347,13 @@ void Font::CommitBitmap(FontBitmap *fbitmap)
 
 bool Font::is_empty() const
 {
-  return ftface_ == 0 && glyph_.empty();
+  return ftface_[0] == 0 && glyph_.empty();
 }
 
 void Font::LoadFreetypeFont(const std::string &path)
 {
   R_ASSERT(is_empty());
+  std::vector<std::string> fontpaths;
 
   if (fontattr_.height <= 0)
   {
@@ -366,16 +368,33 @@ void Font::LoadFreetypeFont(const std::string &path)
     return;
   }
 
-  /* Create freetype font */
-  const char *ttfpath = path.c_str();
-  int r = FT_New_Face(ftLib, ttfpath, 0, (FT_Face*)&ftface_);
-  if (r)
+  const int fntsize_pixel = fontattr_.height;
+
+  /* Create freetype fonts */
+  Split(path, ';', fontpaths);
+  ftface_count_ = (unsigned)fontpaths.size();
+  if (ftface_count_ > kMaxFallbackFonts)
   {
-    error_msg_ = "Cannot read font file.";
+    error_msg_ = "Too many fallback fonts are specified.";
     error_code_ = -1;
     return;
   }
-  FT_Face ftface = (FT_Face)ftface_;
+  for (unsigned i = 0; i < ftface_count_; ++i)
+  {
+    const char *ttfpath = fontpaths[i].c_str();
+    int r = FT_New_Face(ftLib, ttfpath, 0, (FT_Face*)&ftface_[i]);
+    if (r)
+    {
+      error_msg_ = "Cannot read font file.";
+      error_code_ = -1;
+      return;
+    }
+    // Set size to load glyphs as
+    FT_Set_Pixel_Sizes((FT_Face)ftface_[i], 0, fntsize_pixel);
+  }
+
+  /* Now, all fallback font properties are set by first one. */
+  FT_Face ftface = (FT_Face)ftface_[0];
 
   /* Create freetype stroker (if necessary) */
   if (fontattr_.outline_width > 0)
@@ -387,10 +406,6 @@ void Font::LoadFreetypeFont(const std::string &path)
     ftstroker_ = stroker;
   }
   else ftstroker_ = 0;
-
-  // Set size to load glyphs as
-  const int fntsize_pixel = fontattr_.height;
-  FT_Set_Pixel_Sizes(ftface, 0, fntsize_pixel);
 
   // Set font baseline
   if (fontattr_.baseline_offset == 0)
@@ -595,7 +610,7 @@ void Font::PrepareText(const std::string& s)
   int s32len = 0;
 
   /* only available when TTF font */
-  if (!ftface_) return;
+  if (!ftface_[0]) return;
 
   ConvertStringToCodepoint(s, s32, s32len, 1024);
   PrepareGlyph(s32, s32len);
@@ -604,18 +619,33 @@ void Font::PrepareText(const std::string& s)
 void Font::PrepareGlyph(uint32_t *chrs, int count)
 {
   /* only available when TTF font */
-  if (!ftface_) return;
+  if (!ftface_[0]) return;
 
-  FT_Face ftface = (FT_Face)ftface_;
+  FT_Face ftface = nullptr;
   FT_Stroker ftStroker = (FT_Stroker)ftstroker_;
   FT_Glyph glyph;
   FT_BitmapGlyph bglyph;
   FontGlyph g;
+  unsigned gindex;
+  bool found_glyph = false;
+
   for (int i = 0; i < count; ++i)
   {
     /* Use FT_Load_Char, which calls and find Glyph index internally ... */
     /* and... just ignore failed character. */
-    if (FT_Load_Char(ftface, chrs[i], FT_LOAD_NO_BITMAP))
+    found_glyph = false;
+    for (unsigned j = 0; j < ftface_count_; ++j)
+    {
+      ftface = (FT_Face)ftface_[j];
+      gindex = FT_Get_Char_Index(ftface, chrs[i]);
+      if (gindex == 0) continue;
+      if (FT_Load_Glyph(ftface, gindex, FT_LOAD_NO_BITMAP) == 0)
+      {
+        found_glyph = true;
+        break;
+      }
+    }
+    if (!found_glyph)
       continue;
 
     FT_Get_Glyph(ftface->glyph, &glyph);
@@ -855,12 +885,13 @@ void Font::ReleaseFont()
     ftstroker_ = 0;
   }
 
-  if (ftface_)
+  for (unsigned i = 0; i < ftface_count_; ++i)
   {
-    FT_Face ft = (FT_Face)ftface_;
+    FT_Face ft = (FT_Face)ftface_[i];
     FT_Done_Face(ft);
-    ftface_ = 0;
+    ftface_[i] = 0;
   }
+  ftface_count_ = 0;
 
   path_.clear();
   is_ttf_font_ = false;
