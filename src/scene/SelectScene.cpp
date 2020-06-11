@@ -81,7 +81,8 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
       // Register select song / course into Game / Player state.
       // XXX: can we preload selected song from here before PlayScene...?
       // XXX: what about course selection? select in gamemode?
-      auto &d = wheel_.get_selected_data(0);
+      auto *d = wheel_.get_selected_data(0);
+      R_ASSERT(d);
 #if 0
       Game::getInstance().push_song(d.info.songpath);
       FOR_EACH_PLAYER(p, i)
@@ -92,7 +93,7 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
       END_EACH_PLAYER()
 #endif
       SongPlayer::getInstance().AddSongtoPlaylist(
-        d.info.songpath, d.info.chartpath
+        d->info.songpath, d->info.chartpath
       );
 
       // Song selection - immediately change scene mode

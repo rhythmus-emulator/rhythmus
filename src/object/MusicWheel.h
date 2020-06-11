@@ -2,7 +2,7 @@
 
 #include "Song.h"
 #include "Game.h"
-#include "Menu.h"
+#include "ListView.h"
 #include "Text.h"
 #include "Number.h"
 #include "KeyPool.h"
@@ -28,11 +28,12 @@ enum Songitemtype
   kSongitemEnd,
 };
 
-class MusicWheelData : public MenuData
+class MusicWheelData
 {
 public:
   MusicWheelData();
   SongListData info;
+  std::string name;
   std::string sectionname;
   int type;
   const PlayRecord *record;
@@ -51,12 +52,12 @@ private:
 };
 
 /* @brief Pure music wheel item interface */
-class MusicWheelItem : public MenuItem
+class MusicWheelItem : public ListViewItem
 {
 public:
   MusicWheelItem();
   virtual void Load(const MetricGroup &metric);
-  virtual bool LoadFromMenuData(MenuData *d);
+  virtual void LoadFromData(void *d);
 
 private:
   Sprite background_[NUM_SELECT_BAR_TYPES];
@@ -64,7 +65,7 @@ private:
   std::unique_ptr<Text> title_;
 };
 
-class MusicWheel : public Menu
+class MusicWheel : public ListView
 {
 public:
   MusicWheel();
@@ -72,10 +73,10 @@ public:
 
   virtual void Load(const MetricGroup &metric);
 
-  MusicWheelData &get_data(int dataindex);
-  MusicWheelData &get_selected_data(int player_num);
+  MusicWheelData *get_data(int dataindex);
+  MusicWheelData *get_selected_data(int player_num);
 
-  virtual void OnSelectChange(const MenuData *data, int direction);
+  virtual void OnSelectChange(const void *data, int direction);
   virtual void OnSelectChanged();
   virtual void NavigateLeft();
   virtual void NavigateRight();
@@ -153,7 +154,7 @@ private:
   KeyData<int> info_pr;
   KeyData<float> info_musicwheelpos;
 
-  virtual MenuItem* CreateMenuItem();
+  virtual ListViewItem* CreateMenuItem();
 };
 
 }

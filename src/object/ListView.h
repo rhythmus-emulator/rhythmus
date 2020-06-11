@@ -20,32 +20,23 @@ enum MenuPosMethod
   kMenuPosFixed,
 };
 
-class MenuData
-{
-public:
-  virtual ~MenuData() {};
-
-  std::string name;
-  std::string desc;
-};
-
 /* @brief Context of rendering select item */
-class MenuItem : public BaseObject
+class ListViewItem : public BaseObject
 {
 public:
-  MenuItem();
+  ListViewItem();
 
-  virtual bool LoadFromMenuData(MenuData *d);
+  virtual void LoadFromData(void *data);
   void set_dataindex(int dataindex);
   int get_dataindex() const;
   void set_focus(bool focused);
-  MenuData* get_data();
+  void* get_data();
 
 private:
   int dataindex_;
 
   // select item data ptr
-  MenuData* data_;
+  void* data_;
 
   // check is current item is selected
   bool is_focused_;
@@ -53,18 +44,16 @@ private:
 
 /* @brief used for calculating bar position of select item
    (with very basic math expression) */
-class Menu : public BaseObject
+class ListView : public BaseObject
 {
 public:
-  Menu();
-  ~Menu();
+  ListView();
+  ~ListView();
 
   virtual void Load(const MetricGroup &metric);
 
-  MenuData& GetSelectedMenuData();
-  MenuData& GetMenuDataByIndex(int index);
-  MenuData* GetMenuDataByName(const std::string& name);
-  void SelectMenuByName(const std::string& name);
+  void* GetSelectedMenuData();
+  void* GetMenuDataByIndex(int index);
   void SelectMenuByIndex(int index);
 
   /* @brief Get total data count */
@@ -75,7 +64,7 @@ public:
 
   /* @brief Clear all list items and item data. */
   void Clear();
-  void AddData(MenuData* d);
+  void AddData(void* d);
 
   void set_display_count(int display_count);
   void set_focus_min_index(int min_index);
@@ -97,15 +86,15 @@ public:
 
   /* TODO: curve & rot with z pos? */
 
-  virtual void OnSelectChange(const MenuData *data, int direction);
+  virtual void OnSelectChange(const void *data, int direction);
   virtual void OnSelectChanged();
 
 protected:
   // select item data
-  std::vector<MenuData*> data_;
+  std::vector<void*> data_;
 
   // select bar sprites
-  std::vector<MenuItem*> bar_;
+  std::vector<ListViewItem*> items_;
 
   // currently selected data index
   int data_index_;
@@ -167,7 +156,7 @@ protected:
   void UpdateItemPosByExpr();
   void UpdateItemPosByFixed();
   virtual void doUpdate(double);
-  virtual MenuItem* CreateMenuItem();
+  virtual ListViewItem* CreateMenuItem();
 };
 
 }

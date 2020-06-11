@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Menu.h"
+#include "ListView.h"
 #include "Text.h"
 
 namespace rhythmus
 {
 
-class OptionData : public MenuData
+class OptionData
 {
 public:
   // displayed option name
@@ -22,7 +22,7 @@ public:
   std::string value;
 };
 
-class OptionItem : public MenuItem
+class OptionItem : public ListViewItem
 {
 public:
   virtual void Load(const MetricGroup &metric);
@@ -32,7 +32,7 @@ private:
   Text option_value;
 };
 
-class OptionMenu : public Menu
+class OptionMenu : public ListView
 {
 public:
   OptionMenu();
@@ -50,7 +50,7 @@ public:
 #endif
 
 private:
-  virtual MenuItem* CreateMenuItem();
+  virtual ListViewItem* CreateMenuItem();
 };
 
 }

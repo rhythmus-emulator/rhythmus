@@ -1,6 +1,4 @@
-#include "Menu.h"
-#include "Game.h"
-#include "SceneManager.h"
+#include "ListView.h"
 #include "Util.h"
 #include "common.h"
 
@@ -18,44 +16,41 @@ inline float modf_pos(float a, float b)
   return fmod(fmod(a, b) + b, b);
 }
 
-// ---------------------------- class WheelItem
+// ---------------------------- class ListViewItem
 
-MenuItem::MenuItem()
+ListViewItem::ListViewItem()
   : dataindex_(0), data_(nullptr), is_focused_(false)
 {
 }
 
-bool MenuItem::LoadFromMenuData(MenuData *d)
+void ListViewItem::LoadFromData(void *data)
 {
-  if (data_ == d)
-    return false;
-  data_ = d;
-  return (d != 0);
+  data_ = data;
 }
 
-void MenuItem::set_dataindex(int dataindex)
+void ListViewItem::set_dataindex(int dataindex)
 {
   dataindex_ = dataindex;
 }
 
-int MenuItem::get_dataindex() const
+int ListViewItem::get_dataindex() const
 {
   return dataindex_;
 }
 
-void MenuItem::set_focus(bool focused)
+void ListViewItem::set_focus(bool focused)
 {
   is_focused_ = focused;
 }
 
-MenuData* MenuItem::get_data()
+void* ListViewItem::get_data()
 {
   return data_;
 }
 
 // --------------------------------- class Menu
 
-Menu::Menu()
+ListView::ListView()
   : data_index_(0),
     display_count_(16), focus_index_(8), focus_min_(4), focus_max_(12),
     scroll_time_(200.0f), scroll_time_remain_(.0f),
@@ -74,18 +69,18 @@ Menu::Menu()
   pos_expr_param_.curve_level = 5;
 }
 
-Menu::~Menu()
+ListView::~ListView()
 {
   Clear();
-  for (auto* p : bar_)
+  for (auto* p : items_)
   {
     RemoveChild(p);
     delete p;
   }
-  bar_.clear();
+  items_.clear();
 }
 
-void Menu::Load(const MetricGroup &metric)
+void ListView::Load(const MetricGroup &metric)
 {
   BaseObject::Load(metric);
 
@@ -100,14 +95,14 @@ void Menu::Load(const MetricGroup &metric)
   display_count_ = metric.get<int>("BarCount");
 
   // Build items (bar item)
-  while (bar_.size() < (unsigned)display_count_ + kScrollPosMaxDiff * 2)
+  while (items_.size() < (unsigned)display_count_ + kScrollPosMaxDiff * 2)
   {
     auto *item = CreateMenuItem();
     item->set_parent(this);
     item->Load(metric);
     item->Hide();
     AddChild(item);
-    bar_.push_back(item);
+    items_.push_back(item);
   }
 
   // Set item position
@@ -135,82 +130,59 @@ void Menu::Load(const MetricGroup &metric)
   OnSelectChange(data_[data_index_], 0);
 }
 
-void Menu::AddData(MenuData* d) { data_.push_back(d); }
-MenuData& Menu::GetSelectedMenuData() { return GetMenuDataByIndex(data_index_); }
-MenuData& Menu::GetMenuDataByIndex(int index) { return *data_[index]; }
+void ListView::AddData(void* d) { data_.push_back(d); }
+void* ListView::GetSelectedMenuData() { return GetMenuDataByIndex(data_index_); }
+void* ListView::GetMenuDataByIndex(int index) { return items_[index]; }
 
-MenuData* Menu::GetMenuDataByName(const std::string& name)
-{
-  if (name.empty())
-    return nullptr;
-  for (auto *d : data_)
-  {
-    if (d->name == name)
-      return d;
-  }
-  return nullptr;
-}
-
-void Menu::SelectMenuByName(const std::string& name)
-{
-  for (unsigned i = 0; i < data_.size(); ++i) if (data_[i]->name == name)
-  {
-    SelectMenuByIndex(i);
-    return;
-  }
-
-  // -- failed to select menu by name --
-}
-
-void Menu::SelectMenuByIndex(int index)
+void ListView::SelectMenuByIndex(int index)
 {
   data_index_ = index;
   RebuildItems();
 }
 
-int Menu::size() const { return data_.size(); }
-int Menu::index() const { return data_index_; }
+int ListView::size() const { return data_.size(); }
+int ListView::index() const { return data_index_; }
 
-void Menu::Clear()
+void ListView::Clear()
 {
   /* unreference data from bar items. */
-  for (auto* p : bar_)
-    p->LoadFromMenuData(nullptr);
+  for (auto* p : items_)
+    p->LoadFromData(nullptr);
   /* now delete all data. */
   for (auto* p : data_)
     delete p;
   data_.clear();
 }
 
-void Menu::set_display_count(int display_count)
+void ListView::set_display_count(int display_count)
 {
   display_count_ = display_count;
 }
 
-void Menu::set_focus_min_index(int min_index)
+void ListView::set_focus_min_index(int min_index)
 {
   focus_min_ = min_index;
 }
 
-void Menu::set_focus_max_index(int max_index)
+void ListView::set_focus_max_index(int max_index)
 {
   focus_max_ = max_index;
 }
 
-void Menu::set_focus_index(int center_idx)
+void ListView::set_focus_index(int center_idx)
 {
   focus_index_ = center_idx;
 }
 
-void Menu::set_infinite_scroll(bool inf_scroll)
+void ListView::set_infinite_scroll(bool inf_scroll)
 {
   inf_scroll_ = inf_scroll;
 }
 
-void Menu::RebuildData()
+void ListView::RebuildData()
 {}
 
-void Menu::RebuildItems()
+void ListView::RebuildItems()
 {
   /* Number dataindex for all items. */
   auto data_count = size();
@@ -218,16 +190,16 @@ void Menu::RebuildItems()
   int data_idx = data_index_ - focus_index_ - kScrollPosMaxDiff;
   data_idx %= data_count;
   if (data_idx < 0) data_idx += data_count;
-  for (auto *item : bar_)
+  for (auto *item : items_)
   {
-    MenuData* cur_data = data_[data_idx];
+    void* cur_data = data_[data_idx];
     item->set_dataindex(data_idx);
-    item->LoadFromMenuData(cur_data);
+    item->LoadFromData(cur_data);
     data_idx = (data_idx + 1) % data_count;
   }
 }
 
-void Menu::NavigateDown()
+void ListView::NavigateDown()
 {
   if (!inf_scroll_ && data_index_ >= size() - 1)
     return;
@@ -247,7 +219,7 @@ void Menu::NavigateDown()
   std::rotate(bar_.begin(), std::prev(bar_.end()), bar_.end());
   bar_.back()->set_dataindex(new_dataindex);
   */
-  std::rotate(bar_.begin(), std::prev(bar_.end()), bar_.end());
+  std::rotate(items_.begin(), std::prev(items_.end()), items_.end());
 
   // update items
   RebuildItems();
@@ -255,7 +227,7 @@ void Menu::NavigateDown()
   OnSelectChange(data_[data_index_], 1);
 }
 
-void Menu::NavigateUp()
+void ListView::NavigateUp()
 {
   if (!inf_scroll_ && data_index_ == 0)
     return;
@@ -276,7 +248,7 @@ void Menu::NavigateUp()
   std::rotate(bar_.begin(), std::next(bar_.begin()), bar_.end());
   bar_.front()->set_dataindex(new_dataindex);
   */
-  std::rotate(bar_.begin(), std::next(bar_.begin()), bar_.end());
+  std::rotate(items_.begin(), std::next(items_.begin()), items_.end());
 
   // update items
   RebuildItems();
@@ -284,11 +256,11 @@ void Menu::NavigateUp()
   OnSelectChange(data_[data_index_], -1);
 }
 
-void Menu::NavigateLeft() {}
+void ListView::NavigateLeft() {}
 
-void Menu::NavigateRight() {}
+void ListView::NavigateRight() {}
 
-void Menu::doUpdate(double delta)
+void ListView::doUpdate(double delta)
 {
   // Update scroll pos
   scroll_time_remain_ = std::max(.0f, scroll_time_remain_ - (float)delta);
@@ -303,7 +275,7 @@ void Menu::doUpdate(double delta)
   UpdateItemPos();
 }
 
-void Menu::UpdateItemPos()
+void ListView::UpdateItemPos()
 {
   switch (pos_method_)
   {
@@ -316,10 +288,10 @@ void Menu::UpdateItemPos()
   }
 }
 
-void Menu::UpdateItemPosByExpr()
+void ListView::UpdateItemPosByExpr()
 {
   int x, y, i;
-  int display_count = (int)bar_.size();
+  int display_count = (int)items_.size();
 
   // firstly - set all object's position
   for (i = 0; i < display_count; ++i)
@@ -334,8 +306,8 @@ void Menu::UpdateItemPosByExpr()
       (pos_expr_param_.bar_height + pos_expr_param_.bar_margin) * pos -
       pos_expr_param_.bar_height * 0.5f
       );
-    bar_[i]->SetPos(x, y);
-    bar_[i]->SetSize(pos_expr_param_.bar_width, pos_expr_param_.bar_height);
+    items_[i]->SetPos(x, y);
+    items_[i]->SetSize(pos_expr_param_.bar_width, pos_expr_param_.bar_height);
   }
 
   // decide range of object to show
@@ -344,13 +316,13 @@ void Menu::UpdateItemPosByExpr()
   for (i = 0; i < display_count; ++i)
   {
     if (i < start_idx_show || i > end_idx_show)
-      bar_[i]->Hide();
+      items_[i]->Hide();
     else
-      bar_[i]->Show();
+      items_[i]->Show();
   }
 }
 
-void Menu::UpdateItemPosByFixed()
+void ListView::UpdateItemPosByFixed()
 {
   int scroll_offset = (int)floor(scroll_delta_);
   float ratio = 1.0f - (scroll_delta_ - scroll_offset);
@@ -360,7 +332,7 @@ void Menu::UpdateItemPosByFixed()
   /* Hide all elements first. */
   for (int i = 0; i < display_count_ + kScrollPosMaxDiff * 2; ++i)
   {
-    bar_[i]->Hide();
+    items_[i]->Hide();
   }
 
   /* Reset item position */
@@ -375,18 +347,18 @@ void Menu::UpdateItemPosByFixed()
       obj1->GetCurrentFrame(),
       obj2->GetCurrentFrame(),
       ratio, EaseTypes::kEaseLinear);
-    bar_[ii]->SetPos((int)d.pos.x, (int)d.pos.y);
-    bar_[ii]->Show();
+    items_[ii]->SetPos((int)d.pos.x, (int)d.pos.y);
+    items_[ii]->Show();
   }
 }
 
-MenuItem* Menu::CreateMenuItem()
+ListViewItem* ListView::CreateMenuItem()
 {
-  return new MenuItem();
+  return new ListViewItem();
 }
 
-void Menu::OnSelectChange(const MenuData *data, int direction) {}
+void ListView::OnSelectChange(const void *data, int direction) {}
 
-void Menu::OnSelectChanged() {}
+void ListView::OnSelectChanged() {}
 
 }

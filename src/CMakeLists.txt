@@ -47,7 +47,7 @@ set (RHYTHMUS_SOURCES
   scene/OptionScene.cpp
   scene/OverlayScene.cpp
 
-  object/Menu.cpp
+  object/ListView.cpp
   object/MusicWheel.cpp
   object/OptionMenu.cpp
   object/Text.cpp
@@ -103,7 +103,7 @@ set (RHYTHMUS_HEADERS
   scene/OptionScene.h
   scene/OverlayScene.h
 
-  object/Menu.h
+  object/ListView.h
   object/MusicWheel.h
   object/OptionMenu.h
   object/Text.h

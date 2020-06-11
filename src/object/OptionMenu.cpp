@@ -10,7 +10,7 @@ namespace rhythmus
 void OptionItem::Load(const MetricGroup &metric)
 {
   option_name.SetSystemFont();  // XXX: fix later
-  MenuItem::Load(metric);
+  ListViewItem::Load(metric);
 }
 
 // --------------------------- class OptionMenu
@@ -26,10 +26,10 @@ OptionMenu::OptionMenu()
 
 void OptionMenu::Load(const MetricGroup &metric)
 {
-  Menu::Load(metric);
+  ListView::Load(metric);
 }
 
-MenuItem* OptionMenu::CreateMenuItem()
+ListViewItem* OptionMenu::CreateMenuItem()
 {
   return new OptionItem();
 }

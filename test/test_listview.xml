@@ -5,7 +5,7 @@
   <!-- declare listview info -->
   <listview postype="topdown" adaptertype="basic"
             x="800" y="0" w="480" h="800"
-            element_height="20" max_display="20" focusrange="10,10">
+            element_height="40" max_display="21" focusrange="10,10">
     <!-- declare element info -->
     <adapter>
       <image src="test/main.png" crop="991,425,1547,465" />

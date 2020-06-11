@@ -127,12 +127,8 @@ static const bool _type_to_disp_level[] = {
   false
 };
 
-bool MusicWheelItem::LoadFromMenuData(MenuData *d)
+void MusicWheelItem::LoadFromData(void *d)
 {
-  if (!MenuItem::LoadFromMenuData(d))
-    return false;
-
-
   MusicWheelData *data = static_cast<MusicWheelData*>(d);
 
   title_->SetText(data->info.title);
@@ -161,8 +157,6 @@ bool MusicWheelItem::LoadFromMenuData(MenuData *d)
       level_[i].SetText(std::string());
     }
   }
-
-  return true;
 }
 
 
@@ -289,27 +283,27 @@ void MusicWheel::Load(const MetricGroup &metric)
       sort_.type = Sorttype::kNoSort;
   }
 
-  Menu::Load(metric);
+  ListView::Load(metric);
 }
 
-MusicWheelData& MusicWheel::get_data(int dataindex)
+MusicWheelData* MusicWheel::get_data(int dataindex)
 {
-  return static_cast<MusicWheelData&>(Menu::GetMenuDataByIndex(dataindex));
+  return static_cast<MusicWheelData*>(ListView::GetMenuDataByIndex(dataindex));
 }
 
-MusicWheelData& MusicWheel::get_selected_data(int player_num)
+MusicWheelData* MusicWheel::get_selected_data(int player_num)
 {
-  return static_cast<MusicWheelData&>(Menu::GetSelectedMenuData());
+  return static_cast<MusicWheelData*>(ListView::GetSelectedMenuData());
 }
 
-MenuItem* MusicWheel::CreateMenuItem()
+ListViewItem* MusicWheel::CreateMenuItem()
 {
   MusicWheelItem* item = new MusicWheelItem();
   item->set_parent(this);
   return item;
 }
 
-void MusicWheel::OnSelectChange(const MenuData *data, int direction)
+void MusicWheel::OnSelectChange(const void *data, int direction)
 {
   const auto *d = static_cast<const MusicWheelData*>(data);
 
@@ -387,7 +381,7 @@ void MusicWheel::NavigateLeft()
   if (!current_section_.empty())
   {
     CloseSection();
-    OnSelectChange(&get_selected_data(0), 0);
+    OnSelectChange(get_selected_data(0), 0);
   }
 }
 
@@ -396,20 +390,22 @@ void MusicWheel::NavigateRight()
   // if selected item is folder and not opened, then go into it.
   // if selected is folder and opened, then close it.
   // if song, change select difficulty and rebuild item.
-  auto &sel_data = get_selected_data(0);
-  if (sel_data.type == Songitemtype::kSongitemFolder)
+  auto *sel_data = get_selected_data(0);
+  if (!sel_data) return;
+
+  if (sel_data->type == Songitemtype::kSongitemFolder)
   {
-    if (sel_data.name == current_section_)
+    if (sel_data->name == current_section_)
       CloseSection();
     else
-      OpenSection(sel_data.name);
+      OpenSection(sel_data->name);
   }
-  else if (sel_data.type == Songitemtype::kSongitemSong)
+  else if (sel_data->type == Songitemtype::kSongitemSong)
   {
-    sel_data.NextChart();
+    sel_data->NextChart();
     RebuildData();
   }
-  OnSelectChange(&get_selected_data(0), 0);
+  OnSelectChange(get_selected_data(0), 0);
 }
 
 void MusicWheel::RebuildData()
@@ -519,7 +515,7 @@ void MusicWheel::RebuildData()
   // after section open/close.
   std::string previous_selection;
   if (!data_.empty())
-    previous_selection = get_selected_data(0).name;
+    previous_selection = get_selected_data(0)->name;
   else if (!current_section_.empty())
     previous_selection = current_section_;
   Clear();
@@ -540,7 +536,7 @@ void MusicWheel::RebuildData()
   data_index_ = 0;
   for (size_t i = 0; i < data_.size(); ++i)
   {
-    if (data_[i]->name == previous_selection)
+    if (static_cast<MusicWheelData*>(data_[i])->name == previous_selection)
     {
       data_index_ = i;
       break;

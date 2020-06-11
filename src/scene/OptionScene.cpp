@@ -152,11 +152,12 @@ void OptionScene::ProcessInputEvent(const InputEvent& e)
 
 void OptionScene::EnterOptionItem()
 {
-  OptionData &data = static_cast<OptionData&>(menu_.GetSelectedMenuData());
+  OptionData *data = static_cast<OptionData*>(menu_.GetSelectedMenuData());
+  R_ASSERT(data);
 
   // just change index of current selected data
-  data.index = (data.index + 1) % data.values.size();
-  data.value = data.values[data.index];
+  data->index = (data->index + 1) % data->values.size();
+  data->value = data->values[data->index];
 }
 
 void OptionScene::EscapeOptionItem()
