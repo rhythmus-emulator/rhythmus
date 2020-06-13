@@ -94,6 +94,7 @@ public:
   void AddFrame(const DrawProperty &draw_prop, double time, int ease_type);
   void SetCommand(const std::string &cmd);
   void Update(double &ms, std::string &command_to_invoke, DrawProperty *out);
+  void HurryTween();
   void GetDrawProperty(DrawProperty &out);
   void SetEaseType(int ease_type);
   void SetLoop(unsigned repeat_start_time);
@@ -178,6 +179,7 @@ public:
   void AddCommand(const std::string &name, const std::string &command);
   void LoadCommand(const MetricGroup& metric);
   void LoadCommandWithPrefix(const std::string &prefix, const MetricGroup& metric);
+  void HurryTween();
 
   /**
    * @brief
@@ -285,6 +287,9 @@ protected:
 
   // is this object owns children? if so, delete them when Removed.
   bool own_children_;
+
+  // propagate event(command) to children?
+  bool propagate_event_;
 
   // drawing order
   int draw_order_;

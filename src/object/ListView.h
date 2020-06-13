@@ -12,7 +12,14 @@ namespace rhythmus
 constexpr int NUM_SELECT_BAR_TYPES = 10;
 constexpr int NUM_LEVEL_TYPES = 7;
 constexpr int kDefaultBarCount = 30;
-constexpr int kScrollPosMaxDiff = 3;
+
+enum class ListViewType
+{
+  kList,
+  kWheel,
+  kIcon,
+  kEnd
+};
 
 enum MenuPosMethod
 {
@@ -25,21 +32,29 @@ class ListViewItem : public BaseObject
 {
 public:
   ListViewItem();
+  ListViewItem(const ListViewItem& obj);
 
+  virtual void Load(const MetricGroup &m);
   virtual void LoadFromData(void *data);
-  void set_dataindex(int dataindex);
-  int get_dataindex() const;
+  void set_dataindex(unsigned dataindex);
+  unsigned get_dataindex() const;
   void set_focus(bool focused);
   void* get_data();
+  DrawProperty &get_item_dprop();
 
 private:
-  int dataindex_;
+  unsigned dataindex_;
 
   // select item data ptr
   void* data_;
 
   // check is current item is selected
   bool is_focused_;
+
+  // property to be used for drawn.
+  DrawProperty item_dprop_;
+
+  virtual void OnAnimation(DrawProperty &frame);
 };
 
 /* @brief used for calculating bar position of select item
@@ -57,20 +72,21 @@ public:
   void SelectMenuByIndex(int index);
 
   /* @brief Get total data count */
-  int size() const;
+  unsigned size() const;
 
   /* @brief get current selected index */
-  int index() const;
+  unsigned index() const;
 
   /* @brief Clear all list items and item data. */
   void Clear();
   void AddData(void* d);
 
-  void set_display_count(int display_count);
-  void set_focus_min_index(int min_index);
-  void set_focus_max_index(int max_index);
-  void set_focus_index(int index);
-  void set_infinite_scroll(bool inf_scroll);
+  void set_listviewtype(ListViewType type);
+  void set_item_min_index(unsigned min_index);
+  void set_item_max_index(unsigned max_index);
+  void set_item_center_index(unsigned index);
+
+  bool is_wheel() const;
 
   /* @brief Rebuild source data. */
   virtual void RebuildData();
@@ -93,20 +109,40 @@ protected:
   // select item data
   std::vector<void*> data_;
 
-  // select bar sprites
+  // select bar items to draw
   std::vector<ListViewItem*> items_;
 
+  // select bar items (with absolute index)
+  std::vector<ListViewItem*> items_abs_;
+
+  // current top data position of listview
+  // @warn may be negative or bigger than data size.
+  int data_top_index_;
+
   // currently selected data index
+  // @warn may be negative or bigger than data size.
   int data_index_;
 
-  // displayed item count
-  int display_count_;
+  // item display type
+  ListViewType viewtype_;
 
-  // focus index of the displayed item
-  int focus_index_;
+  // displayed item count
+  unsigned item_count_;
+
+  // calculate item count automatically
+  bool set_item_count_auto_;
+
+  // center of the item index (which is being selected)
+  unsigned item_center_index_;
 
   // focus area of the displayed item
-  int focus_min_, focus_max_;
+  unsigned item_focus_min_, item_focus_max_;
+
+  // basic item height
+  unsigned item_height_;
+
+  // ListViewItem type
+  std::string item_type_;
 
   // scroll time
   float scroll_time_;
@@ -114,14 +150,8 @@ protected:
   // scroll time (remain)
   float scroll_time_remain_;
 
-  // current scroll delta
+  // current scroll delta ( used by UpdateItemPos() )
   float scroll_delta_;
-
-  // initial scroll delta
-  float scroll_delta_init_;
-
-  // enable for infinite scroll.
-  bool inf_scroll_;
 
   // type of calculating select bar position
   // If false, some extern method should update bar position manually.
@@ -142,21 +172,16 @@ protected:
     } text_margin;
   } pos_expr_param_;
 
-  // struct for item pos parameter with fixed position.
-  struct {
-    BaseObject tween_bar[kDefaultBarCount + 1];
-    BaseObject tween_bar_focus[kDefaultBarCount + 1];
-  } pos_fixed_param_;
-
   Sprite focus_effect_;
 
   Sound wheel_sound_;
 
+  unsigned CalculateItemCount() const;
   void UpdateItemPos();
   void UpdateItemPosByExpr();
   void UpdateItemPosByFixed();
   virtual void doUpdate(double);
-  virtual ListViewItem* CreateMenuItem();
+  virtual ListViewItem* CreateMenuItem(const std::string &itemtype);
 };
 
 }

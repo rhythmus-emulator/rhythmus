@@ -6,12 +6,12 @@ namespace rhythmus
 {
 
 // kinda trick to return always positive value when modulous.
-inline int mod_pos(int a, int b)
+static inline int mod_pos(int a, int b)
 {
   return ((a % b) + b) % b;
 }
 
-inline float modf_pos(float a, float b)
+static inline float modf_pos(float a, float b)
 {
   return fmod(fmod(a, b) + b, b);
 }
@@ -23,17 +23,29 @@ ListViewItem::ListViewItem()
 {
 }
 
+ListViewItem::ListViewItem(const ListViewItem& obj) :
+  dataindex_(obj.dataindex_), data_(obj.data_), is_focused_(false)
+{
+}
+
+void ListViewItem::Load(const MetricGroup &m)
+{
+  BaseObject::Load(m);
+
+  item_dprop_ = frame_;
+}
+
 void ListViewItem::LoadFromData(void *data)
 {
   data_ = data;
 }
 
-void ListViewItem::set_dataindex(int dataindex)
+void ListViewItem::set_dataindex(unsigned dataindex)
 {
   dataindex_ = dataindex;
 }
 
-int ListViewItem::get_dataindex() const
+unsigned ListViewItem::get_dataindex() const
 {
   return dataindex_;
 }
@@ -48,25 +60,26 @@ void* ListViewItem::get_data()
   return data_;
 }
 
+DrawProperty &ListViewItem::get_item_dprop()
+{
+  return item_dprop_;
+}
+
+void ListViewItem::OnAnimation(DrawProperty &frame)
+{
+  item_dprop_ = frame;
+}
+
 // --------------------------------- class Menu
 
 ListView::ListView()
-  : data_index_(0),
-    display_count_(16), focus_index_(8), focus_min_(4), focus_max_(12),
-    scroll_time_(200.0f), scroll_time_remain_(.0f),
-    scroll_delta_(.0f), scroll_delta_init_(.0f), inf_scroll_(false),
+  : data_top_index_(0), data_index_(0), viewtype_(ListViewType::kList),
+    item_count_(16), set_item_count_auto_(false), item_height_(80),
+    item_center_index_(8), item_focus_min_(4), item_focus_max_(12),
+    scroll_time_(200.0f), scroll_time_remain_(.0f), scroll_delta_(.0f),
     pos_method_(MenuPosMethod::kMenuPosExpression)
 {
   memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
-
-  // Set bar position expr param with default
-  pos_expr_param_.bar_offset_x = GRAPHIC->width() - 540;
-  pos_expr_param_.bar_center_y = GRAPHIC->height() / 2;
-  pos_expr_param_.bar_height = 40;
-  pos_expr_param_.bar_width = 540;
-  pos_expr_param_.bar_margin = 1;
-  pos_expr_param_.curve_size = 80;
-  pos_expr_param_.curve_level = 5;
 }
 
 ListView::~ListView()
@@ -82,40 +95,50 @@ ListView::~ListView()
 
 void ListView::Load(const MetricGroup &metric)
 {
+  // Load itemview attributes
   BaseObject::Load(metric);
-
-  pos_method_ = metric.get<int>("PositionType");
-  int center_index = metric.get<int>("CenterIndex");
-  if (center_index)
+  metric.get_safe("position_type", pos_method_);
+  metric.get_safe("viewtype", (int&)viewtype_);
+  if (viewtype_ >= ListViewType::kEnd)
+    viewtype_ = ListViewType::kList;
+  metric.get_safe("itemtype", item_type_);
+  metric.get_safe("itemheight", item_height_);
+  metric.get_safe("itemcountauto", set_item_count_auto_);
+  if (!set_item_count_auto_)
+    metric.get_safe("itemcount", item_count_);
+  else
+    item_count_ = CalculateItemCount();
+  int center_index = -1;
+  metric.get_safe("center_index", center_index);
+  if (center_index >= 0)
   {
-    set_focus_max_index(center_index);
-    set_focus_min_index(center_index);
-    set_focus_index(center_index);
+    set_item_min_index((unsigned)center_index);
+    set_item_max_index((unsigned)center_index);
+    set_item_center_index((unsigned)center_index);
   }
-  display_count_ = metric.get<int>("BarCount");
 
-  // Build items (bar item)
-  while (items_.size() < (unsigned)display_count_ + kScrollPosMaxDiff * 2)
+  // Create items
+  const MetricGroup *itemmetric = metric.get_group("item");
+  if (itemmetric)
   {
-    auto *item = CreateMenuItem();
-    item->set_parent(this);
-    item->Load(metric);
-    item->Hide();
-    AddChild(item);
+    ListViewItem *item = CreateMenuItem(item_type_);
+    item->Load(*itemmetric);
+    /* default: nullptr data */
+    item->LoadFromData(nullptr);
+    item->set_dataindex(0);
     items_.push_back(item);
-  }
+    AddChild(item);
 
-  // Set item position
-  for (int i = 0; i < display_count_; ++i)
-  {
-    pos_fixed_param_.tween_bar[i].set_name(format_string("Bar%d", i));
-    pos_fixed_param_.tween_bar_focus[i].set_name(format_string("BarOn%d", i));
-    pos_fixed_param_.tween_bar[i].Hide();
-    pos_fixed_param_.tween_bar_focus[i].Hide();
-    AddChild(&pos_fixed_param_.tween_bar[i]);
-    AddChild(&pos_fixed_param_.tween_bar_focus[i]);
+    // clone
+    for (unsigned i = 1; i < item_count_; ++i)
+    {
+      ListViewItem *item = new ListViewItem(*items_.front());
+      items_.push_back(item);
+      item->set_dataindex(i);
+      AddChild(item);
+    }
 
-    pos_fixed_param_.tween_bar[i].Load(metric);
+    items_abs_ = items_;
   }
 
   // Load sounds
@@ -125,9 +148,20 @@ void ListView::Load(const MetricGroup &metric)
 
   // Build data & item
   RebuildData();
+  RebuildItems();
 
   // selectchange for initiailize.
-  OnSelectChange(data_[data_index_], 0);
+  if (data_.empty())
+    OnSelectChange(nullptr, 0);
+  else
+    OnSelectChange(data_[data_index_ % size()], 0);
+
+  // Call bar load event
+  for (unsigned i = 0; i < items_abs_.size(); ++i)
+  {
+    std::string cmdname = format_string("Bar%u", i);
+    items_abs_[i]->RunCommandByName(cmdname);
+  }
 }
 
 void ListView::AddData(void* d) { data_.push_back(d); }
@@ -137,11 +171,14 @@ void* ListView::GetMenuDataByIndex(int index) { return items_[index]; }
 void ListView::SelectMenuByIndex(int index)
 {
   data_index_ = index;
+  data_top_index_ = index - item_center_index_;
+  scroll_time_remain_ = 0;
+  scroll_delta_ = 0;
   RebuildItems();
 }
 
-int ListView::size() const { return data_.size(); }
-int ListView::index() const { return data_index_; }
+unsigned ListView::size() const { return (unsigned)data_.size(); }
+unsigned ListView::index() const { return data_index_; }
 
 void ListView::Clear()
 {
@@ -154,29 +191,29 @@ void ListView::Clear()
   data_.clear();
 }
 
-void ListView::set_display_count(int display_count)
+void ListView::set_listviewtype(ListViewType type)
 {
-  display_count_ = display_count;
+  viewtype_ = type;
 }
 
-void ListView::set_focus_min_index(int min_index)
+void ListView::set_item_min_index(unsigned min_index)
 {
-  focus_min_ = min_index;
+  item_focus_min_ = min_index;
 }
 
-void ListView::set_focus_max_index(int max_index)
+void ListView::set_item_max_index(unsigned max_index)
 {
-  focus_max_ = max_index;
+  item_focus_max_ = max_index;
 }
 
-void ListView::set_focus_index(int center_idx)
+void ListView::set_item_center_index(unsigned center_idx)
 {
-  focus_index_ = center_idx;
+  item_center_index_ = center_idx;
 }
 
-void ListView::set_infinite_scroll(bool inf_scroll)
+bool ListView::is_wheel() const
 {
-  inf_scroll_ = inf_scroll;
+  return (viewtype_ == ListViewType::kWheel);
 }
 
 void ListView::RebuildData()
@@ -184,95 +221,106 @@ void ListView::RebuildData()
 
 void ListView::RebuildItems()
 {
-  /* Number dataindex for all items. */
-  auto data_count = size();
-  R_ASSERT(data_count > 0);
-  int data_idx = data_index_ - focus_index_ - kScrollPosMaxDiff;
-  data_idx %= data_count;
-  if (data_idx < 0) data_idx += data_count;
+  bool loop = is_wheel();
+  unsigned data_size = (unsigned)data_.size();
+  unsigned data_index = 0;
+  unsigned focused_index = data_index_ - data_top_index_;
+  unsigned i = 0;
+  int loop_count = 0;
+
+  if (data_size > 0)
+    data_index = (unsigned)mod_pos(data_top_index_, (int)data_size);
+
   for (auto *item : items_)
   {
-    void* cur_data = data_[data_idx];
-    item->set_dataindex(data_idx);
-    item->LoadFromData(cur_data);
-    data_idx = (data_idx + 1) % data_count;
+    void* cur_data = nullptr;
+    if (!data_.empty())
+      cur_data = data_[data_index];
+
+    item->set_dataindex(data_index);
+    item->set_focus(focused_index == i);
+
+    if (!loop && loop_count != 0)
+    {
+      item->Hide();
+      //item->LoadFromData(nullptr);
+    }
+    else
+    {
+      item->Show();
+      if (item->get_data() != cur_data)
+        item->LoadFromData(cur_data);
+    }
+
+    if (data_size > 0)
+      data_index = (data_index + 1) % data_size;
+
+    ++i;
   }
 }
 
 void ListView::NavigateDown()
 {
-  if (!inf_scroll_ && data_index_ >= size() - 1)
+  if (!is_wheel() && data_index_ >= (int)size() - 1)
     return;
 
-  wheel_sound_.Play();
+  // change data index
+  data_index_++;
+  int item_focus_index = data_index_ - data_top_index_;
+  if (item_focus_index > (int)item_focus_max_)
+  {
+    // back element to front
+    std::rotate(items_.begin(), std::prev(items_.end()), items_.end());
+    data_top_index_++;
 
-  // change data index and scroll effect (set time / delta)
-  data_index_ = (data_index_ + 1) % size();
-  scroll_delta_init_ = scroll_delta_ - 1.0f;
-  if (scroll_delta_init_ < -kScrollPosMaxDiff)
-    scroll_delta_init_ = -kScrollPosMaxDiff;
-  scroll_time_remain_ = scroll_time_;
+    // start scrolling
+    scroll_time_remain_ = scroll_time_;
 
-  // shift up item
-  /*
-  int new_dataindex = (bar_.back()->get_dataindex() + 1) % size();
-  std::rotate(bar_.begin(), std::prev(bar_.end()), bar_.end());
-  bar_.back()->set_dataindex(new_dataindex);
-  */
-  std::rotate(items_.begin(), std::prev(items_.end()), items_.end());
+    // play wheel sound
+    wheel_sound_.Play();
+  }
 
-  // update items
   RebuildItems();
-
-  OnSelectChange(data_[data_index_], 1);
+  OnSelectChange(
+    data_.empty() ? nullptr : data_[mod_pos(data_index_, (int)size())],
+    1);
 }
 
 void ListView::NavigateUp()
 {
-  if (!inf_scroll_ && data_index_ == 0)
+  if (!is_wheel() && data_index_ == 0)
     return;
 
-  wheel_sound_.Play();
-
-  // change data index and scroll effect (set time / delta)
+  // change data index
   data_index_--;
-  if (data_index_ < 0) data_index_ += size();
-  scroll_delta_init_ = scroll_delta_ + 1.0f;
-  if (scroll_delta_init_ > kScrollPosMaxDiff)
-    scroll_delta_init_ = kScrollPosMaxDiff;
-  scroll_time_remain_ = scroll_time_;
+  int item_focus_index = data_index_ - data_top_index_;
+  if (item_focus_index < (int)item_focus_min_)
+  {
+    // front element to back
+    std::rotate(items_.begin(), std::next(items_.begin()), items_.end());
+    data_top_index_--;
 
-  // shift down item
-  /*
-  int new_dataindex = bar_.front()->get_dataindex();
-  std::rotate(bar_.begin(), std::next(bar_.begin()), bar_.end());
-  bar_.front()->set_dataindex(new_dataindex);
-  */
-  std::rotate(items_.begin(), std::next(items_.begin()), items_.end());
+    // start scrolling
+    scroll_time_remain_ = scroll_time_;
 
-  // update items
+    // play wheel sound
+    wheel_sound_.Play();
+  }
+
   RebuildItems();
-
-  OnSelectChange(data_[data_index_], -1);
+  OnSelectChange(
+    data_.empty() ? nullptr : data_[mod_pos(data_index_, (int)size())],
+    -1);
 }
 
 void ListView::NavigateLeft() {}
 
 void ListView::NavigateRight() {}
 
-void ListView::doUpdate(double delta)
+unsigned ListView::CalculateItemCount() const
 {
-  // Update scroll pos
-  scroll_time_remain_ = std::max(.0f, scroll_time_remain_ - (float)delta);
-  scroll_delta_ = scroll_delta_init_ * std::pow(scroll_time_remain_ / scroll_time_, 2);
-  if (scroll_delta_init_ != 0 && scroll_delta_ == 0)
-  {
-    scroll_delta_init_ = 0;
-    OnSelectChanged();
-  }
-
-  // calculate each bar position-based-index and position
-  UpdateItemPos();
+  float height = GetHeight(frame_.pos);
+  return static_cast<unsigned>(height / item_height_);
 }
 
 void ListView::UpdateItemPos()
@@ -290,13 +338,17 @@ void ListView::UpdateItemPos()
 
 void ListView::UpdateItemPosByExpr()
 {
-  int x, y, i;
-  int display_count = (int)items_.size();
+  int x, y;
+  unsigned item_count = (unsigned)items_.size();
 
-  // firstly - set all object's position
-  for (i = 0; i < display_count; ++i)
+  // Fast-forward animation if they were playing
+  for (auto *item : items_)
+    item->HurryTween();
+
+  for (unsigned i = 0; i < item_count; ++i)
   {
-    double pos = i - display_count / 2 + scroll_delta_;
+    // pos: expecting [0 ~ 1]
+    double pos = i / (double)item_count + scroll_delta_;
     x = static_cast<int>(
       pos_expr_param_.bar_offset_x + pos_expr_param_.curve_size *
       (1.0 - cos(pos / pos_expr_param_.curve_level))
@@ -309,50 +361,51 @@ void ListView::UpdateItemPosByExpr()
     items_[i]->SetPos(x, y);
     items_[i]->SetSize(pos_expr_param_.bar_width, pos_expr_param_.bar_height);
   }
-
-  // decide range of object to show
-  int start_idx_show = kScrollPosMaxDiff +  + (int)floor(scroll_delta_);
-  int end_idx_show = display_count - kScrollPosMaxDiff + (int)ceil(scroll_delta_);
-  for (i = 0; i < display_count; ++i)
-  {
-    if (i < start_idx_show || i > end_idx_show)
-      items_[i]->Hide();
-    else
-      items_[i]->Show();
-  }
 }
 
 void ListView::UpdateItemPosByFixed()
 {
   int scroll_offset = (int)floor(scroll_delta_);
-  float ratio = 1.0f - (scroll_delta_ - scroll_offset);
-  int ii = 0;
+  bool loop = is_wheel();
   DrawProperty d;
 
-  /* Hide all elements first. */
-  for (int i = 0; i < display_count_ + kScrollPosMaxDiff * 2; ++i)
-  {
-    items_[i]->Hide();
-  }
+  // Fast-forward animation if they were playing
+  for (auto *item : items_)
+    item->HurryTween();
 
-  /* Reset item position */
-  for (int i = 0; i < display_count_ - 1; ++i)
+  // actual item array are rotated when listview is scrolled
+  // to reduce LoadFromData(..) call, so item object by actual item index
+  // should be obtained by items_abs_ array.
+  for (unsigned i = 0; i < items_.size() - 1; ++i)
   {
-    /* TODO: skip if data index is over when inf_scroll is off. */
-    int ii = i + kScrollPosMaxDiff + scroll_offset + 1;
-    ii %= display_count_ + kScrollPosMaxDiff * 2;
-    BaseObject *obj1 = &pos_fixed_param_.tween_bar[i];
-    BaseObject *obj2 = &pos_fixed_param_.tween_bar[i + 1];
     MakeTween(d,
-      obj1->GetCurrentFrame(),
-      obj2->GetCurrentFrame(),
-      ratio, EaseTypes::kEaseLinear);
-    items_[ii]->SetPos((int)d.pos.x, (int)d.pos.y);
-    items_[ii]->Show();
+      items_abs_[i]->get_item_dprop(),
+      items_abs_[i+1]->get_item_dprop(),
+      scroll_delta_, EaseTypes::kEaseLinear);
+
+    // TODO: set alpha, rotation
+    items_[i]->SetPos((int)d.pos.x, (int)d.pos.y);
   }
 }
 
-ListViewItem* ListView::CreateMenuItem()
+void ListView::doUpdate(double delta)
+{
+  if (scroll_time_remain_ > 0 && scroll_time_ > 0)
+  {
+    // Update scroll pos
+    scroll_time_remain_ = std::max(.0f, scroll_time_remain_ - (float)delta);
+    // -- for precision
+    if (scroll_time_remain_ < 5.0f)
+      scroll_time_remain_ = .0f;
+    if (scroll_time_ > 0)
+      scroll_delta_ = std::pow(scroll_time_remain_ / scroll_time_, 2);
+  }
+
+  // calculate each bar position-based-index and position
+  UpdateItemPos();
+}
+
+ListViewItem* ListView::CreateMenuItem(const std::string &)
 {
   return new ListViewItem();
 }

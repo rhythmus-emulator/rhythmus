@@ -192,6 +192,12 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
     GetDrawProperty(*out);
 }
 
+void Animation::HurryTween()
+{
+  R_ASSERT(!frames_.empty());
+  current_frame_ = frames_.size() - 1;
+}
+
 void Animation::GetDrawProperty(DrawProperty &out)
 {
   if (current_frame_ == frames_.size() - 1)
@@ -251,7 +257,7 @@ bool Animation::is_tweening() const
 // ----------------------------------------------------------- class BaseObject
 
 BaseObject::BaseObject()
-  : parent_(nullptr), own_children_(true), draw_order_(0), position_prop_(0),
+  : parent_(nullptr), own_children_(true), propagate_event_(true), draw_order_(0), position_prop_(0),
     set_xy_as_center_(false), visible_(true), hide_if_not_tweening_(false),
     ignore_visible_group_(true), is_draggable_(false), is_focusable_(false),
     is_focused_(false), is_hovered_(false), do_clipping_(false)
@@ -504,6 +510,12 @@ void BaseObject::RunCommand(const std::string &command, const std::string& value
       std::cerr << "Error: Command parameter is not enough to execute " << command << std::endl;
     }
   }
+  /*
+  if (propagate_event_)
+  {
+    for (auto *obj : children_)
+      obj->RunCommand(command, value);
+  }*/
 }
 
 /* just clear out command, without event unregister. */
@@ -577,6 +589,17 @@ void BaseObject::LoadCommandWithPrefix(const std::string &prefix, const MetricGr
     {
       AddCommand(it->first.substr(prefix.size()), it->second);
     }
+  }
+}
+
+void BaseObject::HurryTween()
+{
+  if (!ani_.empty())
+  {
+    ani_.back().HurryTween();
+    ani_.back().GetDrawProperty(frame_);
+    ani_.clear();
+    OnAnimation(frame_);
   }
 }
 

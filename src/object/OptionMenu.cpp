@@ -17,11 +17,8 @@ void OptionItem::Load(const MetricGroup &metric)
 
 OptionMenu::OptionMenu()
 {
-  set_infinite_scroll(false);
-  set_display_count(10);
-  set_focus_min_index(1);
-  set_focus_max_index(9);
-  set_focus_index(1);
+  set_item_min_index(0);
+  set_item_max_index(10);
 }
 
 void OptionMenu::Load(const MetricGroup &metric)

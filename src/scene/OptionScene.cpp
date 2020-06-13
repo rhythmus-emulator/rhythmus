@@ -109,12 +109,7 @@ OptionScene::OptionScene() : option_mode_(1)
 void OptionScene::LoadScene()
 {
   AddChild(&menu_);
-  menu_.set_infinite_scroll(false);
-  menu_.set_display_count(10);
-  menu_.set_focus_min_index(1);
-  menu_.set_focus_max_index(9);
   BuildOptionItemData();
-
   Scene::LoadScene();
 }
 

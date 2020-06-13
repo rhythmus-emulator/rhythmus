@@ -199,7 +199,7 @@ MusicWheel::MusicWheel() :
   info_musicwheelpos(KEYPOOL->GetFloat("MusicWheelPos"))
 {
   set_name("MusicWheel");
-  set_infinite_scroll(true);
+  set_listviewtype(ListViewType::kWheel);
   sort_.type = 0;
   sort_.invalidate = true;
   filter_.gamemode = 0;
