@@ -129,6 +129,7 @@ Scene::Scene()
     do_sort_objects_(false), enable_caching_(false),
     focused_object_(nullptr)
 {
+  SetOwnChildren(true);
 }
 
 void Scene::LoadScene()
@@ -233,7 +234,6 @@ void Scene::Load(const MetricGroup& m)
 
 
   // Create objects.
-  SetOwnChildren(true);
   for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
   {
     BaseObject *o = CreateObject(*c);

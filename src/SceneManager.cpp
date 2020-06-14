@@ -89,6 +89,7 @@ void SceneManager::Update()
       current_scene_ = next_scene_;
       next_scene_ = nullptr;
 
+      current_scene_->OnReady();
       current_scene_->StartScene();
 
       // Need to refresh game timer & clear out delta

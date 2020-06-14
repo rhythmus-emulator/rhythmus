@@ -146,6 +146,7 @@ void ResourceElement::clear_error()
   error_code_ = 0;
 }
 
+// @DEPRECIATED
 // This function must be called when an object need to be loaded for sure
 // Even if ResourceContainer::load_async is true, because shared object
 // can be fetch although it isn't loaded.

@@ -19,7 +19,7 @@ Sprite::Sprite()
   texcoord_ = Rect{ 0.0f, 0.0f, 1.0f, 1.0f };
 }
 
-Sprite::Sprite(const Sprite& spr) :
+Sprite::Sprite(const Sprite& spr) : BaseObject(spr),
   img_(nullptr), sprani_(spr.sprani_), time_(0), frame_(0), res_id_(spr.res_id_),
   blending_(spr.blending_), texcoord_(spr.texcoord_), use_texture_coord_(spr.use_texture_coord_),
   tex_attribute_(spr.tex_attribute_)
@@ -100,6 +100,11 @@ void Sprite::LoadLR2SRC(const std::string &lr2src)
   sprani_.duration = args.Get<int>(8);
 }
 
+void Sprite::OnReady()
+{
+  // TODO: use texture coord later
+}
+
 void Sprite::SetImage(const std::string &path)
 {
   if (img_)
@@ -111,7 +116,6 @@ void Sprite::SetImage(const std::string &path)
   img_ = IMAGEMAN->Load(path);
   if (!img_)
     return;
-  SleepUntilLoadFinish(img_);
 
   /* default image texture coord set */
   use_texture_coord_ = true;

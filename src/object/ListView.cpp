@@ -132,7 +132,7 @@ void ListView::Load(const MetricGroup &metric)
   const MetricGroup *itemmetric = metric.get_group("item");
   if (itemmetric)
   {
-#if 0
+#if 1
     /* default: nullptr data */
     ListViewItem *item = CreateMenuItem(item_type_);
     item->Load(*itemmetric);
@@ -142,7 +142,7 @@ void ListView::Load(const MetricGroup &metric)
     AddChild(item);
 
     // clone
-    // XXX: CANNOT use clone() method which is loading object!
+    // XXX: MAY NOT use clone() method to loading object!
     for (unsigned i = 1; i < item_count_; ++i)
     {
       ListViewItem *item = (ListViewItem*)items_[0]->clone();
@@ -150,7 +150,7 @@ void ListView::Load(const MetricGroup &metric)
       item->set_dataindex(i);
       AddChild(item);
     }
-#endif
+#else
 
     for (unsigned i = 0; i < item_count_; ++i)
     {
@@ -162,6 +162,7 @@ void ListView::Load(const MetricGroup &metric)
       AddChild(item);
     }
 
+#endif
     items_abs_ = items_;
   }
 

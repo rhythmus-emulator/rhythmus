@@ -29,6 +29,7 @@ public:
   virtual BaseObject *clone();
 
   virtual void Load(const MetricGroup &metric);
+  virtual void OnReady();
 
   void LoadLR2SRC(const std::string &lr2src);
 

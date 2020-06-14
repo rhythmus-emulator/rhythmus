@@ -23,7 +23,7 @@ Text::Text()
   text_alignment_ = Vector2(0.0f, 0.0f);  // TOPLEFT
 }
 
-Text::Text(const Text &text) : font_(nullptr),
+Text::Text(const Text &text) : BaseObject(text), font_(nullptr),
   text_fitting_(text.text_fitting_),
   text_alignment_(text.text_alignment_), set_xy_aligncenter_(text.set_xy_aligncenter_),
   use_height_as_font_height_(text.use_height_as_font_height_),
@@ -142,11 +142,20 @@ void Text::Load(const MetricGroup &m)
   // TODO: load blending from LR2DST
 #endif
 
-  // set text after align/fit property is read
+  ClearText();
   if (m.exist("value"))
-    SetText(m.get_str("value"));
+    text_ = m.get_str("value");
   else if (m.exist("text"))
-    SetText(m.get_str("text"));
+    text_ = m.get_str("text");
+}
+
+void Text::OnReady()
+{
+  if (font_ == nullptr)
+    return;
+  font_->PrepareText(text_);
+  font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
+  UpdateTextRenderContext();
 }
 
 void Text::SetFont(const std::string& path)
@@ -163,7 +172,6 @@ void Text::SetFont(const std::string& path)
 
   // if not, then load from path directly.
   font_ = FONTMAN->Load(path);
-  SleepUntilLoadFinish(font_);
 
   // if text previously exists, call SetText() internally.
   if (!text_.empty())
@@ -174,7 +182,6 @@ void Text::SetFont(const MetricGroup &m)
 {
   ClearFont();
   font_ = FONTMAN->Load(m);
-  SleepUntilLoadFinish(font_);
 
   /* if text previously exists, call SetText() internally */
   if (!text_.empty())

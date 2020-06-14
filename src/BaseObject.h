@@ -166,6 +166,9 @@ public:
   // Load object property from ThemeMetric using name of this object.
   void LoadFromName();
 
+  // Called after all object tree is created.
+  virtual void OnReady();
+
   /**
    * Commands can modify attributes(mainly animation) of objects during runtime.
    * Metric, on the other hand, is expect to set object's initial state,

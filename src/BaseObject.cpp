@@ -475,6 +475,13 @@ void BaseObject::LoadFromName()
   Load(*m);
 }
 
+void BaseObject::OnReady()
+{
+  // propagate OnReady() to children
+  for (auto *o : children_)
+    o->OnReady();
+}
+
 void BaseObject::RunCommandByName(const std::string &event_name)
 {
   auto it = commands_.find(event_name);
@@ -1455,6 +1462,7 @@ BaseObject* CreateObject(const MetricGroup &m)
 
   if (object)
   {
+#if 0
     if (*PREFERENCE->theme_load_async == 0)
     {
       object->Load(m);
@@ -1477,6 +1485,8 @@ BaseObject* CreateObject(const MetricGroup &m)
       ObjectLoaderTask *t = new ObjectLoaderTask(*object, m);
       TaskPool::getInstance().EnqueueTask(t);
     }
+#endif
+    object->Load(m);
   }
 
   return object;

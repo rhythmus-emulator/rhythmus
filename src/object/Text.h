@@ -21,6 +21,7 @@ public:
   virtual BaseObject *clone();
 
   virtual void Load(const MetricGroup& metric);
+  virtual void OnReady();
 
   void SetFont(const std::string& path);
   void SetFont(const MetricGroup &m);
