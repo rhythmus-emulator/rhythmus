@@ -19,10 +19,24 @@ Sprite::Sprite()
   texcoord_ = Rect{ 0.0f, 0.0f, 1.0f, 1.0f };
 }
 
+Sprite::Sprite(const Sprite& spr) :
+  img_(nullptr), sprani_(spr.sprani_), time_(0), frame_(0), res_id_(spr.res_id_),
+  blending_(spr.blending_), texcoord_(spr.texcoord_), use_texture_coord_(spr.use_texture_coord_),
+  tex_attribute_(spr.tex_attribute_)
+{
+  if (spr.img_)
+    img_ = (Image*)spr.img_->clone();
+}
+
 Sprite::~Sprite()
 {
   if (img_)
     IMAGEMAN->Unload(img_);
+}
+
+BaseObject *Sprite::clone()
+{
+  return new Sprite(*this);
 }
 
 void Sprite::Load(const MetricGroup& metric)

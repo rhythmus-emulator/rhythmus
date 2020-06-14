@@ -124,6 +124,12 @@ bool ResourceElement::is_loading() const
   return parent_task_ != nullptr || is_loading_;
 }
 
+ResourceElement *ResourceElement::clone() const
+{
+  ref_count_++;
+  return const_cast<ResourceElement*>(this);
+}
+
 const char *ResourceElement::get_error_msg() const
 {
   return error_msg_;

@@ -26,6 +26,7 @@ public:
   void set_parent_task(Task *task);
   Task *get_parent_task();
   bool is_loading() const;
+  ResourceElement *clone() const;
 
   const char *get_error_msg() const;
   int get_error_code() const;
@@ -39,7 +40,7 @@ public:
 private:
   Task *parent_task_;
   std::string name_;
-  int ref_count_;
+  mutable int ref_count_;
   bool is_loading_;
 
 protected:

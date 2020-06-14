@@ -136,6 +136,7 @@ public:
   BaseObject();
   BaseObject(const BaseObject& obj);
   virtual ~BaseObject();
+  virtual BaseObject *clone();
 
   void set_name(const std::string& name);
   const std::string& get_name() const;

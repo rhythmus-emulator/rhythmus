@@ -257,7 +257,7 @@ bool Animation::is_tweening() const
 // ----------------------------------------------------------- class BaseObject
 
 BaseObject::BaseObject()
-  : parent_(nullptr), own_children_(true), propagate_event_(true), draw_order_(0), position_prop_(0),
+  : parent_(nullptr), own_children_(false), propagate_event_(false), draw_order_(0), position_prop_(0),
     set_xy_as_center_(false), visible_(true), hide_if_not_tweening_(false),
     ignore_visible_group_(true), is_draggable_(false), is_focusable_(false),
     is_focused_(false), is_hovered_(false), do_clipping_(false)
@@ -273,22 +273,39 @@ BaseObject::BaseObject()
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
-  : name_(obj.name_), own_children_(true), parent_(obj.parent_), ani_(obj.ani_), draw_order_(obj.draw_order_),
-    set_xy_as_center_(obj.set_xy_as_center_), visible_(obj.visible_), hide_if_not_tweening_(obj.hide_if_not_tweening_),
+  : name_(obj.name_), own_children_(obj.own_children_), propagate_event_(obj.propagate_event_),
+    parent_(obj.parent_), ani_(obj.ani_), draw_order_(obj.draw_order_),
+    set_xy_as_center_(obj.set_xy_as_center_), visible_(obj.visible_),
+    hide_if_not_tweening_(obj.hide_if_not_tweening_),
     ignore_visible_group_(obj.ignore_visible_group_),
     is_focusable_(obj.is_focusable_), is_draggable_(false), is_focused_(false),
     is_hovered_(false), do_clipping_(false)
 {
-  // XXX: childrens won't copied by now
   frame_ = obj.frame_;
   memcpy(visible_flag_, obj.visible_flag_, sizeof(visible_flag_));
   bg_color_ = obj.bg_color_;
+
+  if (own_children_)
+  {
+    for (auto *o : obj.children_)
+      AddChild(o->clone());
+  }
+  else
+  {
+    for (auto *o : obj.children_)
+      AddChild(o);
+  }
 }
 
 BaseObject::~BaseObject()
 {
   SCENEMAN->ClearFocus(this);
   RemoveAllChild();
+}
+
+BaseObject *BaseObject::clone()
+{
+  return new BaseObject(*this);
 }
 
 void BaseObject::set_name(const std::string& name)
@@ -510,12 +527,11 @@ void BaseObject::RunCommand(const std::string &command, const std::string& value
       std::cerr << "Error: Command parameter is not enough to execute " << command << std::endl;
     }
   }
-  /*
   if (propagate_event_)
   {
     for (auto *obj : children_)
       obj->RunCommand(command, value);
-  }*/
+  }
 }
 
 /* just clear out command, without event unregister. */
@@ -1345,6 +1361,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
 #include "object/Button.h"
 #include "object/OnMouse.h"
 #include "object/Dialog.h"
+#include "object/ListView.h"
 
 namespace rhythmus
 {
@@ -1420,6 +1437,16 @@ BaseObject* CreateObject(const MetricGroup &m)
   else if (type == "dialog")
   {
     object = new Dialog();
+  }
+  else if (type == "listview")
+  {
+    object = new ListView();
+  }
+  else if (type == "frame")
+  {
+    // TODO: use BaseFrame() object
+    object = new BaseObject();
+    object->SetOwnChildren(true);
   }
   else if (type == "line")
   {

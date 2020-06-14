@@ -23,9 +23,30 @@ Text::Text()
   text_alignment_ = Vector2(0.0f, 0.0f);  // TOPLEFT
 }
 
+Text::Text(const Text &text) : font_(nullptr),
+  text_fitting_(text.text_fitting_),
+  text_alignment_(text.text_alignment_), set_xy_aligncenter_(text.set_xy_aligncenter_),
+  use_height_as_font_height_(text.use_height_as_font_height_),
+  alignment_attrs_(text.alignment_attrs_),
+  autosize_(text.autosize_), blending_(text.blending_), counter_(text.counter_),
+  res_id_(text.res_id_), do_line_breaking_(text.do_line_breaking_)
+{
+  text_render_ctx_.drawsize = Vector2(0, 0);
+  text_render_ctx_.width = 0;
+  text_render_ctx_.height = 0;
+
+  if (text.font_)
+    font_ = (Font*)text.font_->clone();
+}
+
 Text::~Text()
 {
   ClearFont();
+}
+
+BaseObject *Text::clone()
+{
+  return new Text(*this);
 }
 
 void Text::Load(const MetricGroup &m)

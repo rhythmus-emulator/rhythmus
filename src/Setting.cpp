@@ -76,31 +76,48 @@ bool MetricGroup::Load(const std::string &path)
 bool MetricGroup::LoadFromXml(const std::string &path)
 {
   tinyxml2::XMLDocument doc;
+  std::list<XMLElement *> node_to_load;
+  std::list<MetricGroup *> group_to_load;
+
   if (doc.LoadFile(path.c_str()) != XML_SUCCESS)
   {
     throw FileNotFoundException(path);
   }
 
   XMLElement* root = doc.RootElement();
-  XMLElement* ele = root->FirstChildElement();
+  XMLElement* ele;
+  MetricGroup *g;
+  node_to_load.push_back(root->FirstChildElement());
+  group_to_load.push_back(this);
 
   const char *name = root->Attribute("name");
   if (name) set_name(name);
 
-  while (ele)
+  while (!node_to_load.empty())
   {
-    // XXX: supporting more nested elements? (depth over 2)
-    const char* elename = ele->Name();
-    MetricGroup& metric = add_group(elename);
-    const XMLAttribute* attr = ele->FirstAttribute();
-    while (attr)
+    ele = node_to_load.back();
+    g = group_to_load.back();
+    node_to_load.pop_back();
+    group_to_load.pop_back();
+
+    while (ele)
     {
-      const char* v = attr->Value();
-      R_ASSERT_M(v, "No value given on xml attribute.");
-      metric.set(attr->Name(), attr->Value());
-      attr = attr->Next();
+      const char* elename = ele->Name();
+      MetricGroup& metric = g->add_group(elename);
+      const XMLAttribute* attr = ele->FirstAttribute();
+      while (attr)
+      {
+        const char* v = attr->Value();
+        R_ASSERT_M(v, "No value given on xml attribute.");
+        metric.set(attr->Name(), attr->Value());
+        attr = attr->Next();
+      }
+
+      node_to_load.push_back(ele->FirstChildElement());
+      group_to_load.push_back(&metric);
+
+      ele = ele->NextSiblingElement();
     }
-    ele = ele->NextSiblingElement();
   }
 
   return true;

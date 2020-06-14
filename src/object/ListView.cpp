@@ -18,14 +18,22 @@ static inline float modf_pos(float a, float b)
 
 // ---------------------------- class ListViewItem
 
-ListViewItem::ListViewItem()
-  : dataindex_(0), data_(nullptr), is_focused_(false)
+ListViewItem::ListViewItem() :
+  dataindex_(0), data_(nullptr), is_focused_(false)
 {
+  own_children_ = true; // TODO: use BaseFrame()
 }
 
-ListViewItem::ListViewItem(const ListViewItem& obj) :
-  dataindex_(obj.dataindex_), data_(obj.data_), is_focused_(false)
+ListViewItem::ListViewItem(const ListViewItem& obj) : BaseObject(obj),
+  dataindex_(obj.dataindex_), data_(obj.data_), is_focused_(false),
+  item_dprop_(obj.item_dprop_)
 {
+  own_children_ = true; // TODO: use BaseFrame()
+}
+
+BaseObject *ListViewItem::clone()
+{
+  return new ListViewItem(*this);
 }
 
 void ListViewItem::Load(const MetricGroup &m)
@@ -70,6 +78,13 @@ void ListViewItem::OnAnimation(DrawProperty &frame)
   item_dprop_ = frame;
 }
 
+// @brief Test listviewitem for test purpose
+class TestListViewItem : public ListViewItem
+{
+public:
+private:
+};
+
 // --------------------------------- class Menu
 
 ListView::ListView()
@@ -80,24 +95,20 @@ ListView::ListView()
     pos_method_(MenuPosMethod::kMenuPosExpression)
 {
   memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
+  pos_expr_param_.curve_level = 1.0;
+  own_children_ = true; // TODO: use BaseFrame()
 }
 
 ListView::~ListView()
 {
   Clear();
-  for (auto* p : items_)
-  {
-    RemoveChild(p);
-    delete p;
-  }
-  items_.clear();
 }
 
 void ListView::Load(const MetricGroup &metric)
 {
   // Load itemview attributes
   BaseObject::Load(metric);
-  metric.get_safe("position_type", pos_method_);
+  metric.get_safe("postype", pos_method_);
   metric.get_safe("viewtype", (int&)viewtype_);
   if (viewtype_ >= ListViewType::kEnd)
     viewtype_ = ListViewType::kList;
@@ -121,20 +132,33 @@ void ListView::Load(const MetricGroup &metric)
   const MetricGroup *itemmetric = metric.get_group("item");
   if (itemmetric)
   {
+#if 0
+    /* default: nullptr data */
     ListViewItem *item = CreateMenuItem(item_type_);
     item->Load(*itemmetric);
-    /* default: nullptr data */
     item->LoadFromData(nullptr);
     item->set_dataindex(0);
     items_.push_back(item);
     AddChild(item);
 
     // clone
+    // XXX: CANNOT use clone() method which is loading object!
     for (unsigned i = 1; i < item_count_; ++i)
     {
-      ListViewItem *item = new ListViewItem(*items_.front());
+      ListViewItem *item = (ListViewItem*)items_[0]->clone();
       items_.push_back(item);
       item->set_dataindex(i);
+      AddChild(item);
+    }
+#endif
+
+    for (unsigned i = 0; i < item_count_; ++i)
+    {
+      ListViewItem *item = CreateMenuItem(item_type_);
+      item->Load(*itemmetric);
+      item->LoadFromData(nullptr);
+      item->set_dataindex(i);
+      items_.push_back(item);
       AddChild(item);
     }
 
@@ -187,7 +211,7 @@ void ListView::Clear()
     p->LoadFromData(nullptr);
   /* now delete all data. */
   for (auto* p : data_)
-    delete p;
+    free(p);
   data_.clear();
 }
 
@@ -347,19 +371,16 @@ void ListView::UpdateItemPosByExpr()
 
   for (unsigned i = 0; i < item_count; ++i)
   {
-    // pos: expecting [0 ~ 1]
-    double pos = i / (double)item_count + scroll_delta_;
+    // pos: expecting (-1 ~ item_count)
+    double pos = i + scroll_delta_;
     x = static_cast<int>(
-      pos_expr_param_.bar_offset_x + pos_expr_param_.curve_size *
+      pos_expr_param_.curve_size *
       (1.0 - cos(pos / pos_expr_param_.curve_level))
       );
     y = static_cast<int>(
-      pos_expr_param_.bar_center_y +
-      (pos_expr_param_.bar_height + pos_expr_param_.bar_margin) * pos -
-      pos_expr_param_.bar_height * 0.5f
+      item_height_ * pos
       );
     items_[i]->SetPos(x, y);
-    items_[i]->SetSize(pos_expr_param_.bar_width, pos_expr_param_.bar_height);
   }
 }
 
@@ -381,7 +402,7 @@ void ListView::UpdateItemPosByFixed()
     MakeTween(d,
       items_abs_[i]->get_item_dprop(),
       items_abs_[i+1]->get_item_dprop(),
-      scroll_delta_, EaseTypes::kEaseLinear);
+      scroll_delta_, EaseTypes::kEaseIn);
 
     // TODO: set alpha, rotation
     items_[i]->SetPos((int)d.pos.x, (int)d.pos.y);
@@ -398,7 +419,7 @@ void ListView::doUpdate(double delta)
     if (scroll_time_remain_ < 5.0f)
       scroll_time_remain_ = .0f;
     if (scroll_time_ > 0)
-      scroll_delta_ = std::pow(scroll_time_remain_ / scroll_time_, 2);
+      scroll_delta_ = 1.0f - scroll_time_remain_ / scroll_time_;
   }
 
   // calculate each bar position-based-index and position
@@ -407,7 +428,10 @@ void ListView::doUpdate(double delta)
 
 ListViewItem* ListView::CreateMenuItem(const std::string &)
 {
-  return new ListViewItem();
+  if (item_type_ == "test")
+    return new TestListViewItem();
+  else
+    return new ListViewItem();
 }
 
 void ListView::OnSelectChange(const void *data, int direction) {}

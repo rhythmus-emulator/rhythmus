@@ -3,13 +3,13 @@
   <metric type="font" name="listviewfont" path="test/gyeonggi.ttf" size="18" color="#FF000000" />
   
   <!-- declare listview info -->
-  <listview postype="topdown" adaptertype="basic"
-            x="800" y="0" w="480" h="800"
-            element_height="40" max_display="21" focusrange="10,10">
+  <listview postype="0" viewtype="2" itemtype="test"
+            x="650" y="0" w="556" h="800"
+            itemheight="40" itemcount="21" focusrange="10,10">
     <!-- declare element info -->
-    <adapter>
-      <image src="test/main.png" crop="991,425,1547,465" />
-      <text font="listviewfont" value="TESTTEXT" />
-    </adapter>
+    <item w="556" y="40">
+      <image src="test/main.png" crop="991,425,1547,465" w="556" h="40" />
+      <text name="maintext" font="listviewfont" value="TESTTEXT" />
+    </item>
   </listview>
 </theme>

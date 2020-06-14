@@ -16,7 +16,9 @@ class Text : public BaseObject
 {
 public:
   Text();
+  Text(const Text &text);
   virtual ~Text();
+  virtual BaseObject *clone();
 
   virtual void Load(const MetricGroup& metric);
 

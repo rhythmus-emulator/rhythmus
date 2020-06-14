@@ -33,6 +33,7 @@ class ListViewItem : public BaseObject
 public:
   ListViewItem();
   ListViewItem(const ListViewItem& obj);
+  virtual BaseObject *clone();
 
   virtual void Load(const MetricGroup &m);
   virtual void LoadFromData(void *data);
@@ -57,8 +58,7 @@ private:
   virtual void OnAnimation(DrawProperty &frame);
 };
 
-/* @brief used for calculating bar position of select item
-   (with very basic math expression) */
+/* @brief ListView based on recycling ListViewItem. */
 class ListView : public BaseObject
 {
 public:
@@ -150,7 +150,7 @@ protected:
   // scroll time (remain)
   float scroll_time_remain_;
 
-  // current scroll delta ( used by UpdateItemPos() )
+  // current scroll delta ( used by UpdateItemPos(), -1 ~ 0 )
   float scroll_delta_;
 
   // type of calculating select bar position
@@ -161,15 +161,6 @@ protected:
   struct {
     double curve_level;
     double curve_size;
-    int bar_width;
-    int bar_height;
-    int bar_margin;
-    int bar_offset_x;
-    int bar_center_y;
-
-    struct {
-      int x, y;
-    } text_margin;
   } pos_expr_param_;
 
   Sprite focus_effect_;

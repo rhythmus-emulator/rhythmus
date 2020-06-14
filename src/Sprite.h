@@ -24,8 +24,9 @@ class Sprite : public BaseObject
 {
 public:
   Sprite();
-  Sprite(const Sprite& spr) = default;
+  Sprite(const Sprite& spr);
   virtual ~Sprite();
+  virtual BaseObject *clone();
 
   virtual void Load(const MetricGroup &metric);
 
