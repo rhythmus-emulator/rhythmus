@@ -125,7 +125,8 @@ void Graphic::DeleteGraphic()
 }
 
 Graphic::Graphic()
-  : frame_delay_weight_avg_(1000.0f), last_render_time_(.0), is_game_running_(true)
+  : frame_delay_weight_avg_(1000.0f), next_render_time_(.0),
+    last_render_time_(.0), is_game_running_(true)
 {
   video_mode_.bpp = 32;
   video_mode_.width = 1280;
@@ -195,6 +196,11 @@ void Graphic::GetSupportedVideoMode(std::vector<VideoModeParams> &p)
 
 void Graphic::ResolutionChanged()
 {
+}
+
+bool Graphic::IsVsyncUpdatable() const
+{
+  return Timer::GetUncachedSystemTime() > next_render_time_;
 }
 
 int Graphic::width() const { return video_mode_.height; }
@@ -411,13 +417,14 @@ void Graphic::DrawQuad(const VertexInfo *vi) { DrawQuads(vi, 4); }
 // This method should be called every time to calculate FPS
 void Graphic::BeginFrame()
 {
-  float time = (float)Timer::SystemTimer().GetDeltaTime() * 1000.0f;
-  if (last_render_time_ != 0)
-  {
-    frame_delay_weight_avg_ =
-      frame_delay_weight_avg_ * 0.8f + (time - last_render_time_) * 0.2f;
-  }
-  last_render_time_ = time;
+  frame_delay_weight_avg_ = frame_delay_weight_avg_ * 0.8f + delta() * 1000.0f * 0.2f;
+  last_render_time_ = Timer::GetUncachedSystemTime();
+
+  // remove rare gap of render time (about 20FPS)
+  if (next_render_time_ + 0.05 < last_render_time_)
+    next_render_time_ = last_render_time_;
+
+  next_render_time_ += 1.0 / GetVideoMode().rate;
 }
 
 void Graphic::EndFrame() {}
@@ -432,6 +439,11 @@ void Graphic::SignalWindowClose()
 bool Graphic::IsWindowShouldClose() const
 {
   return !is_game_running_;
+}
+
+double Graphic::delta() const
+{
+  return Timer::SystemTimer().GetTime() - last_render_time_;
 }
 
 const char* Graphic::name() { return "Base"; }
@@ -524,9 +536,11 @@ void GraphicGL::Cleanup()
   // TODO: destroy shader, program.
 }
 
-bool GraphicGL::TryVideoMode(const VideoModeParams &p)
+bool GraphicGL::TryVideoMode(VideoModeParams &p)
 {
   GLFWwindow *w = (GLFWwindow*)GAME->handler();
+  int totalMonitor;
+  GLFWmonitor** monitors;
 
   // Destroy previous window if exists...
   if (w)
@@ -536,6 +550,7 @@ bool GraphicGL::TryVideoMode(const VideoModeParams &p)
   }
 
   // create new window and swap context
+  monitors = glfwGetMonitors(&totalMonitor);
   if (p.windowed)
   {
     w = glfwCreateWindow(p.width, p.height,
@@ -543,14 +558,12 @@ bool GraphicGL::TryVideoMode(const VideoModeParams &p)
   }
   else
   {
-    int totalMonitor;
-    GLFWmonitor** monitors = glfwGetMonitors(&totalMonitor);
     R_ASSERT(totalMonitor > 0);
     w = glfwCreateWindow(p.width, p.height,
       GAME->get_window_title().c_str(), monitors[0], NULL);
   }
-  if (!w)
-    return false;
+  const GLFWvidmode* mode = glfwGetVideoMode(monitors[0]);
+  p.rate = mode->refreshRate;
 
   glfwSetErrorCallback(error_callback);
   glfwMakeContextCurrent(w);
@@ -853,8 +866,6 @@ void GraphicGL::EndFrame()
 {
   glFlush();
   glfwSwapBuffers((GLFWwindow*)GAME->handler());
-  glfwPollEvents();
-
   ResetMatrix();
 }
 

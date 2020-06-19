@@ -140,8 +140,8 @@ void Game::Loop()
   while (GAME->is_running_ && !GRAPHIC->IsWindowShouldClose())
   {
     /* Update main timer in graphic(main) thread. */
-    Timer::Update();
-    double delta = Timer::SystemTimer().GetDeltaTime() * 1000;
+    //double inputdelta = Timer::SystemTimer().GetDeltaTime() * 1000;
+    //double delta = GRAPHIC->delta() * 1000.0;
 
     try
     {
@@ -150,24 +150,35 @@ void Game::Loop()
         * COMMENT: Event must be processed before Update() method
         * (e.g. Wheel flickering when items Rebuild after Event flush)
         */
-      InputEventManager::Flush();
-      EventManager::Flush();
-
-      /* Song and movie won't be updated if paused. */
-      if (!GAME->IsPaused())
+      if (GRAPHIC->IsVsyncUpdatable())
       {
-        SongPlayer::getInstance().Update(delta);
-        ResourceManager::Update(delta);
+        Timer::Update();
+        InputEventManager::Flush();
+        EventManager::Flush();
+
+        /* Song and movie won't be updated if paused. */
+        if (!GAME->IsPaused())
+        {
+          double delta = Timer::SystemTimer().GetDeltaTime() * 1000;
+          SongPlayer::getInstance().Update((float)delta);
+          ResourceManager::Update(delta);
+        }
+
+        /* Scene update & rendering */
+        SCENEMAN->Update();
+        GRAPHIC->BeginFrame();
+        SCENEMAN->Render();
+        GRAPHIC->EndFrame();
+
+        /* Flush stdout into log message */
+        Logger::getInstance().Flush();
+      }
+      else
+      {
+        std::this_thread::sleep_for(std::chrono::microseconds(10));
       }
 
-      /* Scene update & rendering */
-      SCENEMAN->Update();
-      GRAPHIC->BeginFrame();
-      SCENEMAN->Render();
-      GRAPHIC->EndFrame();
-
-      /* Flush stdout into log message */
-      Logger::getInstance().Flush();
+      GAME->PollEvent();
     }
     catch (const RuntimeException &e)
     {
@@ -209,6 +220,11 @@ void Game::Exit()
 {
   GAME->is_running_ = false;
   GRAPHIC->SignalWindowClose();
+}
+
+void Game::PollEvent()
+{
+  glfwPollEvents();
 }
 
 void Game::InitializeHandler()

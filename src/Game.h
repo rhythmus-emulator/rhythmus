@@ -60,6 +60,9 @@ public:
   static void Cleanup();
   static void Exit();
 
+  /* Poll event in system level. Must be executed from main thread. */
+  void PollEvent();
+
   void CenterWindow();
 
   /* Generally low-level API handler. */

@@ -103,11 +103,17 @@ public:
   virtual void Cleanup() = 0;
   void SetVideoMode(VideoModeParams &p);
   const VideoModeParams &GetVideoMode() const;
-  virtual bool TryVideoMode(const VideoModeParams &p) = 0;
+  virtual bool TryVideoMode(VideoModeParams &p) = 0;
   virtual void GetSupportedVideoMode(std::vector<VideoModeParams> &p);
+
 
   // when external resolution is changed
   virtual void ResolutionChanged();
+
+
+  /* This simulates vsync by checking last rendering time. */
+  bool IsVsyncUpdatable() const;
+
 
   int width() const;
   int height() const;
@@ -186,6 +192,7 @@ public:
   float GetFPS() const;
   virtual void SignalWindowClose();
   virtual bool IsWindowShouldClose() const;
+  double delta() const;
 
   virtual const char* name();
 
@@ -197,7 +204,8 @@ private:
   std::vector<Matrix> mat_proj_;
   Matrix mat_view_;
 
-  float last_render_time_;
+  double next_render_time_;
+  double last_render_time_;
   float frame_delay_weight_avg_;
   bool is_game_running_;
 };
@@ -228,7 +236,7 @@ public:
 
   virtual void Initialize();
   virtual void Cleanup();
-  virtual bool TryVideoMode(const VideoModeParams &p);
+  virtual bool TryVideoMode(VideoModeParams &p);
   virtual void GetSupportedVideoMode(std::vector<VideoModeParams> &p);
 
   virtual unsigned CreateTexture(const uint8_t *p, unsigned width, unsigned height);
