@@ -131,7 +131,7 @@ Graphic::Graphic()
   video_mode_.bpp = 32;
   video_mode_.width = 1280;
   video_mode_.height = 800;
-  video_mode_.vsync = true;
+  video_mode_.vsync = false;
   video_mode_.rate = 60;
   video_mode_.windowed = true;
 

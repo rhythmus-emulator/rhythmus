@@ -217,9 +217,9 @@ float Text::GetTextWidth() const
 void Text::SetText(const std::string& s)
 {
   ClearText();
-  if (!font_) return;
-
   text_ = s;
+  if (!font_ || font_->is_loading()) return;
+
   font_->PrepareText(s);
   font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);
   UpdateTextRenderContext();

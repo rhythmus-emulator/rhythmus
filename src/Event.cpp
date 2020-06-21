@@ -86,22 +86,14 @@ void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
 
   InputEvent msg(eventid);
   msg.SetKeyCode(key);
-
-  {
-    std::lock_guard<std::mutex> lock(input_evt_lock);
-    input_evt_messages_.push_back(msg);
-  }
+  input_evt_messages_.push_back(msg);
 }
 
 void on_text(GLFWwindow *w, uint32_t codepoint)
 {
   InputEvent msg(InputEvents::kOnText);
   msg.SetCodepoint(codepoint);
-
-  {
-    std::lock_guard<std::mutex> lock(input_evt_lock);
-    input_evt_messages_.push_back(msg);
-  }
+  input_evt_messages_.push_back(msg);
 }
 
 void on_cursormove(GLFWwindow *w, double xpos, double ypos)
@@ -115,10 +107,7 @@ void on_cursormove(GLFWwindow *w, double xpos, double ypos)
     cursor_y = cursor_y / GRAPHIC->height() * window_y;
   }
   msg.SetPosition((int)(cursor_x + 0.5), (int)(cursor_y + 0.5));
-  {
-    std::lock_guard<std::mutex> lock(input_evt_lock);
-    input_evt_messages_.push_back(msg);
-  }
+  input_evt_messages_.push_back(msg);
 }
 
 void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
@@ -127,15 +116,12 @@ void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
     action == GLFW_PRESS ? InputEvents::kOnCursorDown : InputEvents::kOnCursorClick
   );
   msg.SetPosition((int)(cursor_x + 0.5), (int)(cursor_y + 0.5));
-
-  {
-    std::lock_guard<std::mutex> lock(input_evt_lock);
-    input_evt_messages_.push_back(msg);
-  }
+  input_evt_messages_.push_back(msg);
 }
 
 void on_joystick_conn(int jid, int event)
 {
+  // XXX: need lock_guard as joystick event is asynchronous
 }
 
 void on_window_resize(GLFWwindow *w, int width, int height)
