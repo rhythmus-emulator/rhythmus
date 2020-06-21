@@ -225,7 +225,7 @@ void FontBitmap::SetToReadOnly()
 // --------------------------------- class Font
 
 Font::Font()
-  : is_ttf_font_(true), ftface_count_(0), ftstroker_(0),
+  : is_ttf_font_(false), ftface_count_(0), ftstroker_(0),
     error_code_(0), error_msg_(0)
 {
   memset(&ftface_, 0, sizeof(ftface_));
@@ -368,6 +368,7 @@ void Font::LoadFreetypeFont(const std::string &path)
     return;
   }
 
+  is_ttf_font_ = true;
   const int fntsize_pixel = fontattr_.height;
 
   /* Create freetype fonts */
@@ -389,6 +390,7 @@ void Font::LoadFreetypeFont(const std::string &path)
       error_code_ = -1;
       return;
     }
+    // TODO: cleanup previous loaded ftface
     // Set size to load glyphs as
     FT_Set_Pixel_Sizes((FT_Face)ftface_[i], 0, fntsize_pixel);
   }

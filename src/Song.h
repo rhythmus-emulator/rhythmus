@@ -4,7 +4,6 @@
 #include <string>
 #include <memory>
 #include <vector>
-#include <atomic>
 #include <mutex>
 #include <list>
 #include <vector>
@@ -77,16 +76,13 @@ class SongList
 public:
   SongList();
 
+  static void Initialize();
+  static void Cleanup();
+
   void Load();
   void Save();
   void Clear();
-
-  /* @brief invalidate song entry. used for multi-threading. */
-  void LoadInvalidationList();
-
-  /* @brief clear song invalidation entry
-   * (for canceling songlist loading) */
-  void ClearInvalidationList();
+  void Update();
 
   /**
    * @brief
@@ -107,24 +103,31 @@ public:
   const SongListData& get(int i) const;
   SongListData get(int i);
 
-  static SongList& getInstance();
+  friend class SongListUpdateTask;
 
 private:
   // loaded songs
   std::vector<SongListData> songs_;
 
-  // songs to invalidate
-  std::list<std::string> invalidate_list_;
-  std::mutex invalidate_list_mutex_, songlist_mutex_;
+  // songs to load
+  std::mutex loading_mutex_;
   std::string current_loading_file_;
   int total_inval_size_;
-  std::atomic<int> load_count_;
+  int load_count_;
   bool is_loaded_;
 
+  // song directory
   std::string song_dir_;
 
+  // sqlite handler
   static int sql_dummy_callback(void*, int argc, char **argv, char **colnames);
   static int sql_songlist_callback(void*, int argc, char **argv, char **colnames);
+
+  void StartSongLoading(const std::string &name);
+  void PushChart(const SongListData &dat);
+  void FinishSongLoading();
 };
+
+extern SongList *SONGLIST;
 
 }

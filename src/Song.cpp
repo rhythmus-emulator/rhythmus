@@ -85,15 +85,123 @@ int StringToSorttype(const char* s)
 class SongListUpdateTask : public Task
 {
 public:
+  SongListUpdateTask(const std::string &path) :
+    fullpath_(path), is_aborted_(false)
+  {
+    // separate songpath and chartname, if necessary.
+    if (path.find('|') != std::string::npos)
+    {
+      Split(path, '|', filepath_, chartname_);
+    }
+    else
+    {
+      filepath_ = path;
+    }
+  }
+
   virtual void run()
   {
-    SongList::getInstance().LoadInvalidationList();
+    SongListData dat;
+
+    // check is aborted..?
+    if (is_aborted_)
+      return;
+
+    // attempt song loading.
+    SongAuto song = std::make_shared<rparser::Song>();
+    if (!song->Open(filepath_))
+    {
+      // XXX: make status for Task ..?
+      Logger::Error("Song read failure: %s", fullpath_.c_str());
+      return;
+    }
+
+    SONGLIST->StartSongLoading(filepath_);
+
+    dat.songpath = filepath_;
+    for (unsigned i = 0; i < song->GetChartCount(); ++i)
+    {
+      rparser::Chart* c = nullptr;
+      if (chartname_.empty())
+      {
+        c = song->GetChart(i);
+      }
+      else
+      {
+        c = song->GetChart(chartname_);
+        if (!c) break;
+        i = INT_MAX; // kind of trick to exit for loop instantly
+      }
+      c->Update();
+      auto &meta = c->GetMetaData();
+      dat.chartpath = c->GetFilename();
+      dat.id = c->GetHash();
+      // TODO: automatically extract subtitle from title
+      dat.title = meta.title;
+      dat.subtitle = meta.subtitle;
+      dat.artist = meta.artist;
+      dat.subartist = meta.subartist;
+      dat.genre = meta.genre;
+      switch (c->GetChartType())
+      {
+      case rparser::CHARTTYPE::IIDXSP:
+        dat.type = Gamemode::kGamemodeIIDXSP;
+        break;
+      case rparser::CHARTTYPE::IIDXDP:
+        dat.type = Gamemode::kGamemodeIIDXDP;
+        break;
+      case rparser::CHARTTYPE::Popn:
+        dat.type = Gamemode::kGamemodePopn;
+        break;
+      default:
+        dat.type = Gamemode::kGamemodeNone;
+      }
+      switch (meta.difficulty)
+      {
+      case 2:
+        dat.difficulty = Difficulty::kDifficultyNormal;
+        break;
+      case 3:
+        dat.difficulty = Difficulty::kDifficultyHard;
+        break;
+      case 4:
+        dat.difficulty = Difficulty::kDifficultyEx;
+        break;
+      case 5:
+        dat.difficulty = Difficulty::kDifficultyInsane;
+        break;
+      case 0: /* XXX: what is the exact meaning of DIFF 0? */
+      case 1:
+      default:
+        dat.difficulty = Difficulty::kDifficultyEasy;
+        break;
+      }
+      dat.level = meta.level;
+      dat.judgediff = meta.difficulty;
+      dat.modified_date = 0; // TODO
+      dat.notecount = static_cast<int>(c->GetScoreableNoteCount());
+      dat.length_ms = static_cast<int>(c->GetSongLastObjectTime() * 1000);
+      dat.is_longnote = c->HasLongnote();
+      dat.is_backspin = 0; // TODO
+      dat.bpm_max = (int)c->GetTimingSegmentData().GetMaxBpm();
+      dat.bpm_min = (int)c->GetTimingSegmentData().GetMinBpm();
+
+      SONGLIST->PushChart(dat);
+    }
+
+    SONGLIST->FinishSongLoading();
   }
 
   virtual void abort()
   {
-    SongList::getInstance().ClearInvalidationList();
+    is_aborted_ = true;
   }
+
+private:
+  std::string fullpath_;
+  std::string filepath_;
+  std::string chartname_;
+  bool is_aborted_;
 };
 
 // ----------------------------- class SongList
@@ -105,10 +213,22 @@ SongList::SongList()
   Clear();
 }
 
+void SongList::Initialize()
+{
+  R_ASSERT(SONGLIST == 0);
+  SONGLIST = new SongList();
+}
+
+void SongList::Cleanup()
+{
+  delete SONGLIST;
+  SONGLIST = nullptr;
+}
+
 void SongList::Load()
 {
   Clear();
-  is_loaded_ = false;
+  is_loaded_ = true;    /* consider all song is loaded in initial state. */
 
   /* (path, timestamp) key */
   std::map<std::string, int> mod_dir;
@@ -137,7 +257,7 @@ void SongList::Load()
   sqlite3 *db = 0;
   int rc = sqlite3_open("../system/song.db", &db);
   if (rc) {
-    std::cout << "Cannot open song database, regarding as database file is missing." << std::endl;
+    Logger::Error("Cannot open song database, regarding as database file is missing.");
   } else
   {
     // Load all previously loaded songs
@@ -150,14 +270,14 @@ void SongList::Load()
       &SongList::sql_songlist_callback, this, &errmsg);
     if (rc != SQLITE_OK)
     {
-      std::cerr << "Failed to query song database, maybe corrupted? (" << errmsg << ")" << std::endl;
+      Logger::Error("Failed to query song database, maybe corrupted? (%s)", errmsg);
       sqlite3_free(db);
     }
     sqlite3_close(db);
 
     // mark hit count to check a song should be loaded
     // - also check current song is invalid or not.
-    //   if invalid, it will removed from array...
+    //   if invalid, it would be removed from array...
     std::vector<SongListData> songs_new;
     for (auto& s : songs_)
     {
@@ -181,20 +301,15 @@ void SongList::Load()
   // * songs_ : contains all confirmed chart lists (don't need to be reloaded)
   // * songcheck : hit_count == 0 if song is new, which means need to be (re)loaded.
 
-  // 3. Now prepare invalidate song list and load with worker thread
+  // 3. Now create all invalidate song list into Task
   for (auto &check : songcheck)
   {
     if (check.hit_count == 0)
-      invalidate_list_.push_back(check.songpath);
-  }
-  total_inval_size_ = invalidate_list_.size();
-  EventManager::SendEvent("SongListLoaded");
-
-  size_t thread_count_ = TaskPool::getInstance().GetPoolSize();
-  for (size_t i = 0; i < thread_count_; ++i)
-  {
-    Task* t = new SongListUpdateTask();
-    TaskPool::getInstance().EnqueueTask(t);
+    {
+      Task* t = new SongListUpdateTask(check.songpath);
+      TaskPool::getInstance().EnqueueTask(t);
+      is_loaded_ = false;   /* Song is not loaded yet in this state! */
+    }
   }
 }
 
@@ -304,135 +419,18 @@ void SongList::Clear()
   total_inval_size_ = 0;
   load_count_ = 0;
   songs_.clear();
-  invalidate_list_.clear();
 }
 
-void SongList::LoadInvalidationList()
+void SongList::Update()
 {
-  std::string filepath;
-  std::string chartname;
-
-  while (true)
-  {
-    {
-      // get song name safely.
-      // if empty, then exit loop.
-      std::lock_guard<std::mutex> lock(invalidate_list_mutex_);
-      if (invalidate_list_.empty())
-      {
-        break;
-      }
-      std::string path = invalidate_list_.front();
-      invalidate_list_.pop_front();
-      current_loading_file_ = path;
-      // separate songpath and chartname, if necessary.
-      if (path.find('|') != std::string::npos)
-      {
-        Split(path, '|', filepath, chartname);
-      }
-      else
-      {
-        filepath = path;
-      }
-    }
-
-    // attempt song loading.
-    SongAuto song = std::make_shared<rparser::Song>();
-    if (!song->Open(filepath))
-    {
-      load_count_++;
-      break;
-    }
-    SongListData dat;
-    dat.songpath = filepath;
-    for (unsigned i = 0; i < song->GetChartCount(); ++i)
-    {
-      rparser::Chart* c = nullptr;
-      if (chartname.empty())
-      {
-        c = song->GetChart(i);
-      }
-      else
-      {
-        c = song->GetChart(chartname);
-        if (!c) break;
-        i = INT_MAX; // kind of trick to exit for loop instantly
-      }
-      c->Update();
-      auto &meta = c->GetMetaData();
-      dat.chartpath = c->GetFilename();
-      dat.id = c->GetHash();
-      // TODO: automatically extract subtitle from title
-      dat.title = meta.title;
-      dat.subtitle = meta.subtitle;
-      dat.artist = meta.artist;
-      dat.subartist = meta.subartist;
-      dat.genre = meta.genre;
-      switch (c->GetChartType())
-      {
-      case rparser::CHARTTYPE::IIDXSP:
-        dat.type = Gamemode::kGamemodeIIDXSP;
-        break;
-      case rparser::CHARTTYPE::IIDXDP:
-        dat.type = Gamemode::kGamemodeIIDXDP;
-        break;
-      case rparser::CHARTTYPE::Popn:
-        dat.type = Gamemode::kGamemodePopn;
-        break;
-      default:
-        dat.type = Gamemode::kGamemodeNone;
-      }
-      switch (meta.difficulty)
-      {
-      case 2:
-        dat.difficulty = Difficulty::kDifficultyNormal;
-        break;
-      case 3:
-        dat.difficulty = Difficulty::kDifficultyHard;
-        break;
-      case 4:
-        dat.difficulty = Difficulty::kDifficultyEx;
-        break;
-      case 5:
-        dat.difficulty = Difficulty::kDifficultyInsane;
-        break;
-      case 0: /* XXX: what is the exact meaning of DIFF 0? */
-      case 1:
-      default:
-        dat.difficulty = Difficulty::kDifficultyEasy;
-        break;
-      }
-      dat.level = meta.level;
-      dat.judgediff = meta.difficulty;
-      dat.modified_date = 0; // TODO
-      dat.notecount = static_cast<int>(c->GetScoreableNoteCount());
-      dat.length_ms = static_cast<int>(c->GetSongLastObjectTime() * 1000);
-      dat.is_longnote = c->HasLongnote();
-      dat.is_backspin = 0; // TODO
-      dat.bpm_max = (int)c->GetTimingSegmentData().GetMaxBpm();
-      dat.bpm_min = (int)c->GetTimingSegmentData().GetMinBpm();
-
-      {
-        std::lock_guard<std::mutex> lock(songlist_mutex_);
-        songs_.push_back(dat);
-      }
-    }
-
-    load_count_++;
-  }
-
   // check if invalidate list is done.
   // if so, mark as all loaded
-  if (invalidate_list_.empty())
+  if (total_inval_size_ == load_count_ && !is_loaded_)
   {
     is_loaded_ = true;
+    Save();
+    EventManager::SendEvent("SongListLoaded");
   }
-}
-
-void SongList::ClearInvalidationList()
-{
-  std::lock_guard<std::mutex> lock(invalidate_list_mutex_);
-  invalidate_list_.clear();
 }
 
 void SongList::LoadFileIntoSongList(const std::string& songpath, const std::string& chartname)
@@ -451,8 +449,9 @@ void SongList::LoadFileIntoSongList(const std::string& songpath, const std::stri
   std::string path = songpath;
   if (!chartname.empty())
     path += "|" + chartname;
-  invalidate_list_.push_back(path);
-  LoadInvalidationList();
+  is_loaded_ = false;
+  Task* t = new SongListUpdateTask(path);
+  TaskPool::getInstance().EnqueueTask(t);
 }
 
 int SongList::sql_dummy_callback(void*, int argc, char **argv, char **colnames)
@@ -478,16 +477,31 @@ std::string SongList::get_loading_filename() const
   return current_loading_file_;
 }
 
-SongList& SongList::getInstance()
-{
-  static SongList s;
-  return s;
-}
-
 size_t SongList::size() { return songs_.size(); }
 std::vector<SongListData>::iterator SongList::begin() { return songs_.begin(); }
 std::vector<SongListData>::iterator SongList::end() { return songs_.end(); }
 const SongListData& SongList::get(int i) const { return songs_[i]; }
 SongListData SongList::get(int i) { return songs_[i]; }
+
+void SongList::StartSongLoading(const std::string &name)
+{
+  std::lock_guard<std::mutex> lock(loading_mutex_);
+  current_loading_file_ = name;
+}
+
+void SongList::PushChart(const SongListData &dat)
+{
+  std::lock_guard<std::mutex> lock(loading_mutex_);
+  songs_.push_back(dat);
+}
+
+void SongList::FinishSongLoading()
+{
+  std::lock_guard<std::mutex> lock(loading_mutex_);
+  load_count_++;
+}
+
+
+SongList *SONGLIST = nullptr;
 
 }

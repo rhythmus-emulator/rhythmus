@@ -10,8 +10,6 @@
  *
  * BaseObject itself is AST tree, which parses command to
  * fill rendering semantic.
- * TODO: detach parser from BaseObject and change input like
- * xml tree, instead of string command.
  *
  * Also, coordinate related utility functions declared in
  * this file.

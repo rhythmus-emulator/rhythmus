@@ -188,18 +188,6 @@ void Text::SetFont(const MetricGroup &m)
     SetText(text_);
 }
 
-/* @DEPRECIATED */
-void Text::SetSystemFont()
-{
-  MetricGroup sysfont;
-  sysfont.set("path", "system/default.ttf");
-  sysfont.set("size", 16);
-  sysfont.set("color", "#FFFFFFFF");
-  sysfont.set("border-size", 1);
-  sysfont.set("border-color", "#FF000000");
-  SetFont(sysfont);
-}
-
 void Text::ClearFont()
 {
   if (font_)

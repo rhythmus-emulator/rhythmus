@@ -203,8 +203,8 @@ bool Graphic::IsVsyncUpdatable() const
   return Timer::GetUncachedSystemTime() > next_render_time_;
 }
 
-int Graphic::width() const { return video_mode_.height; }
-int Graphic::height() const { return video_mode_.width; }
+int Graphic::width() const { return video_mode_.width; }
+int Graphic::height() const { return video_mode_.height; }
 
 unsigned Graphic::CreateRenderTarget(unsigned &width, unsigned &height)
 {

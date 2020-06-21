@@ -9,7 +9,7 @@ namespace rhythmus
 
 void OptionItem::Load(const MetricGroup &metric)
 {
-  option_name.SetSystemFont();  // XXX: fix later
+  option_name.SetFont("SystemFont");  // XXX: fix later
   ListViewItem::Load(metric);
 }
 

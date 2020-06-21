@@ -694,14 +694,14 @@ void ResourceManager::Initialize()
   /* Cache system directory hierarchy. */
   PATH->CacheSystemDirectory();
 
-#if 0
-  // TODO: Create Font.System metrics for default system font.
-  a.name = "System";
-  a.SetPath("system/default.ttf");
-  a.SetSize(5);
-  a.color = 0xFFFFFFFF;
-  gFontAttributes[a.name] = a;
-#endif
+  MetricGroup sysfont;
+  sysfont.set("name", "SystemFont");
+  sysfont.set("path", "system/default.ttf");
+  sysfont.set("size", 16);
+  sysfont.set("color", "#FFFFFFFF");
+  sysfont.set("border-size", 1);
+  sysfont.set("border-color", "#FF000000");
+  FONTMAN->CacheFontMetrics(sysfont);
 }
 
 void ResourceManager::Cleanup()

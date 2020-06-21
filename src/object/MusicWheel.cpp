@@ -420,7 +420,7 @@ void MusicWheel::RebuildData()
     bool pass_filter;
 
     // gamemode filtering
-    for (auto &song : SongList::getInstance())
+    for (auto &song : *SONGLIST)
     {
       pass_filter = true;
       switch (filter_.gamemode)

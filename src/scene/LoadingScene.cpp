@@ -12,12 +12,13 @@ LoadingScene::LoadingScene()
   set_name("LoadingScene");
   next_scene_ = "SelectScene";
   prev_scene_ = "Exit";
+  SetOwnChildren(false);
 }
 
 void LoadingScene::LoadScene()
 {
-  current_file_text_.SetSystemFont();
-  message_text_.SetSystemFont();
+  current_file_text_.SetFont("SystemFont");
+  message_text_.SetFont("SystemFont");
 
   message_text_.SetPos(
     320, GRAPHIC->height() - 160
@@ -37,7 +38,7 @@ void LoadingScene::LoadScene()
 
 void LoadingScene::StartScene()
 {
-  SongList::getInstance().Load();
+  SONGLIST->Load();
   message_text_.SetText("Song loading ...");
 }
 
@@ -50,7 +51,7 @@ void LoadingScene::ProcessInputEvent(const InputEvent& e)
       // cancel all loading thread and exit game instantly
       Game::Exit();
     }
-    else if (SongList::getInstance().is_loaded())
+    else if (SONGLIST->is_loaded())
     {
       CloseScene(true);
     }
@@ -61,10 +62,10 @@ void LoadingScene::doUpdate(double)
 {
   static bool check_loaded = false;
 
-  if (!SongList::getInstance().is_loaded())
+  if (!SONGLIST->is_loaded())
   {
-    std::string path = SongList::getInstance().get_loading_filename();
-    int prog = static_cast<int>(SongList::getInstance().get_progress() * 100);
+    std::string path = SONGLIST->get_loading_filename();
+    int prog = static_cast<int>(SONGLIST->get_progress() * 100);
     message_text_.SetText("Loading " + std::to_string(prog) + "%");
     current_file_text_.SetText(path);
   }

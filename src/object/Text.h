@@ -25,7 +25,6 @@ public:
 
   void SetFont(const std::string& path);
   void SetFont(const MetricGroup &m);
-  void SetSystemFont();
   void ClearFont();
 
   float GetTextWidth() const;

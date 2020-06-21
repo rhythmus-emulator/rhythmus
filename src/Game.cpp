@@ -131,6 +131,7 @@ void Game::Initialize()
   Timer::Initialize();
   PlayerManager::Initialize();
   SceneManager::Initialize();
+  SongList::Initialize();
 
   GAME->is_running_ = true;
 }
@@ -198,10 +199,14 @@ void Game::Loop()
 /* @warn do not call this method directly! call Exit() instead. */
 void Game::Cleanup()
 {
+  // Stop all working tasks first
+  TaskPool::getInstance().ClearTaskPool();
+
+  // Delete all other elements
   SongPlayer::getInstance().Stop();
+  SongList::Cleanup();
   PlayerManager::Cleanup();
   SceneManager::Cleanup();
-  TaskPool::getInstance().ClearTaskPool();
   Graphic::DeleteGraphic();
   SoundDriver::getInstance().Destroy();
   Setting::Save();
