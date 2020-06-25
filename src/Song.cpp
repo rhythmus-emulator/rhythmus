@@ -111,82 +111,88 @@ public:
     SongAuto song = std::make_shared<rparser::Song>();
     if (!song->Open(filepath_))
     {
-      // XXX: make status for Task ..?
+      // Actually this is not a song that this program can read,
+      // but is necessary to be cached to prevent parsing it next time again.
+      // So don't return here, call PushChart(..) with unknown type,
+      // and invoke FinishSongLoading().
       Logger::Error("Song read failure: %s", fullpath_.c_str());
-      return;
+
+      // TODO: call PushChart(..) with unknown type
     }
-
-    SONGLIST->StartSongLoading(filepath_);
-
-    dat.songpath = filepath_;
-    for (unsigned i = 0; i < song->GetChartCount(); ++i)
+    else
     {
-      rparser::Chart* c = nullptr;
-      if (chartname_.empty())
-      {
-        c = song->GetChart(i);
-      }
-      else
-      {
-        c = song->GetChart(chartname_);
-        if (!c) break;
-        i = INT_MAX; // kind of trick to exit for loop instantly
-      }
-      c->Update();
-      auto &meta = c->GetMetaData();
-      dat.chartpath = c->GetFilename();
-      dat.id = c->GetHash();
-      // TODO: automatically extract subtitle from title
-      dat.title = meta.title;
-      dat.subtitle = meta.subtitle;
-      dat.artist = meta.artist;
-      dat.subartist = meta.subartist;
-      dat.genre = meta.genre;
-      switch (c->GetChartType())
-      {
-      case rparser::CHARTTYPE::IIDXSP:
-        dat.type = Gamemode::kGamemodeIIDXSP;
-        break;
-      case rparser::CHARTTYPE::IIDXDP:
-        dat.type = Gamemode::kGamemodeIIDXDP;
-        break;
-      case rparser::CHARTTYPE::Popn:
-        dat.type = Gamemode::kGamemodePopn;
-        break;
-      default:
-        dat.type = Gamemode::kGamemodeNone;
-      }
-      switch (meta.difficulty)
-      {
-      case 2:
-        dat.difficulty = Difficulty::kDifficultyNormal;
-        break;
-      case 3:
-        dat.difficulty = Difficulty::kDifficultyHard;
-        break;
-      case 4:
-        dat.difficulty = Difficulty::kDifficultyEx;
-        break;
-      case 5:
-        dat.difficulty = Difficulty::kDifficultyInsane;
-        break;
-      case 0: /* XXX: what is the exact meaning of DIFF 0? */
-      case 1:
-      default:
-        dat.difficulty = Difficulty::kDifficultyEasy;
-        break;
-      }
-      dat.level = meta.level;
-      dat.judgediff = meta.difficulty;
-      dat.modified_date = 0; // TODO
-      dat.notecount = static_cast<int>(c->GetScoreableNoteCount());
-      dat.length_ms = static_cast<int>(c->GetSongLastObjectTime() * 1000);
-      dat.is_longnote = c->HasLongnote();
-      dat.is_backspin = 0; // TODO
-      dat.bpm_max = (int)c->GetTimingSegmentData().GetMaxBpm();
-      dat.bpm_min = (int)c->GetTimingSegmentData().GetMinBpm();
+      SONGLIST->StartSongLoading(filepath_);
 
-      SONGLIST->PushChart(dat);
+      dat.songpath = filepath_;
+      for (unsigned i = 0; i < song->GetChartCount(); ++i)
+      {
+        rparser::Chart* c = nullptr;
+        if (chartname_.empty())
+        {
+          c = song->GetChart(i);
+        }
+        else
+        {
+          c = song->GetChart(chartname_);
+          if (!c) break;
+          i = INT_MAX; // kind of trick to exit for loop instantly
+        }
+        c->Update();
+        auto &meta = c->GetMetaData();
+        dat.chartpath = c->GetFilename();
+        dat.id = c->GetHash();
+        // TODO: automatically extract subtitle from title
+        dat.title = meta.title;
+        dat.subtitle = meta.subtitle;
+        dat.artist = meta.artist;
+        dat.subartist = meta.subartist;
+        dat.genre = meta.genre;
+        switch (c->GetChartType())
+        {
+        case rparser::CHARTTYPE::IIDXSP:
+          dat.type = Gamemode::kGamemodeIIDXSP;
+          break;
+        case rparser::CHARTTYPE::IIDXDP:
+          dat.type = Gamemode::kGamemodeIIDXDP;
+          break;
+        case rparser::CHARTTYPE::Popn:
+          dat.type = Gamemode::kGamemodePopn;
+          break;
+        default:
+          dat.type = Gamemode::kGamemodeNone;
+        }
+        switch (meta.difficulty)
+        {
+        case 2:
+          dat.difficulty = Difficulty::kDifficultyNormal;
+          break;
+        case 3:
+          dat.difficulty = Difficulty::kDifficultyHard;
+          break;
+        case 4:
+          dat.difficulty = Difficulty::kDifficultyEx;
+          break;
+        case 5:
+          dat.difficulty = Difficulty::kDifficultyInsane;
+          break;
+        case 0: /* XXX: what is the exact meaning of DIFF 0? */
+        case 1:
+        default:
+          dat.difficulty = Difficulty::kDifficultyEasy;
+          break;
+        }
+        dat.level = meta.level;
+        dat.judgediff = meta.difficulty;
+        dat.modified_date = 0; // TODO
+        dat.notecount = static_cast<int>(c->GetScoreableNoteCount());
+        dat.length_ms = static_cast<int>(c->GetSongLastObjectTime() * 1000);
+        dat.is_longnote = c->HasLongnote();
+        dat.is_backspin = 0; // TODO
+        dat.bpm_max = (int)c->GetTimingSegmentData().GetMaxBpm();
+        dat.bpm_min = (int)c->GetTimingSegmentData().GetMinBpm();
+
+        SONGLIST->PushChart(dat);
+      }
     }
 
     SONGLIST->FinishSongLoading();
@@ -236,6 +242,7 @@ void SongList::Load()
   std::map<std::string, int> mod_db;
   std::vector<SongInvalidateData> songcheck;
   std::vector<DirItem> dir;
+  std::vector<Task*> tasklist;
 
   // 1. attempt to read file/folder list in directory
   if (!GetDirectoryItems(song_dir_, dir))
@@ -301,15 +308,19 @@ void SongList::Load()
   // * songcheck : hit_count == 0 if song is new, which means need to be (re)loaded.
 
   // 3. Now create all invalidate song list into Task
+  is_loaded_ = true;
   for (auto &check : songcheck)
   {
     if (check.hit_count == 0)
     {
       Task* t = new SongListUpdateTask(check.songpath);
-      TaskPool::getInstance().EnqueueTask(t);
+      tasklist.push_back(t);
+      total_inval_size_++;
       is_loaded_ = false;   /* Song is not loaded yet in this state! */
     }
   }
+  for (auto *t : tasklist)
+    TaskPool::getInstance().EnqueueTask(t);
 }
 
 int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **colnames)
@@ -420,18 +431,6 @@ void SongList::Clear()
   songs_.clear();
 }
 
-void SongList::Update()
-{
-  // check if invalidate list is done.
-  // if so, mark as all loaded
-  if (total_inval_size_ == load_count_ && !is_loaded_)
-  {
-    is_loaded_ = true;
-    Save();
-    EventManager::SendEvent("SongListLoaded");
-  }
-}
-
 void SongList::LoadFileIntoSongList(const std::string& songpath, const std::string& chartname)
 {
   // check a file is already exists
@@ -494,10 +493,17 @@ void SongList::PushChart(const SongListData &dat)
   songs_.push_back(dat);
 }
 
+/* @warn This function should be thread-safe */
 void SongList::FinishSongLoading()
 {
   std::lock_guard<std::mutex> lock(loading_mutex_);
   load_count_++;
+  if (load_count_ == total_inval_size_)
+  {
+    is_loaded_ = true;
+    Save();
+    EventManager::SendEvent("SongListLoaded");
+  }
 }
 
 
