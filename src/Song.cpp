@@ -239,9 +239,7 @@ void SongList::Load()
   // 1. attempt to read file/folder list in directory
   if (!GetDirectoryItems(song_dir_, dir))
   {
-    std::cerr <<
-      "SongList: Failed to generate songlist. make sure song library path exists." <<
-      std::endl;
+    Logger::Error("SongList: Failed to generate songlist. make sure song library path exists.");
     return;
   }
   for (auto& d : dir)

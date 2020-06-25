@@ -440,7 +440,7 @@ void BaseObject::Load(const MetricGroup &m)
     Hide();
 
     // Hide if not tweening.
-    hide_if_not_tweening_ = true;
+    //hide_if_not_tweening_ = true;
   }
 #endif
 
@@ -881,8 +881,8 @@ void BaseObject::SetLR2DST(const std::string &cmd)
 
     SetCenter(center);
 
-    // if first loop, then set loop.
-    if (i == 0 && loop >= 0)
+    // if first loop with time == 0, then set loop.
+    if (i == 0 && time == 0 && loop >= 0)
       ani.SetLoop(loop);
   }
 

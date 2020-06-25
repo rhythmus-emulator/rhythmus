@@ -1,5 +1,6 @@
 #include "LoadingScene.h"
 #include "Song.h"
+#include "Logger.h"
 #include <iostream>
 
 namespace rhythmus
@@ -74,7 +75,7 @@ void LoadingScene::doUpdate(double)
     if (!check_loaded)
     {
       // run first time when loading is done
-      std::cout << "LoadingScene: Song list loading finished." << std::endl;
+      Logger::Info("LoadingScene: Song list loading finished.");
       EventManager::SendEvent("SongListLoadFinished");
 
       current_file_text_.ClearText();
