@@ -188,7 +188,10 @@ bool FontBitmap::Update()
 bool FontBitmap::IsWritable(int w, int h) const
 {
   if (!bitmap_) return false;
-  if (cur_x_ + w > width_ && cur_y_ + cur_line_height_ + h > height_) return false;
+  /* if x is already bigger then width,
+   * and next line height also overflows,
+   * then cannot write to this bitmap. */
+  if (cur_x_ + w >= width_ && cur_y_ + cur_line_height_ + h >= height_) return false;
   else return true;
 }
 
@@ -608,6 +611,8 @@ inline void __blend(unsigned char result[4], unsigned char fg[4], unsigned char 
 
 void Font::PrepareText(const std::string& s)
 {
+  // TODO: stress test; PrepareText(...) as much as it can
+  // (bitmap overflow check)
   uint32_t s32[1024];
   int s32len = 0;
 
@@ -629,10 +634,24 @@ void Font::PrepareGlyph(uint32_t *chrs, int count)
   FT_BitmapGlyph bglyph;
   FontGlyph g;
   unsigned gindex;
+  bool existing_glyph = false;
   bool found_glyph = false;
 
   for (int i = 0; i < count; ++i)
   {
+    /* check is glyph exists already before rendering */
+    existing_glyph = false;
+    for (auto &g : glyph_)
+    {
+      if (g.codepoint == chrs[i])
+      {
+        existing_glyph = true;
+        break;
+      }
+    }
+    if (existing_glyph)
+      continue;
+
     /* Use FT_Load_Char, which calls and find Glyph index internally ... */
     /* and... just ignore failed character. */
     found_glyph = false;

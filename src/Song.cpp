@@ -209,7 +209,8 @@ private:
 SongList::SongList()
   : is_loaded_(false)
 {
-  song_dir_ = "../songs";
+  song_dir_ = "./songs";
+  song_db_ = "./system/song.db";
   Clear();
 }
 
@@ -253,7 +254,7 @@ void SongList::Load()
 
   // 2. attempt to load DB
   sqlite3 *db = 0;
-  int rc = sqlite3_open("../system/song.db", &db);
+  int rc = sqlite3_open(song_db_.c_str(), &db);
   if (rc) {
     Logger::Error("Cannot open song database, regarding as database file is missing.");
   } else
@@ -343,7 +344,7 @@ int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **c
 void SongList::Save()
 {
   sqlite3 *db = 0;
-  int rc = sqlite3_open("../system/song.db", &db);
+  int rc = sqlite3_open(song_db_.c_str(), &db);
   if (rc) {
     std::cout << "Cannot save song database." << std::endl;
   }

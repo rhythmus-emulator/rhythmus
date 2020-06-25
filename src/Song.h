@@ -119,6 +119,9 @@ private:
   // song directory
   std::string song_dir_;
 
+  // song db directory
+  std::string song_db_;
+
   // sqlite handler
   static int sql_dummy_callback(void*, int argc, char **argv, char **colnames);
   static int sql_songlist_callback(void*, int argc, char **argv, char **colnames);
