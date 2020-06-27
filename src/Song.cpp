@@ -115,7 +115,7 @@ public:
       // but is necessary to be cached to prevent parsing it next time again.
       // So don't return here, call PushChart(..) with unknown type,
       // and invoke FinishSongLoading().
-      Logger::Error("Song read failure: %s", fullpath_.c_str());
+      Logger::Error("Songlist read failure: %s", fullpath_.c_str());
 
       // TODO: call PushChart(..) with unknown type
     }
@@ -321,34 +321,47 @@ void SongList::Load()
   }
   for (auto *t : tasklist)
     TaskPool::getInstance().EnqueueTask(t);
+
+  Logger::Info("Songlist reload status: File found(song) %u, "
+               "Cache found(chart) %u, Validate(song) %u",
+    dir.size(), songs_.size(), total_inval_size_);
 }
 
 int SongList::sql_songlist_callback(void *_self, int argc, char **argv, char **colnames)
 {
   SongList *self = static_cast<SongList*>(_self);
-  for (int i = 0; i < argc; ++i)
+  SongListData sdata;
+
+  sdata.id = argv[0];
+  sdata.title = argv[1];
+  sdata.subtitle = argv[2];
+  sdata.artist = argv[3];
+  sdata.subartist = argv[4];
+  sdata.genre = argv[5];
+  sdata.songpath = argv[6];
+  sdata.chartpath = argv[7];
+  sdata.type = atoi(argv[8]);
+  sdata.level = atoi(argv[9]);
+  sdata.judgediff = atoi(argv[10]);
+  sdata.modified_date = atoi(argv[11]);
+  sdata.notecount = atoi(argv[12]);
+  sdata.length_ms = atoi(argv[13]);
+  sdata.bpm_max = atoi(argv[14]);
+  sdata.bpm_min = atoi(argv[15]);
+  sdata.is_longnote = atoi(argv[16]);
+  sdata.is_backspin = atoi(argv[17]);
+
+  // check is duplicated data already existing
+  for (auto &song : self->songs_)
   {
-    SongListData sdata;
-    sdata.id = argv[0];
-    sdata.title = argv[1];
-    sdata.subtitle = argv[2];
-    sdata.artist = argv[3];
-    sdata.subartist = argv[4];
-    sdata.genre = argv[5];
-    sdata.songpath = argv[6];
-    sdata.chartpath = argv[7];
-    sdata.type = atoi(argv[8]);
-    sdata.level = atoi(argv[9]);
-    sdata.judgediff = atoi(argv[10]);
-    sdata.modified_date = atoi(argv[11]);
-    sdata.notecount = atoi(argv[12]);
-    sdata.length_ms = atoi(argv[13]);
-    sdata.bpm_max = atoi(argv[14]);
-    sdata.bpm_min = atoi(argv[15]);
-    sdata.is_longnote = atoi(argv[16]);
-    sdata.is_backspin = atoi(argv[17]);
-    self->songs_.push_back(sdata);
+    if (song.id == sdata.id && song.songpath == sdata.songpath && song.chartpath == sdata.chartpath)
+    {
+      Logger::Warn("Song data is already exists (%s, %s)", song.songpath.c_str(), song.chartpath.c_str());
+      return -1;
+    }
   }
+
+  self->songs_.push_back(sdata);
   return 0;
 }
 
@@ -406,8 +419,8 @@ void SongList::Save()
         "'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s',"
         "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d"
         ");",
-        s.id, s.title, s.subtitle, s.artist, s.subartist, s.genre,
-        s.songpath, s.chartpath, s.type, s.level, s.judgediff, s.modified_date,
+        s.id.c_str(), s.title.c_str(), s.subtitle.c_str(), s.artist.c_str(), s.subartist.c_str(), s.genre.c_str(),
+        s.songpath.c_str(), s.chartpath.c_str(), s.type, s.level, s.judgediff, s.modified_date,
         s.notecount, s.length_ms, s.bpm_max, s.bpm_min, s.is_longnote, s.is_backspin
       );
       sqlite3_exec(db, sql.c_str(),
