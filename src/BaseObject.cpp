@@ -257,7 +257,7 @@ bool Animation::is_tweening() const
 // ----------------------------------------------------------- class BaseObject
 
 BaseObject::BaseObject()
-  : parent_(nullptr), own_children_(false), propagate_event_(false), draw_order_(0), position_prop_(0),
+  : parent_(nullptr), is_allocated_(false), propagate_event_(false), draw_order_(0), position_prop_(0),
     set_xy_as_center_(false), visible_(true), hide_if_not_tweening_(false),
     ignore_visible_group_(true), is_draggable_(false), is_focusable_(false),
     is_focused_(false), is_hovered_(false), do_clipping_(false)
@@ -273,7 +273,7 @@ BaseObject::BaseObject()
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
-  : name_(obj.name_), own_children_(obj.own_children_), propagate_event_(obj.propagate_event_),
+  : name_(obj.name_), is_allocated_(obj.is_allocated_), propagate_event_(obj.propagate_event_),
     parent_(obj.parent_), ani_(obj.ani_), draw_order_(obj.draw_order_),
     set_xy_as_center_(obj.set_xy_as_center_), visible_(obj.visible_),
     hide_if_not_tweening_(obj.hide_if_not_tweening_),
@@ -285,14 +285,11 @@ BaseObject::BaseObject(const BaseObject& obj)
   memcpy(visible_flag_, obj.visible_flag_, sizeof(visible_flag_));
   bg_color_ = obj.bg_color_;
 
-  if (own_children_)
+  for (auto *o : obj.children_)
   {
-    for (auto *o : obj.children_)
+    if (o->is_allocated_)
       AddChild(o->clone());
-  }
-  else
-  {
-    for (auto *o : obj.children_)
+    else
       AddChild(o);
   }
 }
@@ -328,16 +325,14 @@ void BaseObject::RemoveChild(BaseObject* obj)
   auto it = std::find(children_.begin(), children_.end(), obj);
   if (it != children_.end())
     children_.erase(it);
-  if (own_children_) delete obj;
+  if (obj->is_allocated_) delete obj;
 }
 
 void BaseObject::RemoveAllChild()
 {
-  if (own_children_)
-  {
-    for (auto *o : children_)
+  for (auto *o : children_)
+    if (o->is_allocated_)
       delete o;
-  }
   children_.clear();
 }
 
@@ -380,9 +375,9 @@ BaseObject *BaseObject::GetChildAtPosition(float x, float y)
   return nullptr;
 }
 
-void BaseObject::SetOwnChildren(bool v)
+bool BaseObject::IsHeapAllocated(bool v) const
 {
-  own_children_ = v;
+  return is_allocated_;
 }
 
 
@@ -445,14 +440,11 @@ void BaseObject::Load(const MetricGroup &m)
 #endif
 
   // Check for children objects to load
-  if (own_children_)
+  for (auto i = m.group_cbegin(); i != m.group_cend(); ++i)
   {
-    for (auto i = m.group_cbegin(); i != m.group_cend(); ++i)
-    {
-      BaseObject *obj = CreateObject(*i);
-      if (obj)
-        AddChild(obj);
-    }
+    BaseObject *obj = CreateObject(*i);
+    if (obj)
+      AddChild(obj);
   }
 }
 
@@ -1397,7 +1389,7 @@ private:
   const MetricGroup *m;
 };
 
-BaseObject* CreateObject(const MetricGroup &m)
+BaseObject* BaseObject::CreateObject(const MetricGroup &m)
 {
   std::string type;
   BaseObject *object = nullptr;
@@ -1453,7 +1445,6 @@ BaseObject* CreateObject(const MetricGroup &m)
   {
     // TODO: use BaseFrame() object
     object = new BaseObject();
-    object->SetOwnChildren(true);
   }
   else if (type == "line")
   {
@@ -1487,6 +1478,7 @@ BaseObject* CreateObject(const MetricGroup &m)
     }
 #endif
     object->Load(m);
+    object->is_allocated_ = true;
   }
 
   return object;

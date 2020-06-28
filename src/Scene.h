@@ -55,13 +55,13 @@ public:
   Scene();
   virtual ~Scene() { };
 
+  virtual void Load(const MetricGroup& m);
+
   /* @brief load scene resource and prepare to start */
   virtual void LoadScene();
 
   /* @brief start scene e.g. start scene timer */
   virtual void StartScene();
-
-  virtual void Load(const MetricGroup& m);
 
   /* @brief triggered when scene is finished
    * @warn it does not mean changing scene instantly,

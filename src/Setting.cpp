@@ -45,6 +45,12 @@ void MetricGroup::set_name(const std::string &name)
 
 bool MetricGroup::Load(const std::string &path)
 {
+  if (path.empty())
+  {
+    Logger::Error("Error: attempt to load empty metric file");
+    return false;
+  }
+
   clear();
   std::string ext = Upper(GetExtension(path));
 
@@ -64,13 +70,9 @@ bool MetricGroup::Load(const std::string &path)
   {
     return LoadFromLR2SoundMetric(path);
   }
-  else
-  {
-    Logger::Error("Error: not supported Metrics file: %s", path.c_str());
-    return false;
-  }
 
-  /* unreachable section */
+  Logger::Error("Error: not supported Metrics file: %s", path.c_str());
+  return false;
 }
 
 bool MetricGroup::LoadFromXml(const std::string &path)
@@ -81,7 +83,8 @@ bool MetricGroup::LoadFromXml(const std::string &path)
 
   if (doc.LoadFile(path.c_str()) != XML_SUCCESS)
   {
-    throw FileNotFoundException(path);
+    //throw FileNotFoundException(path);
+    return false;
   }
 
   XMLElement* root = doc.RootElement();
@@ -335,7 +338,7 @@ bool MetricGroup::LoadFromLR2Metric(const std::string &path)
 
   // default settings
   // use itself as script file.
-  set("script", path);
+  //set("script", path);
   set("sort", true);
 
 
@@ -400,7 +403,7 @@ bool MetricGroup::LoadFromLR2Metric(const std::string &path)
         // set attribute name / value.
         const char *const *attrname = (*lr2desc)->attributes;
         value_reg_index = 1;
-        while (attrname)
+        while (*attrname)
         {
           const char *attr_ptr = *attrname;
           std::string *string_to_fill = &attr_name;
@@ -412,9 +415,10 @@ bool MetricGroup::LoadFromLR2Metric(const std::string &path)
             {
               // fill attr_value
               string_to_fill = &attr_value;
+              ++attr_ptr;
               continue;
             }
-            if (*attr_ptr == '%')
+            else if (*attr_ptr == '%')
             {
               // resolve format specifier
               int reg_idx = 0;
@@ -623,6 +627,16 @@ MetricGroup& MetricGroup::add_group(const std::string &group_name)
 
 MetricGroup* MetricGroup::get_group(const std::string &group_name)
 {
+  size_t p = group_name.find_first_of('.');
+  if (p != std::string::npos)
+  {
+    std::string g1, g2;
+    g1 = group_name.substr(0, p);
+    g2 = group_name.substr(p + 1);
+    const MetricGroup *group = get_group(g1);
+    if (group) group->get_group(g2);
+    else return nullptr;
+  }
   for (auto ii = children_.rbegin(); ii != children_.rend(); ++ii)
     if (ii->name() == group_name) return &*ii;
   return nullptr;
@@ -635,6 +649,16 @@ const MetricGroup* MetricGroup::get_group(const std::string &group_name) const
 
 const std::string &MetricGroup::get_str(const std::string &key) const
 {
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    R_ASSERT(group);
+    return group->get_str(subkeyname);
+  }
   auto it = attr_.find(key);
   R_ASSERT_M(it != attr_.end(), "ThemeMetric Key not found: " + key);
   return it->second;
@@ -644,6 +668,16 @@ template <>
 bool MetricGroup::get(const std::string &key) const
 {
   const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    R_ASSERT(group);
+    return group->get<bool>(subkeyname);
+  }
   return get_str(key) == "true";
 }
 
@@ -651,6 +685,16 @@ template <>
 int MetricGroup::get(const std::string &key) const
 {
   const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    R_ASSERT(group);
+    return group->get<int>(subkeyname);
+  }
   return atoi(get_str(key).c_str());
 }
 
@@ -658,6 +702,16 @@ template <>
 size_t MetricGroup::get(const std::string &key) const
 {
   const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    R_ASSERT(group);
+    return group->get<size_t>(subkeyname);
+  }
   return (size_t)get<int>(key);
 }
 
@@ -665,6 +719,16 @@ template <>
 double MetricGroup::get(const std::string &key) const
 {
   const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    R_ASSERT(group);
+    return group->get<double>(subkeyname);
+  }
   return atof(get_str(key).c_str());
 }
 
@@ -672,6 +736,16 @@ template <>
 float MetricGroup::get(const std::string &key) const
 {
   const_cast<MetricGroup*>(this)->resolve_fallback(key);
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    R_ASSERT(group);
+    return group->get<float>(subkeyname);
+  }
   return (float)get<double>(key);
 }
 
@@ -698,6 +772,16 @@ std::vector<int> Metric::get(const std::string &key) const
 
 bool MetricGroup::get_safe(const std::string &key, std::string &v) const
 {
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    if (group) return group->get_safe(subkeyname, v);
+    else return false;
+  }
   auto it = attr_.find(key);
   if (it != attr_.end())
     v = it->second;
@@ -706,6 +790,16 @@ bool MetricGroup::get_safe(const std::string &key, std::string &v) const
 
 bool MetricGroup::get_safe(const std::string &key, int &v) const
 {
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    if (group) return group->get_safe(subkeyname, v);
+    else return false;
+  }
   auto it = attr_.find(key);
   if (it != attr_.end())
     v = atoi(it->second.c_str());
@@ -714,6 +808,16 @@ bool MetricGroup::get_safe(const std::string &key, int &v) const
 
 bool MetricGroup::get_safe(const std::string &key, unsigned &v) const
 {
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    if (group) return group->get_safe(subkeyname, v);
+    else return false;
+  }
   auto it = attr_.find(key);
   if (it != attr_.end())
     v = (unsigned)atoi(it->second.c_str());
@@ -722,6 +826,16 @@ bool MetricGroup::get_safe(const std::string &key, unsigned &v) const
 
 bool MetricGroup::get_safe(const std::string &key, double &v) const
 {
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    if (group) return group->get_safe(subkeyname, v);
+    else return false;
+  }
   auto it = attr_.find(key);
   if (it != attr_.end())
     v = atof(it->second.c_str());
@@ -730,6 +844,16 @@ bool MetricGroup::get_safe(const std::string &key, double &v) const
 
 bool MetricGroup::get_safe(const std::string &key, float &v) const
 {
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    if (group) return group->get_safe(subkeyname, v);
+    else return false;
+  }
   auto it = attr_.find(key);
   if (it != attr_.end())
     v = (float)atof(it->second.c_str());
@@ -738,6 +862,16 @@ bool MetricGroup::get_safe(const std::string &key, float &v) const
 
 bool MetricGroup::get_safe(const std::string &key, bool &v) const
 {
+  size_t p = key.find_last_of('.');
+  if (p != std::string::npos)
+  {
+    std::string subgroupname, subkeyname;
+    subgroupname = key.substr(0, p);
+    subkeyname = key.substr(p + 1);
+    const MetricGroup *group = get_group(subgroupname);
+    if (group) return group->get_safe(subkeyname, v);
+    else return false;
+  }
   auto it = attr_.find(key);
   if (it != attr_.end())
     v = (Upper(it->second) == "TRUE");
@@ -1394,13 +1528,13 @@ void PreferenceList::Load(const MetricGroup &m)
 
   // Load values
   for (auto i : pref_i_)
-    m.get_safe(i.first, **i.second);
+    m.get_safe(format_string("%s.value", i.first.c_str()), **i.second);
   for (auto i : pref_f_)
-    m.get_safe(i.first, **i.second);
+    m.get_safe(format_string("%s.value", i.first.c_str()), **i.second);
   for (auto i : pref_s_)
-    m.get_safe(i.first, **i.second);
+    m.get_safe(format_string("%s.value", i.first.c_str()), **i.second);
   for (auto i : pref_file_)
-    m.get_safe(i.first, **i.second);
+    m.get_safe(format_string("%s.value", i.first.c_str()), **i.second);
 }
 
 bool PreferenceList::Save(const std::string &path)

@@ -13,7 +13,6 @@ LoadingScene::LoadingScene()
   set_name("LoadingScene");
   next_scene_ = "SelectScene";
   prev_scene_ = "Exit";
-  SetOwnChildren(false);
 }
 
 void LoadingScene::LoadScene()

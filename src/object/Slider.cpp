@@ -37,7 +37,6 @@ void Slider::Refresh()
 
 void Slider::Load(const MetricGroup &metric)
 {
-  SetOwnChildren(false);
   cursor_.SetDraggable(true);
   AddChild(&cursor_);
   BaseObject::Load(metric);

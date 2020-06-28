@@ -2,6 +2,7 @@
 #include "SongPlayer.h"
 #include "Timer.h"
 #include "Util.h"
+#include "Logger.h"
 #include "Error.h"
 #include "common.h"
 
@@ -24,7 +25,7 @@ Player::Player(PlayerTypes player_type, const std::string& player_name)
   if (player_type_ == PlayerTypes::kPlayerGuest)
     is_guest_ = true;
 
-  config_name_ = format_string("player/%s", player_name_.c_str());
+  playrecord_name_ = format_string("player/%s", player_name_.c_str());
 }
 
 Player::~Player()
@@ -43,12 +44,11 @@ void Player::Load()
   // Unload if property already loaded
   ClosePlayRecords();
 
-  std::string filepath = config_name_ + ".xml";
+  std::string filepath = playrecord_name_ + ".xml";
   MetricGroup config;
   if (!config.Load(filepath))
   {
-    std::cerr << "Cannot load player preference (maybe default setting will used)"
-      << std::endl;
+    Logger::Warn("Cannot load player preference (maybe default setting will used)");
   }
 
   // TODO: load specific setting metric suitable for play config.
@@ -75,10 +75,10 @@ void Player::Load()
 
 void Player::LoadPlayRecords()
 {
-  std::string filepath = config_name_ + ".db";
+  std::string filepath = playrecord_name_ + ".db";
   int rc = sqlite3_open(filepath.c_str(), &pr_db_);
   if (rc) {
-    std::cout << "Cannot save song database." << std::endl;
+    Logger::Warn("Cannot save playrecord database.");
     ClosePlayRecords();
   }
   else
@@ -86,7 +86,7 @@ void Player::LoadPlayRecords()
     char *errmsg;
 
     // create player record schema
-    sqlite3_exec(pr_db_,
+    rc = sqlite3_exec(pr_db_,
       "CREATE TABLE IF NOT EXISTS record("
       "id CHAR(128) PRIMARY KEY,"
       "name CHAR(512) NOT NULL,"
@@ -106,17 +106,20 @@ void Player::LoadPlayRecords()
       ");",
       &Player::CreateSchemaCallbackFunc, this, &errmsg);
 
+    if (rc != SQLITE_OK)
+      Logger::Error("Failed to create playrecord database (%s)", errmsg);
+
     // load all records
     rc = sqlite3_exec(pr_db_,
       "SELECT id, name, gamemode, timestamp, seed, speed, speed_type, "
       "clear_type, health_type, option, assist, total_note, "
       "miss, pr, bd, gd, gr, pg, playcount, clearcount, failcount "
-      "from songs;",
+      "from record;",
       &Player::PRQueryCallbackFunc, this, &errmsg);
 
     if (rc != SQLITE_OK)
     {
-      std::cerr << "Failed to query song database, maybe corrupted? (" << errmsg << ")" << std::endl;
+      Logger::Error("Failed to query playrecord database, maybe corrupted? (%s)", errmsg);
       ClosePlayRecords();
       return;
     }
@@ -167,7 +170,7 @@ void Player::Save()
   if (is_guest_)
     return;
 
-  std::string filepath = config_name_ + ".xml";
+  std::string filepath = playrecord_name_ + ".xml";
   MetricGroup curr_config;
 
   curr_config.set("running_combo", running_combo_);
@@ -205,7 +208,7 @@ void Player::UpdatePlayRecord(const PlayRecord &pr)
     "'%s', '%s', %d, %d, %d, %d, %d, %d, %d, %d, "
     "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, "
     "%d, %d, %d"
-    ");", pr.id, pr.chartname, pr.gamemode, pr.timestamp, pr.seed,
+    ");", pr.id.c_str(), pr.chartname.c_str(), pr.gamemode, pr.timestamp, pr.seed,
     pr.speed, pr.speed_type, pr.clear_type, pr.health_type, pr.option,
     pr.assist, pr.total_note, pr.miss, pr.pr, pr.bd,
     pr.gd, pr.gr, pr.pg, pr.maxcombo, pr.score,
@@ -216,7 +219,7 @@ void Player::UpdatePlayRecord(const PlayRecord &pr)
 
   if (rc != SQLITE_OK)
   {
-    std::cerr << "Error while saving playrecord " << pr.id << " (" << errmsg << ")" << std::endl;
+    Logger::Error("Error while saving playrecord %s (%s)", pr.id.c_str(), errmsg);
     return;
   }
 }
@@ -355,7 +358,7 @@ void PlayerManager::CreatePlayer(PlayerTypes playertype,
       return;
     }
   }
-  std::cerr << "Failed to add new player: Player slot is full" << std::endl;
+  Logger::Error("Failed to add new player: Player slot is full");
 }
 
 void PlayerManager::CreatePlayer(PlayerTypes playertype,

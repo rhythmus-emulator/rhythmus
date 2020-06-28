@@ -60,7 +60,7 @@ public:
 private:
   std::string player_name_;
   PlayerTypes player_type_;
-  std::string config_name_;
+  std::string playrecord_name_;
 
   /* context for current play */
   int gamemode_;

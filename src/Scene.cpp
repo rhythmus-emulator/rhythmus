@@ -129,7 +129,66 @@ Scene::Scene()
     do_sort_objects_(false), enable_caching_(false),
     focused_object_(nullptr)
 {
-  SetOwnChildren(true);
+}
+
+void Scene::Load(const MetricGroup& m)
+{
+  int draw_index = 0;
+
+  if (m.exist("sort"))
+    do_sort_objects_ = m.get<bool>("sort");
+  if (m.exist("Timeout"))
+    next_scene_time_ = m.get<int>("Timeout");
+  if (m.exist("InputStart"))
+    begin_input_time_ = m.get<int>("InputStart");
+  if (m.exist("FadeOut"))
+    fade_out_time_ = m.get<int>("FadeOut");
+  if (m.exist("FadeIn"))
+    fade_in_time_ = m.get<int>("FadeIn");
+
+
+  // Load scene specific script if necessary.
+  if (m.exist("script"))
+  {
+    Script::Execute(m.get_str("script"));
+  }
+
+
+  // Register fonts to global THEMEMETRIC
+  for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
+  {
+    if (c->name() == "font")
+    {
+      FONTMAN->CacheFontMetrics(*c);
+    }
+  }
+
+
+  // Create objects.
+  for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
+  {
+    BaseObject *o = CreateObject(*c);
+    if (o)
+      AddChild(o);
+    else
+    {
+      o = FindChildByName(c->name());
+      if (o) 
+        o->Load(*c);
+    }
+    if (o)
+      o->SetDrawOrder(++draw_index);
+  }
+
+
+  // sort object if necessary.
+  if (do_sort_objects_)
+  {
+    std::stable_sort(children_.begin(), children_.end(),
+      [](BaseObject *o1, BaseObject *o2) {
+      return o1->GetDrawOrder() < o2->GetDrawOrder();
+    });
+  }
 }
 
 void Scene::LoadScene()
@@ -200,56 +259,6 @@ void Scene::StartScene()
 
   // Now trigger actual 'OnLoad' event.
   EventManager::SendEvent("Load");
-}
-
-void Scene::Load(const MetricGroup& m)
-{
-  if (m.exist("sort"))
-    do_sort_objects_ = m.get<bool>("sort");
-  if (m.exist("Timeout"))
-    next_scene_time_ = m.get<int>("Timeout");
-  if (m.exist("InputStart"))
-    begin_input_time_ = m.get<int>("InputStart");
-  if (m.exist("FadeOut"))
-    fade_out_time_ = m.get<int>("FadeOut");
-  if (m.exist("FadeIn"))
-    fade_in_time_ = m.get<int>("FadeIn");
-
-
-  // Load scene specific script if necessary.
-  if (m.exist("script"))
-  {
-    Script::Execute(m.get_str("script"));
-  }
-
-
-  // Register fonts to global THEMEMETRIC
-  for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
-  {
-    if (c->name() == "font")
-    {
-      FONTMAN->CacheFontMetrics(*c);
-    }
-  }
-
-
-  // Create objects.
-  for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
-  {
-    BaseObject *o = CreateObject(*c);
-    if (o)
-      AddChild(o);
-  }
-
-
-  // sort object if necessary.
-  if (do_sort_objects_)
-  {
-    std::sort(children_.begin(), children_.end(),
-      [](BaseObject *o1, BaseObject *o2) {
-      return o1->GetDrawOrder() < o2->GetDrawOrder();
-    });
-  }
 }
 
 void Scene::FadeOutScene(bool next)

@@ -21,14 +21,12 @@ static inline float modf_pos(float a, float b)
 ListViewItem::ListViewItem() :
   dataindex_(0), data_(nullptr), is_focused_(false)
 {
-  own_children_ = true; // TODO: use BaseFrame()
 }
 
 ListViewItem::ListViewItem(const ListViewItem& obj) : BaseObject(obj),
   dataindex_(obj.dataindex_), data_(obj.data_), is_focused_(false),
   item_dprop_(obj.item_dprop_)
 {
-  own_children_ = true; // TODO: use BaseFrame()
 }
 
 BaseObject *ListViewItem::clone()
@@ -96,7 +94,6 @@ ListView::ListView()
 {
   memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
   pos_expr_param_.curve_level = 1.0;
-  own_children_ = true; // TODO: use BaseFrame()
 }
 
 ListView::~ListView()

@@ -16,7 +16,6 @@ Dialog::~Dialog() {}
 void Dialog::Load(const MetricGroup &metric)
 {
   // Add childs with fixed member
-  SetOwnChildren(false);
   AddChild(&background_);
   AddChild(&title_);
   AddChild(&text_);

@@ -153,7 +153,7 @@ public:
   BaseObject* get_parent();
   BaseObject* GetLastChild();
   BaseObject *GetChildAtPosition(float x, float y);
-  void SetOwnChildren(bool v);
+  bool IsHeapAllocated(bool v) const;
 
   // Load object property from metric info.
   virtual void Load(const MetricGroup &m);
@@ -277,6 +277,12 @@ public:
     return o.get_name() == get_name();
   }
 
+  /**
+   * @brief
+   * An utility function for creating general object from metric.
+   */
+  static BaseObject* CreateObject(const MetricGroup &m);
+
 private:
 
 protected:
@@ -287,8 +293,8 @@ protected:
   // children for rendering (not released when this object is destructed)
   std::vector<BaseObject*> children_;
 
-  // is this object owns children? if so, delete them when Removed.
-  bool own_children_;
+  // is this object allocated from heap memory?
+  bool is_allocated_;
 
   // propagate event(command) to children?
   bool propagate_event_;
@@ -357,12 +363,5 @@ protected:
 
   virtual const CommandFnMap& GetCommandFnMap();
 };
-
-
-/**
- * @brief
- * An util function for creating general object from metric.
- */
-BaseObject* CreateObject(const MetricGroup &m);
 
 }
