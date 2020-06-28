@@ -154,12 +154,23 @@ void Scene::Load(const MetricGroup& m)
   }
 
 
-  // Register fonts to global THEMEMETRIC
+  // Basic commands with scene metric
+  // - Register fonts to global THEMEMETRIC
+  // - Register path alias for image/font.
+  // - Load flags and options for current scene (current?)
   for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
   {
     if (c->name() == "font")
     {
       FONTMAN->CacheFontMetrics(*c);
+    }
+    else if (c->name() == "path")
+    {
+      std::string name, path;
+      c->get_safe("name", name);
+      c->get_safe("path", path);
+      if (path != "CONTINUE")
+        PATH->SetAlias(name, path);
     }
   }
 

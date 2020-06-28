@@ -158,10 +158,10 @@ static const LR2CommandDesc **GetLR2CommandDesc()
   { "CUSTOMFILE", "option", true, {"name", "constraint", "default", 0}, {"type", "file", 0} };
 
   static LR2CommandDesc image =
-  { "IMAGE", "image", false, {"path", 0}, {"name", "image%i", 0} };
+  { "IMAGE", "path", false, {"path", "name:image%i", 0} };
 
   static LR2CommandDesc lr2font =
-  { "LR2FONT", "font", false, {"path", 0}, {"name", "font%i", 0} };
+  { "LR2FONT", "path", false, {"path", "name:font%i", 0} };
 
   static LR2CommandDesc font =
   { "FONT", "FONT__", false, {"size", "thick", "type", "name", 0}, {0} };
@@ -219,19 +219,19 @@ static const LR2CommandDesc **GetLR2CommandDesc()
   {"lr2dst:%a;%v", 0}, {0} };
 
   static LR2CommandDesc src_number =
-  { "SRC_TEXT", "number", false,
+  { "SRC_NUMBER", "number", false,
   {"lr2src:%v", 0}, {"type", "number", 0} };
 
   static LR2CommandDesc dst_number =
-  { "DST_TEXT", "number", true /* WARN: must use last element */,
+  { "DST_NUMBER", "number", true /* WARN: must use last element */,
   {"lr2dst:%a;%v", 0}, {0} };
 
   static LR2CommandDesc src_slider =
-  { "SRC_TEXT", "slider", false,
+  { "SRC_SLIDER", "slider", false,
   {"lr2src:%v", 0}, {"type", "slider", 0} };
 
   static LR2CommandDesc dst_slider =
-  { "DST_TEXT", "slider", true /* WARN: must use last element */,
+  { "DST_SLIDER", "slider", true /* WARN: must use last element */,
   {"lr2dst:%a;%v", 0}, {0} };
 
   // TODO: bargraph
@@ -475,7 +475,7 @@ bool MetricGroup::LoadFromLR2Metric(const std::string &path)
           // if empty attrname, then don't add it to value (silent)
           if (*attrname)
           {
-            set(*attrname, attr_value.empty()
+            m->set(*attrname, attr_value.empty()
               ? value_reg[value_reg_index]
               : attr_value);
           }
