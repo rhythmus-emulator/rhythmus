@@ -208,7 +208,7 @@ static const LR2CommandDesc **GetLR2CommandDesc()
 
   static LR2CommandDesc dst_sprite =
   { "DST_IMAGE", "sprite", true /* WARN: must use last element */,
-  {"lr2dst:%a;%v", 0}, {0} };
+  {"lr2dst:%a%v", 0}, {0} };
 
   static LR2CommandDesc src_text =
   { "SRC_TEXT", "text", false,
@@ -216,7 +216,7 @@ static const LR2CommandDesc **GetLR2CommandDesc()
 
   static LR2CommandDesc dst_text =
   { "DST_TEXT", "text", true /* WARN: must use last element */,
-  {"lr2dst:%a;%v", 0}, {0} };
+  {"lr2dst:%a%v", 0}, {0} };
 
   static LR2CommandDesc src_number =
   { "SRC_NUMBER", "number", false,
@@ -224,7 +224,7 @@ static const LR2CommandDesc **GetLR2CommandDesc()
 
   static LR2CommandDesc dst_number =
   { "DST_NUMBER", "number", true /* WARN: must use last element */,
-  {"lr2dst:%a;%v", 0}, {0} };
+  {"lr2dst:%a%v", 0}, {0} };
 
   static LR2CommandDesc src_slider =
   { "SRC_SLIDER", "slider", false,
@@ -232,7 +232,7 @@ static const LR2CommandDesc **GetLR2CommandDesc()
 
   static LR2CommandDesc dst_slider =
   { "DST_SLIDER", "slider", true /* WARN: must use last element */,
-  {"lr2dst:%a;%v", 0}, {0} };
+  {"lr2dst:%a%v", 0}, {0} };
 
   // TODO: bargraph
   // TODO: note -- stepmania
@@ -453,8 +453,8 @@ bool MetricGroup::LoadFromLR2Metric(const std::string &path)
               case 'a':
                 // get whole string of previous attribute
                 // (do nothing if attribute not exists)
-                if (exist(attr_name))
-                  *string_to_fill += get_str(attr_name);
+                if (m->exist(attr_name))
+                  *string_to_fill += m->get_str(attr_name) + "|";
                 break;
               case 'v':
                 // get whole original value
@@ -475,7 +475,7 @@ bool MetricGroup::LoadFromLR2Metric(const std::string &path)
           // if empty attrname, then don't add it to value (silent)
           if (*attrname)
           {
-            m->set(*attrname, attr_value.empty()
+            m->set(attr_name, attr_value.empty()
               ? value_reg[value_reg_index]
               : attr_value);
           }

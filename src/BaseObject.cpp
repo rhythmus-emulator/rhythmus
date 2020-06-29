@@ -418,7 +418,7 @@ void BaseObject::Load(const MetricGroup &m)
       const char *sep_d2 = d.c_str();
       while (*sep_d2 && *sep_d2 != '|') sep_d2++;
       std::string d2 = d.substr(0, sep_d2 - d.c_str());
-      CommandArgs args_dst(d2);
+      CommandArgs args_dst(d2, 20, true);
 
       // XXX: move this flag to Sprite,
       // as LR2_TEXT object don't work with this..?

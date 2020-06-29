@@ -80,7 +80,7 @@ void Sprite::LoadLR2SRC(const std::string &lr2src)
   /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
   CommandArgs args(lr2src, 10, true);
 
-  SetImage(args.Get<std::string>(1));
+  SetImage("image" + args.Get<std::string>(1));
 
   Vector4 r{
     args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), args.Get<int>(5)

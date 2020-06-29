@@ -95,7 +95,7 @@ void Text::Load(const MetricGroup &m)
     CommandArgs args(lr2src);
 
     /* fetch font size from lr2dst ... */
-    SetFont(args.Get<std::string>(1));
+    SetFont("font" + args.Get<std::string>(1));
 
     /* track change of text table */
     std::string eventname = "Text" + args.Get<std::string>(2);
