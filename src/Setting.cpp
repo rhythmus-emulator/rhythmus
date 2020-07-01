@@ -448,7 +448,8 @@ bool MetricGroup::LoadFromLR2Metric(const std::string &path)
                 break;
               case 'i':
                 // get command count(index)
-                *string_to_fill += std::to_string(command_count[name]);
+                // \comment start index by zero (subtract 1)
+                *string_to_fill += std::to_string(command_count[name] - 1);
                 break;
               case 'a':
                 // get whole string of previous attribute

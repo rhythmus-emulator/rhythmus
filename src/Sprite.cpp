@@ -208,7 +208,7 @@ void Sprite::doRender()
     int ix = frame_ % sprani_.divx;
     int iy = frame_ / sprani_.divx % sprani_.divy;
     texcrop.x += w * ix;
-    texcrop.y += h * ix;
+    texcrop.y += h * iy;
     texcrop.z = texcrop.x + w;
     texcrop.w = texcrop.y + h;
   }
