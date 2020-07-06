@@ -119,7 +119,7 @@ private:
   double frame_time_;         // eclipsed time of whole animation
   bool is_finished_;
   bool repeat_;
-  unsigned repeat_time_;
+  unsigned repeat_start_time_;
   std::string command;        // commands to be triggered when this tween starts
 };
 

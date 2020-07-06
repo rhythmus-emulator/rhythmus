@@ -92,7 +92,7 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
 
 Animation::Animation(const DrawProperty *initial_state)
   : current_frame_(-1), current_frame_time_(0), frame_time_(0),
-    is_finished_(false), repeat_(false), repeat_time_(0)
+    is_finished_(false), repeat_(false), repeat_start_time_(0)
 {
   if (initial_state)
     AddFrame(*initial_state, 0, EaseTypes::kEaseLinear);
@@ -153,11 +153,12 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
   frame_time_ += ms;
   if (repeat_)
   {
-    const double actual_loop_time = frames_.back().time - (double)repeat_time_;
-    if (actual_loop_time == 0)
-      frame_time_ = std::min(frame_time_, (double)repeat_time_);
-    else if (frame_time_ > repeat_time_)
-      frame_time_ = fmod(frame_time_ - repeat_time_, actual_loop_time) + repeat_time_;
+    const double loop_time = frames_.back().time;
+    const double actual_loop_time = loop_time - (double)repeat_start_time_;
+    if (actual_loop_time <= 0)
+      frame_time_ = std::min(frame_time_, loop_time);
+    else if (frame_time_ > loop_time)
+      frame_time_ = fmod(frame_time_ - loop_time, actual_loop_time) + (double)repeat_start_time_;
     ms = 0;
   }
   for (current_frame_ = -1; current_frame_ < (int)frames_.size() - 1; ++current_frame_)
@@ -219,13 +220,13 @@ void Animation::SetEaseType(int ease_type)
 void Animation::SetLoop(unsigned repeat_start_time)
 {
   repeat_ = true;
-  repeat_time_ = repeat_start_time;
+  repeat_start_time_ = repeat_start_time;
 }
 
 void Animation::DeleteLoop()
 {
   repeat_ = false;
-  repeat_time_ = 0;
+  repeat_start_time_ = 0;
 }
 
 const DrawProperty &Animation::LastFrame() const
@@ -873,8 +874,8 @@ void BaseObject::SetLR2DST(const std::string &cmd)
 
     SetCenter(center);
 
-    // if first loop with time == 0, then set loop.
-    if (i == 0 && time == 0 && loop >= 0)
+    // only loop attribute at first row is valid.
+    if (i == 0 && loop >= 0)
       ani.SetLoop(loop);
   }
 

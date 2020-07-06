@@ -322,7 +322,7 @@ size_t FindUtf8FirstByteReversed(const std::string &str)
   const char *p = s + str.size() - 1;
   while (p > s)
   {
-    if (*p & 0b11000000 == 0b11000000 || *p & 0b10000000 == 0)
+    if ((*p & 0b11000000 == 0b11000000) || (*p & 0b10000000 == 0))
       break;
     --p;
   }
@@ -458,21 +458,29 @@ template <>
 int CommandArgs::Get(size_t arg_index) const
 {
   if (kMaxCommandArgs <= arg_index) return 0;
-  return atoi(args_[arg_index]);
+  const char *c = args_[arg_index];
+  if (!c) return 0;
+  else if (*c == '-') return -atoi(c + 1);
+  else return atoi(c);
 }
 
 template <>
 size_t CommandArgs::Get(size_t arg_index) const
 {
   if (kMaxCommandArgs <= arg_index) return 0;
-  return (size_t)atoi(args_[arg_index]);
+  const char *c = args_[arg_index];
+  if (!c) return 0;
+  else return (size_t)atol(c);
 }
 
 template <>
 double CommandArgs::Get(size_t arg_index) const
 {
   if (kMaxCommandArgs <= arg_index) return 0;
-  return atof(args_[arg_index]);
+  const char *c = args_[arg_index];
+  if (!c) return 0;
+  else if (*c == '-') return -atof(c + 1);
+  else return atof(c);
 }
 
 template <>
@@ -486,13 +494,13 @@ template <>
 std::string CommandArgs::Get(size_t arg_index) const
 {
   if (kMaxCommandArgs <= arg_index) return "";
-  return args_[arg_index];
+  return args_[arg_index] ? args_[arg_index] : "";
 }
 
 const char* CommandArgs::Get_str(size_t arg_index) const
 {
   if (kMaxCommandArgs <= arg_index) return "";
-  return args_[arg_index];
+  return args_[arg_index] ? args_[arg_index] : "";
 }
 
 size_t CommandArgs::size() const { return len_; }

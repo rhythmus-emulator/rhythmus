@@ -67,11 +67,20 @@ void Sprite::Load(const MetricGroup& metric)
   if (metric.exist("lr2src"))
   {
     std::string lr2src;
+    std::string lr2dst;
+    CommandArgs cmds, params;
     metric.get_safe("lr2src", lr2src);
     LoadLR2SRC(lr2src);
+
+    metric.get_safe("lr2dst", lr2dst);
+    cmds.set_separator('|');
+    cmds.Parse(lr2dst);
+    params.set_separator(',');
+    params.Parse(cmds.Get_str(0), 20, true);
+
+    // TODO: load resource id
+    blending_ = params.Get<int>(11);
   }
-  // TODO: load blending from lr2dst property
-  // TODO: load resource id
 #endif
 }
 
