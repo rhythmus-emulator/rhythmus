@@ -2,6 +2,7 @@
 #include "Util.h"
 #include "KeyPool.h"
 #include "config.h"
+#include <sstream>
 
 namespace rhythmus
 {
@@ -52,6 +53,16 @@ void Button::Load(const MetricGroup &metric)
     sprani_.duration = 0;
   }
 #endif
+}
+
+const char* Button::type() const { return "Button"; }
+
+std::string Button::toString() const
+{
+  std::stringstream ss;
+  ss << "panel: " << panel_ << std::endl;
+  ss << "button_id: " << button_id_ << std::endl;
+  return BaseObject::toString() + ss.str();
 }
 
 }

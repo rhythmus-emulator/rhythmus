@@ -226,6 +226,22 @@ static const LR2CommandDesc **GetLR2CommandDesc()
   { "DST_NUMBER", "number", true /* WARN: must use last element */,
   {"lr2dst:%a%v", 0}, {0} };
 
+  static LR2CommandDesc src_button =
+  { "SRC_BUTTON", "button", false,
+  {"lr2src:%v", 0}, {"type", "button", 0} };
+
+  static LR2CommandDesc dst_button =
+  { "DST_BUTTON", "button", true /* WARN: must use last element */,
+  {"lr2dst:%a%v", 0}, {0} };
+
+  static LR2CommandDesc src_onmouse =
+  { "SRC_ONMOUSE", "onmouse", false,
+  {"lr2src:%v", 0}, {"type", "button", 0} };
+
+  static LR2CommandDesc dst_onmouse =
+  { "DST_ONMOUSE", "onmouse", true /* WARN: must use last element */,
+  {"lr2dst:%a%v", 0}, {0} };
+
   static LR2CommandDesc src_slider =
   { "SRC_SLIDER", "slider", false,
   {"lr2src:%v", 0}, {"type", "slider", 0} };
@@ -264,6 +280,10 @@ static const LR2CommandDesc **GetLR2CommandDesc()
     &dst_text,
     &src_number,
     &dst_number,
+    &src_button,
+    &dst_button,
+    &src_onmouse,
+    &dst_onmouse,
     &src_slider,
     &dst_slider,
     0

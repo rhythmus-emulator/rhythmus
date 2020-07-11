@@ -15,6 +15,9 @@ public:
 
   virtual void Load(const MetricGroup &metric);
 
+  virtual const char* type() const;
+  virtual std::string toString() const;
+
 private:
   // Slider cursor.
   Sprite cursor_;

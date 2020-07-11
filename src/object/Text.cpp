@@ -5,6 +5,7 @@
 #include "Util.h"
 #include "common.h"
 #include "config.h"
+#include <sstream>
 
 RHYTHMUS_NAMESPACE_BEGIN
 
@@ -473,6 +474,27 @@ void Text::doRender()
     GRAPHIC->DrawQuads(&text_render_ctx_.vi[i * 4], (j - i) * 4);
     i = j;
   }
+}
+
+const char* Text::type() const { return "Text"; }
+
+std::string Text::toString() const
+{
+  std::stringstream ss;
+  ss << "text: " << text_ << std::endl;
+  ss << "text width/height: " << text_render_ctx_.width << "," << text_render_ctx_.height << std::endl;
+  ss << "vertex count: " << text_render_ctx_.vi.size() << std::endl;
+  ss << "text fitting: " << text_fitting_ << std::endl;
+  ss << "alignment: " << text_alignment_.x << "," << text_alignment_.y << std::endl;
+  ss << "scale: " << alignment_attrs_.sx << "," << alignment_attrs_.sy << std::endl;
+  ss << "transition: " << alignment_attrs_.tx << "," << alignment_attrs_.ty << std::endl;
+  ss << "editable: " << editable_ << std::endl;
+  ss << "autosize: " << autosize_ << std::endl;
+  ss << "blending: " << blending_ << std::endl;
+  ss << "set_xy_aligncenter: " << set_xy_aligncenter_ << std::endl;
+  ss << "use_height_as_font_height: " << use_height_as_font_height_ << std::endl;
+  ss << "do_line_breaking: " << do_line_breaking_ << std::endl;
+  return BaseObject::toString();
 }
 
 RHYTHMUS_NAMESPACE_END

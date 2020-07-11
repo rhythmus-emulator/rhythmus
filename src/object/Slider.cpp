@@ -3,6 +3,7 @@
 #include "KeyPool.h"
 #include "Util.h"
 #include "config.h"
+#include <sstream>
 #include <algorithm>
 #include <memory.h>
 
@@ -58,7 +59,7 @@ void Slider::Load(const MetricGroup &metric)
 
     // only load texture path & texture coord for cursor
     // TODO: set cycle for image
-    cursor_.SetImage(args.Get_str(1));
+    cursor_.SetImage(std::string("image") + args.Get_str(1));
     cursor_.SetImageCoord(Rect{
       args.Get<float>(2), args.Get<float>(3),
       args.Get<float>(2) + args.Get<float>(4),
@@ -182,6 +183,23 @@ void Slider::doUpdate(double)
 
 void Slider::doRender()
 {
+}
+
+const char* Slider::type() const { return "Slider"; }
+
+std::string Slider::toString() const
+{
+  std::stringstream ss;
+  ss << "type: " << type_ << std::endl;
+  ss << "maxvalue: " << maxvalue_ << std::endl;
+  ss << "value: " << value_ << std::endl;
+  if (val_ptr_)
+    ss << "val: " << *val_ptr_ << std::endl;
+  else
+    ss << "(val empty)" << std::endl;
+  ss << "editable: " << editable_ << std::endl;
+  ss << "\nCURSOR DESC" << std::endl << cursor_.toString();
+  return BaseObject::toString() + ss.str();
 }
 
 }

@@ -55,4 +55,6 @@ void OnMouse::doRender()
   Sprite::doRender();
 }
 
+const char* OnMouse::type() const { return "OnMouse"; }
+
 }

@@ -37,6 +37,8 @@ public:
   virtual void OnText(uint32_t codepoint);
 
   Font *font();
+  virtual const char* type() const;
+  virtual std::string toString() const;
 
 protected:
   virtual void OnAnimation(DrawProperty &frame);
