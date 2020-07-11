@@ -29,7 +29,12 @@ void SelectScene::LoadScene()
   AddChild(&wheel_);
 
   Scene::LoadScene();
-  EventManager::SendEvent("SelectSceneLoad");
+}
+
+void SelectScene::StartScene()
+{
+  Scene::StartScene();
+  EVENTMAN->SendEvent("SelectSceneLoad");
 }
 
 void SelectScene::CloseScene(bool next)

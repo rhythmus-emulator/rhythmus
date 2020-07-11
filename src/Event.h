@@ -236,11 +236,13 @@ public:
 
   void SetKeyCode(int v);
   void SetPosition(int x, int y);
+  void SetButton(int button);
   void SetCodepoint(uint32_t codepoint);
 
   int KeyCode() const;
   int GetX() const;
   int GetY() const;
+  int GetButton() const;
   uint32_t Codepoint() const;
 
 private:
@@ -309,24 +311,25 @@ private:
 class EventManager
 {
 public:
+  static void Initialize();
+  static void Cleanup();
+
   void Subscribe(EventReceiver& e, const std::string &name);
   void Unsubscribe(EventReceiver& e);
   bool IsSubscribed(EventReceiver& e, const std::string &name);
 
   /* broadcast event to whole subscriber of it. */
   //static void SendEvent(int event_id);
-  static void SendEvent(const std::string& event_name);
-  static void SendEvent(const EventMessage &msg);
-  static void SendEvent(EventMessage &&msg);
+  void SendEvent(const std::string& event_name);
+  void SendEvent(const EventMessage &msg);
+  void SendEvent(EventMessage &&msg);
 
-  /* e.g. Set input event handler */
-  static void Initialize();
+  /* Peek status of input id */
+  int GetStatus(unsigned input_id) const;
 
-  /* Flush all events for each rendering.
-   * Use */
-  static void Flush();
+  /* Flush all events for each rendering. */
+  void Flush();
 
-  static EventManager& getInstance();
 private:
   EventManager();
   ~EventManager();
@@ -363,5 +366,7 @@ private:
   std::list<QueuedEvent> events_;
   bool allow_queue_;
 };
+
+extern EventManager *EVENTMAN;
 
 }

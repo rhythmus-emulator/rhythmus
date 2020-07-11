@@ -67,11 +67,13 @@ double InputEvent::time() const { return time_; }
 
 void InputEvent::SetKeyCode(int v) { argv_[0] = v; }
 void InputEvent::SetPosition(int x, int y) { argv_[0] = x; argv_[1] = y; }
+void InputEvent::SetButton(int button) { argv_[2] = button; }
 void InputEvent::SetCodepoint(uint32_t codepoint) { *(uint32_t*)argv_ = codepoint; }
 
 int InputEvent::KeyCode() const { return argv_[0]; }
 int InputEvent::GetX() const { return argv_[0]; }
 int InputEvent::GetY() const { return argv_[1]; }
+int InputEvent::GetButton() const { return argv_[2]; }
 uint32_t InputEvent::Codepoint() const { return *(uint32_t*)argv_; }
 
 void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
@@ -115,6 +117,7 @@ void on_cursorbutton(GLFWwindow *w, int button, int action, int mods)
   InputEvent msg(
     action == GLFW_PRESS ? InputEvents::kOnCursorDown : InputEvents::kOnCursorClick
   );
+  msg.SetButton(button);
   msg.SetPosition((int)(cursor_x + 0.5), (int)(cursor_y + 0.5));
   input_evt_messages_.push_back(msg);
 }
@@ -167,19 +170,17 @@ EventReceiver::~EventReceiver()
 
 void EventReceiver::SubscribeTo(const std::string &name)
 {
-  EventManager& em = EventManager::getInstance();
   std::lock_guard<std::mutex> l(gSubscribeLock);
   subscription_.push_back(name);
-  em.event_subscribers_[name].insert(this);
+  EVENTMAN->event_subscribers_[name].insert(this);
 }
 
 void EventReceiver::UnsubscribeAll()
 {
-  EventManager& em = EventManager::getInstance();
   std::lock_guard<std::mutex> l(gSubscribeLock);
   for (auto eid : subscription_)
   {
-    auto& sublist = em.event_subscribers_[eid];
+    auto& sublist = EVENTMAN->event_subscribers_[eid];
     if (sublist.find(this) != sublist.end())
       sublist.erase(this);
   }
@@ -380,7 +381,7 @@ public:
 
     /* create EventMap */
     fnmap.AddEvent("Load", [this]() {
-      EventManager::SendEvent("LR0");
+      EVENTMAN->SendEvent("LR0");
     });
 
     /* Events for SelectScene */
@@ -396,15 +397,15 @@ public:
       *F[27] = 0;
       *F[28] = 0;
       *F[29] = 0;
-      EventManager::SendEvent("Panel1Off");
-      EventManager::SendEvent("Panel2Off");
-      EventManager::SendEvent("Panel3Off");
-      EventManager::SendEvent("Panel4Off");
-      EventManager::SendEvent("Panel5Off");
-      EventManager::SendEvent("Panel6Off");
-      EventManager::SendEvent("Panel7Off");
-      EventManager::SendEvent("Panel8Off");
-      EventManager::SendEvent("Panel9Off");
+      EVENTMAN->SendEvent("LR21Off");
+      EVENTMAN->SendEvent("LR22Off");
+      EVENTMAN->SendEvent("LR23Off");
+      EVENTMAN->SendEvent("LR24Off");
+      EVENTMAN->SendEvent("LR25Off");
+      EVENTMAN->SendEvent("LR26Off");
+      EVENTMAN->SendEvent("LR27Off");
+      EVENTMAN->SendEvent("LR28Off");
+      EVENTMAN->SendEvent("LR29Off");
       *F[46] = 0;
       *F[47] = 1;
     });
@@ -529,24 +530,24 @@ public:
 
       *slider[1] = *info_musicwheelpos;
 
-      EventManager::SendEvent("LR10");
-      EventManager::SendEvent("LR11");
-      EventManager::SendEvent("LR14Off");
+      EVENTMAN->SendEvent("LR10");
+      EVENTMAN->SendEvent("LR11");
+      EVENTMAN->SendEvent("LR14Off");
     });
 
     fnmap.AddEvent("SongSelectChangeUp", []() {
-      EventManager::SendEvent("LR12");
+      EVENTMAN->SendEvent("LR12");
     });
 
     fnmap.AddEvent("SongSelectChangeDown", []() {
-      EventManager::SendEvent("LR13");
+      EVENTMAN->SendEvent("LR13");
     });
 
     fnmap.AddEvent("SongSelectChanged", []() {
-      EventManager::SendEvent("LR10Off");
-      EventManager::SendEvent("LR12Off");
-      EventManager::SendEvent("LR13Off");
-      EventManager::SendEvent("LR14");
+      EVENTMAN->SendEvent("LR10Off");
+      EVENTMAN->SendEvent("LR12Off");
+      EVENTMAN->SendEvent("LR13Off");
+      EVENTMAN->SendEvent("LR14");
     });
 
     /* Events for SelectScene Panel */
@@ -581,27 +582,27 @@ public:
       {
         *F[20] = 1;
         *F[20 + panelidx] = 0;
-        EventManager::SendEvent(paneloffop2[panelidx]);
-        EventManager::SendEvent(paneloffop3[panelidx]);
-        EventManager::SendEvent(paneloffevents[panelidx]);
+        EVENTMAN->SendEvent(paneloffop2[panelidx]);
+        EVENTMAN->SendEvent(paneloffop3[panelidx]);
+        EVENTMAN->SendEvent(paneloffevents[panelidx]);
         *button[panelidx] = 0;
       }
       else
       {
         *F[20] = 0;
         *F[20 + panelidx] = 1;
-        EventManager::SendEvent(panelonevents[panelidx]);
-        EventManager::SendEvent(panelonop2[panelidx]);
-        EventManager::SendEvent(panelonop3[panelidx]);
+        EVENTMAN->SendEvent(panelonevents[panelidx]);
+        EVENTMAN->SendEvent(panelonop2[panelidx]);
+        EVENTMAN->SendEvent(panelonop3[panelidx]);
         *button[panelidx] = 1;
         for (int i = 1; i < 10; ++i)
         {
           if (panelidx != i && *F[20 + i] == 1)
           {
             *F[20 + i] = 0;
-            EventManager::SendEvent(paneloffop2[i]);
-            EventManager::SendEvent(paneloffop3[i]);
-            EventManager::SendEvent(paneloffevents[i]);
+            EVENTMAN->SendEvent(paneloffop2[i]);
+            EVENTMAN->SendEvent(paneloffop3[i]);
+            EVENTMAN->SendEvent(paneloffevents[i]);
             *button[i] = 0;
           }
         }
@@ -629,7 +630,7 @@ public:
       wheel->NextDifficultyFilter();
       wheel->RebuildData();
 #endif
-      EventManager::SendEvent("SongSelectChange");
+      EVENTMAN->SendEvent("SongSelectChange");
     });
     fnmap.AddEvent("Click11", []() {
 #if 0
@@ -642,7 +643,7 @@ public:
       wheel->NextGamemodeFilter();
       wheel->RebuildData();
 #endif
-      EventManager::SendEvent("SongSelectChange");
+      EVENTMAN->SendEvent("SongSelectChange");
     });
     fnmap.AddEvent("Click12", []() {
 #if 0
@@ -655,22 +656,22 @@ public:
       wheel->NextSort();
       wheel->RebuildData();
 #endif
-      EventManager::SendEvent("SongSelectChange");
+      EVENTMAN->SendEvent("SongSelectChange");
     });
     /* Events for PlayScene */
     fnmap.AddEvent("PlayLoading", [this]() {
       *F[80] = 1;   // Loading
       *F[81] = 1;   // Loaded
-      EventManager::SendEvent("LR40Off");     // READY
-      EventManager::SendEvent("LR41Off");     // START
+      EVENTMAN->SendEvent("LR40Off");     // READY
+      EVENTMAN->SendEvent("LR41Off");     // START
     });
     fnmap.AddEvent("PlayReady", [this]() {
       *F[80] = 0;   // Loading
       *F[81] = 1;   // Loaded
-      EventManager::SendEvent("LR40");        // READY
+      EVENTMAN->SendEvent("LR40");        // READY
     });
     fnmap.AddEvent("PlayStart", [this]() {
-      EventManager::SendEvent("LR41");        // START
+      EVENTMAN->SendEvent("LR41");        // START
     });
   }
 
@@ -747,6 +748,8 @@ public:
 /* @brief Subscribe to input events */
 void EventManager::Initialize()
 {
+  EVENTMAN = new EventManager();
+
 #if USE_GLFW
   GLFWwindow* window_ = (GLFWwindow*)GAME->handler();
   R_ASSERT(window_);
@@ -765,10 +768,24 @@ void EventManager::Initialize()
 #endif
 }
 
+void EventManager::Cleanup()
+{
+  delete EVENTMAN;
+}
+
+int EventManager::GetStatus(unsigned input_id) const
+{
+  if (input_id >= RI_MOUSE_BUTTON_1)
+    return 0; /* not implemented */
+#if USE_GLFW
+  if (glfwGetKey((GLFWwindow*)GAME->handler(), input_id) == GLFW_PRESS)
+    return 1;
+#endif
+  return 0;
+}
+
 void EventManager::Flush()
 {
-  auto& em = getInstance();
-
   // process cached events until no remaining event to process.
   // swap cache to prevent event lagging while ProcessEvent.
   // Pre-reserve enough space for new event cache to improve performance.
@@ -793,7 +810,7 @@ void EventManager::Flush()
 
     for (const auto& e : evnt)
     {
-      auto &evtlist = getInstance().event_subscribers_[e.GetEventName()];
+      auto &evtlist = EVENTMAN->event_subscribers_[e.GetEventName()];
       for (auto* recv : evtlist)
       {
         if (!recv->OnEvent(e))
@@ -804,12 +821,6 @@ void EventManager::Flush()
     }
     ++event_depth;
   }
-}
-
-EventManager& EventManager::getInstance()
-{
-  static EventManager em;
-  return em;
 }
 
 
@@ -851,7 +862,7 @@ void QueuedEventCache::Update(float delta)
     ii->time_delta -= delta;
     if (ii->time_delta < 0)
     {
-      EventManager::SendEvent(ii->name);
+      EVENTMAN->SendEvent(ii->name);
       auto ii_e = ii;
       ii++;
       events_.erase(ii_e);
@@ -869,7 +880,7 @@ void QueuedEventCache::FlushAll()
 {
   for (auto &e : events_)
   {
-    EventManager::SendEvent(e.name);
+    EVENTMAN->SendEvent(e.name);
   }
   events_.clear();
 }
@@ -879,5 +890,6 @@ void QueuedEventCache::DeleteAll()
   events_.clear();
 }
 
+EventManager *EVENTMAN = nullptr;
 
 }

@@ -277,6 +277,9 @@ public:
     return o.get_name() == get_name();
   }
 
+  virtual const char* type() const;
+  virtual std::string toString() const;
+
   /**
    * @brief
    * An utility function for creating general object from metric.

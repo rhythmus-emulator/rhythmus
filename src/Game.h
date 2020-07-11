@@ -79,6 +79,8 @@ public:
   void AlertMessageBox(const std::string &title, const std::string &text);
   void WarningMessageBox(const std::string &title, const std::string &text);
   void CriticalMessageBox(const std::string &title, const std::string &text);
+  void PopupMessage(const std::string &text);
+  void SetClipBoard(const std::string &s);
   void Pause(bool pause);
   bool IsPaused();
 

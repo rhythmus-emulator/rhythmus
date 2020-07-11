@@ -166,6 +166,26 @@ void SceneManager::OnInputEvent(const InputEvent& e)
   float y = (float)e.GetY();
   BaseObject *curr_hover_object = nullptr;
 
+  // if clicked for debug purpose,
+  // then search for any object collided to cursor.
+  if (EVENTMAN->GetStatus(RI_KEY_LEFT_CONTROL) && EVENTMAN->GetStatus(RI_KEY_LEFT_ALT) &&
+      e.type() == InputEvents::kOnCursorDown && current_scene_)
+  {
+    curr_hover_object = current_scene_->GetChildAtPosition(x, y);
+    if (e.GetButton() == 0)
+    {
+      if (curr_hover_object)
+      {
+        GAME->SetClipBoard(curr_hover_object->toString());
+        //GAME->PopupMessage("Debug Info Copied.");
+      }
+    }
+    else {
+      current_scene_->RemoveChild(curr_hover_object);
+    }
+    return;
+  }
+
   // XXX: on touch event on mobile?
   if (e.type() == InputEvents::kOnCursorMove
    || e.type() == InputEvents::kOnCursorDown)

@@ -32,6 +32,7 @@ enum MessageBoxTypes
   kMbInformation,
   kMbWarning,
   kMbCritical,
+  kMbPopup
 };
 
 /* @brief Container of data of dialog messages. */

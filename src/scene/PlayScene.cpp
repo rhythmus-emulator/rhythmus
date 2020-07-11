@@ -51,13 +51,13 @@ void PlayScene::LoadScene()
 void PlayScene::StartScene()
 {
   // send loading event
-  EventManager::SendEvent("PlayLoading");
+  EVENTMAN->SendEvent("PlayLoading");
 
   // enqueue event: after song resource loading
   {
     SceneTask *task = new SceneTask("songreadytask", [this] {
       // trigger song ready event
-      EventManager::SendEvent("PlayReady");
+      EVENTMAN->SendEvent("PlayReady");
     });
     task->wait_for(theme_play_param_.load_wait_time);
     task->wait_cond([this] {
@@ -70,7 +70,7 @@ void PlayScene::StartScene()
   {
     SceneTask *task = new SceneTask("songplaytask", [this] {
       // trigger song play event
-      EventManager::SendEvent("PlayStart");
+      EVENTMAN->SendEvent("PlayStart");
       SongPlayer::getInstance().Play();
       this->play_status_ = 1;
     });

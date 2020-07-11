@@ -75,7 +75,7 @@ void LoadingScene::doUpdate(double)
     {
       // run first time when loading is done
       Logger::Info("LoadingScene: Song list loading finished.");
-      EventManager::SendEvent("SongListLoadFinished");
+      EVENTMAN->SendEvent("SongListLoadFinished");
 
       current_file_text_.ClearText();
       message_text_.SetText("Ready ...!");

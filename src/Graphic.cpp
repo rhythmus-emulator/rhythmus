@@ -417,7 +417,7 @@ void Graphic::DrawQuad(const VertexInfo *vi) { DrawQuads(vi, 4); }
 // This method should be called every time to calculate FPS
 void Graphic::BeginFrame()
 {
-  frame_delay_weight_avg_ = frame_delay_weight_avg_ * 0.8f + delta() * 1000.0f * 0.2f;
+  frame_delay_weight_avg_ = frame_delay_weight_avg_ * 0.8f + (float)delta() * 1000.0f * 0.2f;
   last_render_time_ = Timer::GetUncachedSystemTime();
 
   // remove rare gap of render time (about 20FPS)

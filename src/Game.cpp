@@ -155,7 +155,7 @@ void Game::Loop()
       {
         Timer::Update();
         InputEventManager::Flush();
-        EventManager::Flush();
+        EVENTMAN->Flush();
 
         /* Song and movie won't be updated if paused. */
         if (!GAME->IsPaused())
@@ -212,6 +212,7 @@ void Game::Cleanup()
   Setting::Save();
   Setting::Cleanup();
   ResourceManager::Cleanup();
+  EventManager::Cleanup();
   Logger::getInstance().FinishLogging();
 
   GAME->DestroyHandler();
@@ -375,6 +376,21 @@ void Game::WarningMessageBox(const std::string &title, const std::string &text)
 void Game::CriticalMessageBox(const std::string &title, const std::string &text)
 {
   MessageBoxData::Add(MessageBoxTypes::kMbCritical, title, text);
+}
+
+void Game::PopupMessage(const std::string &text)
+{
+  MessageBoxData::Add(MessageBoxTypes::kMbPopup, std::string(), text);
+}
+
+void Game::SetClipBoard(const std::string &s)
+{
+#ifdef USE_GLFW
+  if (handler_)
+  {
+    glfwSetClipboardString((GLFWwindow*)handler_, s.c_str());
+  }
+#endif
 }
 
 void Game::Pause(bool pause)

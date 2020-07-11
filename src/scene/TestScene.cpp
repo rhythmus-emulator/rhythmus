@@ -29,7 +29,7 @@ void TestScene::ProcessInputEvent(const InputEvent& e)
       Game::Exit();
       break;
     case RI_KEY_SPACE:
-      EventManager::SendEvent("Load");
+      EVENTMAN->SendEvent("Load");
       break;
     }
   }

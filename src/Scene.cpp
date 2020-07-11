@@ -226,7 +226,7 @@ void Scene::LoadScene()
   //Scene::Load(*METRIC);
 
   // Load start event : Loading
-  EventManager::SendEvent("Loading");
+  EVENTMAN->SendEvent("Loading");
 }
 
 void Scene::StartScene()
@@ -258,10 +258,10 @@ void Scene::StartScene()
   // set scenetime if necessary
   if (next_scene_time_ > 0)
   {
-    EventManager::SendEvent("SceneChange");
+    EVENTMAN->SendEvent("SceneChange");
     SceneTask *task = new SceneTask("timeout", [this] {
       this->CloseScene(true);
-      EventManager::SendEvent("SceneTimeout");
+      EVENTMAN->SendEvent("SceneTimeout");
     });
     task->wait_for(next_scene_time_ - event_time);
     scenetask_.Enqueue(task);
@@ -269,7 +269,7 @@ void Scene::StartScene()
   }
 
   // Now trigger actual 'OnLoad' event.
-  EventManager::SendEvent("Load");
+  EVENTMAN->SendEvent("Load");
 }
 
 void Scene::FadeOutScene(bool next)

@@ -5,6 +5,7 @@
 #include "Util.h"
 #include "common.h"
 #include "config.h"
+#include <sstream>
 
 namespace rhythmus
 {
@@ -231,6 +232,21 @@ void Sprite::doRender()
   GRAPHIC->SetTexture(0, img_->get_texture_ID());
   GRAPHIC->SetBlendMode(blending_);
   GRAPHIC->DrawQuad(vi);
+}
+
+const char* Sprite::type() const { return "sprite"; }
+
+std::string Sprite::toString() const
+{
+  std::stringstream ss;
+  if (img_)
+  {
+    ss << "file: " << img_->get_path() << "," << img_->get_width() << "," << img_->get_height() << std::endl;
+  }
+  else {
+    ss << "file is empty." << std::endl;
+  }
+  return BaseObject::toString() + ss.str();
 }
 
 }

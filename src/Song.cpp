@@ -515,7 +515,7 @@ void SongList::FinishSongLoading()
   {
     is_loaded_ = true;
     Save();
-    EventManager::SendEvent("SongListLoaded");
+    EVENTMAN->SendEvent("SongListLoaded");
   }
 }
 

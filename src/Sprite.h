@@ -50,6 +50,9 @@ public:
   virtual void SetNumber(int number);
   virtual void Refresh();
 
+  virtual const char* type() const;
+  virtual std::string toString() const;
+
 protected:
   Image *img_;
 

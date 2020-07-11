@@ -363,16 +363,16 @@ void MusicWheel::OnSelectChange(const void *data, int direction)
 
 
   // send event
-  EventManager::SendEvent("SongSelectChanged");
+  EVENTMAN->SendEvent("SongSelectChanged");
   if (direction == -1)
-    EventManager::SendEvent("SongSelectChangeUp");
+    EVENTMAN->SendEvent("SongSelectChangeUp");
   else if (direction == 1)
-    EventManager::SendEvent("SongSelectChangeDown");
+    EVENTMAN->SendEvent("SongSelectChangeDown");
 }
 
 void MusicWheel::OnSelectChanged()
 {
-  EventManager::SendEvent("SongSelectChanged");
+  EVENTMAN->SendEvent("SongSelectChanged");
 }
 
 void MusicWheel::NavigateLeft()
@@ -470,7 +470,7 @@ void MusicWheel::RebuildData()
     }
 
     // XXX: need to send in sort invalidation
-    EventManager::SendEvent("SongFilterChanged");
+    EVENTMAN->SendEvent("SongFilterChanged");
   }
 
   // sort data object

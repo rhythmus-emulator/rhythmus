@@ -411,8 +411,6 @@ void BaseObject::Load(const MetricGroup &m)
     la.set_separator(',');
     la.Parse(lr2cmd, 21, true);
 
-    debug_ = la.Get<std::string>(20);
-
     if (m.exist("lr2dst"))
     {
       std::string d = m.get_str("lr2dst");
@@ -437,6 +435,8 @@ void BaseObject::Load(const MetricGroup &m)
 
     // Hide if not tweening.
     //hide_if_not_tweening_ = true;
+    
+    debug_ = "LR2SRC-" + lr2cmd;
   }
 #endif
 
@@ -1320,7 +1320,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
       static_cast<BaseObject*>(o)->SetFocusable(args.Get<int>(0));
     };
     static auto fn_SendEvent = [](void *o, CommandArgs& args, const std::string &) {
-      EventManager::SendEvent(args.Get<std::string>(0));
+      EVENTMAN->SendEvent(args.Get<std::string>(0));
     };
     cmdfnmap_["x"] = fn_X;
     cmdfnmap_["y"] = fn_Y;
@@ -1483,6 +1483,30 @@ BaseObject* BaseObject::CreateObject(const MetricGroup &m)
   }
 
   return object;
+}
+
+const char* BaseObject::type() const { return "BaseObject"; }
+
+std::string BaseObject::toString() const
+{
+  std::stringstream ss;
+  ss << "type: " << type() << std::endl;
+  if (commands_.empty())
+    ss << "events: (empty)" << std::endl;
+  else {
+    ss << "events:" << std::endl;
+    for (auto &i : commands_)
+    {
+      ss << " - " << i.first << " : " << i.second << std::endl;
+    }
+  }
+  ss << "pos (rect) : " << frame_.pos.x << "," << frame_.pos.y << "," << frame_.pos.w << "," << frame_.pos.z << std::endl;
+  ss << "draw_order : " << draw_order_ << std::endl;
+  ss << "is_focusable? : " << (is_focusable_ ? "true" : "false") << std::endl;
+
+  if (!debug_.empty())
+    ss << "debug message: " << debug_ << std::endl;
+  return ss.str();
 }
 
 }
