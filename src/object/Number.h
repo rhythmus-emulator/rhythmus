@@ -25,6 +25,9 @@ public:
   virtual void SetText(const std::string &s);
   virtual void Refresh();
 
+  virtual const char* type() const;
+  virtual std::string toString() const;
+
 private:
   Image *img_;
   Font *font_;

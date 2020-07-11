@@ -3,6 +3,7 @@
 #include "Util.h"
 #include "KeyPool.h"
 #include "config.h"
+#include <sstream>
 #include <string.h>
 #include <algorithm>
 
@@ -73,7 +74,7 @@ void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
   CommandArgs args(lr2src);
 
   ClearAll();
-  img_ = IMAGEMAN->Load(args.Get_str(1));
+  img_ = IMAGEMAN->Load(std::string("image") + args.Get_str(1));
   if (!img_)
     return;
   SleepUntilLoadFinish(img_);
@@ -278,11 +279,11 @@ void Number::UpdateNumberStr()
   // check string size
   {
     int v = value_params_.curr;
-    while (v > 0)
+    do
     {
       len++;
       v /= 10;
-    }
+    } while (v > 0);
     if (value_params_.max_decimal > 0)
       len += 1; /* dot */
     if (len > value_params_.max_string)
@@ -315,9 +316,9 @@ void Number::UpdateNumberStr()
   num_chrs[format_len] = 0;
 
   // fill characters from decimal
-  if (value_params_.max_decimal > 0)
+  if (value_params_.max_decimal > 0 && len > 1)
   {
-    for (int i = 0; i < value_params_.max_decimal; ++i)
+    for (int i = 0; i < value_params_.max_decimal && i < len - 1; ++i)
     {
       sp[len - i - 1] = '0' + (val % 10);
       val /= 10;
@@ -449,6 +450,24 @@ void Number::doRender()
     }
     i = j;
   }
+}
+
+const char* Number::type() const { return "Number"; }
+
+std::string Number::toString() const
+{
+  std::stringstream ss;
+  if (font_)
+    ss << "font: " << font_->get_name() << " (" << font_->get_path() << ")" << std::endl;
+  else
+    ss << "font empty (image font)" << std::endl;
+  ss << "keta: " << keta_ << std::endl;
+
+  if (val_ptr_)
+    ss << "ref-number: " << *val_ptr_ << std::endl;
+  ss << "number-text: " << num_chrs << std::endl;
+  
+  return BaseObject::toString() + ss.str();
 }
 
 }
