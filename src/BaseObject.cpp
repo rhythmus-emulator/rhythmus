@@ -418,6 +418,7 @@ void BaseObject::Load(const MetricGroup &m)
       while (*sep_d2 && *sep_d2 != '|') sep_d2++;
       std::string d2 = d.substr(0, sep_d2 - d.c_str());
       CommandArgs args_dst(d2, 20, true);
+      int timer = args_dst.Get<int>(16);
 
       // XXX: move this flag to Sprite,
       // as LR2_TEXT object don't work with this..?
@@ -426,8 +427,8 @@ void BaseObject::Load(const MetricGroup &m)
         "F" + args_dst.Get<std::string>(19), ""
       );
 
-      AddCommand(format_string("LR%d", la.Get<int>(16)), "lr2cmd:" + d);
-      AddCommand(format_string("LR%dOff", la.Get<int>(16)), "stop");
+      AddCommand(format_string("LR%d", timer), "lr2cmd:" + d);
+      AddCommand(format_string("LR%dOff", timer), "stop");
     }
 
     // Hide by default.
