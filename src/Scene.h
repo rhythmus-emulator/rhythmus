@@ -63,6 +63,12 @@ public:
   /* @brief start scene e.g. start scene timer */
   virtual void StartScene();
 
+  /* @brief Register as predefined object. (for static allocated object) */
+  void RegisterPredefObject(BaseObject *obj);
+
+  /* @brief Create object and insert to scene. */
+  virtual void CreateSceneObject(const MetricGroup* m);
+
   /* @brief triggered when scene is finished
    * @warn it does not mean changing scene instantly,
    * which triggers fadeout/transition. */
@@ -117,8 +123,8 @@ private:
   // theme-specific metric data used for loading scene.
   MetricGroup metric_;
 
-  // currently focused object (if exists)
-  BaseObject* focused_object_;
+  // Pre-defined object that can be created manually.
+  std::map<std::string, BaseObject *> predef_objects_;
 };
 
 }

@@ -24,9 +24,7 @@ void SelectScene::LoadScene()
   SongPlayer::getInstance().Stop();
   PlayerManager::CreateGuestPlayerIfEmpty();
 
-  // Add wheel children first, as scene parameter may need it.
-  // (e.g. LR2 command)
-  AddChild(&wheel_);
+  RegisterPredefObject(&wheel_);
 
   Scene::LoadScene();
 }

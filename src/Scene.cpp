@@ -126,14 +126,14 @@ Scene::Scene()
   : fade_time_(0), fade_duration_(0),
     fade_in_time_(0), fade_out_time_(0),
     is_input_available_(true), begin_input_time_(0), next_scene_time_(0),
-    do_sort_objects_(false), enable_caching_(false),
-    focused_object_(nullptr)
+    do_sort_objects_(false), enable_caching_(false)
 {
 }
 
 void Scene::Load(const MetricGroup& m)
 {
   int draw_index = 0;
+  bool use_custom_layout = false;
 
   if (m.exist("sort"))
     do_sort_objects_ = m.get<bool>("sort");
@@ -145,7 +145,7 @@ void Scene::Load(const MetricGroup& m)
     fade_out_time_ = m.get<int>("FadeOut");
   if (m.exist("FadeIn"))
     fade_in_time_ = m.get<int>("FadeIn");
-
+  m.get_safe("usecustomlayout", use_custom_layout);
 
   // Load scene specific script if necessary.
   if (m.exist("script"))
@@ -175,20 +175,15 @@ void Scene::Load(const MetricGroup& m)
   }
 
 
-  // Create objects.
-  for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
+  // Create objects if usedefaultlayout == N.
+  if (use_custom_layout)
   {
-    BaseObject *o = CreateObject(*c);
-    if (o)
-      AddChild(o);
-    else
-    {
-      o = FindChildByName(c->name());
-      if (o) 
-        o->Load(*c);
-    }
-    if (o)
-      o->SetDrawOrder(++draw_index);
+    for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
+      CreateSceneObject(&*c);
+  }
+  else {
+    for (auto *c : children_)
+      c->LoadFromName();
   }
 
 
@@ -270,6 +265,40 @@ void Scene::StartScene()
 
   // Now trigger actual 'OnLoad' event.
   EVENTMAN->SendEvent("Load");
+}
+
+void Scene::RegisterPredefObject(BaseObject *obj)
+{
+  R_ASSERT(obj && !obj->get_name().empty());
+  predef_objects_[obj->get_name()] = obj;
+}
+
+void Scene::CreateSceneObject(const MetricGroup* m)
+{
+  BaseObject *obj = nullptr;
+
+  // Attempt to create general object first
+  if (m)
+    obj = BaseObject::CreateObject(*m);
+
+  // Search for predefined objects
+  if (!obj)
+  {
+    std::string name = m->name();
+    auto i = predef_objects_.find(name);
+    if (i != predef_objects_.end())
+      obj = i->second;
+  }
+
+  if (obj)
+  {
+    obj->Load(*m);
+    AddChild(obj);
+  }
+  else {
+    Logger::Error("Scene::CreateSceneObject: Failed to load metric object \'%s\'.",
+                  m->name().c_str());
+  }
 }
 
 void Scene::FadeOutScene(bool next)

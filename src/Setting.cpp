@@ -250,6 +250,10 @@ static const LR2CommandDesc **GetLR2CommandDesc()
   { "DST_SLIDER", "slider", true /* WARN: must use last element */,
   {"lr2dst:%a%v", 0}, {0} };
 
+  static LR2CommandDesc src_bar_body =
+  { "SRC_BAR_BODY", "MusicWheel", false,
+  {"lr2bar%0ssrc:%v", 0}, {0} };
+
   // TODO: bargraph
   // TODO: note -- stepmania
   //static LR2CommandDesc src_note =
@@ -356,10 +360,9 @@ bool MetricGroup::LoadFromLR2Metric(const std::string &path)
     return false;
   }
 
-  // default settings
-  // use itself as script file.
-  //set("script", path);
-  set("sort", true);
+  // default scene settings
+  set("usecustomlayout", true);
+  //set("sort", true);
 
 
   std::string name;                         // command name
