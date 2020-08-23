@@ -254,6 +254,14 @@ static const LR2CommandDesc **GetLR2CommandDesc()
   { "SRC_BAR_BODY", "MusicWheel", false,
   {"lr2bar%0ssrc:%v", 0}, {0} };
 
+  static LR2CommandDesc dst_bar_body_on =
+  { "DST_BAR_BODY_ON", "MusicWheel", false,
+  {"lr2bar%0sondst:%v", 0}, {0} };
+
+  static LR2CommandDesc dst_bar_body_off =
+  { "DST_BAR_BODY_OFF", "MusicWheel", false,
+  {"lr2bar%0soffdst:%v", 0}, {0} };
+
   // TODO: bargraph
   // TODO: note -- stepmania
   //static LR2CommandDesc src_note =
@@ -290,6 +298,9 @@ static const LR2CommandDesc **GetLR2CommandDesc()
     &dst_onmouse,
     &src_slider,
     &dst_slider,
+    &src_bar_body,
+    &dst_bar_body_on,
+    &dst_bar_body_off,
     0
   };
 

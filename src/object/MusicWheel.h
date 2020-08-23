@@ -28,10 +28,15 @@ enum Songitemtype
   kSongitemEnd,
 };
 
-class MusicWheelData
+struct MusicWheelData;
+
+struct MusicWheelSongData
 {
-public:
-  MusicWheelData();
+  std::vector<MusicWheelData*> charts;
+};
+
+struct MusicWheelData
+{
   SongListData info;
   std::string name;
   std::string sectionname;
@@ -39,16 +44,12 @@ public:
   const PlayRecord *record;
   int clear;
   double rate;
+  size_t chartidx;
 
-  void NextChart();
+  MusicWheelData();
   void ApplyFromSongListData(SongListData &song);
   void SetSection(const std::string &sectionname, const std::string &title);
   void SetPlayRecord();
-  void AddChart(SongListData *d);
-
-private:
-  size_t chartidx;
-  std::vector<SongListData*> charts_;
 };
 
 /* @brief Pure music wheel item interface */
@@ -81,6 +82,7 @@ public:
   virtual void NavigateLeft();
   virtual void NavigateRight();
   virtual void RebuildData();
+  virtual void DeleteData(void *d);
 
   void OpenSection(const std::string &section);
   void CloseSection();
@@ -117,6 +119,8 @@ private:
   std::vector<MusicWheelData> data_filtered_;
   /* section items (created in Load procedure) */
   std::vector<MusicWheelData> data_sections_;
+  /* data for song list. */
+  std::vector<MusicWheelSongData> data_songs_;
 
   /* Keypools updated by MusicWheel object */
   KeyData<std::string> info_title;

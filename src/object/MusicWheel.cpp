@@ -18,14 +18,6 @@ MusicWheelData::MusicWheelData()
   info.level = 0;
 }
 
-void MusicWheelData::NextChart()
-{
-  if (charts_.empty())
-    return;
-  chartidx = (chartidx + 1) % charts_.size();
-  ApplyFromSongListData(*charts_[chartidx]);
-}
-
 void MusicWheelData::ApplyFromSongListData(SongListData &song)
 {
   name = song.id;
@@ -58,11 +50,6 @@ void MusicWheelData::SetPlayRecord()
     clear = record->clear_type;
     rate = record->rate();
   }
-}
-
-void MusicWheelData::AddChart(SongListData *d)
-{
-  charts_.push_back(d);
 }
 
 // ----------------------------- MusicWheelItem
@@ -223,7 +210,7 @@ MusicWheel::MusicWheel() :
 
 MusicWheel::~MusicWheel()
 {
-  Clear();
+  ClearData();
 }
 
 void MusicWheel::Load(const MetricGroup &metric)
@@ -402,22 +389,35 @@ void MusicWheel::NavigateRight()
   }
   else if (sel_data->type == Songitemtype::kSongitemSong)
   {
-    sel_data->NextChart();
-    RebuildData();
+    NextDifficultyFilter();
   }
   OnSelectChange(get_selected_data(0), 0);
 }
 
 void MusicWheel::RebuildData()
 {
+  // clear items and store previously selected item here.
+  // previously selected item will be used to focus item
+  // after section open/close.
+  std::string previous_selection;
+  if (!data_.empty())
+    previous_selection = get_selected_data(0)->name;
+  else if (!current_section_.empty())
+    previous_selection = current_section_;
+  ClearData();
+  data_filtered_.clear();
+  data_songs_.clear();
+
   // filter songs
   if (filter_.invalidate)
   {
+    size_t i = 0;
+    bool pass_filter;
+    std::map<std::string, MusicWheelSongData *> song_chart_map;
+
     filter_.invalidate = false;
     charts_.clear();
     data_filtered_.clear();
-    size_t i = 0;
-    bool pass_filter;
 
     // gamemode filtering
     for (auto &song : *SONGLIST)
@@ -457,16 +457,16 @@ void MusicWheel::RebuildData()
       data_filtered_.push_back(data);
     }
 
-    // add difficulty info into chartlist.
-    // TODO: need to set chartidx
-    for (auto &d : data_filtered_)
+    // create song list
+    for (auto &c : data_filtered_)
     {
-      for (auto *c : charts_)
+      if (song_chart_map.find(c.info.songpath) == song_chart_map.end())
       {
-        auto &sdata = *static_cast<SongListData*>(c);
-        if (sdata.songpath == d.info.songpath)
-          d.AddChart(&sdata);
+        MusicWheelSongData d;
+        data_songs_.push_back(d);
+        song_chart_map[c.info.songpath] = &data_songs_.back();
       }
+      song_chart_map[c.info.songpath]->charts.push_back(&c);
     }
 
     // XXX: need to send in sort invalidation
@@ -510,16 +510,6 @@ void MusicWheel::RebuildData()
     }
   }
 
-  // clear items and store previously selected item.
-  // previously selected item will be used to focus item
-  // after section open/close.
-  std::string previous_selection;
-  if (!data_.empty())
-    previous_selection = get_selected_data(0)->name;
-  else if (!current_section_.empty())
-    previous_selection = current_section_;
-  Clear();
-
   // add songs & default sections/items
   for (size_t i = 0; i < data_sections_.size(); ++i)
   {
@@ -528,7 +518,7 @@ void MusicWheel::RebuildData()
     {
       // TODO: filtering once again by section type/name
       for (auto &d : data_filtered_)
-        data_.push_back(new MusicWheelData(d));
+        AddData(new MusicWheelData(d));
     }
   }
   
@@ -536,7 +526,7 @@ void MusicWheel::RebuildData()
   data_index_ = 0;
   for (size_t i = 0; i < data_.size(); ++i)
   {
-    if (static_cast<MusicWheelData*>(data_[i])->name == previous_selection)
+    if (static_cast<MusicWheelData*>(data_[i].p)->name == previous_selection)
     {
       data_index_ = i;
       break;
@@ -545,6 +535,11 @@ void MusicWheel::RebuildData()
 
   // rebuild rendering items
   RebuildItems();
+}
+
+void MusicWheel::DeleteData(void *d)
+{
+  delete (MusicWheelData*)d;
 }
 
 void MusicWheel::OpenSection(const std::string &section)
@@ -610,6 +605,7 @@ void MusicWheel::NextGamemodeFilter()
 
 void MusicWheel::NextDifficultyFilter()
 {
+  // change difficulty filter
   for (size_t i = 0; i < Difficulty::kDifficultyEnd; ++i)
   {
     filter_.difficulty = (filter_.difficulty + 1) % Difficulty::kDifficultyEnd;
@@ -617,6 +613,10 @@ void MusicWheel::NextDifficultyFilter()
       break;
   }
   SetDifficultyFilter(filter_.difficulty);
+  // TODO: set song index
+  // if next song difficulty is merged into single item,
+  // then replace current data with next difficulty item.
+  // else, search another difficulty item and set data index with that.
 }
 
 int MusicWheel::GetSort() const

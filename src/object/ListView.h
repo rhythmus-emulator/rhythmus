@@ -23,8 +23,32 @@ enum class ListViewType
 
 enum MenuPosMethod
 {
-  kMenuPosExpression,
-  kMenuPosFixed,
+  kMenuPosFixed,    // for fixed position by index for each listview items
+  kMenuPosDynamic,  // for dynamic menu height object
+  kMenuPosExpr,     // expression based menu position
+};
+
+struct ListViewPos
+{
+  int index_i;    // index of integer
+  float index_f;  // index of decimal
+  float y;        // current y pos
+};
+
+struct ListViewItemPos
+{
+  unsigned index;
+  float y;
+  DrawProperty p;
+};
+
+struct ListViewData
+{
+  unsigned index;
+  float y, height;
+  void *p;
+  BaseObject *content;
+  Point margin;
 };
 
 /* @brief Context of rendering select item */
@@ -37,14 +61,24 @@ public:
 
   virtual void Load(const MetricGroup &m);
   virtual void LoadFromData(void *data);
-  void set_dataindex(unsigned dataindex);
-  unsigned get_dataindex() const;
-  void set_focus(bool focused);
+  void LoadFromLVData(const ListViewData& lvdata);
+
   void* get_data();
   DrawProperty &get_item_dprop();
 
 private:
-  unsigned dataindex_;
+  void set_dataindex(unsigned dataindex);
+  unsigned get_dataindex() const;
+  void set_itemindex(int itemindex);
+  int get_itemindex() const;
+  void set_content(BaseObject *content);
+  void set_focus(bool focused);
+
+  friend class ListView;
+
+private:
+  unsigned dataindex_;  // index of actual data
+  int itemindex_;       // index number of listview item (no duplication)
 
   // select item data ptr
   void* data_;
@@ -52,13 +86,25 @@ private:
   // check is current item is selected
   bool is_focused_;
 
+  // listview item content
+  BaseObject *content_;
+
   // property to be used for drawn.
   DrawProperty item_dprop_;
+
+  // margin of a item
+  Point margin_;
 
   virtual void OnAnimation(DrawProperty &frame);
 };
 
-/* @brief ListView based on recycling ListViewItem. */
+/*
+ * @brief ListView based on recycling ListViewItem.
+ *
+ * @comments
+ * Implementing list looping with dynamic height is almost impossible.
+ * Maybe panel object need to be created to implement it.
+ */
 class ListView : public BaseObject
 {
 public:
@@ -67,26 +113,26 @@ public:
 
   virtual void Load(const MetricGroup &metric);
 
-  void* GetSelectedMenuData();
-  void* GetMenuDataByIndex(int index);
-  void SelectMenuByIndex(int index);
-
   /* @brief Get total data count */
   unsigned size() const;
 
   /* @brief get current selected index */
   unsigned index() const;
 
-  /* @brief Clear all list items and item data. */
-  void Clear();
-  void AddData(void* d);
-
-  void set_listviewtype(ListViewType type);
-  void set_item_min_index(unsigned min_index);
-  void set_item_max_index(unsigned max_index);
-  void set_item_center_index(unsigned index);
-
   bool is_wheel() const;
+
+
+  /* @brief Add data to be displayed.
+   * @warn  RebuildItems() must be called after calling this method.
+   *        Also, pointer object is not owned(deleted) by ListView. */
+  void AddData(void* d);
+  void AddData(void* d, const Point &margin);
+  void ClearData();
+
+  void* GetSelectedMenuData();
+  void* GetMenuDataByIndex(int index);
+  void SelectMenuByIndex(int index);
+  float GetItemYPosByIndex(int index);
 
   /* @brief Rebuild source data. */
   virtual void RebuildData();
@@ -94,6 +140,14 @@ public:
   /* @brief Build items to display which is suitable for current data_index.
    * This method must be called when data_index is changed. */
   virtual void RebuildItems();
+
+  ListViewItem *GetLVItem(unsigned data_index);
+  virtual BaseObject *CreateLVItemContent(void *data);
+
+  void set_listviewtype(ListViewType type);
+  void set_item_min_index(unsigned min_index);
+  void set_item_max_index(unsigned max_index);
+  void set_item_center_index(unsigned index);
 
   virtual void NavigateDown();
   virtual void NavigateUp();
@@ -106,14 +160,22 @@ public:
   virtual void OnSelectChanged();
 
 protected:
-  // select item data
-  std::vector<void*> data_;
+  // current listview top item position
+  ListViewPos pos_;
+  MenuPosMethod pos_method_;
 
-  // select bar items to draw
+  // previous listview item position for checking item rebuild
+  int index_current_;
+  int index_previous_;
+
+  // listview item data
+  std::vector<ListViewData> data_;
+
+  // listview item wrapper
   std::vector<ListViewItem*> items_;
 
-  // select bar items (with absolute index)
-  std::vector<ListViewItem*> items_abs_;
+  // position data. used for ypos based object.
+  std::vector<ListViewItemPos> item_pos_list_;
 
   // current top data position of listview
   // @warn may be negative or bigger than data size.
@@ -141,21 +203,20 @@ protected:
   // basic item height
   unsigned item_height_;
 
+  // total item height
+  unsigned item_total_height_;
+
   // ListViewItem type
   std::string item_type_;
+
+  // scroll from ~ to
+  int scroll_idx_from_, scroll_idx_to_;
 
   // scroll time
   float scroll_time_;
 
   // scroll time (remain)
   float scroll_time_remain_;
-
-  // current scroll delta ( used by UpdateItemPos(), -1 ~ 0 )
-  float scroll_delta_;
-
-  // type of calculating select bar position
-  // If false, some extern method should update bar position manually.
-  int pos_method_;
 
   // struct for item pos parameter with expr.
   struct {
@@ -169,10 +230,7 @@ protected:
 
   unsigned CalculateItemCount() const;
   void UpdateItemPos();
-  void UpdateItemPosByExpr();
-  void UpdateItemPosByFixed();
   virtual void doUpdate(double);
-  virtual ListViewItem* CreateMenuItem(const std::string &itemtype);
 };
 
 }
