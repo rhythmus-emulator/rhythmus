@@ -92,6 +92,9 @@ public:
   void AddFrame(const DrawProperty &draw_prop, double time, int ease_type);
   void SetCommand(const std::string &cmd);
   void Update(double &ms, std::string &command_to_invoke, DrawProperty *out);
+  void Replay();
+  void Play();
+  void Pause();
   void HurryTween();
   void GetDrawProperty(DrawProperty &out);
   void SetEaseType(int ease_type);
@@ -119,6 +122,7 @@ private:
   double frame_time_;         // eclipsed time of whole animation
   bool is_finished_;
   bool repeat_;
+  bool paused_;
   unsigned repeat_start_time_;
   std::string command;        // commands to be triggered when this tween starts
 };
@@ -156,10 +160,7 @@ public:
   bool IsHeapAllocated(bool v) const;
 
   // Load object property from metric info.
-  virtual void Load(const MetricGroup &m);
-
-  // Load object property from metric file.
-  void LoadFromFile(const std::string &metric_file);
+  virtual void Load(const MetricGroup &metric);
 
   // Load object property from ThemeMetric using name of this object.
   void LoadFromName();
@@ -197,6 +198,8 @@ public:
 
   DrawProperty& GetLastFrame();
   DrawProperty& GetCurrentFrame();
+  void AddFrameByLR2command(const std::string &cmd);
+  void AddFrameByLR2command(const char **argv);
   void SetX(int x);
   void SetY(int y);
   void SetWidth(int w);
@@ -218,7 +221,7 @@ public:
   void SetLoop(unsigned loop_start_time);
   float GetX() const;
   float GetY() const;
-  void SetLR2DST(const std::string &cmd);
+  void SetDebug(const std::string &debug_msg);
 
   /**
    * 0: Center
@@ -266,6 +269,8 @@ public:
 
   void SetDeltaTime(double time);
   void Stop();
+  void Replay();
+  void Pause();
   double GetTweenLength() const;
   bool IsTweening() const;
   bool IsVisible() const;
@@ -281,10 +286,9 @@ public:
   virtual std::string toString() const;
 
   /**
-   * @brief
-   * An utility function for creating general object from metric.
+   * @brief Creates new object by given type.
    */
-  static BaseObject* CreateObject(const MetricGroup &m);
+  static BaseObject* CreateObject(const std::string &type);
 
 private:
 
@@ -293,7 +297,7 @@ protected:
 
   BaseObject *parent_;
 
-  // children for rendering (not released when this object is destructed)
+  // child objects which are going to be rendered.
   std::vector<BaseObject*> children_;
 
   // is this object allocated from heap memory?

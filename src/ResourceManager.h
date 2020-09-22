@@ -174,13 +174,9 @@ public:
   void Update(double ms);
   void set_load_async(bool load_async);
 
-  void CacheFontMetrics(const MetricGroup &m);
-  MetricGroup *GetFontMetricFromName(const std::string &name);
-
 private:
   bool load_async_;
   std::mutex lock_;
-  std::map<std::string, MetricGroup> font_metrics_;
 };
 
 

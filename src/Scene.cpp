@@ -1,6 +1,5 @@
 #include "Scene.h"
 #include "SceneManager.h"       /* preference */
-#include "Setting.h"
 #include "Script.h"
 #include "Util.h"
 #include "Logger.h"
@@ -126,11 +125,17 @@ Scene::Scene()
   : fade_time_(0), fade_duration_(0),
     fade_in_time_(0), fade_out_time_(0),
     is_input_available_(true), begin_input_time_(0), next_scene_time_(0),
-    do_sort_objects_(false), enable_caching_(false)
+    do_sort_objects_(false), enable_caching_(false), loading_ctx_(nullptr)
 {
 }
 
-void Scene::Load(const MetricGroup& m)
+Scene::~Scene()
+{
+  if (loading_ctx_)
+    delete loading_ctx_;
+}
+
+void Scene::Load(const MetricGroup &m)
 {
   int draw_index = 0;
   bool use_custom_layout = false;
@@ -147,46 +152,6 @@ void Scene::Load(const MetricGroup& m)
     fade_in_time_ = m.get<int>("FadeIn");
   m.get_safe("usecustomlayout", use_custom_layout);
 
-  // Load scene specific script if necessary.
-  if (m.exist("script"))
-  {
-    Script::Execute(m.get_str("script"));
-  }
-
-
-  // Basic commands with scene metric
-  // - Register fonts to global THEMEMETRIC
-  // - Register path alias for image/font.
-  // - Load flags and options for current scene (current?)
-  for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
-  {
-    if (c->name() == "font")
-    {
-      FONTMAN->CacheFontMetrics(*c);
-    }
-    else if (c->name() == "path")
-    {
-      std::string name, path;
-      c->get_safe("name", name);
-      c->get_safe("path", path);
-      if (path != "CONTINUE")
-        PATH->SetAlias(name, path);
-    }
-  }
-
-
-  // Create objects if usedefaultlayout == N.
-  if (use_custom_layout)
-  {
-    for (auto c = m.group_cbegin(); c != m.group_cend(); ++c)
-      CreateSceneObject(&*c);
-  }
-  else {
-    for (auto *c : children_)
-      c->LoadFromName();
-  }
-
-
   // sort object if necessary.
   if (do_sort_objects_)
   {
@@ -199,29 +164,24 @@ void Scene::Load(const MetricGroup& m)
 
 void Scene::LoadScene()
 {
-  if (!get_name().empty())
-  {
-    // attempt to load custom scene
-    // @warn
-    // Metric data should be alive after Scene::Load(...) method
-    // since this could be async method. Do not clear metric while loading.
-    auto *pref = PREFERENCE->GetFile(get_name());
-    if (pref && metric_.Load(**pref))
-    {
-      Scene::Load(metric_);
-      return;
-    }
-    else
-    {
-      Logger::Warn("Attempt to load scene %s but failed.", get_name().c_str());
-    }
-  }
-
-  // fallback: default metric data
-  //Scene::Load(*METRIC);
+  std::string metric_filename;
 
   // Load start event : Loading
   EVENTMAN->SendEvent("Loading");
+
+  // Load metrics (e.g. Stepmania)
+  LoadFromName();
+
+  // Load script file
+  if (!get_name().empty())
+  {
+    auto *pref = PREFERENCE->GetFile(get_name());
+    if (pref) metric_filename = **pref;
+    if (!metric_filename.empty())
+    {
+      Script::Load(metric_filename, this);
+    }
+  }
 }
 
 void Scene::StartScene()
@@ -271,34 +231,6 @@ void Scene::RegisterPredefObject(BaseObject *obj)
 {
   R_ASSERT(obj && !obj->get_name().empty());
   predef_objects_[obj->get_name()] = obj;
-}
-
-void Scene::CreateSceneObject(const MetricGroup* m)
-{
-  BaseObject *obj = nullptr;
-
-  // Attempt to create general object first
-  if (m)
-    obj = BaseObject::CreateObject(*m);
-
-  // Search for predefined objects
-  if (!obj)
-  {
-    std::string name = m->name();
-    auto i = predef_objects_.find(name);
-    if (i != predef_objects_.end())
-      obj = i->second;
-  }
-
-  if (obj)
-  {
-    obj->Load(*m);
-    AddChild(obj);
-  }
-  else {
-    Logger::Error("Scene::CreateSceneObject: Failed to load metric object \'%s\'.",
-                  m->name().c_str());
-  }
 }
 
 void Scene::FadeOutScene(bool next)
@@ -412,5 +344,98 @@ void Scene::doRenderAfter()
     GRAPHIC->DrawQuad(vi);
   }
 }
+
+// -------------------------------------------------------------------- Loaders
+
+class LR2CSVSceneHandlers
+{
+public:
+  static void image(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    std::string name, path;
+    name = format_string("image%u", loader->get_image_index());
+    path = ctx->get_str(1);
+    if (path != "CONTINUE")
+      PATH->SetAlias(name, path);
+  }
+  static void lr2font(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *fntstyle = METRIC->get_group(format_string("font%u", loader->get_font_index()));
+    const char *path = ctx->get_str(1);
+    fntstyle->set("path", path);
+  }
+  static void font(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // --
+  }
+  static void information(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // TODO -- "gamemode", "title", "artist", "previewimage"
+  }
+  static void customoption(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // {"name", "id", "constraint:%3s,%4s,%5s,%6s,%7s,%8s,%9s,%10s", 0},
+  }
+  static void customfile(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // {"name", "constraint", "default", 0}
+  }
+  static void transcolor(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // TODO: change GRAPHIC configuration
+  }
+  static void startinput(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *scene = (Scene*)loader->get_object("scene");
+    if (!scene) return;
+    scene->SetInputStartTime(ctx->get_int(1));
+  }
+  static void ignoreinput(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // ignores all input except system keys (e.g. escape)
+    // TODO
+  }
+  static void fadeout(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *scene = (Scene*)loader->get_object("scene");
+    if (!scene) return;
+    scene->SetFadeOutTime(ctx->get_int(1));
+  }
+  static void fadein(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *scene = (Scene*)loader->get_object("scene");
+    if (!scene) return;
+    scene->SetFadeInTime(ctx->get_int(1));
+  }
+  static void timeout(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *scene = (Scene*)loader->get_object("scene");
+    if (!scene) return;
+    scene->SetTimeout(ctx->get_int(1));
+  }
+  static void helpfile(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // TODO
+  }
+  LR2CSVSceneHandlers()
+  {
+    LR2CSVExecutor::AddHandler("#IMAGE", (LR2CSVCommandHandler*)&image);
+    LR2CSVExecutor::AddHandler("#LR2FONT", (LR2CSVCommandHandler*)&lr2font);
+    LR2CSVExecutor::AddHandler("#FONT", (LR2CSVCommandHandler*)&font);
+    LR2CSVExecutor::AddHandler("#INFORMATION", (LR2CSVCommandHandler*)&information);
+    LR2CSVExecutor::AddHandler("#CUSTOMOPTION", (LR2CSVCommandHandler*)&customoption);
+    LR2CSVExecutor::AddHandler("#CUSTOMFILE", (LR2CSVCommandHandler*)&customfile);
+    LR2CSVExecutor::AddHandler("#TRANSCLOLR", (LR2CSVCommandHandler*)&transcolor);
+    LR2CSVExecutor::AddHandler("#STARTINPUT", (LR2CSVCommandHandler*)&startinput);
+    LR2CSVExecutor::AddHandler("#IGNOREINPUT", (LR2CSVCommandHandler*)&ignoreinput);
+    LR2CSVExecutor::AddHandler("#FADEOUT", (LR2CSVCommandHandler*)&fadeout);
+    LR2CSVExecutor::AddHandler("#FADEIN", (LR2CSVCommandHandler*)&fadein);
+    LR2CSVExecutor::AddHandler("#TIMEOUT", (LR2CSVCommandHandler*)&timeout);
+    LR2CSVExecutor::AddHandler("#HELPFILE", (LR2CSVCommandHandler*)&helpfile);
+  }
+};
+
+// register handlers
+LR2CSVSceneHandlers _LR2CSVSceneHandlers;
 
 }

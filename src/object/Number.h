@@ -15,11 +15,19 @@ public:
   Number();
   virtual ~Number();
 
-  virtual void Load(const MetricGroup& metric);
+  virtual void Load(const MetricGroup &metric);
+  virtual void OnReady();
 
   virtual void SetGlyphFromFont(const MetricGroup &m);
-  virtual void SetGlyphFromLR2SRC(const std::string &lr2src);
+  virtual void SetGlyphFromImage(const std::string &path, const Rect &clip,
+                                 int divx, int divy, int digitcount);
 
+  void SetAlignment(int align);
+  void SetDigit(int count);
+  void SetResizeToBox(bool v);
+  void SetBlending(int blending);
+  void SetResourceId(const std::string &resourceid);
+  void SetLoopCycle(int cycle);
   virtual void SetNumber(int number);
   virtual void SetNumber(double number);
   virtual void SetText(const std::string &s);

@@ -67,8 +67,6 @@ public:
   bool Load(const std::string &path);
   bool LoadFromXml(const std::string &path);
   bool LoadFromIni(const std::string &path);
-  bool LoadFromLR2Metric(const std::string &path);
-  bool LoadFromLR2SoundMetric(const std::string &path);
 
   bool Save(const std::string &path);
 

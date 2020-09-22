@@ -3,9 +3,10 @@
 #include "Logger.h"
 #include "ResourceManager.h"
 #include "LR2/LR2SceneLoader.h"
+#include "Script.h"
 #include "common.h"
-#include <sstream>
 #include "tinyxml2.h"
+#include <sstream>
 
 using namespace tinyxml2;
 
@@ -15,15 +16,11 @@ namespace rhythmus
 constexpr const char* kSettingPath = "config/system.xml";
 constexpr const char* kDefaultRootTagName = "setting";
 
-#if USE_LR2_FEATURE
-constexpr const char* kLR2SubstitutePath = "LR2files/Theme";
-constexpr const char* kSubstitutePath = "themes";
-#endif
-
 inline const char* GetSafeString(const char* p)
 {
   return p ? p : "";
 }
+
 
 // ------------------------- class Metric
 
@@ -61,14 +58,6 @@ bool MetricGroup::Load(const std::string &path)
   else if (ext == "XML")
   {
     return LoadFromXml(path);
-  }
-  else if (ext == "LR2SKIN")
-  {
-    return LoadFromLR2Metric(path);
-  }
-  else if (ext == "LR2SS")
-  {
-    return LoadFromLR2SoundMetric(path);
   }
 
   Logger::Error("Error: not supported Metrics file: %s", path.c_str());
@@ -130,477 +119,6 @@ bool MetricGroup::LoadFromIni(const std::string &path)
 {
   // TODO: Stepmania metrics info
   throw UnimplementedException("Stepmania skin is not supported yet.");
-}
-
-#if USE_LR2_FEATURE == 1
-struct LR2CommandDesc
-{
-  const char *name;
-  const char *newname;
-  bool not_create_if_exist;
-  const char *attributes[64];
-  const char *default_value[64];
-};
-
-static const LR2CommandDesc **GetLR2CommandDesc()
-{
-  static LR2CommandDesc information =
-  { "INFORMATION", "", true, {"gamemode", "title", "artist", "previewimage", 0}, {0} };
-
-  // TODO: more elegant format specifier?
-  static LR2CommandDesc customoption =
-  { "CUSTOMOPTION", "option", true,
-    {"name", "id", "constraint:%3s,%4s,%5s,%6s,%7s,%8s,%9s,%10s", 0},
-    {"type", "option", 0}
-  };
-
-  static LR2CommandDesc customfile =
-  { "CUSTOMFILE", "option", true, {"name", "constraint", "default", 0}, {"type", "file", 0} };
-
-  static LR2CommandDesc image =
-  { "IMAGE", "path", false, {"path", "name:image%i", 0} };
-
-  static LR2CommandDesc lr2font =
-  { "LR2FONT", "path", false, {"path", "name:font%i", 0} };
-
-  static LR2CommandDesc font =
-  { "FONT", "FONT__", false, {"size", "thick", "type", "name", 0}, {0} };
-
-  static LR2CommandDesc bar_center =
-  { "BAR_CENTER", "", true, {"bar_center", 0}, {0} };
-
-  static LR2CommandDesc bar_available =
-  { "BAR_AVAILABLE", "", true, {"bar_available", 0}, {0} };
-
-  static LR2CommandDesc transcolor =
-  { "TRANSCLOLR", "", true, {"transcolor", 0}, {0} };
-
-  static LR2CommandDesc startinput =
-  { "STARTINPUT", "", true, {"startinput", 0}, {0} };
-
-  static LR2CommandDesc ignoreinput =
-  { "IGNOREINPUT", "", true, {"ignoreinput", 0}, {0} };
-
-  static LR2CommandDesc fadeout =
-  { "FADEOUT", "", true, {"fadeout", 0}, {0} };
-
-  static LR2CommandDesc fadein =
-  { "FADEIN", "", true, {"fadein", 0}, {0} };
-
-  static LR2CommandDesc timeout =
-  { "SCENETIME", "", true, {"timeout", 0}, {0} };
-
-  static LR2CommandDesc loadstart =
-  { "LOADSTART", "", true, {"loadstart", 0}, {0} };
-
-  static LR2CommandDesc loadend =
-  { "LOADEND", "", true, {"loadend", 0}, {0} };
-
-  static LR2CommandDesc playstart =
-  { "SCRATCHSIDE", "", true, {"playstart", 0}, {0} };
-
-  static LR2CommandDesc helpfile =
-  { "HELPFILE", "", true, {"help", 0}, {0} };
-
-  static LR2CommandDesc src_sprite =
-  { "SRC_IMAGE", "sprite", false,
-  {"lr2src:%v", 0}, {"type", "sprite", 0} };
-
-  static LR2CommandDesc dst_sprite =
-  { "DST_IMAGE", "sprite", true /* WARN: must use last element */,
-  {"lr2dst:%a%v", 0}, {0} };
-
-  static LR2CommandDesc src_text =
-  { "SRC_TEXT", "text", false,
-  {"lr2src:%v", 0}, {"type", "text", 0} };
-
-  static LR2CommandDesc dst_text =
-  { "DST_TEXT", "text", true /* WARN: must use last element */,
-  {"lr2dst:%a%v", 0}, {0} };
-
-  static LR2CommandDesc src_number =
-  { "SRC_NUMBER", "number", false,
-  {"lr2src:%v", 0}, {"type", "number", 0} };
-
-  static LR2CommandDesc dst_number =
-  { "DST_NUMBER", "number", true /* WARN: must use last element */,
-  {"lr2dst:%a%v", 0}, {0} };
-
-  static LR2CommandDesc src_button =
-  { "SRC_BUTTON", "button", false,
-  {"lr2src:%v", 0}, {"type", "button", 0} };
-
-  static LR2CommandDesc dst_button =
-  { "DST_BUTTON", "button", true /* WARN: must use last element */,
-  {"lr2dst:%a%v", 0}, {0} };
-
-  static LR2CommandDesc src_onmouse =
-  { "SRC_ONMOUSE", "onmouse", false,
-  {"lr2src:%v", 0}, {"type", "button", 0} };
-
-  static LR2CommandDesc dst_onmouse =
-  { "DST_ONMOUSE", "onmouse", true /* WARN: must use last element */,
-  {"lr2dst:%a%v", 0}, {0} };
-
-  static LR2CommandDesc src_slider =
-  { "SRC_SLIDER", "slider", false,
-  {"lr2src:%v", 0}, {"type", "slider", 0} };
-
-  static LR2CommandDesc dst_slider =
-  { "DST_SLIDER", "slider", true /* WARN: must use last element */,
-  {"lr2dst:%a%v", 0}, {0} };
-
-  static LR2CommandDesc src_bar_body =
-  { "SRC_BAR_BODY", "MusicWheel", false,
-  {"lr2bar%0ssrc:%v", 0}, {0} };
-
-  static LR2CommandDesc dst_bar_body_on =
-  { "DST_BAR_BODY_ON", "MusicWheel", false,
-  {"lr2bar%0sondst:%v", 0}, {0} };
-
-  static LR2CommandDesc dst_bar_body_off =
-  { "DST_BAR_BODY_OFF", "MusicWheel", false,
-  {"lr2bar%0soffdst:%v", 0}, {0} };
-
-  // TODO: bargraph
-  // TODO: note -- stepmania
-  //static LR2CommandDesc src_note =
-  //{ "SRC_NOTE", "NoteField", false, { "!note%s...", 0 }, { 0 } };
-
-  static const LR2CommandDesc *gLR2CommandDesc[] = {
-    &information,
-    &customoption,
-    &customfile,
-    &image,
-    &lr2font,
-    &font,
-    &bar_center,
-    &bar_available,
-    &transcolor,
-    &startinput,
-    &ignoreinput,
-    &fadeout,
-    &fadein,
-    &timeout,
-    &loadstart,
-    &loadend,
-    &playstart,
-    &helpfile,
-    &src_sprite,
-    &dst_sprite,
-    &src_text,
-    &dst_text,
-    &src_number,
-    &dst_number,
-    &src_button,
-    &dst_button,
-    &src_onmouse,
-    &dst_onmouse,
-    &src_slider,
-    &dst_slider,
-    &src_bar_body,
-    &dst_bar_body_on,
-    &dst_bar_body_off,
-    0
-  };
-
-  return gLR2CommandDesc;
-}
-#endif
-
-
-/**
- * Load from LR2 metric file.
- * Each command (#XXX) converts into MetricGroup.
- *
- * TODO: make code tidy -- make pattern struct such as
- * (name), (newname), (not_create_if_exist), (attributes_per_comma)
- * IMAGE, image, false, _dummy, path, ...
- */
-bool MetricGroup::LoadFromLR2Metric(const std::string &path)
-{
-#if USE_LR2_FEATURE == 1
-  LR2SceneLoader loader;
-  std::vector<std::string> params;
-  size_t optioncount = 0, imagecount = 0, fontcount = 0;
-  loader.SetSubStitutePath("LR2files/Theme", kSubstitutePath);
-  loader.Load(path);
-
-  /* Set metric group using path
-   * (kind of trick; no group information is given at file) */
-  std::string group;
-  if (path.find("select") != std::string::npos)
-  {
-    group = "SelectScene";
-    auto &m = add_group("MusicWheel");
-    m.set("CenterIndex", 10);
-    m.set("PositionType", 1);  /* use bar position */
-    m.set("BarCount", 20);     /* XXX: default 20? */
-    /* below is filter setting for LR2. */
-    m.set("GamemodeFilter", "none,IIDXSP,IIDXDP,popn");
-    m.set("DifficultyFilter", "none,easy,normal,hard,ex,insane");
-    m.set("SortType", "none,title,level,clear");
-  }
-  else if (path.find("decide") != std::string::npos)
-  {
-    group = "DecideScene";
-  }
-  else if (path.find("play") != std::string::npos)
-  {
-    group = "PlayScene";
-    auto &m = add_group("NoteField");
-    m.set("LR2TypeLane", true);
-    /* XXX: move it to _default.xml later */
-    auto &m1 = add_group("NoteField1P");
-    m1.set("_fallback", "NoteField");
-    auto &m2 = add_group("NoteField2P");
-    m2.set("_fallback", "NoteField");
-  }
-  else if (path.find("courseresult") != std::string::npos) /* must courseresult first */
-  {
-    group = "CourseResultScene";
-  }
-  else if (path.find("result") != std::string::npos)
-  {
-    group = "ResultScene";
-  }
-
-  if (group.empty())
-  {
-    Logger::Error("Unknown type of LR2 metric file: %s", path.c_str());
-    return false;
-  }
-
-  // default scene settings
-  set("usecustomlayout", true);
-  //set("sort", true);
-
-
-  std::string name;                         // command name
-  std::string value;                        // command value
-  const char *value_ptr;                    // pointer to current value
-  std::string attr_name;                    // current attribute name
-  std::string attr_value;                   // current attribute value. (only used if need to modified)
-  std::string value_reg[128];               // value register (maximum 128)
-  int value_reg_index;                      // current value register number
-  std::map<std::string, int> command_count; // how many times command was called
-
-  // convert csv commands into metrics
-  for (auto &v : loader)
-  {
-    if (v.first[0] != '#')
-      continue;
-
-    /* We're going to load resource information into metrics,
-     * So ignore #ENDOFHEADER sign to read them all. */
-     //if (v.first == "#ENDOFHEADER")
-     //  break;
-
-    /* set command name and its value. */
-    value_reg[0] = name = Upper(v.first.substr(1));
-    value = v.second;
-    value_ptr = value.c_str();
-    value_reg_index = 1;
-    command_count[name]++;
-
-    /* process LR2 command */
-    const auto *lr2desc = GetLR2CommandDesc();
-    while (*lr2desc)
-    {
-      if (strcmp(name.c_str(), (*lr2desc)->name) == 0)
-      {
-        // set which metric to write
-        MetricGroup *m = nullptr;
-        if ((*lr2desc)->newname == nullptr || *(*lr2desc)->newname == 0)
-        {
-          m = this;
-        }
-        else
-        {
-          if ((*lr2desc)->not_create_if_exist)
-            m = get_group((*lr2desc)->newname);
-          if (!m)
-            m = &add_group((*lr2desc)->newname);
-        }
-        // parse value and add it to value register
-        for (unsigned i = 0; i < 128; ++i) value_reg[i].clear();
-        while (*value_ptr && value_reg_index < 128)
-        {
-          while (*value_ptr != ',')
-          {
-            value_reg[value_reg_index].push_back(*value_ptr);
-            ++value_ptr;
-          }
-          ++value_ptr;
-          ++value_reg_index;
-        }
-        // set attribute name / value.
-        const char *const *attrname = (*lr2desc)->attributes;
-        value_reg_index = 1;
-        while (*attrname)
-        {
-          const char *attr_ptr = *attrname;
-          std::string *string_to_fill = &attr_name;
-          attr_name.clear();
-          attr_value.clear();
-          while (*attr_ptr && *attr_ptr != ',')
-          {
-            if (*attr_ptr == ':')
-            {
-              // fill attr_value
-              string_to_fill = &attr_value;
-              ++attr_ptr;
-              continue;
-            }
-            else if (*attr_ptr == '%')
-            {
-              // resolve format specifier
-              int reg_idx = 0;
-              char escapecmd = 0;
-              ++attr_ptr;
-              while (*attr_ptr)
-              {
-                if (*attr_ptr >= '0' && *attr_ptr <= '9')
-                {
-                  reg_idx = reg_idx * 10 + (*attr_ptr - '0');
-                  ++attr_ptr;
-                }
-                else
-                {
-                  escapecmd = *attr_ptr;
-                  ++attr_ptr;
-                  break;
-                }
-              }
-              switch (escapecmd)
-              {
-              case 'd':
-                *string_to_fill += std::to_string(atoi(value_reg[reg_idx].c_str()));
-                break;
-              case 's':
-                *string_to_fill += value_reg[reg_idx];
-                break;
-              case 'i':
-                // get command count(index)
-                // \comment start index by zero (subtract 1)
-                *string_to_fill += std::to_string(command_count[name] - 1);
-                break;
-              case 'a':
-                // get whole string of previous attribute
-                // (do nothing if attribute not exists)
-                if (m->exist(attr_name))
-                  *string_to_fill += m->get_str(attr_name) + "|";
-                break;
-              case 'v':
-                // get whole original value
-                *string_to_fill += value;
-                break;
-              case 0:
-                break;
-              default:
-                (*string_to_fill).push_back(escapecmd);
-              }
-            }
-            else
-            {
-              (*string_to_fill).push_back(*attr_ptr);
-              ++attr_ptr;
-            }
-          }
-          // if empty attrname, then don't add it to value (silent)
-          if (*attrname)
-          {
-            m->set(attr_name, attr_value.empty()
-              ? value_reg[value_reg_index]
-              : attr_value);
-          }
-          ++attrname;
-          ++value_reg_index;
-        }
-      }
-      ++lr2desc;
-    }
-  }
-
-  /* turn on path prefix for LR2. */
-  PATH->SetPrefixReplace(
-    "LR2files/Theme", kSubstitutePath
-  );
-  return true;
-#else
-  return false;
-#endif
-}
-
-bool MetricGroup::LoadFromLR2SoundMetric(const std::string &path)
-{
-#if USE_LR2_FEATURE == 1
-  LR2SceneLoader loader;
-  loader.SetSubStitutePath("LR2files", "");
-  loader.Load(path);
-
-#define NAMES \
-  NAME("SELECT", "SongSelect"), \
-  NAME("DECIDE", "SongDecide"), \
-  NAME("EXSELECT", "SongExSelect"), \
-  NAME("EXDECIDE", "SongExDecide"), \
-  NAME("FOLDER_OPEN", "SongFolderOpen"), \
-  NAME("FOLDER_CLOSE", "SongFolderClose"), \
-  NAME("PANEL_OPEN", "PanelOpen"), \
-  NAME("PANEL_CLOSE", "PanelClose"), \
-  NAME("OPTION_CHANGE", "ChangeOption"), \
-  NAME("DIFFICULTY", "ChangeDifficulty"), \
-  NAME("SCREENSHOT", "Screenshot"), \
-  NAME("CLEAR", "Clear"), \
-  NAME("FAIL", "Fail"), \
-  NAME("MINE", "MineNote"), \
-  NAME("SCRATCH", "SongSelectChange"), \
-  NAME("COURSECLEAR", "CourseClear"), \
-  NAME("COURSEFAIL", "CourseFail")
-
-#define NAME(lr2name, metricname) lr2name
-  static const char *_lr2names[] = {
-    NAMES, 0
-  };
-#undef NAME
-
-#define NAME(lr2name, metricname) metricname
-  static const char *_metricnames[] = {
-    NAMES, 0
-  };
-#undef NAME
-
-#undef NAMES
-
-  for (auto &v : loader)
-  {
-    size_t metric_idx = 0;
-    std::string lr2name;
-    std::string metricname;
-    if (v.first[0] != '#')
-      continue;
-    lr2name = v.first.substr(1);
-
-    std::string vv = Substitute(
-      GetFirstParam(v.second), "LR2files", ""
-    );
-
-    while (_lr2names[metric_idx])
-    {
-      if (lr2name == _lr2names[metric_idx])
-        break;
-      metric_idx++;
-    }
-
-    if (_metricnames[metric_idx] == 0)
-      continue;
-    metricname = _metricnames[metric_idx];
-    set(metricname, vv);
-  }
-  return true;
-#else
-  return false;
-#endif
 }
 
 bool MetricGroup::Save(const std::string &path)
@@ -1695,6 +1213,7 @@ SystemPreference::~SystemPreference()
 {
 }
 
+
 // ------------------------------------------------------------------ KeyConfig
 
 KeySetting::KeySetting() { Default(); }
@@ -1902,5 +1421,68 @@ std::string ConvertToString(const std::vector<double>& dst)
   }
   return ss.str();
 }
+
+// ------------------------------------------------------------------ Loader/Helper
+
+const char *_LR2name[] = {
+  "SELECT",
+  "DECIDE",
+  "EXSELECT",
+  "EXDECIDE",
+  "FOLDER_OPEN",
+  "FOLDER_CLOSE",
+  "PANEL_OPEN",
+  "PANEL_CLOSE",
+  "OPTION_CHANGE",
+  "DIFFICULTY",
+  "SCREENSHOT",
+  "CLEAR",
+  "FAIL",
+  "MINE",
+  "SCRATCH",
+  "COURSECLEAR",
+  "COURSEFAIL",
+  0
+};
+
+const char *_metricname[] = {
+  "SongSelect",
+  "SongDecide",
+  "SongExSelect",
+  "SongExDecide",
+  0
+};
+
+class LR2CSVSoundHandlers
+{
+public:
+  static void set_sound_metric(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    unsigned i = 0;
+    MetricGroup *soundmetric = METRIC->get_group("Sound");
+    R_ASSERT(soundmetric);
+    while (_LR2name[i])
+    {
+      if (strcmp(ctx->get_str(0), _LR2name[i]) == 0)
+      {
+        soundmetric->set(_metricname[i], ctx->get_str(1));
+        break;
+      }
+      ++i;
+    }
+  }
+  LR2CSVSoundHandlers()
+  {
+    unsigned i = 0;
+    while (_LR2name[i])
+    {
+      LR2CSVExecutor::AddHandler(_LR2name[i], (LR2CSVCommandHandler*)&set_sound_metric);
+      ++i;
+    }
+  }
+};
+
+// register handler
+LR2CSVSoundHandlers _LR2CSVSoundHandlers;
 
 }

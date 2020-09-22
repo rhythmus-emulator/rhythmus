@@ -2,6 +2,7 @@
 #include "SongPlayer.h"
 #include "Util.h"
 #include "Player.h"
+#include "Script.h"
 #include "SceneManager.h"
 
 namespace rhythmus
@@ -141,5 +142,36 @@ void PlayScene::doUpdate(double delta)
   Scene::doUpdate(delta);
   playscenetask_.Update((float)delta);
 }
+
+
+class LR2CSVPlaySceneHandlers
+{
+public:
+  static void loadstart(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // ignored.
+  }
+  static void loadend(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *scene = (PlayScene*)loader->get_object("playscene");
+    if (!scene) return;
+    scene->SetMinimumLoadingTime(ctx->get_int(1));
+  }
+  static void scratchside(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *scene = (PlayScene*)loader->get_object("playscene");
+    if (!scene) return;
+    scene->SetPlayer(ctx->get_int(1));
+  }
+  LR2CSVPlaySceneHandlers()
+  {
+    LR2CSVExecutor::AddHandler("#LOADSTART", (LR2CSVCommandHandler*)&loadstart);
+    LR2CSVExecutor::AddHandler("#LOADEND", (LR2CSVCommandHandler*)&loadend);
+    LR2CSVExecutor::AddHandler("#SCRATCHSIDE", (LR2CSVCommandHandler*)&scratchside);
+  }
+};
+
+// register handler
+LR2CSVPlaySceneHandlers _LR2CSVPlaySceneHandlers;
 
 }

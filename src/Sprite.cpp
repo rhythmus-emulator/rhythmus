@@ -2,6 +2,8 @@
 #include "Game.h"
 #include "ResourceManager.h"
 #include "Script.h"
+#include "Logger.h"
+#include "KeyPool.h"
 #include "Util.h"
 #include "common.h"
 #include "config.h"
@@ -12,7 +14,7 @@ namespace rhythmus
 
 Sprite::Sprite()
   : img_(nullptr), time_(0), frame_(0), res_id_(nullptr),
-    blending_(0), use_texture_coord_(true), tex_attribute_(0)
+    blending_(0), filtering_(0), use_texture_coord_(true), tex_attribute_(0)
 {
   set_xy_as_center_ = true;
   sprani_.divx = sprani_.divy = sprani_.cnt = 1;
@@ -22,8 +24,8 @@ Sprite::Sprite()
 
 Sprite::Sprite(const Sprite& spr) : BaseObject(spr),
   img_(nullptr), sprani_(spr.sprani_), time_(0), frame_(0), res_id_(spr.res_id_),
-  blending_(spr.blending_), texcoord_(spr.texcoord_), use_texture_coord_(spr.use_texture_coord_),
-  tex_attribute_(spr.tex_attribute_)
+  blending_(spr.blending_), filtering_(spr.filtering_), texcoord_(spr.texcoord_),
+  use_texture_coord_(spr.use_texture_coord_), tex_attribute_(spr.tex_attribute_)
 {
   if (spr.img_)
     img_ = (Image*)spr.img_->clone();
@@ -40,74 +42,29 @@ BaseObject *Sprite::clone()
   return new Sprite(*this);
 }
 
-void Sprite::Load(const MetricGroup& metric)
+void Sprite::Load(const MetricGroup &m)
 {
-  BaseObject::Load(metric);
+  BaseObject::Load(m);
 
-  metric.get_safe("blend", blending_);
+  m.get_safe("blend", blending_);
 
-  if (metric.exist("path"))
-    SetImage(metric.get_str("path"));
-  else if (metric.exist("src"))
-    SetImage(metric.get_str("src"));
+  if (m.exist("path"))
+    SetImage(m.get_str("path"));
+  else if (m.exist("src"))
+    SetImage(m.get_str("src"));
 
-  if (metric.exist("crop"))
+  if (m.exist("crop"))
   {
-    CommandArgs args(metric.get_str("crop"), 4, true);
+    CommandArgs args(m.get_str("crop"), 4, true);
     SetImageCoord(Vector4{ args.Get<int>(0), args.Get<int>(1),
       args.Get<int>(2), args.Get<int>(3) });
   }
-  else if (metric.exist("croptex"))
+  else if (m.exist("croptex"))
   {
-    CommandArgs args(metric.get_str("croptex"), 4, true);
+    CommandArgs args(m.get_str("croptex"), 4, true);
     SetTextureCoord(Vector4{ args.Get<int>(0), args.Get<int>(1),
       args.Get<int>(2), args.Get<int>(3) });
   }
-
-#if USE_LR2_FEATURE == 1
-  if (metric.exist("lr2src"))
-  {
-    std::string lr2src;
-    std::string lr2dst;
-    CommandArgs cmds, params;
-    metric.get_safe("lr2src", lr2src);
-    LoadLR2SRC(lr2src);
-
-    metric.get_safe("lr2dst", lr2dst);
-    cmds.set_separator('|');
-    cmds.Parse(lr2dst);
-    params.set_separator(',');
-    params.Parse(cmds.Get_str(0), 20, true);
-
-    // TODO: load resource id
-    blending_ = params.Get<int>(11);
-  }
-#endif
-}
-
-void Sprite::LoadLR2SRC(const std::string &lr2src)
-{
-  /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
-  CommandArgs args(lr2src, 10, true);
-
-  SetImage("image" + args.Get<std::string>(1));
-
-  Vector4 r{
-    args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), args.Get<int>(5)
-  };
-  // Use whole image if width/height is zero.
-  if (r.z <= 0 || r.w <= 0)
-    SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
-  else
-    SetImageCoord(Vector4{ r.x, r.y, r.x + r.z, r.y + r.w });
-
-  int divx = args.Get<int>(6);
-  int divy = args.Get<int>(7);
-
-  sprani_.divx = divx > 0 ? divx : 1;
-  sprani_.divy = divy > 0 ? divy : 1;
-  sprani_.cnt = sprani_.divx *  sprani_.divy;
-  sprani_.duration = args.Get<int>(8);
 }
 
 void Sprite::OnReady()
@@ -139,6 +96,11 @@ void Sprite::SetBlending(int blend)
   blending_ = blend;
 }
 
+void Sprite::SetFiltering(int filtering)
+{
+  filtering_ = filtering;
+}
+
 void Sprite::SetImageCoord(const Rect &r)
 {
   texcoord_ = r;
@@ -151,7 +113,15 @@ void Sprite::SetTextureCoord(const Rect &r)
   use_texture_coord_ = true;
 }
 
-void Sprite::Replay()
+void Sprite::SetAnimatedTexture(int divx, int divy, int duration)
+{
+  sprani_.divx = divx > 0 ? divx : 1;
+  sprani_.divy = divy > 0 ? divy : 1;
+  sprani_.cnt = sprani_.divx *  sprani_.divy;
+  sprani_.duration = duration;
+}
+
+void Sprite::ReplaySprite()
 {
   time_ = 0;
   frame_ = 0;
@@ -169,10 +139,21 @@ void Sprite::SetNumber(int number)
   }
 }
 
+void Sprite::SetResourceId(const std::string &id)
+{
+  auto k = KEYPOOL->GetInt(id);
+  res_id_ = &*k;
+}
+
 void Sprite::Refresh()
 {
   if (res_id_)
     SetNumber(*res_id_);
+}
+
+void Sprite::SetDuration(int milisecond)
+{
+  sprani_.duration = milisecond;
 }
 
 // milisecond
@@ -231,6 +212,7 @@ void Sprite::doRender()
 
   GRAPHIC->SetTexture(0, img_->get_texture_ID());
   GRAPHIC->SetBlendMode(blending_);
+  // TODO: SetFiltering in graphic.
   GRAPHIC->DrawQuad(vi);
 }
 
@@ -248,5 +230,72 @@ std::string Sprite::toString() const
   }
   return BaseObject::toString() + ss.str();
 }
+
+// ------------------------------------------------------------------ Loader/Helper
+
+class LR2CSVSpriteHandlers
+{
+public:
+  static void src_image(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *o = _this ? (Sprite*)_this : (Sprite*)BaseObject::CreateObject("sprite");
+    loader->set_object("sprite", o);
+
+    Vector4 r{
+      ctx->get_int(3), ctx->get_int(4), ctx->get_int(5), ctx->get_int(6)
+    };
+    // Use whole image if width/height is zero.
+    if (r.z <= 0 || r.w <= 0)
+      o->SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
+    else
+      o->SetImageCoord(Vector4{ r.x, r.y, r.x + r.z, r.y + r.w });
+    o->SetAnimatedTexture(ctx->get_int(7), ctx->get_int(8), ctx->get_int(9));
+    o->SetDebug(format_string("LR2SRC-%u", ctx->get_str(21)));
+  }
+
+  static void dst_image(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    const char *args[21];
+    auto *o = _this ? (Sprite*)_this : (Sprite*)loader->get_object("sprite");
+    if (!o)
+    {
+      Logger::Warn("Warning: invalid #DST_IMAGE command.");
+      return;
+    }
+
+    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
+    o->AddFrameByLR2command(args + 1);
+
+    // these attributes are only affective for first run
+    if (loader->get_command_index() == 0)
+    {
+      const int timer = ctx->get_int(17);
+
+      // LR2 needs to keep its animation queue, so don't use stop.
+      o->AddCommand(format_string("LR%d", timer), "replay");
+      o->AddCommand(format_string("LR%dOff", timer), "hide");
+      o->SetBlending(ctx->get_int(12));
+      o->SetFiltering(ctx->get_int(13));
+
+      // XXX: move this flag to Sprite,
+      // as LR2_TEXT object don't work with this..?
+      o->SetVisibleFlag(
+        format_string("F%s", ctx->get_str(18)),
+        format_string("F%s", ctx->get_str(19)),
+        format_string("F%s", ctx->get_str(20)),
+        std::string()
+      );
+    }
+  }
+
+  LR2CSVSpriteHandlers()
+  {
+    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVCommandHandler*)&src_image);
+    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVCommandHandler*)&dst_image);
+  }
+};
+
+// register handlers
+LR2CSVSpriteHandlers _LR2CSVSpriteHandlers;
 
 }

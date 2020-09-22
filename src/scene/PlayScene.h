@@ -18,6 +18,9 @@ public:
   virtual void CloseScene(bool next);
   virtual void ProcessInputEvent(const InputEvent& e);
 
+  void SetPlayer(int player);
+  void SetMinimumLoadingTime(int time);
+
 private:
   virtual void doUpdate(double delta);
 

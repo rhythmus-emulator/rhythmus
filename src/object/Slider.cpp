@@ -2,6 +2,7 @@
 #include "Script.h"
 #include "KeyPool.h"
 #include "Util.h"
+#include "Logger.h"
 #include "config.h"
 #include <sstream>
 #include <algorithm>
@@ -40,71 +41,53 @@ void Slider::Load(const MetricGroup &metric)
 {
   cursor_.SetDraggable(true);
   AddChild(&cursor_);
+
   BaseObject::Load(metric);
 
   metric.get_safe("direction", type_);
 
   if (metric.exist("path"))
     cursor_.SetImage(metric.get_str("path"));
+}
 
-  // TODO: sprite 'src' attribute
-
-#if USE_LR2_FEATURE == 1
-  if (metric.exist("lr2src"))
+void Slider::SetRange(int direction, float range)
+{
+  switch (direction)
   {
-    /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
-    std::string cmd;
-    metric.get_safe("lr2src", cmd);
-    CommandArgs args(cmd);
-
-    // only load texture path & texture coord for cursor
-    // TODO: set cycle for image
-    cursor_.SetImage(std::string("image") + args.Get_str(1));
-    cursor_.SetImageCoord(Rect{
-      args.Get<float>(2), args.Get<float>(3),
-      args.Get<float>(2) + args.Get<float>(4),
-      args.Get<float>(3) + args.Get<float>(5) });
-
-    int direction = args.Get<int>(10);
-    int range = args.Get<int>(11);
-    switch (direction)
-    {
-    case 0:
-    default:
-      range_.y -= (float)range;
-      type_ = 0x10;
-      break;
-    case 1:
-      range_.x += (float)range;
-      type_ = 0x11;
-      break;
-    case 2:
-      range_.y += (float)range;
-      type_ = 0x10;
-      break;
-    case 3:
-      range_.x -= (float)range;
-      type_ = 0x11;
-      break;
-    }
-
-    /* track change of text table */
-    int eventid = args.Get<int>(12) + 1500;
-    std::string eventname = "Number" + std::to_string(eventid);
-    AddCommand(eventname, "refresh");
-    SubscribeTo(eventname);
-
-    /* set ref value for update */
-    auto k = KEYPOOL->GetFloat("slider" + std::to_string(eventid));
-    val_ptr_ = &*k;
-    Refresh();
-
-    /* disabled? */
-    editable_ = true;
-    if (args.Get_str(13))
-      editable_ = (args.Get<int>(13) == 0);
+  case 0:
+  default:
+    range_.y -= (float)range;
+    type_ = 0x10;
+    break;
+  case 1:
+    range_.x += (float)range;
+    type_ = 0x11;
+    break;
+  case 2:
+    range_.y += (float)range;
+    type_ = 0x10;
+    break;
+  case 3:
+    range_.x -= (float)range;
+    type_ = 0x11;
+    break;
   }
-#endif
+}
+
+void Slider::SetResource(const std::string &resname)
+{
+  auto k = KEYPOOL->GetFloat(resname);
+  val_ptr_ = &*k;
+}
+
+void Slider::SetEditable(bool editable)
+{
+  editable_ = editable;
+}
+
+Sprite *Slider::cursor()
+{
+  return &cursor_;
 }
 
 void Slider::OnAnimation(DrawProperty &frame)
@@ -201,5 +184,90 @@ std::string Slider::toString() const
   ss << "\nCURSOR DESC" << std::endl << cursor_.toString();
   return BaseObject::toString() + ss.str();
 }
+
+// ------------------------------------------------------------------ Loader/Helper
+
+class LR2CSVSliderHandlers
+{
+public:
+  static void src_slider(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *o = (Slider*)BaseObject::CreateObject("slider");
+    loader->set_object("slider", o);
+
+
+    // TODO: sprite 'src' attribute
+    /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
+
+    // only load texture path & texture coord for cursor
+    // TODO: set cycle for image
+    o->cursor()->SetImage(std::string("image") + ctx->get_str(2));
+    o->cursor()->SetImageCoord(Rect{
+      ctx->get_float(3), ctx->get_float(4),
+      ctx->get_float(3) + ctx->get_float(5),
+      ctx->get_float(4) + ctx->get_float(6) });
+
+    int direction = ctx->get_int(11);
+    float range = ctx->get_float(12);
+    o->SetRange(direction, range);
+
+    /* track change of text table */
+    int eventid = ctx->get_int(13) + 1500;
+    std::string eventname = "Number" + std::to_string(eventid);
+    o->AddCommand(eventname, "refresh");
+    o->SubscribeTo(eventname);
+
+    /* set ref value for update */
+    o->SetResource("slider" + std::to_string(eventid));
+    o->Refresh();
+
+    /* disabled? */
+    o->SetEditable(ctx->get_int(14) == 0);
+  }
+
+  static void dst_slider(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    const char *args[21];
+    auto *o = (Sprite*)loader->get_object("slider");
+    if (!o)
+    {
+      Logger::Warn("Warning: invalid #DST_SLIDER command.");
+      return;
+    }
+
+    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
+    o->AddFrameByLR2command(args + 1);
+
+    // these attributes are only affective for first run
+    if (loader->get_command_index() == 0)
+    {
+      const int timer = ctx->get_int(17);
+
+      // LR2 needs to keep its animation queue, so don't use stop.
+      o->AddCommand(format_string("LR%d", timer), "replay");
+      o->AddCommand(format_string("LR%dOff", timer), "hide");
+      o->SetBlending(ctx->get_int(12));
+      o->SetFiltering(ctx->get_int(13));
+
+      // XXX: move this flag to Sprite,
+      // as LR2_TEXT object don't work with this..?
+      o->SetVisibleFlag(
+        format_string("F%s", ctx->get_str(18)),
+        format_string("F%s", ctx->get_str(19)),
+        format_string("F%s", ctx->get_str(20)),
+        std::string()
+      );
+    }
+  }
+
+  LR2CSVSliderHandlers()
+  {
+    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVCommandHandler*)&src_slider);
+    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVCommandHandler*)&dst_slider);
+  }
+};
+
+// register handlers
+LR2CSVSliderHandlers _LR2CSVSliderHandlers;
 
 }

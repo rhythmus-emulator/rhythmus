@@ -70,6 +70,7 @@ void MusicWheelItem::Load(const MetricGroup &metric)
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
+    std::string attrname = format_string("lr2bar%dsrc", i);
     background_[i].set_name("MusicWheelType" + std::to_string(i));
     background_[i].Load(metric);
   }
@@ -84,8 +85,8 @@ void MusicWheelItem::Load(const MetricGroup &metric)
     AddChild(&background_[i]);
   for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
     AddChild(&level_[i]);
-  AddChild(&*title_);
-  AddChild(&*level_);
+  //AddChild(&*title_); -- TODO: this method makes double-free with unique destructor. need to be fixed
+  //AddChild(&*level_);
 }
 
 static const int _type_to_baridx[] = {
@@ -229,6 +230,10 @@ void MusicWheel::Load(const MetricGroup &metric)
   sort_.type = *PREFERENCE->select_sort_type;
   sort_.invalidate = true;
 
+  /* copy item metric for creation */
+  if (metric.get_group("item"))
+    item_metric = *metric.get_group("item");
+
   /* limit gamemode and sort filter types by metric */
   if (metric.exist("GamemodeFilter"))
   {
@@ -281,13 +286,6 @@ MusicWheelData* MusicWheel::get_data(int dataindex)
 MusicWheelData* MusicWheel::get_selected_data(int player_num)
 {
   return static_cast<MusicWheelData*>(ListView::GetSelectedMenuData());
-}
-
-ListViewItem* MusicWheel::CreateMenuItem()
-{
-  MusicWheelItem* item = new MusicWheelItem();
-  item->set_parent(this);
-  return item;
 }
 
 void MusicWheel::OnSelectChange(const void *data, int direction)
@@ -513,12 +511,12 @@ void MusicWheel::RebuildData()
   // add songs & default sections/items
   for (size_t i = 0; i < data_sections_.size(); ++i)
   {
-    AddData(new MusicWheelData(data_sections_[i]));
+    AddData(&data_sections_[i]);
     if (data_sections_[i].name == current_section_)
     {
       // TODO: filtering once again by section type/name
       for (auto &d : data_filtered_)
-        AddData(new MusicWheelData(d));
+        AddData(&d);
     }
   }
   
@@ -537,9 +535,18 @@ void MusicWheel::RebuildData()
   RebuildItems();
 }
 
-void MusicWheel::DeleteData(void *d)
+void MusicWheel::RebuildDataContent(ListViewData &data)
 {
-  delete (MusicWheelData*)d;
+  // create from MusicWheel.item data
+  // so metric must be alive after object initialization
+  if (!data.content)
+  {
+    MusicWheelItem *item = new MusicWheelItem();
+    item->set_name("MusicWheelItem");
+    item->LoadFromName();
+    item->set_parent(this);
+    data.content = item;
+  }
 }
 
 void MusicWheel::OpenSection(const std::string &section)
@@ -633,5 +640,154 @@ int MusicWheel::GetDifficultyFilter() const
 {
   return filter_.difficulty;
 }
+
+// -------------------------------------------------------------------- Loaders
+
+class LR2CSVMusicWheelHandlers
+{
+public:
+  static void src_bar_body(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *wheel = (MusicWheel*)loader->get_object("musicwheel");
+    unsigned bgtype = 0;
+    if (!wheel) return;
+    bgtype = (unsigned)ctx->get_int(1);
+    for (unsigned i = 0; i < wheel->get_wheel_item_count(); ++i)
+    {
+      auto *item = wheel->get_wheel_item(i);
+      auto *bg = item->get_background(bgtype);
+      LR2CSVExecutor::CallHandler("#SRC_IMAGE", bg, loader, ctx);
+    }
+  }
+
+  static void dst_bar_body_off(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *wheel = (MusicWheel*)loader->get_object("musicwheel");
+    unsigned itemindex = 0;
+    std::string itemname;
+    if (!wheel) return;
+    itemindex = (unsigned)ctx->get_int(1);
+    itemname = format_string("musicwheelitem%u", itemindex);
+    auto *item = (Sprite*)wheel->get_wheel_item(itemindex);
+    LR2CSVExecutor::CallHandler("#DST_IMAGE", item, loader, ctx);
+  }
+
+  static void dst_bar_body_on(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // TODO: implement. currently ignored.
+  }
+
+  static void bar_center(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *wheel = (MusicWheel*)loader->get_object("musicwheel");
+    if (!wheel) return;
+    wheel->set_item_center_index((unsigned)ctx->get_int(1));
+  }
+
+  static void bar_available(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *wheel = (MusicWheel*)loader->get_object("musicwheel");
+    if (!wheel) return;
+    wheel->set_item_min_index(0);
+    wheel->set_item_max_index((unsigned)ctx->get_int(1));
+  }
+
+  static void src_bar_title(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void dst_bar_title(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void src_bar_flash(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void dst_bar_flash(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void src_bar_level(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void dst_bar_level(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void src_bar_lamp(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void dst_bar_lamp(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void src_my_bar_lamp(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void dst_my_bar_lamp(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void src_rival_bar_lamp(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void dst_rival_bar_lamp(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void src_rival_lamp(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  static void dst_rival_lamp(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+
+  }
+
+  LR2CSVMusicWheelHandlers()
+  {
+    LR2CSVExecutor::AddHandler("#SRC_BAR_BODY", (LR2CSVCommandHandler*)&src_bar_body);
+    LR2CSVExecutor::AddHandler("#DST_BAR_BODY_OFF", (LR2CSVCommandHandler*)&dst_bar_body_off);
+    LR2CSVExecutor::AddHandler("#DST_BAR_BODY_ON", (LR2CSVCommandHandler*)&dst_bar_body_on);
+    LR2CSVExecutor::AddHandler("#BAR_CENTER", (LR2CSVCommandHandler*)&bar_center);
+    LR2CSVExecutor::AddHandler("#BAR_AVAILABLE", (LR2CSVCommandHandler*)&bar_available);
+    LR2CSVExecutor::AddHandler("#SRC_BAR_TITLE", (LR2CSVCommandHandler*)&src_bar_title);
+    LR2CSVExecutor::AddHandler("#DST_BAR_TITLE", (LR2CSVCommandHandler*)&dst_bar_title);
+    LR2CSVExecutor::AddHandler("#SRC_BAR_FLASH", (LR2CSVCommandHandler*)&src_bar_flash);
+    LR2CSVExecutor::AddHandler("#DST_BAR_FLASH", (LR2CSVCommandHandler*)&dst_bar_flash);
+    LR2CSVExecutor::AddHandler("#SRC_BAR_LEVEL", (LR2CSVCommandHandler*)&src_bar_level);
+    LR2CSVExecutor::AddHandler("#DST_BAR_LEVEL", (LR2CSVCommandHandler*)&dst_bar_level);
+    LR2CSVExecutor::AddHandler("#SRC_BAR_LAMP", (LR2CSVCommandHandler*)&src_bar_lamp);
+    LR2CSVExecutor::AddHandler("#DST_BAR_LAMP", (LR2CSVCommandHandler*)&dst_bar_lamp);
+    LR2CSVExecutor::AddHandler("#SRC_MY_BAR_LAMP", (LR2CSVCommandHandler*)&src_my_bar_lamp);
+    LR2CSVExecutor::AddHandler("#DST_MY_BAR_LAMP", (LR2CSVCommandHandler*)&dst_my_bar_lamp);
+    LR2CSVExecutor::AddHandler("#SRC_RIVAL_BAR_LAMP", (LR2CSVCommandHandler*)&src_rival_bar_lamp);
+    LR2CSVExecutor::AddHandler("#DST_RIVAL_BAR_LAMP", (LR2CSVCommandHandler*)&dst_rival_bar_lamp);
+    LR2CSVExecutor::AddHandler("#SRC_RIVAL_LAMP", (LR2CSVCommandHandler*)&src_rival_lamp);
+    LR2CSVExecutor::AddHandler("#DST_RIVAL_LAMP", (LR2CSVCommandHandler*)&dst_rival_lamp);
+    LR2CSVExecutor::AddHandler("#BAR_CENTER", (LR2CSVCommandHandler*)&bar_center);
+  }
+};
+
+// register handlers
+LR2CSVMusicWheelHandlers _LR2CSVMusicWheelHandlers;
 
 }

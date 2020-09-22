@@ -15,6 +15,11 @@ public:
 
   virtual void Load(const MetricGroup &metric);
 
+  void SetRange(int direction, float range);
+  void SetResource(const std::string &resourcename);
+  void SetEditable(bool editable);
+  Sprite *cursor();
+
   virtual const char* type() const;
   virtual std::string toString() const;
 

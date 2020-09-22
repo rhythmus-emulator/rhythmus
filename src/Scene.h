@@ -48,14 +48,17 @@ private:
   bool allow_enqueue_;
 };
 
+/* @brief declared in Scene.cpp, used for scene loading. */
+struct SceneLoadingContext;
+
 /* @brief A screen which is renderable */
 class Scene : public BaseObject
 {
 public:
   Scene();
-  virtual ~Scene() { };
+  virtual ~Scene();
 
-  virtual void Load(const MetricGroup& m);
+  virtual void Load(const MetricGroup &metric);
 
   /* @brief load scene resource and prepare to start */
   virtual void LoadScene();
@@ -65,9 +68,6 @@ public:
 
   /* @brief Register as predefined object. (for static allocated object) */
   void RegisterPredefObject(BaseObject *obj);
-
-  /* @brief Create object and insert to scene. */
-  virtual void CreateSceneObject(const MetricGroup* m);
 
   /* @brief triggered when scene is finished
    * @warn it does not mean changing scene instantly,
@@ -83,6 +83,11 @@ public:
 
   /* @brief Event processing for scene specific action */
   virtual void ProcessInputEvent(const InputEvent& e);
+
+  void SetInputStartTime(int time);
+  void SetFadeOutTime(int time);
+  void SetFadeInTime(int time);
+  void SetTimeout(int time);
 
 protected:
   // generally used scene queued tasks
@@ -120,8 +125,8 @@ private:
   // @brief enable scene resource caching for fast reload for this scene.
   bool enable_caching_;
 
-  // theme-specific metric data used for loading scene.
-  MetricGroup metric_;
+  // context used for loading
+  SceneLoadingContext *loading_ctx_;
 
   // Pre-defined object that can be created manually.
   std::map<std::string, BaseObject *> predef_objects_;

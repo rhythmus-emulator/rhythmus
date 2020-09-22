@@ -62,7 +62,6 @@ set (RHYTHMUS_SOURCES
   object/Dialog.cpp
 
   LR2/exdxa.cpp
-  LR2/LR2SceneLoader.cpp
   )
 
 set (RHYTHMUS_HEADERS
@@ -118,7 +117,6 @@ set (RHYTHMUS_HEADERS
   object/Dialog.h
 
   LR2/exdxa.h
-  LR2/LR2SceneLoader.h
   )
 
 include_directories(

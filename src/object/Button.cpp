@@ -1,33 +1,42 @@
 #include "Button.h"
 #include "Util.h"
-#include "KeyPool.h"
+#include "Script.h"
 #include "config.h"
 #include <sstream>
 
 namespace rhythmus
 {
 
-Button::Button() : panel_(-1), button_id_(0) {}
+Button::Button() {}
 
 Button::~Button() {}
 
 void Button::Load(const MetricGroup &metric)
 {
   Sprite::Load(metric);
+}
 
-#if USE_LR2_FEATURE == 1
-  if (metric.exist("lr2src"))
+const char* Button::type() const { return "Button"; }
+
+// ------------------------------------------------------------------ Loader/Helper
+
+class LR2CSVButtonHandlers
+{
+public:
+  static void src_button(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    CommandArgs args(metric.get_str("lr2src"));
+    auto *o = _this ? (Button*)_this : (Button*)BaseObject::CreateObject("button");
+    loader->set_object("button", o);
+    LR2CSVExecutor::CallHandler("#SRC_IMAGE", o, loader, ctx);
 
-    SetFocusable(args.Get<int>(10));
+    o->SetFocusable(ctx->get_int(11));
 
     /* XXX: change clickable by panel opening */
-    panel_ = args.Get<int>(11);
-    if (panel_ >= 0)
+    int panel = ctx->get_int(12);
+    if (panel >= 0)
     {
-      AddCommand("Panel" + std::to_string(panel_), "focusable:1");
-      AddCommand("Panel" + std::to_string(panel_) + "Off", "focusable:0");
+      o->AddCommand("Panel" + std::to_string(panel), "focusable:1");
+      o->AddCommand("Panel" + std::to_string(panel) + "Off", "focusable:0");
     }
 
     /**
@@ -37,32 +46,31 @@ void Button::Load(const MetricGroup &metric)
      * Click10R : LR2 click event with name 10, reverse.
      */
     std::string minus;
-    button_id_ = args.Get<int>(9);
-    if (args.size() > 12 && args.Get<int>(12) == -1)
+    int button_id = ctx->get_int(10);
+    if (ctx->get_int(13) == -1)
       minus = "R";
-    AddCommand("click",
-      format_string("sendevent:Click%d%s", button_id_, minus.c_str())
+    o->AddCommand("click",
+      format_string("sendevent:Click%d%s", button_id, minus.c_str())
     );
-
-    /* Set resource id from button id */
-    auto k = KEYPOOL->GetInt("button" + std::to_string(button_id_));
-    res_id_ = &*k;
-    AddCommand(format_string("Number%d", button_id_ + 1000), "refresh");
+    o->SetResourceId("button" + std::to_string(button_id));
+    o->AddCommand(format_string("Number%d", button_id + 1000), "refresh");
 
     /* Set sprite duration to zero to prevent unexpected sprite animation */
-    sprani_.duration = 0;
+    o->SetDuration(0);
   }
-#endif
-}
+  static void dst_button(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *o = _this ? (Button*)_this : (Button*)loader->get_object("button");
+    LR2CSVExecutor::CallHandler("#DST_IMAGE", o, loader, ctx);
+  }
+  LR2CSVButtonHandlers()
+  {
+    LR2CSVExecutor::AddHandler("#SRC_BUTTON", (LR2CSVCommandHandler*)&src_button);
+    LR2CSVExecutor::AddHandler("#DST_BUTTON", (LR2CSVCommandHandler*)&dst_button);
+  }
+};
 
-const char* Button::type() const { return "Button"; }
-
-std::string Button::toString() const
-{
-  std::stringstream ss;
-  ss << "panel: " << panel_ << std::endl;
-  ss << "button_id: " << button_id_ << std::endl;
-  return BaseObject::toString() + ss.str();
-}
+// register handler
+LR2CSVButtonHandlers _LR2CSVButtonHandlers;
 
 }

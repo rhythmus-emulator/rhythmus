@@ -6,6 +6,7 @@
 #include "Text.h"
 #include "Number.h"
 #include "KeyPool.h"
+#include <memory>
 #include <string>
 
 namespace rhythmus
@@ -59,6 +60,7 @@ public:
   MusicWheelItem();
   virtual void Load(const MetricGroup &metric);
   virtual void LoadFromData(void *d);
+  Sprite *get_background(unsigned type);
 
 private:
   Sprite background_[NUM_SELECT_BAR_TYPES];
@@ -76,13 +78,15 @@ public:
 
   MusicWheelData *get_data(int dataindex);
   MusicWheelData *get_selected_data(int player_num);
+  MusicWheelItem *get_wheel_item(unsigned itemindex);
+  unsigned get_wheel_item_count() const;
 
   virtual void OnSelectChange(const void *data, int direction);
   virtual void OnSelectChanged();
   virtual void NavigateLeft();
   virtual void NavigateRight();
   virtual void RebuildData();
-  virtual void DeleteData(void *d);
+  virtual void RebuildDataContent(ListViewData &data);
 
   void OpenSection(const std::string &section);
   void CloseSection();
@@ -122,6 +126,8 @@ private:
   /* data for song list. */
   std::vector<MusicWheelSongData> data_songs_;
 
+  MetricGroup item_metric;
+
   /* Keypools updated by MusicWheel object */
   KeyData<std::string> info_title;
   KeyData<std::string> info_subtitle;
@@ -157,8 +163,6 @@ private:
   KeyData<int> info_bd;
   KeyData<int> info_pr;
   KeyData<float> info_musicwheelpos;
-
-  virtual ListViewItem* CreateMenuItem();
 };
 
 }

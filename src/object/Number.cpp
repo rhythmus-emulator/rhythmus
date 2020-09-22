@@ -28,7 +28,7 @@ Number::~Number()
   ClearAll();
 }
 
-void Number::Load(const MetricGroup& metric)
+void Number::Load(const MetricGroup &metric)
 {
   BaseObject::Load(metric);
 
@@ -37,19 +37,13 @@ void Number::Load(const MetricGroup& metric)
   if (metric.exist("font"))
     SetGlyphFromFont(metric);
 
-  if (metric.exist("lr2src"))
-  {
-    SetGlyphFromLR2SRC(metric.get_str("lr2src"));
-    if (metric.exist("lr2dst"))
-    {
-      std::string lr2dst = metric.get_str("lr2dst");
-      CommandArgs args(lr2dst.substr(0, lr2dst.find('|')));
-      blending_ = args.Get<int>(11);
-    }
-  }
-
   if (metric.exist("value"))
     SetNumber(metric.get<int>("value"));
+}
+
+void Number::OnReady()
+{
+  // TODO: code filling vertex here, not in SetGlyphFromImage directly.
 }
 
 void Number::SetGlyphFromFont(const MetricGroup &m)
@@ -58,7 +52,7 @@ void Number::SetGlyphFromFont(const MetricGroup &m)
   font_ = FONTMAN->Load(m);
   if (!font_)
     return;
-  SleepUntilLoadFinish(font_);
+  SleepUntilLoadFinish(font_);   // XXX: Need to remove this code
   AllocNumberGlyph(1);
 
   std::vector<TextVertexInfo> textvertex;
@@ -67,24 +61,16 @@ void Number::SetGlyphFromFont(const MetricGroup &m)
     tvi_glyphs_[i] = textvertex[i];
 }
 
-void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
+void Number::SetGlyphFromImage(const std::string &path, const Rect &imgcoord,
+                               int divx, int divy, int digitcount)
 {
-#if USE_LR2_FEATURE == 1
-  // (null),(image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align),(keta)
-  CommandArgs args(lr2src);
-
   ClearAll();
-  img_ = IMAGEMAN->Load(std::string("image") + args.Get_str(1));
+  img_ = IMAGEMAN->Load(path);
   if (!img_)
     return;
-  SleepUntilLoadFinish(img_);
+  SleepUntilLoadFinish(img_);   // XXX: Need to remove this code
 
   /* add glyphs */
-  int divx = std::max(1, args.Get<int>(6));
-  int divy = std::max(1, args.Get<int>(7));
-  Vector4 imgcoord{
-    args.Get<int>(2), args.Get<int>(3), args.Get<int>(4), args.Get<int>(5)
-  };
   Vector2 gsize{ imgcoord.z / divx, imgcoord.w / divy };
   Vector2 texsize{ (float)img_->get_width(), (float)img_->get_height() };
   unsigned cnt = (unsigned)(divx * divy);
@@ -149,16 +135,12 @@ void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
   }
 
   cycle_count_ = cnt / multiply_mode;
-  cycle_time_ = std::max(1, args.Get<int>(8));
+  cycle_time_ = 1;  // no cycle by default
+}
 
-  /* track change of number table */
-  int eventid = args.Get<int>(9);
-  std::string eventname = "Number" + args.Get<std::string>(9);
-  AddCommand(eventname, "refresh");
-  SubscribeTo(eventname);
-
-  /* alignment (not use LR2 alignment here) */
-  switch (args.Get<int>(11))
+void Number::SetAlignment(int align)
+{
+  switch (align)
   {
   case 0:
     GetCurrentFrame().align.x = 0.0f;
@@ -174,21 +156,37 @@ void Number::SetGlyphFromLR2SRC(const std::string &lr2src)
     value_params_.fill_empty_zero = 2;
     break;
   }
+}
 
-  /* keta processing: tween width multiply & set number formatter */
-  int keta = args.Get<int>(12);
-  keta_ = keta;
-  value_params_.max_string = keta;
+void Number::SetDigit(int count)
+{
+  /* TODO: more precise number formatter */
+  keta_ = count;
+  value_params_.max_string = count;
   value_params_.max_decimal = 0;
+}
 
-  resize_to_box_ = true;
+void Number::SetResizeToBox(bool v)
+{
+  resize_to_box_ = v;
+}
 
-  /* set value instantly: TODO */
-  std::string resname = "N" + args.Get<std::string>(1);
-  KeyData<int> kdata = KEYPOOL->GetInt(resname);
+void Number::SetBlending(int blending)
+{
+  blending_ = blending;
+}
+
+void Number::SetResourceId(const std::string &id)
+{
+  /* set value instantly */
+  KeyData<int> kdata = KEYPOOL->GetInt(id);
   val_ptr_ = &*kdata;
   Refresh();
-#endif
+}
+
+void Number::SetLoopCycle(int cycle)
+{
+  cycle_time_ = std::max(1, cycle);
 }
 
 void Number::SetNumber(int number)
@@ -469,5 +467,74 @@ std::string Number::toString() const
   
   return BaseObject::toString() + ss.str();
 }
+
+// ------------------------------------------------------------------ Loader/Helper
+
+class LR2CSVNumberHandlers
+{
+public:
+  static void src_number(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    // (null),(image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align),(keta)
+    auto *o = (Number*)BaseObject::CreateObject("number");
+    loader->set_object("number", o);
+    std::string imgname = std::string("image") + ctx->get_str(2);
+    Rect clip(ctx->get_int(3), ctx->get_int(4),
+      ctx->get_int(3) + ctx->get_int(5),
+      ctx->get_int(4) + ctx->get_int(6));
+    const int divx = ctx->get_int(7);
+    const int divy = ctx->get_int(8);
+    int digitcount = 10;
+    if ((divx * divy) % 24 == 0) digitcount = 24;
+    else if ((divx * divy) % 11 == 0) digitcount = 11;
+
+    o->SetGlyphFromImage(imgname, clip, divx, divy, digitcount);
+
+    /* alignment (not use LR2 alignment here) */
+    o->SetAlignment(ctx->get_int(12));
+
+    /* digit (keta) */
+    o->SetDigit(ctx->get_int(13));
+
+    o->SetLoopCycle(ctx->get_int(9));
+    o->SetResizeToBox(true);
+
+    /* track change of number table */
+    std::string eventname = format_string("Number%s", ctx->get_str(11));
+    o->AddCommand(eventname, "refresh");
+    o->SubscribeTo(eventname);
+    std::string resname = format_string("N%s", ctx->get_str(11));
+    o->SetResourceId(resname);
+  }
+  static void dst_number(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    const char *args[21];
+    auto *o = (Number*)loader->get_object("number");
+    if (!o) return;
+
+    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
+    o->AddFrameByLR2command(args + 1);
+
+    // these attributes are only affective for first run
+    if (loader->get_command_index() == 0)
+    {
+      const int timer = ctx->get_int(17);
+
+      // LR2 needs to keep its animation queue, so don't use stop.
+      o->AddCommand(format_string("LR%d", timer), "replay");
+      o->AddCommand(format_string("LR%dOff", timer), "hide");
+      o->SetBlending(ctx->get_int(12));
+      //o->SetFiltering(ctx->get_int(13));
+    }
+  }
+  LR2CSVNumberHandlers()
+  {
+    LR2CSVExecutor::AddHandler("#SRC_NUMBER", (LR2CSVCommandHandler*)&src_number);
+    LR2CSVExecutor::AddHandler("#DST_NUMBER", (LR2CSVCommandHandler*)&dst_number);
+  }
+};
+
+// register handler
+LR2CSVNumberHandlers _LR2CSVNumberHandlers;
 
 }

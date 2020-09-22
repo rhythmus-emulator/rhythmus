@@ -92,7 +92,7 @@ void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
 
 Animation::Animation(const DrawProperty *initial_state)
   : current_frame_(-1), current_frame_time_(0), frame_time_(0),
-    is_finished_(false), repeat_(false), repeat_start_time_(0)
+    is_finished_(false), repeat_(false), paused_(false), repeat_start_time_(0)
 {
   if (initial_state)
     AddFrame(*initial_state, 0, EaseTypes::kEaseLinear);
@@ -147,7 +147,7 @@ void Animation::SetCommand(const std::string &cmd)
 void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty *out)
 {
   // don't do anything if empty.
-  if (frames_.empty()) return;
+  if (frames_.empty() || paused_) return;
 
   // find out which frame is it in.
   frame_time_ += ms;
@@ -191,6 +191,25 @@ void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty 
   // return calculated drawproperty.
   if (out)
     GetDrawProperty(*out);
+}
+
+void Animation::Replay()
+{
+  current_frame_ = 0;
+  current_frame_time_ = 0;
+  frame_time_ = 0;
+  is_finished_ = false;
+  paused_ = false;
+}
+
+void Animation::Play()
+{
+  paused_ = false;
+}
+
+void Animation::Pause()
+{
+  paused_ = true;
 }
 
 void Animation::HurryTween()
@@ -381,7 +400,6 @@ bool BaseObject::IsHeapAllocated(bool v) const
   return is_allocated_;
 }
 
-
 void BaseObject::Load(const MetricGroup &m)
 {
   // Load command
@@ -400,73 +418,21 @@ void BaseObject::Load(const MetricGroup &m)
     frame_.pos.z = frame_.pos.x + m.get<float>("w");
   if (m.exist("h"))
     frame_.pos.w = frame_.pos.y + m.get<float>("h");
-
-#if USE_LR2_FEATURE == 1
-  // Load LR2 properties
-  if (m.exist("lr2src"))
-  {
-    std::string lr2cmd;
-    CommandArgs la;
-    m.get_safe("lr2src", lr2cmd);
-    la.set_separator(',');
-    la.Parse(lr2cmd, 21, true);
-
-    if (m.exist("lr2dst"))
-    {
-      std::string d = m.get_str("lr2dst");
-      const char *sep_d2 = d.c_str();
-      while (*sep_d2 && *sep_d2 != '|') sep_d2++;
-      std::string d2 = d.substr(0, sep_d2 - d.c_str());
-      CommandArgs args_dst(d2, 20, true);
-      int timer = args_dst.Get<int>(16);
-
-      // XXX: move this flag to Sprite,
-      // as LR2_TEXT object don't work with this..?
-      SetVisibleFlag(
-        "F" + args_dst.Get<std::string>(17), "F" + args_dst.Get<std::string>(18),
-        "F" + args_dst.Get<std::string>(19), ""
-      );
-
-      AddCommand(format_string("LR%d", timer), "lr2cmd:" + d);
-      AddCommand(format_string("LR%dOff", timer), "stop");
-    }
-
-    // Hide by default.
-    Hide();
-
-    // Hide if not tweening.
-    //hide_if_not_tweening_ = true;
-    
-    debug_ = "LR2SRC-" + lr2cmd;
-  }
-#endif
-
-  // Check for children objects to load
-  for (auto i = m.group_cbegin(); i != m.group_cend(); ++i)
-  {
-    BaseObject *obj = CreateObject(*i);
-    if (obj)
-      AddChild(obj);
-  }
-}
-
-void BaseObject::LoadFromFile(const std::string &metric_file)
-{
-  MetricGroup m;
-  if (m.Load(metric_file))
-    Load(m);
-  else
-    Logger::Error("Error occured while opening metric file.");
 }
 
 void BaseObject::LoadFromName()
 {
   if (get_name().empty())
     return;
+
   MetricGroup *m = METRIC->get_group(get_name());
   if (!m)
     return;
+
   Load(*m);
+
+  for (auto *o : children_)
+    o->LoadFromName();
 }
 
 void BaseObject::OnReady()
@@ -807,82 +773,75 @@ float BaseObject::GetY() const
   return frame_.pos.y;
 }
 
-void BaseObject::SetLR2DST(const std::string &cmd)
+void BaseObject::SetDebug(const std::string &debug_msg)
 {
-#if USE_LR2_FEATURE == 1
-  // DST specifies time information as the time of motion
-  // So we need to calculate 'duration' of that motion.
+  debug_ = debug_msg;
+}
 
-  //int time, int x, int y, int w, int h, int acc_type,
-  //  int a, int r, int g, int b, int blend, int filter, int angle,
-  //  int center
+void BaseObject::AddFrameByLR2command(const std::string &cmd)
+{
+  CommandArgs params(cmd, 20, true);
+  const char *args[20];
+  for (unsigned i = 0; i < 20; ++i)
+    args[i] = params.Get_str(i);
+  AddFrameByLR2command(args);
+}
 
-  int time_prev = 0;
-  CommandArgs cmds;
-  cmds.set_separator('|');
-  cmds.Parse(cmd);
+static inline int _atoi_n(const char *v)
+{
+  return v[0] == '-' ? -atoi(v + 1) : atoi(v);
+}
 
-  ani_.emplace_back(Animation(nullptr));
+void BaseObject::AddFrameByLR2command(const char **argv)
+{
+  if (ani_.empty()) ani_.emplace_back(Animation(nullptr));
   Animation &ani = ani_.back();
 
-  for (unsigned i = 0; i < cmds.size(); ++i)
+  int time = _atoi_n(argv[1]);
+  int x = _atoi_n(argv[2]);
+  int y = _atoi_n(argv[3]);
+  int w = _atoi_n(argv[4]);
+  int h = _atoi_n(argv[5]);
+  int lr2acc = _atoi_n(argv[6]);
+  int a = _atoi_n(argv[7]);
+  int r = _atoi_n(argv[8]);
+  int g = _atoi_n(argv[9]);
+  int b = _atoi_n(argv[10]);
+  //int blend = params.Get<int>(11);
+  //int filter = params.Get<int>(12);
+  int angle = _atoi_n(argv[13]);
+  int center = _atoi_n(argv[14]);
+  int loop = _atoi_n(argv[15]);
+  int acc = 0;
+  // timer/op code is ignored here.
+
+  // set attributes
+  DrawProperty f;
+  f.pos = Vector4{ x, y, x + w, y + h };
+  f.color = Vector4{ r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f };
+  f.rotate = Vector3{ 0.0f, 0.0f, glm::radians((float)angle) };
+  f.scale = Vector2{ 1.0f, 1.0f };
+
+  switch (lr2acc)
   {
-    std::string v = cmds.Get<std::string>(i);
-    CommandArgs params(v, 20, true);
-    int time = params.Get<int>(1);
-    int x = params.Get<int>(2);
-    int y = params.Get<int>(3);
-    int w = params.Get<int>(4);
-    int h = params.Get<int>(5);
-    int lr2acc = params.Get<int>(6);
-    int a = params.Get<int>(7);
-    int r = params.Get<int>(8);
-    int g = params.Get<int>(9);
-    int b = params.Get<int>(10);
-    //int blend = params.Get<int>(11);
-    //int filter = params.Get<int>(12);
-    int angle = params.Get<int>(13);
-    int center = params.Get<int>(14);
-    int loop = params.Get<int>(15);
-    int acc = 0;
-    // timer/op code is ignored here.
-
-    // set attributes
-    DrawProperty f;
-    f.pos = Vector4{ x, y, x + w, y + h };
-    f.color = Vector4{ r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f };
-    f.rotate = Vector3{ 0.0f, 0.0f, glm::radians((float)angle) };
-    f.scale = Vector2{ 1.0f, 1.0f };
-
-    switch (lr2acc)
-    {
-    case 0:
-      acc = EaseTypes::kEaseLinear;
-      break;
-    case 1:
-      acc = EaseTypes::kEaseIn;
-      break;
-    case 2:
-      acc = EaseTypes::kEaseOut;
-      break;
-    case 3:
-      acc = EaseTypes::kEaseInOut;
-      break;
-    }
-
-    // add new animation
-    ani.AddFrame(f, time, acc);
-
-    SetCenter(center);
-
-    // only loop attribute at first row is valid.
-    if (i == 0 && loop >= 0)
-      ani.SetLoop(loop);
+  case 0:
+    acc = EaseTypes::kEaseLinear;
+    break;
+  case 1:
+    acc = EaseTypes::kEaseIn;
+    break;
+  case 2:
+    acc = EaseTypes::kEaseOut;
+    break;
+  case 3:
+    acc = EaseTypes::kEaseInOut;
+    break;
   }
 
-  // show at beginning.
-  Show();
-#endif
+  // add new animation
+  ani.AddFrame(f, time, acc);
+
+  SetCenter(center);
 }
 
 void BaseObject::SetVisibleFlag(const std::string& group0, const std::string& group1,
@@ -1068,6 +1027,18 @@ void BaseObject::SetDeltaTime(double time_msec)
 void BaseObject::Stop()
 {
   ani_.clear();
+}
+
+void BaseObject::Replay()
+{
+  if (ani_.empty()) return;
+  ani_.back().Replay();
+}
+
+void BaseObject::Pause()
+{
+  if (ani_.empty()) return;
+  ani_.back().Pause();
 }
 
 double BaseObject::GetTweenLength() const
@@ -1291,16 +1262,17 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     static auto fn_rotate = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetRotationAsDegree(0.0f, 0.0f, args.Get<float>(0));
     };
-    static auto fn_SetLR2DST = [](void *o, CommandArgs& args, const std::string &v) {
-      auto *b = static_cast<BaseObject*>(o);
-      ((BaseObject*)o)->SetLR2DST(v);
-    };
     static auto fn_Show = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->Show();
     };
     static auto fn_Hide = [](void *o, CommandArgs& args, const std::string &) {
-      static_cast<BaseObject*>(o)->Stop();
       static_cast<BaseObject*>(o)->Hide();
+    };
+    static auto fn_Replay = [](void *o, CommandArgs& args, const std::string &) {
+      static_cast<BaseObject*>(o)->Replay();
+    };
+    static auto fn_Pause = [](void *o, CommandArgs& args, const std::string &) {
+      static_cast<BaseObject*>(o)->Pause();
     };
     static auto fn_Text = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetText(args.Get<std::string>(0));
@@ -1336,9 +1308,10 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
     cmdfnmap_["repeat"] = fn_repeat;
     cmdfnmap_["rotate"] = fn_rotate;
     cmdfnmap_["pos"] = fn_Pos;
-    cmdfnmap_["lr2cmd"] = fn_SetLR2DST;
     cmdfnmap_["show"] = fn_Show;
     cmdfnmap_["hide"] = fn_Hide;
+    cmdfnmap_["replay"] = fn_Replay;
+    cmdfnmap_["pause"] = fn_Pause;
     cmdfnmap_["text"] = fn_Text;
     cmdfnmap_["number"] = fn_Number;
     cmdfnmap_["numberf"] = fn_NumberF;
@@ -1353,7 +1326,6 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
 
 }
 
-#include "TaskPool.h"
 #include "Sprite.h"
 #include "object/Text.h"
 #include "object/Number.h"
@@ -1367,44 +1339,9 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
 namespace rhythmus
 {
 
-// @brief
-// ObjectLoaderTask used for creating children in BaseObject::Load(...)
-class ObjectLoaderTask : public Task
+BaseObject* BaseObject::CreateObject(const std::string &type)
 {
-public:
-  ObjectLoaderTask(BaseObject &o_, const MetricGroup &m_)
-    : o(&o_), m(&m_) {}
-
-  virtual void run()
-  {
-    if (!o) return;
-    o->Load(*m);
-  }
-
-  virtual void abort()
-  {
-    o = nullptr;
-  }
-
-private:
-  BaseObject *o;
-  const MetricGroup *m;
-};
-
-BaseObject* BaseObject::CreateObject(const MetricGroup &m)
-{
-  std::string type;
   BaseObject *object = nullptr;
-  const std::string& objname = m.name();
-
-  // inference type from object name (implicit)
-  type = objname;
-  /*
-  if (objname == "image" || objname == "sprite") type = "image";
-  else if (objname == "text") type = "text";
-  else if (objname == "slider") type = "slider";*/
-  // fetch type from attribute (explicit)
-  //m.get_safe("type", type);
 
   // create object from type string
   if (type == "image" || type == "sprite")
@@ -1455,31 +1392,6 @@ BaseObject* BaseObject::CreateObject(const MetricGroup &m)
 
   if (object)
   {
-#if 0
-    if (*PREFERENCE->theme_load_async == 0)
-    {
-      object->Load(m);
-    }
-    else
-    {
-      // @warn
-      // If async loaded, then load_async of ResourceContainer
-      // must be turned off.
-      // If not, too much thread would be used for loading object
-      // and Resource loader task cannot run, which will cause deadlock.
-      //SOUNDMAN->set_load_async(false);
-      //IMAGEMAN->set_load_async(false);
-      //FONTMAN->set_load_async(false);
-      //
-      // Now, ResourceManager module automatically won't create new thread
-      // If loading thread isn't main thread.
-      // So don't need to turn of async property manually.
-
-      ObjectLoaderTask *t = new ObjectLoaderTask(*object, m);
-      TaskPool::getInstance().EnqueueTask(t);
-    }
-#endif
-    object->Load(m);
     object->is_allocated_ = true;
   }
 
@@ -1509,5 +1421,48 @@ std::string BaseObject::toString() const
     ss << "debug message: " << debug_ << std::endl;
   return ss.str();
 }
+
+// ------------------------------------------------------------------ Loader/Helper
+
+// Number::OnStart 메서드 구현하기 (Load에서 Async 코드 부분 제거하기)
+
+class XMLObjectHandlers
+{
+public:
+  static void sprite(XMLExecutor *e, XMLContext *ctx)
+  {
+    auto *o = BaseObject::CreateObject("sprite");
+    auto *parent = (BaseObject*)e->GetParent();
+    parent->AddChild(o);
+    e->SetCurrentObject(o);
+    o->Load(ctx->GetCurrentMetric());
+  }
+  static void text(XMLExecutor *e, XMLContext *ctx)
+  {
+    auto *o = BaseObject::CreateObject("text");
+    auto *parent = (BaseObject*)e->GetParent();
+    parent->AddChild(o);
+    e->SetCurrentObject(o);
+    o->Load(ctx->GetCurrentMetric());
+  }
+  static void slider(XMLExecutor *e, XMLContext *ctx)
+  {
+    auto *o = BaseObject::CreateObject("slider");
+    auto *parent = (BaseObject*)e->GetParent();
+    parent->AddChild(o);
+    e->SetCurrentObject(o);
+    o->Load(ctx->GetCurrentMetric());
+  }
+  XMLObjectHandlers()
+  {
+    XMLExecutor::AddHandler("sprite", (XMLCommandHandler*)&sprite);
+    XMLExecutor::AddHandler("image", (XMLCommandHandler*)&sprite);
+    XMLExecutor::AddHandler("text", (XMLCommandHandler*)&text);
+    XMLExecutor::AddHandler("slider", (XMLCommandHandler*)&slider);
+  }
+};
+
+// register handler
+XMLObjectHandlers _XMLObjectHandlers;
 
 }

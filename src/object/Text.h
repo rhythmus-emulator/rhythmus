@@ -20,7 +20,7 @@ public:
   virtual ~Text();
   virtual BaseObject *clone();
 
-  virtual void Load(const MetricGroup& metric);
+  virtual void Load(const MetricGroup &metric);
   virtual void OnReady();
 
   void SetFont(const std::string& path);
@@ -30,9 +30,12 @@ public:
   float GetTextWidth() const;
   virtual void SetText(const std::string& s);
   void ClearText();
+  void SetTextResource(const std::string &resourcename);
   virtual void Refresh();
   void SetTextFitting(TextFitting fitting);
   void SetLineBreaking(bool enable_line_break);
+  void SetTextAlignment(float x, float y);
+  void SetLR2StyleText(bool v);
 
   virtual void OnText(uint32_t codepoint);
 

@@ -13,9 +13,9 @@ public:
   virtual bool IsEntered(float x, float y);
   virtual const char* type() const;
 
+  void SetOnmouseRect(const Rect& r);
+
 private:
-  // XXX: for debug?
-  int panel_;
   Rect onmouse_rect_;
 
   virtual void doRender();

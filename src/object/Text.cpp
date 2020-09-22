@@ -2,6 +2,7 @@
 #include "ResourceManager.h"
 #include "Script.h"
 #include "KeyPool.h"
+#include "Logger.h"
 #include "Util.h"
 #include "common.h"
 #include "config.h"
@@ -64,7 +65,7 @@ void Text::Load(const MetricGroup &m)
   else if (m.exist("name"))
   {
     // search for font MetricGroup with given name
-    MetricGroup *fontmetric = FONTMAN->GetFontMetricFromName(m.get_str("name"));
+    MetricGroup *fontmetric = METRIC->get_group(m.get_str("name"));
     if (fontmetric)
       SetFont(*fontmetric);
   }
@@ -88,61 +89,6 @@ void Text::Load(const MetricGroup &m)
     else if (alignstr == "STRETCH") text_fitting_ = TextFitting::kTextFitStretch;
   }
 
-#if USE_LR2_FEATURE == 1
-  if (m.exist("lr2src"))
-  {
-    std::string lr2src;
-    m.get_safe("lr2src", lr2src);
-    CommandArgs args(lr2src);
-
-    /* fetch font size from lr2dst ... */
-    SetFont("font" + args.Get<std::string>(1));
-
-    /* track change of text table */
-    std::string eventname = "Text" + args.Get<std::string>(2);
-    AddCommand(eventname, "refresh");
-    SubscribeTo(eventname);
-    std::string resname = "S" + args.Get<std::string>(2);
-    KeyData<std::string> kdata = KEYPOOL->GetString(resname);
-    res_id_ = &*kdata;
-    Refresh();
-
-    /* alignment */
-    const int lr2align = args.Get<int>(3);
-    switch (lr2align)
-    {
-    case 0:
-      // topleft
-      SetTextFitting(TextFitting::kTextFitMaxSize);
-      text_alignment_.x = 0.0;
-      text_alignment_.y = 0.0;
-      break;
-    case 1:
-      // topcenter
-      SetTextFitting(TextFitting::kTextFitMaxSize);
-      text_alignment_.x = 0.5;
-      text_alignment_.y = 0.0;
-      break;
-    case 2:
-      // topright
-      SetTextFitting(TextFitting::kTextFitMaxSize);
-      text_alignment_.x = 1.0;
-      text_alignment_.y = 0.0;
-      break;
-    }
-    set_xy_aligncenter_ = true;
-    use_height_as_font_height_ = true;
-
-    /* editable (focusable) */
-    if (args.Get<int>(4) > 0)
-      SetFocusable(true);
-
-    /* TODO: panel */
-  }
-
-  // TODO: load blending from LR2DST
-#endif
-
   ClearText();
   if (m.exist("value"))
     text_ = m.get_str("value");
@@ -164,7 +110,7 @@ void Text::SetFont(const std::string& path)
   ClearFont();
 
   // Search for font MetricGroup with given name.
-  MetricGroup *fontmetric = FONTMAN->GetFontMetricFromName(path);
+  MetricGroup *fontmetric = METRIC->get_group(path);
   if (fontmetric)
   {
     SetFont(*fontmetric);
@@ -221,6 +167,12 @@ void Text::ClearText()
   text_render_ctx_.vi.clear();
   text_render_ctx_.height = text_render_ctx_.width = 0;
   text_.clear();
+}
+
+void Text::SetTextResource(const std::string &resname)
+{
+  KeyData<std::string> kdata = KEYPOOL->GetString(resname);
+  res_id_ = &*kdata;
 }
 
 // @warn
@@ -360,6 +312,18 @@ void Text::SetLineBreaking(bool enable_line_break)
   do_line_breaking_ = enable_line_break;
 }
 
+void Text::SetTextAlignment(float x, float y)
+{
+  text_alignment_.x = x;
+  text_alignment_.y = y;
+}
+
+void Text::SetLR2StyleText(bool v)
+{
+  set_xy_aligncenter_ = v;
+  use_height_as_font_height_ = v;
+}
+
 void Text::OnText(uint32_t codepoint)
 {
   if (!editable_) return;
@@ -496,5 +460,93 @@ std::string Text::toString() const
   ss << "do_line_breaking: " << do_line_breaking_ << std::endl;
   return BaseObject::toString();
 }
+
+// ------------------------------------------------------------------ Loader/Helper
+
+class LR2CSVTextandlers
+{
+public:
+  static void src_text(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *o = _this ? (Text*)_this : (Text*)BaseObject::CreateObject("text");
+    loader->set_object("text", o);
+
+    o->SetFont(format_string("font%s", ctx->get_str(2)));
+
+    /* track change of text table */
+    std::string eventname = format_string("Text%s", ctx->get_str(3));
+    o->AddCommand(eventname, "refresh");
+    o->SubscribeTo(eventname);
+    std::string resname = format_string("S%s", ctx->get_str(3));
+    o->SetTextResource(resname);
+    o->Refresh();   // manually refresh to fill text vertices
+
+    /* alignment */
+    const int lr2align = ctx->get_int(4);
+    switch (lr2align)
+    {
+    case 0:
+      // topleft
+      o->SetTextFitting(TextFitting::kTextFitMaxSize);
+      o->SetTextAlignment(0.0f, 0.0f);
+      break;
+    case 1:
+      // topcenter
+      o->SetTextFitting(TextFitting::kTextFitMaxSize);
+      o->SetTextAlignment(0.5f, 0.0f);
+      break;
+    case 2:
+      // topright
+      o->SetTextFitting(TextFitting::kTextFitMaxSize);
+      o->SetTextAlignment(1.0f, 0.0f);
+      break;
+    }
+    o->SetLR2StyleText(true);
+
+    /* editable (focusable) */
+    if (ctx->get_int(5) > 0)
+      o->SetFocusable(true);
+
+    /* TODO: panel */
+  }
+
+  static void dst_text(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    const char *args[21];
+    auto *o = _this ? (Text*)_this : (Text*)loader->get_object("text");
+    if (!o)
+    {
+      Logger::Warn("Invalid #DST_TEXT command.");
+      return;
+    }
+
+    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
+    o->AddFrameByLR2command(args + 1);
+
+    // these attributes are only affective for first run
+    if (loader->get_command_index() == 0)
+    {
+      const int timer = ctx->get_int(17);
+
+      // LR2 needs to keep its animation queue, so don't use stop.
+      o->AddCommand(format_string("LR%d", timer), "replay");
+      o->AddCommand(format_string("LR%dOff", timer), "hide");
+      //o->SetBlending(ctx->get_int(12));
+      //o->SetFiltering(ctx->get_int(13));
+    }
+
+    // TODO: load blending from LR2DST
+    // TODO: fetch font size
+  }
+
+  LR2CSVTextandlers()
+  {
+    LR2CSVExecutor::AddHandler("#SRC_TEXT", (LR2CSVCommandHandler*)&src_text);
+    LR2CSVExecutor::AddHandler("#DST_TEXT", (LR2CSVCommandHandler*)&dst_text);
+  }
+};
+
+// register handler
+LR2CSVTextandlers _LR2CSVTextandlers;
 
 RHYTHMUS_NAMESPACE_END

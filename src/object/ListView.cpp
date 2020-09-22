@@ -94,6 +94,11 @@ DrawProperty &ListViewItem::get_item_dprop()
   return item_dprop_;
 }
 
+bool ListViewItem::is_empty() const
+{
+  return data_ == nullptr;
+}
+
 void ListViewItem::OnAnimation(DrawProperty &frame)
 {
   item_dprop_ = frame;
@@ -153,38 +158,29 @@ void ListView::Load(const MetricGroup &metric)
   // XXX: repeative item, or pre-create item array?
   // --> that can be decided by setting ...? idk.
   const MetricGroup *itemmetric = metric.get_group("item");
+  /* default: nullptr data */
+  ListViewItem *item = new ListViewItem();
   if (itemmetric)
+    item->Load(*itemmetric);
+  item->LoadFromData(nullptr);
+  item->set_dataindex(0);
+  items_.push_back(item);
+  AddChild(item);
+
+  // clone
+  // XXX: MAY NOT use clone() method to loading object!
+  for (unsigned i = 1; i < item_count_; ++i)
   {
 #if 1
-    /* default: nullptr data */
-    ListViewItem *item = new ListViewItem();
+    ListViewItem *item = (ListViewItem*)items_[0]->clone();
+#else
+    ListViewItem *item = CreateMenuItem(item_type_);
     item->Load(*itemmetric);
     item->LoadFromData(nullptr);
-    item->set_dataindex(0);
-    items_.push_back(item);
-    AddChild(item);
-
-    // clone
-    // XXX: MAY NOT use clone() method to loading object!
-    for (unsigned i = 1; i < item_count_; ++i)
-    {
-      ListViewItem *item = (ListViewItem*)items_[0]->clone();
-      items_.push_back(item);
-      item->set_dataindex(i);
-      AddChild(item);
-    }
-#else
-
-    for (unsigned i = 0; i < item_count_; ++i)
-    {
-      ListViewItem *item = CreateMenuItem(item_type_);
-      item->Load(*itemmetric);
-      item->LoadFromData(nullptr);
-      item->set_dataindex(i);
-      items_.push_back(item);
-      AddChild(item);
-    }
 #endif
+    items_.push_back(item);
+    item->set_dataindex(i);
+    AddChild(item);
   }
 
   // Load sounds
@@ -269,7 +265,8 @@ void ListView::RebuildItems()
 {
   // fill content view to ListViewItem template.
   bool loop = is_wheel();
-  unsigned item_index = items_.empty() ? 0 : (unsigned)(pos_.index_i % (int)data_.size());
+  unsigned item_index = items_.empty() ? 0 : (unsigned)(
+    (pos_.index_i % (int)data_.size() + (int)data_.size()) % (int)data_.size());
   int selindex = pos_.index_i;
   int item_index_raw = pos_.index_i;
   for (auto *item : items_)
@@ -282,9 +279,10 @@ void ListView::RebuildItems()
     {
       item->Hide();
     }
-    else if (item->get_dataindex() != item_index)
+    else if (item->is_empty() || item->get_dataindex() != item_index)
     {
       ListViewData &data = data_[item_index];
+      RebuildDataContent(data);
       item->LoadFromLVData(data);
       item->set_itemindex(selindex);
       item->set_focus(data_index_ == item_index_raw);
@@ -295,6 +293,9 @@ void ListView::RebuildItems()
     item_index = items_.empty() ? 0 : (item_index + 1) % data_.size();
   }
 }
+
+void ListView::RebuildDataContent(ListViewData &data)
+{}
 
 ListViewItem *ListView::GetLVItem(unsigned data_index)
 {

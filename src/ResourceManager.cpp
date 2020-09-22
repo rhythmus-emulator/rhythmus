@@ -665,22 +665,6 @@ void FontManager::Update(double ms)
 
 void FontManager::set_load_async(bool load_async) { load_async_ = load_async; }
 
-void FontManager::CacheFontMetrics(const MetricGroup &m)
-{
-  std::string name;
-  m.get_safe("name", name);
-  if (name.empty()) return;
-  font_metrics_[name] = m;
-}
-
-MetricGroup *FontManager::GetFontMetricFromName(const std::string &name)
-{
-  auto i = font_metrics_.find(name);
-  if (i != font_metrics_.end())
-    return &i->second;
-  return nullptr;
-}
-
 
 // ------------------------------------------------------ class ResourceManager
 
@@ -694,14 +678,13 @@ void ResourceManager::Initialize()
   /* Cache system directory hierarchy. */
   PATH->CacheSystemDirectory();
 
-  MetricGroup sysfont;
+  MetricGroup &sysfont = METRIC->add_group("SystemFont");
   sysfont.set("name", "SystemFont");
   sysfont.set("path", "system/default.ttf");
   sysfont.set("size", 16);
   sysfont.set("color", "#FFFFFFFF");
   sysfont.set("border-size", 1);
   sysfont.set("border-color", "#FF000000");
-  FONTMAN->CacheFontMetrics(sysfont);
 }
 
 void ResourceManager::Cleanup()

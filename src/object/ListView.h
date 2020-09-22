@@ -65,6 +65,7 @@ public:
 
   void* get_data();
   DrawProperty &get_item_dprop();
+  bool is_empty() const;
 
 private:
   void set_dataindex(unsigned dataindex);
@@ -140,6 +141,9 @@ public:
   /* @brief Build items to display which is suitable for current data_index.
    * This method must be called when data_index is changed. */
   virtual void RebuildItems();
+
+  /* @brief Build data content. called when it is begin displayed. */
+  virtual void RebuildDataContent(ListViewData &data);
 
   ListViewItem *GetLVItem(unsigned data_index);
   virtual BaseObject *CreateLVItemContent(void *data);
