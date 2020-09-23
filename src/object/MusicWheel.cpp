@@ -147,6 +147,10 @@ void MusicWheelItem::LoadFromData(void *d)
   }
 }
 
+Sprite *MusicWheelItem::get_background(unsigned type)
+{
+  return &background_[type];
+}
 
 // --------------------------- class MusicWheel
 
@@ -652,9 +656,9 @@ public:
     unsigned bgtype = 0;
     if (!wheel) return;
     bgtype = (unsigned)ctx->get_int(1);
-    for (unsigned i = 0; i < wheel->get_wheel_item_count(); ++i)
+    for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i)
     {
-      auto *item = wheel->get_wheel_item(i);
+      auto *item = static_cast<MusicWheelItem*>(wheel->GetMenuItemWrapperByIndex(i));
       auto *bg = item->get_background(bgtype);
       LR2CSVExecutor::CallHandler("#SRC_IMAGE", bg, loader, ctx);
     }
@@ -668,7 +672,8 @@ public:
     if (!wheel) return;
     itemindex = (unsigned)ctx->get_int(1);
     itemname = format_string("musicwheelitem%u", itemindex);
-    auto *item = (Sprite*)wheel->get_wheel_item(itemindex);
+    // XXX: Sprite casting is okay?
+    auto *item = (Sprite*)wheel->GetMenuItemWrapperByIndex(itemindex);
     LR2CSVExecutor::CallHandler("#DST_IMAGE", item, loader, ctx);
   }
 

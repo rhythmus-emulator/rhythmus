@@ -80,14 +80,13 @@ public:
 
   void EnableInput(bool enable_input);
   bool IsInputAvailable() const;
-
-  /* @brief Event processing for scene specific action */
-  virtual void ProcessInputEvent(const InputEvent& e);
-
   void SetInputStartTime(int time);
   void SetFadeOutTime(int time);
   void SetFadeInTime(int time);
   void SetTimeout(int time);
+
+  /* @brief Event processing for scene specific action */
+  virtual void ProcessInputEvent(const InputEvent& e);
 
 protected:
   // generally used scene queued tasks

@@ -284,6 +284,11 @@ bool Scene::IsInputAvailable() const
   return is_input_available_;
 }
 
+void Scene::SetInputStartTime(int time) { begin_input_time_ = time; }
+void Scene::SetFadeOutTime(int time) { fade_out_time_ = time; }
+void Scene::SetFadeInTime(int time) { fade_in_time_ = time; }
+void Scene::SetTimeout(int time) { next_scene_time_ = time; }
+
 void Scene::ProcessInputEvent(const InputEvent& e)
 {
   if (e.type() == InputEvents::kOnKeyUp)

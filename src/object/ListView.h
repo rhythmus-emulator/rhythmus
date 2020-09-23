@@ -131,7 +131,9 @@ public:
   void ClearData();
 
   void* GetSelectedMenuData();
-  void* GetMenuDataByIndex(int index);
+  void* GetMenuDataByIndex(unsigned index);
+  void* GetMenuItemWrapperByIndex(unsigned index);
+  unsigned GetMenuItemWrapperCount() const;
   void SelectMenuByIndex(int index);
   float GetItemYPosByIndex(int index);
 

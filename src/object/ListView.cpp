@@ -240,7 +240,9 @@ void ListView::ClearData()
 }
 
 void* ListView::GetSelectedMenuData() { return GetMenuDataByIndex(data_index_); }
-void* ListView::GetMenuDataByIndex(int index) { return data_[index].p; }
+void* ListView::GetMenuDataByIndex(unsigned index) { return data_[index].p; }
+void* ListView::GetMenuItemWrapperByIndex(unsigned index) { return items_[index]; }
+unsigned ListView::GetMenuItemWrapperCount() const { return items_.size(); };
 
 void ListView::SelectMenuByIndex(int index)
 {

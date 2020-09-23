@@ -1,6 +1,7 @@
 #include "Bargraph.h"
 #include "KeyPool.h"
 #include "Util.h"
+#include "Script.h"
 #include "common.h"
 #include "config.h"
 
@@ -20,24 +21,18 @@ void Bargraph::Load(const MetricGroup &metric)
   BaseObject::Load(metric);
 
   metric.get_safe("value", value_);
+  metric.get_safe("direction", direction_);
+}
 
-#if USE_LR2_FEATURE == 1
-  if (metric.exist("lr2src"))
-  {
-    std::string cmd;
-    metric.get_safe("lr2src", cmd);
-    CommandArgs args(cmd);
+void Bargraph::SetResourceId(const std::string &id)
+{
+  KeyData<float> kdata = KEYPOOL->GetFloat(id);
+  val_ptr_ = &*kdata;
+}
 
-    direction_ = args.Get<int>(9);
-
-    std::string resname = "bargraph";
-    resname += args.Get_str(10);
-    KeyData<float> kdata = KEYPOOL->GetFloat(resname);
-    val_ptr_ = &*kdata;
-
-    bar_.LoadLR2SRC(cmd);
-  }
-#endif
+void Bargraph::SetDirection(int direction)
+{
+  direction_ = direction;
 }
 
 void Bargraph::doUpdate(double)
@@ -59,5 +54,36 @@ void Bargraph::doRender()
 {
   // null
 }
+
+// ------------------------------------------------------------------ Loader/Helper
+
+class LR2CSVBargraphHandlers
+{
+public:
+  static void src_bargraph(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *o = _this ? (Bargraph*)_this : (Bargraph*)BaseObject::CreateObject("bargraph");
+    loader->set_object("button", o);
+    LR2CSVExecutor::CallHandler("#SRC_IMAGE", o, loader, ctx);
+
+    o->SetDirection(ctx->get_int(9));
+    std::string resname = "bargraph";
+    resname += ctx->get_str(11);
+    o->SetResourceId(resname);
+  }
+  static void dst_bargraph(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *o = _this ? (Bargraph*)_this : (Bargraph*)loader->get_object("button");
+    LR2CSVExecutor::CallHandler("#DST_IMAGE", o, loader, ctx);
+  }
+  LR2CSVBargraphHandlers()
+  {
+    LR2CSVExecutor::AddHandler("#SRC_BUTTON", (LR2CSVCommandHandler*)&src_bargraph);
+    LR2CSVExecutor::AddHandler("#DST_BUTTON", (LR2CSVCommandHandler*)&dst_bargraph);
+  }
+};
+
+// register handler
+LR2CSVBargraphHandlers _LR2CSVBargraphHandlers;
 
 }

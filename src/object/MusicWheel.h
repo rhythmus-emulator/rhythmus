@@ -78,8 +78,6 @@ public:
 
   MusicWheelData *get_data(int dataindex);
   MusicWheelData *get_selected_data(int player_num);
-  MusicWheelItem *get_wheel_item(unsigned itemindex);
-  unsigned get_wheel_item_count() const;
 
   virtual void OnSelectChange(const void *data, int direction);
   virtual void OnSelectChanged();

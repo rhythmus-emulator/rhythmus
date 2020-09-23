@@ -20,6 +20,7 @@ public:
 
   void SetPlayer(int player);
   void SetMinimumLoadingTime(int time);
+  void SetReadyTime(int time);
 
 private:
   virtual void doUpdate(double delta);

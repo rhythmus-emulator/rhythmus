@@ -143,6 +143,10 @@ void PlayScene::doUpdate(double delta)
   playscenetask_.Update((float)delta);
 }
 
+void PlayScene::SetPlayer(int player) { theme_play_param_.playside = player; }
+void PlayScene::SetMinimumLoadingTime(int time) { theme_play_param_.load_wait_time = time; }
+void PlayScene::SetReadyTime(int time) { theme_play_param_.ready_time = time; }
+
 
 class LR2CSVPlaySceneHandlers
 {

@@ -10,6 +10,8 @@ public:
   Bargraph();
   virtual ~Bargraph();
   virtual void Load(const MetricGroup &metric);
+  void SetResourceId(const std::string &id);
+  void SetDirection(int direction);
 private:
   // 0: horizontal, 1: vertical
   int direction_;
