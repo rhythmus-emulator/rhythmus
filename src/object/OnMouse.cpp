@@ -73,8 +73,8 @@ public:
   }
   LR2CSVOnMouseHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_ONMOUSE", (LR2CSVCommandHandler*)&src_onmouse);
-    LR2CSVExecutor::AddHandler("#DST_ONMOUSE", (LR2CSVCommandHandler*)&dst_onmouse);
+    LR2CSVExecutor::AddHandler("#SRC_ONMOUSE", (LR2CSVCommandHandler)&src_onmouse);
+    LR2CSVExecutor::AddHandler("#DST_ONMOUSE", (LR2CSVCommandHandler)&dst_onmouse);
   }
 };
 

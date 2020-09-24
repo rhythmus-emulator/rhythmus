@@ -78,8 +78,8 @@ public:
   }
   LR2CSVBargraphHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_BUTTON", (LR2CSVCommandHandler*)&src_bargraph);
-    LR2CSVExecutor::AddHandler("#DST_BUTTON", (LR2CSVCommandHandler*)&dst_bargraph);
+    LR2CSVExecutor::AddHandler("#SRC_BUTTON", (LR2CSVCommandHandler)&src_bargraph);
+    LR2CSVExecutor::AddHandler("#DST_BUTTON", (LR2CSVCommandHandler)&dst_bargraph);
   }
 };
 

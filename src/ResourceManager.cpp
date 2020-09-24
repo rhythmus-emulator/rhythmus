@@ -665,6 +665,16 @@ void FontManager::Update(double ms)
 
 void FontManager::set_load_async(bool load_async) { load_async_ = load_async; }
 
+void FontManager::SetSystemFont()
+{
+  MetricGroup &sysfont = METRIC->add_group("SystemFont");
+  sysfont.set("name", "SystemFont");
+  sysfont.set("path", "system/default.ttf");
+  sysfont.set("size", 16);
+  sysfont.set("color", "#FFFFFFFF");
+  sysfont.set("border-size", 1);
+  sysfont.set("border-color", "#FF000000");
+}
 
 // ------------------------------------------------------ class ResourceManager
 
@@ -677,14 +687,6 @@ void ResourceManager::Initialize()
 
   /* Cache system directory hierarchy. */
   PATH->CacheSystemDirectory();
-
-  MetricGroup &sysfont = METRIC->add_group("SystemFont");
-  sysfont.set("name", "SystemFont");
-  sysfont.set("path", "system/default.ttf");
-  sysfont.set("size", 16);
-  sysfont.set("color", "#FFFFFFFF");
-  sysfont.set("border-size", 1);
-  sysfont.set("border-color", "#FF000000");
 }
 
 void ResourceManager::Cleanup()

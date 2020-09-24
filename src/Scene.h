@@ -48,9 +48,6 @@ private:
   bool allow_enqueue_;
 };
 
-/* @brief declared in Scene.cpp, used for scene loading. */
-struct SceneLoadingContext;
-
 /* @brief A screen which is renderable */
 class Scene : public BaseObject
 {
@@ -123,9 +120,6 @@ private:
 
   // @brief enable scene resource caching for fast reload for this scene.
   bool enable_caching_;
-
-  // context used for loading
-  SceneLoadingContext *loading_ctx_;
 
   // Pre-defined object that can be created manually.
   std::map<std::string, BaseObject *> predef_objects_;

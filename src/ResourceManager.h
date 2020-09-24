@@ -174,6 +174,8 @@ public:
   void Update(double ms);
   void set_load_async(bool load_async);
 
+  static void SetSystemFont();
+
 private:
   bool load_async_;
   std::mutex lock_;

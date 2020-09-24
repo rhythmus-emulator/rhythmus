@@ -290,8 +290,8 @@ public:
 
   LR2CSVSpriteHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVCommandHandler*)&src_image);
-    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVCommandHandler*)&dst_image);
+    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVCommandHandler)&src_image);
+    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVCommandHandler)&dst_image);
   }
 };
 

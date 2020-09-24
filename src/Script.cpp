@@ -73,6 +73,7 @@ bool XMLContext::step_in()
   if (!child) return false;
   node_level.push_back(curr_node);
   curr_node = child;
+  return true;
 }
 
 bool XMLContext::step_out()
@@ -80,6 +81,7 @@ bool XMLContext::step_out()
   if (node_level.empty()) return false;
   curr_node = node_level.back();
   node_level.pop_back();
+  return true;
 }
 
 void* XMLContext::get_document()
@@ -115,13 +117,17 @@ MetricGroup XMLContext::GetCurrentMetric() const
 
 // ----------------------------------------------------------------- XMLExecutor
 
-std::map<std::string, XMLCommandHandler*> gXMLHandlers;
+static std::map<std::string, XMLCommandHandler> &getXMLHandler()
+{
+  static std::map<std::string, XMLCommandHandler> gXMLHandlers;
+  return gXMLHandlers;
+}
 
 XMLExecutor::XMLExecutor(XMLContext *ctx) : ctx_(ctx) {}
 
-void XMLExecutor::AddHandler(const std::string &cmd, XMLCommandHandler *handler)
+void XMLExecutor::AddHandler(const std::string &cmd, XMLCommandHandler handler)
 {
-  gXMLHandlers[cmd] = handler;
+  getXMLHandler()[cmd] = handler;
 }
 
 bool XMLExecutor::Run()
@@ -129,8 +135,8 @@ bool XMLExecutor::Run()
   while (ctx_->next())
   {
     tinyxml2::XMLElement *p = (tinyxml2::XMLElement*)ctx_->get_node();
-    auto i = gXMLHandlers.find(p->Name());
-    if (i != gXMLHandlers.end())
+    auto i = getXMLHandler().find(p->Name());
+    if (i != getXMLHandler().end())
       (*i->second)(this, ctx_);
     if (ctx_->step_in())
     {
@@ -364,23 +370,27 @@ void LR2CSVContext::AddIfStmtStack(bool cond_is_true)
 
 // ------------------------------------------------------------- LR2CSVExecutor
 
-std::map<std::string, LR2CSVCommandHandler*> gLR2CSVHandlers;
+static std::map<std::string, LR2CSVCommandHandler> &getLR2CSVHandler()
+{
+  static std::map<std::string, LR2CSVCommandHandler> gLR2CSVHandlers;
+  return gLR2CSVHandlers;
+}
 
 LR2CSVExecutor::LR2CSVExecutor(LR2CSVContext *ctx)
   : ctx_(ctx), image_count_(0), font_count_(0), command_count_(0) {}
 
 LR2CSVExecutor::~LR2CSVExecutor() {}
 
-void LR2CSVExecutor::AddHandler(const std::string &cmd, LR2CSVCommandHandler *handler)
+void LR2CSVExecutor::AddHandler(const std::string &cmd, LR2CSVCommandHandler handler)
 {
-  gLR2CSVHandlers[cmd] = handler;
+  getLR2CSVHandler()[cmd] = handler;
 }
 
 void LR2CSVExecutor::CallHandler(const std::string &cmd, void *_this,
                                  LR2CSVExecutor *loader, LR2CSVContext *ctx)
 {
-  auto &i = gLR2CSVHandlers.find(cmd);
-  if (i != gLR2CSVHandlers.end())
+  auto &i = getLR2CSVHandler().find(cmd);
+  if (i != getLR2CSVHandler().end())
     (*i->second)(nullptr, loader, ctx);
 }
 
@@ -389,8 +399,8 @@ void LR2CSVExecutor::Run()
   while (ctx_->next())
   {
     const char *cmd = ctx_->get_str(0);
-    auto &i = gLR2CSVHandlers.find(cmd);
-    if (i != gLR2CSVHandlers.end())
+    auto i = getLR2CSVHandler().find(cmd);
+    if (i != getLR2CSVHandler().end())
     {
       if (command_ != cmd)
       {

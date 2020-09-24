@@ -769,26 +769,26 @@ public:
 
   LR2CSVMusicWheelHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_BAR_BODY", (LR2CSVCommandHandler*)&src_bar_body);
-    LR2CSVExecutor::AddHandler("#DST_BAR_BODY_OFF", (LR2CSVCommandHandler*)&dst_bar_body_off);
-    LR2CSVExecutor::AddHandler("#DST_BAR_BODY_ON", (LR2CSVCommandHandler*)&dst_bar_body_on);
-    LR2CSVExecutor::AddHandler("#BAR_CENTER", (LR2CSVCommandHandler*)&bar_center);
-    LR2CSVExecutor::AddHandler("#BAR_AVAILABLE", (LR2CSVCommandHandler*)&bar_available);
-    LR2CSVExecutor::AddHandler("#SRC_BAR_TITLE", (LR2CSVCommandHandler*)&src_bar_title);
-    LR2CSVExecutor::AddHandler("#DST_BAR_TITLE", (LR2CSVCommandHandler*)&dst_bar_title);
-    LR2CSVExecutor::AddHandler("#SRC_BAR_FLASH", (LR2CSVCommandHandler*)&src_bar_flash);
-    LR2CSVExecutor::AddHandler("#DST_BAR_FLASH", (LR2CSVCommandHandler*)&dst_bar_flash);
-    LR2CSVExecutor::AddHandler("#SRC_BAR_LEVEL", (LR2CSVCommandHandler*)&src_bar_level);
-    LR2CSVExecutor::AddHandler("#DST_BAR_LEVEL", (LR2CSVCommandHandler*)&dst_bar_level);
-    LR2CSVExecutor::AddHandler("#SRC_BAR_LAMP", (LR2CSVCommandHandler*)&src_bar_lamp);
-    LR2CSVExecutor::AddHandler("#DST_BAR_LAMP", (LR2CSVCommandHandler*)&dst_bar_lamp);
-    LR2CSVExecutor::AddHandler("#SRC_MY_BAR_LAMP", (LR2CSVCommandHandler*)&src_my_bar_lamp);
-    LR2CSVExecutor::AddHandler("#DST_MY_BAR_LAMP", (LR2CSVCommandHandler*)&dst_my_bar_lamp);
-    LR2CSVExecutor::AddHandler("#SRC_RIVAL_BAR_LAMP", (LR2CSVCommandHandler*)&src_rival_bar_lamp);
-    LR2CSVExecutor::AddHandler("#DST_RIVAL_BAR_LAMP", (LR2CSVCommandHandler*)&dst_rival_bar_lamp);
-    LR2CSVExecutor::AddHandler("#SRC_RIVAL_LAMP", (LR2CSVCommandHandler*)&src_rival_lamp);
-    LR2CSVExecutor::AddHandler("#DST_RIVAL_LAMP", (LR2CSVCommandHandler*)&dst_rival_lamp);
-    LR2CSVExecutor::AddHandler("#BAR_CENTER", (LR2CSVCommandHandler*)&bar_center);
+    LR2CSVExecutor::AddHandler("#SRC_BAR_BODY", (LR2CSVCommandHandler)&src_bar_body);
+    LR2CSVExecutor::AddHandler("#DST_BAR_BODY_OFF", (LR2CSVCommandHandler)&dst_bar_body_off);
+    LR2CSVExecutor::AddHandler("#DST_BAR_BODY_ON", (LR2CSVCommandHandler)&dst_bar_body_on);
+    LR2CSVExecutor::AddHandler("#BAR_CENTER", (LR2CSVCommandHandler)&bar_center);
+    LR2CSVExecutor::AddHandler("#BAR_AVAILABLE", (LR2CSVCommandHandler)&bar_available);
+    LR2CSVExecutor::AddHandler("#SRC_BAR_TITLE", (LR2CSVCommandHandler)&src_bar_title);
+    LR2CSVExecutor::AddHandler("#DST_BAR_TITLE", (LR2CSVCommandHandler)&dst_bar_title);
+    LR2CSVExecutor::AddHandler("#SRC_BAR_FLASH", (LR2CSVCommandHandler)&src_bar_flash);
+    LR2CSVExecutor::AddHandler("#DST_BAR_FLASH", (LR2CSVCommandHandler)&dst_bar_flash);
+    LR2CSVExecutor::AddHandler("#SRC_BAR_LEVEL", (LR2CSVCommandHandler)&src_bar_level);
+    LR2CSVExecutor::AddHandler("#DST_BAR_LEVEL", (LR2CSVCommandHandler)&dst_bar_level);
+    LR2CSVExecutor::AddHandler("#SRC_BAR_LAMP", (LR2CSVCommandHandler)&src_bar_lamp);
+    LR2CSVExecutor::AddHandler("#DST_BAR_LAMP", (LR2CSVCommandHandler)&dst_bar_lamp);
+    LR2CSVExecutor::AddHandler("#SRC_MY_BAR_LAMP", (LR2CSVCommandHandler)&src_my_bar_lamp);
+    LR2CSVExecutor::AddHandler("#DST_MY_BAR_LAMP", (LR2CSVCommandHandler)&dst_my_bar_lamp);
+    LR2CSVExecutor::AddHandler("#SRC_RIVAL_BAR_LAMP", (LR2CSVCommandHandler)&src_rival_bar_lamp);
+    LR2CSVExecutor::AddHandler("#DST_RIVAL_BAR_LAMP", (LR2CSVCommandHandler)&dst_rival_bar_lamp);
+    LR2CSVExecutor::AddHandler("#SRC_RIVAL_LAMP", (LR2CSVCommandHandler)&src_rival_lamp);
+    LR2CSVExecutor::AddHandler("#DST_RIVAL_LAMP", (LR2CSVCommandHandler)&dst_rival_lamp);
+    LR2CSVExecutor::AddHandler("#BAR_CENTER", (LR2CSVCommandHandler)&bar_center);
   }
 };
 

@@ -529,8 +529,8 @@ public:
   }
   LR2CSVNumberHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_NUMBER", (LR2CSVCommandHandler*)&src_number);
-    LR2CSVExecutor::AddHandler("#DST_NUMBER", (LR2CSVCommandHandler*)&dst_number);
+    LR2CSVExecutor::AddHandler("#SRC_NUMBER", (LR2CSVCommandHandler)&src_number);
+    LR2CSVExecutor::AddHandler("#DST_NUMBER", (LR2CSVCommandHandler)&dst_number);
   }
 };
 

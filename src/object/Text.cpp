@@ -541,8 +541,8 @@ public:
 
   LR2CSVTextandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_TEXT", (LR2CSVCommandHandler*)&src_text);
-    LR2CSVExecutor::AddHandler("#DST_TEXT", (LR2CSVCommandHandler*)&dst_text);
+    LR2CSVExecutor::AddHandler("#SRC_TEXT", (LR2CSVCommandHandler)&src_text);
+    LR2CSVExecutor::AddHandler("#DST_TEXT", (LR2CSVCommandHandler)&dst_text);
   }
 };
 

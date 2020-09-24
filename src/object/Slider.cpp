@@ -262,8 +262,8 @@ public:
 
   LR2CSVSliderHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVCommandHandler*)&src_slider);
-    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVCommandHandler*)&dst_slider);
+    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVCommandHandler)&src_slider);
+    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVCommandHandler)&dst_slider);
   }
 };
 

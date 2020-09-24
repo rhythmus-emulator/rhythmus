@@ -169,9 +169,9 @@ public:
   }
   LR2CSVPlaySceneHandlers()
   {
-    LR2CSVExecutor::AddHandler("#LOADSTART", (LR2CSVCommandHandler*)&loadstart);
-    LR2CSVExecutor::AddHandler("#LOADEND", (LR2CSVCommandHandler*)&loadend);
-    LR2CSVExecutor::AddHandler("#SCRATCHSIDE", (LR2CSVCommandHandler*)&scratchside);
+    LR2CSVExecutor::AddHandler("#LOADSTART", (LR2CSVCommandHandler)&loadstart);
+    LR2CSVExecutor::AddHandler("#LOADEND", (LR2CSVCommandHandler)&loadend);
+    LR2CSVExecutor::AddHandler("#SCRATCHSIDE", (LR2CSVCommandHandler)&scratchside);
   }
 };
 

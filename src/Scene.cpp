@@ -125,14 +125,12 @@ Scene::Scene()
   : fade_time_(0), fade_duration_(0),
     fade_in_time_(0), fade_out_time_(0),
     is_input_available_(true), begin_input_time_(0), next_scene_time_(0),
-    do_sort_objects_(false), enable_caching_(false), loading_ctx_(nullptr)
+    do_sort_objects_(false), enable_caching_(false)
 {
 }
 
 Scene::~Scene()
 {
-  if (loading_ctx_)
-    delete loading_ctx_;
 }
 
 void Scene::Load(const MetricGroup &m)
@@ -424,19 +422,19 @@ public:
   }
   LR2CSVSceneHandlers()
   {
-    LR2CSVExecutor::AddHandler("#IMAGE", (LR2CSVCommandHandler*)&image);
-    LR2CSVExecutor::AddHandler("#LR2FONT", (LR2CSVCommandHandler*)&lr2font);
-    LR2CSVExecutor::AddHandler("#FONT", (LR2CSVCommandHandler*)&font);
-    LR2CSVExecutor::AddHandler("#INFORMATION", (LR2CSVCommandHandler*)&information);
-    LR2CSVExecutor::AddHandler("#CUSTOMOPTION", (LR2CSVCommandHandler*)&customoption);
-    LR2CSVExecutor::AddHandler("#CUSTOMFILE", (LR2CSVCommandHandler*)&customfile);
-    LR2CSVExecutor::AddHandler("#TRANSCLOLR", (LR2CSVCommandHandler*)&transcolor);
-    LR2CSVExecutor::AddHandler("#STARTINPUT", (LR2CSVCommandHandler*)&startinput);
-    LR2CSVExecutor::AddHandler("#IGNOREINPUT", (LR2CSVCommandHandler*)&ignoreinput);
-    LR2CSVExecutor::AddHandler("#FADEOUT", (LR2CSVCommandHandler*)&fadeout);
-    LR2CSVExecutor::AddHandler("#FADEIN", (LR2CSVCommandHandler*)&fadein);
-    LR2CSVExecutor::AddHandler("#TIMEOUT", (LR2CSVCommandHandler*)&timeout);
-    LR2CSVExecutor::AddHandler("#HELPFILE", (LR2CSVCommandHandler*)&helpfile);
+    LR2CSVExecutor::AddHandler("#IMAGE", (LR2CSVCommandHandler)image);
+    LR2CSVExecutor::AddHandler("#LR2FONT", (LR2CSVCommandHandler)lr2font);
+    LR2CSVExecutor::AddHandler("#FONT", (LR2CSVCommandHandler)font);
+    LR2CSVExecutor::AddHandler("#INFORMATION", (LR2CSVCommandHandler)information);
+    LR2CSVExecutor::AddHandler("#CUSTOMOPTION", (LR2CSVCommandHandler)customoption);
+    LR2CSVExecutor::AddHandler("#CUSTOMFILE", (LR2CSVCommandHandler)customfile);
+    LR2CSVExecutor::AddHandler("#TRANSCLOLR", (LR2CSVCommandHandler)transcolor);
+    LR2CSVExecutor::AddHandler("#STARTINPUT", (LR2CSVCommandHandler)startinput);
+    LR2CSVExecutor::AddHandler("#IGNOREINPUT", (LR2CSVCommandHandler)ignoreinput);
+    LR2CSVExecutor::AddHandler("#FADEOUT", (LR2CSVCommandHandler)fadeout);
+    LR2CSVExecutor::AddHandler("#FADEIN", (LR2CSVCommandHandler)fadein);
+    LR2CSVExecutor::AddHandler("#TIMEOUT", (LR2CSVCommandHandler)timeout);
+    LR2CSVExecutor::AddHandler("#HELPFILE", (LR2CSVCommandHandler)helpfile);
   }
 };
 

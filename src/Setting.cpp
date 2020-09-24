@@ -1476,7 +1476,7 @@ public:
     unsigned i = 0;
     while (_LR2name[i])
     {
-      LR2CSVExecutor::AddHandler(_LR2name[i], (LR2CSVCommandHandler*)&set_sound_metric);
+      LR2CSVExecutor::AddHandler(_LR2name[i], (LR2CSVCommandHandler)&set_sound_metric);
       ++i;
     }
   }

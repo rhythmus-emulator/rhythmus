@@ -1455,10 +1455,10 @@ public:
   }
   XMLObjectHandlers()
   {
-    XMLExecutor::AddHandler("sprite", (XMLCommandHandler*)&sprite);
-    XMLExecutor::AddHandler("image", (XMLCommandHandler*)&sprite);
-    XMLExecutor::AddHandler("text", (XMLCommandHandler*)&text);
-    XMLExecutor::AddHandler("slider", (XMLCommandHandler*)&slider);
+    XMLExecutor::AddHandler("sprite", (XMLCommandHandler)&sprite);
+    XMLExecutor::AddHandler("image", (XMLCommandHandler)&sprite);
+    XMLExecutor::AddHandler("text", (XMLCommandHandler)&text);
+    XMLExecutor::AddHandler("slider", (XMLCommandHandler)&slider);
   }
 };
 

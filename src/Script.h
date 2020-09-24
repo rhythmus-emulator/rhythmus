@@ -40,7 +40,7 @@ class XMLExecutor
 {
 public:
   XMLExecutor(XMLContext *ctx);
-  static void AddHandler(const std::string &cmd, XMLCommandHandler *handler);
+  static void AddHandler(const std::string &cmd, XMLCommandHandler handler);
   bool Run();
   void SetCurrentObject(void *p);
   void* GetParent();
@@ -110,7 +110,7 @@ class LR2CSVExecutor
 public:
   LR2CSVExecutor(LR2CSVContext *ctx);
   ~LR2CSVExecutor();
-  static void AddHandler(const std::string &cmd, LR2CSVCommandHandler *handler);
+  static void AddHandler(const std::string &cmd, LR2CSVCommandHandler handler);
   static void CallHandler(const std::string &cmd, void *_this,
                           LR2CSVExecutor *loader, LR2CSVContext *ctx);
   virtual void Run();

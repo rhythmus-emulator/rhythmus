@@ -104,6 +104,9 @@ void Game::Initialize()
   Setting::Initialize();
   Setting::Reload();
 
+  // set system font
+  FontManager::SetSystemFont();
+
   // flush temporary variables into setting.
   for (auto i : gMetricTemp)
     METRIC->set(i.first, i.second);
