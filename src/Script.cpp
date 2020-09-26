@@ -132,7 +132,7 @@ void XMLExecutor::AddHandler(const std::string &cmd, XMLCommandHandler handler)
 
 bool XMLExecutor::RunInternal()
 {
-  while (ctx_->next())
+  while (ctx_->get_node())
   {
     tinyxml2::XMLElement* p = (tinyxml2::XMLElement*)ctx_->get_node();
     auto i = getXMLHandler().find(p->Name());
@@ -145,6 +145,7 @@ bool XMLExecutor::RunInternal()
       parent_.pop_back();
       ctx_->step_out();
     }
+    ctx_->next();
   }
   return true;
 }
