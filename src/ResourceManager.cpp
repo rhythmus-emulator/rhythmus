@@ -27,14 +27,13 @@ class ResourceLoaderTask : public Task
 {
 public:
   ResourceLoaderTask(T *obj)
-    : obj_(obj), p_(0), len_(0), metric_(nullptr) {}
+    : obj_(obj), p_(0), len_(0) {}
 
   void SetData(const char *p, size_t len, const char *name_optional)
   {
     p_ = p;
     len_ = len;
     filename_ = name_optional;
-    metric_ = nullptr;
   }
 
   void SetFilename(const std::string &filename)
@@ -42,7 +41,6 @@ public:
     p_ = nullptr;
     len_ = 0;
     filename_ = filename;
-    metric_ = nullptr;
   }
 
   void SetMetric(const MetricGroup &m)
@@ -50,7 +48,7 @@ public:
     p_ = nullptr;
     len_ = 0;
     filename_.clear();
-    metric_ = &m;
+    metric_ = m;
   }
 
   virtual void run()
@@ -62,8 +60,8 @@ public:
       if (p_ != nullptr && len_ > 0)
         obj_->Load(p_, len_,
           filename_.empty() ? nullptr : filename_.c_str());
-      else if (metric_ != nullptr)
-        obj_->Load(*metric_);
+      else if (filename_.empty())
+        obj_->Load(metric_);
       else
         obj_->Load(filename_);
       obj_->set_parent_task(nullptr);
@@ -90,7 +88,7 @@ private:
   const char *p_;
   size_t len_;
   std::string filename_;
-  const MetricGroup *metric_;
+  MetricGroup metric_;
 };
 
 

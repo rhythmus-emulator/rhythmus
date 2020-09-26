@@ -45,6 +45,7 @@ public:
   void SetCurrentObject(void *p);
   void* GetParent();
 private:
+  bool RunInternal();
   XMLContext *ctx_;
   void *current_;
   std::vector<void*> parent_;

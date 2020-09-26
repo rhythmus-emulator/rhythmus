@@ -130,22 +130,36 @@ void XMLExecutor::AddHandler(const std::string &cmd, XMLCommandHandler handler)
   getXMLHandler()[cmd] = handler;
 }
 
-bool XMLExecutor::Run()
+bool XMLExecutor::RunInternal()
 {
   while (ctx_->next())
   {
-    tinyxml2::XMLElement *p = (tinyxml2::XMLElement*)ctx_->get_node();
+    tinyxml2::XMLElement* p = (tinyxml2::XMLElement*)ctx_->get_node();
     auto i = getXMLHandler().find(p->Name());
     if (i != getXMLHandler().end())
       (*i->second)(this, ctx_);
     if (ctx_->step_in())
     {
       parent_.push_back(current_);
-      Run();
+      RunInternal();
       parent_.pop_back();
+      ctx_->step_out();
     }
   }
   return true;
+}
+
+bool XMLExecutor::Run()
+{
+  bool r = false;
+  if (ctx_->step_in())
+  {
+    parent_.push_back(current_);
+    r = RunInternal();
+    parent_.pop_back();
+    ctx_->step_out();
+  }
+  return r;
 }
 
 void XMLExecutor::SetCurrentObject(void *p)
