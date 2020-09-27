@@ -174,6 +174,8 @@ void MetricGroup::clear()
 
 MetricGroup& MetricGroup::add_group(const std::string &group_name)
 {
+  MetricGroup* g = get_group(group_name);
+  if (g) return *g;
   children_.emplace_back(MetricGroup(group_name));
   return children_.back();
 }

@@ -341,9 +341,9 @@ ImageManager::~ImageManager()
 
 Image* ImageManager::Load(const std::string &path)
 {
-  if (path.empty()) return nullptr;
   Image *r = nullptr;
   std::string newpath = PATH->GetPath(path);
+  if (newpath.empty()) return nullptr;
   lock_.lock();
   r = (Image*)SearchResource(newpath.c_str());
   if (!r)

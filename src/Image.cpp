@@ -513,6 +513,7 @@ void Image::LoadMovieFromPath(const std::string& path)
 
   // create empty bitmap
   data_ptr_ = (uint8_t*)malloc(width_ * height_ * 4);
+  R_ASSERT(data_ptr_);
   for (int i = 0; i < width_ * height_ * 4; i += 4)
   {
     // all black bitmap with no transparency (alpha 0xff)

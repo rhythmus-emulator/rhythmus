@@ -190,7 +190,6 @@ void CSVContext::set_separator(char c) { sep = c; }
 bool CSVContext::Load(const std::string &path)
 {
   std::string r;
-  std::string path_replaced = Substitute(path, "LR2files/Theme", "themes");
   std::ifstream is(path.c_str());
   if (is.fail()) return false;
   rows.clear();
@@ -369,7 +368,7 @@ float LR2CSVContext::get_float(unsigned idx) const
 bool LR2CSVContext::LoadContextStack(const std::string &path)
 {
   ctx.emplace_back(CSVContext());
-  if (!ctx.back().Load(path))
+  if (!ctx.back().Load(SubstitutePath(path)))
   {
     ctx.pop_back();
     return false;
@@ -380,6 +379,11 @@ bool LR2CSVContext::LoadContextStack(const std::string &path)
 void LR2CSVContext::AddIfStmtStack(bool cond_is_true)
 {
   if_stack_.emplace_back(IfStmt{ cond_is_true ? 1 : 0, cond_is_true });
+}
+
+std::string LR2CSVContext::SubstitutePath(const std::string& path)
+{
+  return Substitute(path, "LR2files/Theme", "themes");
 }
 
 

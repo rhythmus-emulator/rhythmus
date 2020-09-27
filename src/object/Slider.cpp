@@ -190,7 +190,7 @@ std::string Slider::toString() const
 class LR2CSVSliderHandlers
 {
 public:
-  static void src_slider(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static void src_slider(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *o = (Slider*)BaseObject::CreateObject("slider");
     loader->set_object("slider", o);
@@ -225,7 +225,7 @@ public:
     o->SetEditable(ctx->get_int(14) == 0);
   }
 
-  static void dst_slider(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static void dst_slider(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     const char *args[21];
     auto *o = (Sprite*)loader->get_object("slider");
@@ -262,8 +262,8 @@ public:
 
   LR2CSVSliderHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVCommandHandler)&src_slider);
-    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVCommandHandler)&dst_slider);
+    LR2CSVExecutor::AddHandler("#SRC_SLIDER", (LR2CSVCommandHandler)&src_slider);
+    LR2CSVExecutor::AddHandler("#DST_SLIDER", (LR2CSVCommandHandler)&dst_slider);
   }
 };
 

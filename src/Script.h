@@ -84,6 +84,7 @@ public:
   const char *get_str(unsigned idx) const;
   int get_int(unsigned idx) const;
   float get_float(unsigned idx) const;
+  static std::string SubstitutePath(const std::string& path);
 
 private:
   std::vector<CSVContext> ctx;

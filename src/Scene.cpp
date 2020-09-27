@@ -353,21 +353,21 @@ void Scene::doRenderAfter()
 class LR2CSVSceneHandlers
 {
 public:
-  static void image(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static void image(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     std::string name, path;
     name = format_string("image%u", loader->get_image_index());
     path = ctx->get_str(1);
     if (path != "CONTINUE")
-      PATH->SetAlias(name, path);
+      PATH->SetAlias(name, LR2CSVContext::SubstitutePath(path));
   }
-  static void lr2font(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static void lr2font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *fntstyle = METRIC->get_group(format_string("font%u", loader->get_font_index()));
+    auto &fntstyle = METRIC->add_group(format_string("font%u", loader->get_font_index()));
     const char *path = ctx->get_str(1);
-    fntstyle->set("path", path);
+    fntstyle.set("path", LR2CSVContext::SubstitutePath(path));
   }
-  static void font(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static void font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     // --
   }

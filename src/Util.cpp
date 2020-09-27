@@ -144,6 +144,7 @@ std::string Lower(const std::string &s)
   return rutil::lower(s);
 }
 
+// XXX: make function name as SubstitutePath ?
 std::string Substitute(const std::string& path_, const std::string& startswith, const std::string& relplacewith)
 {
   std::string path = path_;
@@ -322,7 +323,7 @@ size_t FindUtf8FirstByteReversed(const std::string &str)
   const char *p = s + str.size() - 1;
   while (p > s)
   {
-    if ((*p & 0b11000000 == 0b11000000) || (*p & 0b10000000 == 0))
+    if ((*p & 0b11000000) == 0b11000000 || (*p & 0b10000000) == 0)
       break;
     --p;
   }

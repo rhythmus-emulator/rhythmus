@@ -811,7 +811,7 @@ void BaseObject::AddFrameByLR2command(const char **argv)
   //int filter = params.Get<int>(12);
   int angle = _atoi_n(argv[13]);
   int center = _atoi_n(argv[14]);
-  int loop = _atoi_n(argv[15]);
+  //int loop = _atoi_n(argv[15]);
   int acc = 0;
   // timer/op code is ignored here.
 

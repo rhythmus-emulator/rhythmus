@@ -239,12 +239,15 @@ public:
   static void src_image(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *o = _this ? (Sprite*)_this : (Sprite*)BaseObject::CreateObject("sprite");
+    auto* scene = ((BaseObject*)loader->get_object("scene"));
     loader->set_object("sprite", o);
+    scene->AddChild(o);
 
     Vector4 r{
       ctx->get_int(3), ctx->get_int(4), ctx->get_int(5), ctx->get_int(6)
     };
     // Use whole image if width/height is zero.
+    o->SetImage(format_string("image%s", ctx->get_str(2)));
     if (r.z <= 0 || r.w <= 0)
       o->SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
     else
@@ -269,6 +272,7 @@ public:
     // these attributes are only affective for first run
     if (loader->get_command_index() == 0)
     {
+      const int loop = ctx->get_int(16);
       const int timer = ctx->get_int(17);
 
       // LR2 needs to keep its animation queue, so don't use stop.
@@ -276,6 +280,8 @@ public:
       o->AddCommand(format_string("LR%dOff", timer), "hide");
       o->SetBlending(ctx->get_int(12));
       o->SetFiltering(ctx->get_int(13));
+      if (loop >= 0)
+        o->SetLoop(loop);
 
       // XXX: move this flag to Sprite,
       // as LR2_TEXT object don't work with this..?
