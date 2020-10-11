@@ -63,8 +63,9 @@ public:
   static void src_bargraph(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *o = _this ? (Bargraph*)_this : (Bargraph*)BaseObject::CreateObject("bargraph");
-    loader->set_object("button", o);
-    LR2CSVExecutor::CallHandler("#SRC_IMAGE", o, loader, ctx);
+    loader->set_object("bargraph", o);
+    // TODO: use general SRC property later to bar sprite
+    //LR2CSVExecutor::CallHandler("#SRC_IMAGE", o, loader, ctx);
 
     o->SetDirection(ctx->get_int(9));
     std::string resname = "bargraph";
@@ -73,13 +74,13 @@ public:
   }
   static void dst_bargraph(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *o = _this ? (Bargraph*)_this : (Bargraph*)loader->get_object("button");
+    auto *o = _this ? (Bargraph*)_this : (Bargraph*)loader->get_object("bargraph");
     LR2CSVExecutor::CallHandler("#DST_IMAGE", o, loader, ctx);
   }
   LR2CSVBargraphHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_BUTTON", (LR2CSVCommandHandler)&src_bargraph);
-    LR2CSVExecutor::AddHandler("#DST_BUTTON", (LR2CSVCommandHandler)&dst_bargraph);
+    LR2CSVExecutor::AddHandler("#SRC_BARGRAPH", (LR2CSVCommandHandler)&src_bargraph);
+    LR2CSVExecutor::AddHandler("#DST_BARGRAPH", (LR2CSVCommandHandler)&dst_bargraph);
   }
 };
 

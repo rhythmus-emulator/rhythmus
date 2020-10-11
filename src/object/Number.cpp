@@ -480,8 +480,8 @@ public:
     loader->set_object("number", o);
     std::string imgname = std::string("image") + ctx->get_str(2);
     Rect clip(ctx->get_int(3), ctx->get_int(4),
-      ctx->get_int(3) + ctx->get_int(5),
-      ctx->get_int(4) + ctx->get_int(6));
+      ctx->get_int(5),
+      ctx->get_int(6)); /* x, y, w, h */
     const int divx = ctx->get_int(7);
     const int divy = ctx->get_int(8);
     int digitcount = 10;

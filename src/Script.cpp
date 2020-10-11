@@ -410,7 +410,7 @@ void LR2CSVExecutor::CallHandler(const std::string &cmd, void *_this,
 {
   auto &i = getLR2CSVHandler().find(cmd);
   if (i != getLR2CSVHandler().end())
-    (*i->second)(nullptr, loader, ctx);
+    (*i->second)(_this, loader, ctx);
 }
 
 void LR2CSVExecutor::Run()
