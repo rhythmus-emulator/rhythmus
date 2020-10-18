@@ -2,7 +2,7 @@
 
 #include "Song.h"
 #include "Game.h"
-#include "ListView.h"
+#include "Wheel.h"
 #include "Text.h"
 #include "Number.h"
 #include "KeyPool.h"
@@ -54,7 +54,7 @@ struct MusicWheelData
 };
 
 /* @brief Pure music wheel item interface */
-class MusicWheelItem : public ListViewItem
+class MusicWheelItem : public WheelItem
 {
 public:
   MusicWheelItem();
@@ -68,7 +68,7 @@ private:
   std::unique_ptr<Text> title_;
 };
 
-class MusicWheel : public ListView
+class MusicWheel : public Wheel
 {
 public:
   MusicWheel();
@@ -84,7 +84,7 @@ public:
   virtual void NavigateLeft();
   virtual void NavigateRight();
   virtual void RebuildData();
-  virtual void RebuildDataContent(ListViewData &data);
+  virtual void RebuildDataContent(WheelItemData &data);
 
   void OpenSection(const std::string &section);
   void CloseSection();

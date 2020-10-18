@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ListView.h"
+#include "Wheel.h"
 #include "Text.h"
 
 namespace rhythmus
@@ -22,7 +22,7 @@ public:
   std::string value;
 };
 
-class OptionItem : public ListViewItem
+class OptionItem : public WheelItem
 {
 public:
   virtual void Load(const MetricGroup &metric);
@@ -32,7 +32,7 @@ private:
   Text option_value;
 };
 
-class OptionMenu : public ListView
+class OptionMenu : public Wheel
 {
 public:
   OptionMenu();
@@ -50,7 +50,7 @@ public:
 #endif
 
 private:
-  virtual ListViewItem* CreateMenuItem();
+  virtual WheelItem* CreateMenuItem();
 };
 
 }

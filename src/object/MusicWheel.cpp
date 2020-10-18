@@ -191,7 +191,6 @@ MusicWheel::MusicWheel() :
   info_musicwheelpos(KEYPOOL->GetFloat("MusicWheelPos"))
 {
   set_name("MusicWheel");
-  set_listviewtype(ListViewType::kWheel);
   sort_.type = 0;
   sort_.invalidate = true;
   filter_.gamemode = 0;
@@ -279,17 +278,17 @@ void MusicWheel::Load(const MetricGroup &metric)
       sort_.type = Sorttype::kNoSort;
   }
 
-  ListView::Load(metric);
+  Wheel::Load(metric);
 }
 
 MusicWheelData* MusicWheel::get_data(int dataindex)
 {
-  return static_cast<MusicWheelData*>(ListView::GetMenuDataByIndex(dataindex));
+  return static_cast<MusicWheelData*>(Wheel::GetMenuDataByIndex(dataindex));
 }
 
 MusicWheelData* MusicWheel::get_selected_data(int player_num)
 {
-  return static_cast<MusicWheelData*>(ListView::GetSelectedMenuData());
+  return static_cast<MusicWheelData*>(Wheel::GetSelectedMenuData());
 }
 
 void MusicWheel::OnSelectChange(const void *data, int direction)
@@ -539,7 +538,7 @@ void MusicWheel::RebuildData()
   RebuildItems();
 }
 
-void MusicWheel::RebuildDataContent(ListViewData &data)
+void MusicWheel::RebuildDataContent(WheelItemData &data)
 {
   // create from MusicWheel.item data
   // so metric must be alive after object initialization
