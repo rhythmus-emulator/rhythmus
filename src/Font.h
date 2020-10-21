@@ -157,6 +157,11 @@ public:
   bool is_ttf_font() const;
   int height() const;
 
+  /* @brief Draw text instantly.
+   * @warn  This method should be used for debugging or system message,
+   *        not for main text rendering due to performance. */
+  void DrawText(float x, float y, const std::string &text_utf8);
+
 private:
   void LoadFreetypeFont(const std::string &path);
   void LoadLR2BitmapFont(const std::string &path);

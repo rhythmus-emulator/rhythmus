@@ -936,4 +936,27 @@ int Font::height() const
   return fontattr_.height;
 }
 
+void Font::DrawText(float x, float y, const std::string &text_utf8)
+{
+  std::vector<TextVertexInfo> tvi;
+
+  if (x != .0f || y != .0f) {
+    Vector3 t(x, y, 0.0f);
+    GRAPHIC->PushMatrix();
+    GRAPHIC->Translate(t);
+  }
+
+  PrepareText(text_utf8);
+  GetTextVertexInfo(text_utf8, tvi, true /* line-break */);
+  for (unsigned i = 0; i < tvi.size(); )
+  {
+    GRAPHIC->SetTexture(0, **tvi[i].tex);
+    GRAPHIC->DrawQuads(tvi[i].vi, 4);
+  }
+
+  if (x != .0f || y != .0f) {
+    GRAPHIC->PopMatrix();
+  }
+}
+
 }
