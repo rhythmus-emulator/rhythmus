@@ -80,6 +80,7 @@ void Sprite::SetImage(const std::string &path)
     img_ = nullptr;
   }
 
+  path_ = path;
   img_ = IMAGEMAN->Load(path);
   if (!img_)
     return;
@@ -248,7 +249,7 @@ public:
     };
     // Use whole image if width/height is zero.
     o->SetImage(format_string("image%s", ctx->get_str(2)));
-    if (r.z <= 0 || r.w <= 0)
+    if (r.z < 0 || r.w < 0)
       o->SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
     else
       o->SetImageCoord(Vector4{ r.x, r.y, r.x + r.z, r.y + r.w });

@@ -2,6 +2,8 @@
 #include "Util.h"
 #include "Script.h"
 #include "config.h"
+#include "ResourceManager.h"  /* SystemFont */
+#include "Font.h" /* DrawText */
 #include <sstream>
 
 namespace rhythmus
@@ -17,6 +19,11 @@ void Button::Load(const MetricGroup &metric)
 }
 
 const char* Button::type() const { return "Button"; }
+
+void Button::doRender()
+{
+  Sprite::doRender();
+}
 
 // ------------------------------------------------------------------ Loader/Helper
 

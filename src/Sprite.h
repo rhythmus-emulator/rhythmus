@@ -63,6 +63,8 @@ protected:
 
   SpriteAnimationInfo sprani_;
 
+  std::string path_;
+
   // current sprite time
   double time_;
 

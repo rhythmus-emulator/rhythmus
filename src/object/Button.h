@@ -11,6 +11,10 @@ public:
   virtual void Load(const MetricGroup &metric);
 
   virtual const char* type() const;
+
+private:
+  friend class Sprite;
+  virtual void doRender();
 };
 
 }
