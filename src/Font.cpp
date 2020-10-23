@@ -940,6 +940,8 @@ void Font::DrawText(float x, float y, const std::string &text_utf8)
 {
   std::vector<TextVertexInfo> tvi;
 
+  if (is_loading()) return;
+
   if (x != .0f || y != .0f) {
     Vector3 t(x, y, 0.0f);
     GRAPHIC->PushMatrix();
@@ -948,7 +950,7 @@ void Font::DrawText(float x, float y, const std::string &text_utf8)
 
   PrepareText(text_utf8);
   GetTextVertexInfo(text_utf8, tvi, true /* line-break */);
-  for (unsigned i = 0; i < tvi.size(); )
+  for (unsigned i = 0; i < tvi.size(); ++i)
   {
     GRAPHIC->SetTexture(0, **tvi[i].tex);
     GRAPHIC->DrawQuads(tvi[i].vi, 4);

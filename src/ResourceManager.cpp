@@ -674,6 +674,17 @@ void FontManager::SetSystemFont()
   sysfont.set("border-color", "#FF000000");
 }
 
+Font* FontManager::GetSystemFont()
+{
+  static Font* sysfont = nullptr;
+  if (sysfont == NULL) {
+    MetricGroup *sysfontmetric = METRIC->get_group("SystemFont");
+    R_ASSERT(sysfontmetric);
+    sysfont = FONTMAN->Load(*sysfontmetric);
+  }
+  return sysfont;
+}
+
 // ------------------------------------------------------ class ResourceManager
 
 void ResourceManager::Initialize()

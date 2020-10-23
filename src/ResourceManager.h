@@ -175,6 +175,7 @@ public:
   void set_load_async(bool load_async);
 
   static void SetSystemFont();
+  static Font* GetSystemFont();
 
 private:
   bool load_async_;
