@@ -188,6 +188,9 @@ public:
   virtual void ClipViewArea(const Vector4 &area) = 0;
   virtual void ResetViewArea() = 0;
 
+  /* drawing (utility) */
+  virtual void DrawRect(float x, float y, float w, float h, uint32_t argb);
+
   /* status */
   float GetFPS() const;
   virtual void SignalWindowClose();

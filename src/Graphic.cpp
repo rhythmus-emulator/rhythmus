@@ -429,6 +429,32 @@ void Graphic::BeginFrame()
 
 void Graphic::EndFrame() {}
 
+void Graphic::DrawRect(float x, float y, float w, float h, uint32_t argb)
+{
+  VertexInfo vi[4];
+  memset(vi, 0, sizeof(VertexInfo) * 4);
+  vi[0].p.x = x;
+  vi[0].p.y = y;
+  vi[1].p.x = x + w;
+  vi[1].p.y = y;
+  vi[2].p.x = x + w;
+  vi[2].p.y = y + h;
+  vi[3].p.x = x;
+  vi[3].p.y = y + h;
+  vi[1].t.x = 1.0f;
+  vi[2].t.x = 1.0f;
+  vi[2].t.y = 1.0f;
+  vi[3].t.y = 1.0f;
+  for (unsigned i = 0; i < 4; ++i) {
+    vi[i].c.a = (argb >> 24) / 255.0f;
+    vi[i].c.r = ((argb >> 16) & 0xFF) / 255.0f;
+    vi[i].c.g = ((argb >> 8) & 0xFF) / 255.0f;
+    vi[i].c.b = (argb & 0xFF) / 255.0f;
+  }
+  SetTexture(0, 0);
+  DrawQuad(vi);
+}
+
 float Graphic::GetFPS() const { return 1000.0f / frame_delay_weight_avg_; }
 
 void Graphic::SignalWindowClose()
