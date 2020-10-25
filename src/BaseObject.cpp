@@ -358,8 +358,8 @@ void BaseObject::RemoveAllChild()
 
 BaseObject* BaseObject::FindChildByName(const std::string& name)
 {
-  for (const auto& spr : children_)
-    if (spr->get_name() == name) return spr;
+  for (auto *child : children_)
+    if (child->get_name() == name) return child;
   return nullptr;
 }
 

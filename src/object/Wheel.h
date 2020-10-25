@@ -104,6 +104,7 @@ public:
   ~Wheel();
 
   virtual void Load(const MetricGroup &metric);
+  virtual void OnReady();
 
   /* @brief Get total data count */
   unsigned size() const;
@@ -138,6 +139,8 @@ public:
 
   WheelItem *GetWheelItem(unsigned data_index);
   virtual BaseObject *CreateLVItemContent(void *data);
+  virtual WheelItem *CreateWheelWrapper();
+  void SetWheelWrapperCount(unsigned max_size);
 
   void set_item_min_index(unsigned min_index);
   void set_item_max_index(unsigned max_index);

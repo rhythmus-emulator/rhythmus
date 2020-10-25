@@ -66,6 +66,8 @@ private:
   Sprite background_[NUM_SELECT_BAR_TYPES];
   Number level_[NUM_LEVEL_TYPES];
   std::unique_ptr<Text> title_;
+
+  virtual void doRender();
 };
 
 class MusicWheel : public Wheel
@@ -85,6 +87,7 @@ public:
   virtual void NavigateRight();
   virtual void RebuildData();
   virtual void RebuildDataContent(WheelItemData &data);
+  virtual void CreateWheelWrapper(unsigned max_size);
 
   void OpenSection(const std::string &section);
   void CloseSection();

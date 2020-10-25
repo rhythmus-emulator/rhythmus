@@ -25,6 +25,7 @@ void SelectScene::LoadScene()
   PlayerManager::CreateGuestPlayerIfEmpty();
 
   RegisterPredefObject(&wheel_);
+  AddChild(&wheel_);
 
   Scene::LoadScene();
 }

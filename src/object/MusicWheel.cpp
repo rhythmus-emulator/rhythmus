@@ -152,6 +152,12 @@ Sprite *MusicWheelItem::get_background(unsigned type)
   return &background_[type];
 }
 
+void MusicWheelItem::doRender()
+{
+  WheelItem::doRender();
+  GRAPHIC->DrawRect(0, 0, 200, 60, 0x66FF9999);
+}
+
 // --------------------------- class MusicWheel
 
 MusicWheel::MusicWheel() :
@@ -552,6 +558,11 @@ void MusicWheel::RebuildDataContent(WheelItemData &data)
   }
 }
 
+void MusicWheel::CreateWheelWrapper(unsigned max_size)
+{
+
+}
+
 void MusicWheel::OpenSection(const std::string &section)
 {
   current_section_ = section;
@@ -651,9 +662,19 @@ class LR2CSVMusicWheelHandlers
 public:
   static void src_bar_body(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *wheel = (MusicWheel*)loader->get_object("musicwheel");
     unsigned bgtype = 0;
+
+    /* for first-appearence */
+    auto *scene = (Scene*)loader->get_object("scene");
+    if (!scene) return;
+    auto *wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
     if (!wheel) return;
+    if (loader->get_object("musicwheel") == NULL)
+    {
+      wheel->CreateWheelWrapper(30);
+      loader->set_object("musicwheel", wheel);
+    }
+
     bgtype = (unsigned)ctx->get_int(1);
     for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i)
     {
@@ -683,15 +704,25 @@ public:
 
   static void bar_center(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *wheel = (MusicWheel*)loader->get_object("musicwheel");
+    /* for first-appearence */
+    auto *scene = (Scene*)loader->get_object("scene");
+    if (!scene) return;
+    auto *wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
     if (!wheel) return;
+    loader->set_object("musicwheel", wheel);
+
     wheel->set_item_center_index((unsigned)ctx->get_int(1));
   }
 
   static void bar_available(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *wheel = (MusicWheel*)loader->get_object("musicwheel");
+    /* for first-appearence */
+    auto *scene = (Scene*)loader->get_object("scene");
+    if (!scene) return;
+    auto *wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
     if (!wheel) return;
+    loader->set_object("musicwheel", wheel);
+
     wheel->set_item_min_index(0);
     wheel->set_item_max_index((unsigned)ctx->get_int(1));
   }

@@ -131,12 +131,15 @@ Wheel::~Wheel()
 
 void Wheel::Load(const MetricGroup &metric)
 {
+  unsigned wheelwrappersize = 30;
+
   // Load itemview attributes
   BaseObject::Load(metric);
   metric.get_safe("postype", (int&)pos_method_);
   metric.get_safe("itemtype", item_type_);
   metric.get_safe("itemheight", item_height_);
   metric.get_safe("itemcountauto", set_item_count_auto_);
+  metric.get_safe("itemcount", (int&)wheelwrappersize);
   if (!set_item_count_auto_)
     metric.get_safe("itemcount", item_count_);
   else
@@ -150,35 +153,16 @@ void Wheel::Load(const MetricGroup &metric)
     set_item_center_index((unsigned)center_index);
   }
 
-  // Create items
-  // XXX: repeative item, or pre-create item array?
-  // --> that can be decided by setting ...? idk.
+  SetWheelWrapperCount(wheelwrappersize);
   const MetricGroup *itemmetric = metric.get_group("item");
-  /* default: nullptr data */
-  WheelItem *item = new WheelItem();
-  if (itemmetric)
-    item->Load(*itemmetric);
-  item->LoadFromData(nullptr);
-  item->set_dataindex(0);
-  items_.push_back(item);
-  AddChild(item);
-
-  // clone
-  // XXX: MAY NOT use clone() method to loading object!
-  for (unsigned i = 1; i < item_count_; ++i)
-  {
-#if 1
-    WheelItem *item = (WheelItem*)items_[0]->clone();
-#else
-    WheelItem *item = CreateMenuItem(item_type_);
-    item->Load(*itemmetric);
-    item->LoadFromData(nullptr);
-#endif
-    items_.push_back(item);
-    item->set_dataindex(i);
-    AddChild(item);
+  if (itemmetric) {
+    for (auto *item : items_)
+      item->Load(*itemmetric);
   }
+}
 
+void Wheel::OnReady()
+{
   // Load sounds
   std::string soundpath;
   if (METRIC->get_safe("Sound.SongSelectChange", soundpath))
@@ -300,6 +284,26 @@ BaseObject *Wheel::CreateLVItemContent(void *data)
 {
   /* Implement by your own */
   return nullptr;
+}
+
+WheelItem *Wheel::CreateWheelWrapper()
+{
+  /* Implement by your own */
+  return nullptr;
+}
+
+void Wheel::SetWheelWrapperCount(unsigned max_size)
+{
+  if (max_size < items_.size()) {
+    for (unsigned i = max_size; i < items_.size(); ++i)
+      delete items_[i];
+    items_.resize(max_size);
+  }
+  else if (max_size > items_.size()) {
+    while (items_.size() < max_size) {
+      items_.push_back(CreateWheelWrapper());
+    }
+  }
 }
 
 void Wheel::set_item_min_index(unsigned min_index)
