@@ -118,6 +118,17 @@ static const bool _type_to_disp_level[] = {
 void MusicWheelItem::LoadFromData(void *d)
 {
   MusicWheelData *data = static_cast<MusicWheelData*>(d);
+  
+  // TODO: if data is nullptr, then clear all data and set as empty item
+  if (data == nullptr)
+  {
+    if (title_) title_->Hide();
+    for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
+      background_[i].Hide();
+    for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
+      level_[i].Hide();
+    return;
+  }
 
   title_->SetText(data->info.title);
 
@@ -301,6 +312,10 @@ void MusicWheel::OnSelectChange(const void *data, int direction)
 {
   const auto *d = static_cast<const MusicWheelData*>(data);
 
+  if (d == nullptr) {
+    static MusicWheelData data_empty;
+    d = &data_empty;
+  }
 
   // update KeyPool
   *info_title = d->info.title;
@@ -558,9 +573,9 @@ void MusicWheel::RebuildDataContent(WheelItemData &data)
   }
 }
 
-void MusicWheel::CreateWheelWrapper(unsigned max_size)
+WheelItem *MusicWheel::CreateWheelWrapper()
 {
-
+  return new MusicWheelItem();
 }
 
 void MusicWheel::OpenSection(const std::string &section)
@@ -671,7 +686,7 @@ public:
     if (!wheel) return;
     if (loader->get_object("musicwheel") == NULL)
     {
-      wheel->CreateWheelWrapper(30);
+      wheel->SetWheelWrapperCount(30);
       loader->set_object("musicwheel", wheel);
     }
 

@@ -242,10 +242,15 @@ void Wheel::RebuildItems()
 {
   // fill content view to ListViewItem template.
   bool loop = is_loop_;
-  unsigned item_index = items_.empty() ? 0 : (unsigned)(
-    (pos_.index_i % (int)data_.size() + (int)data_.size()) % (int)data_.size());
+  unsigned item_index = 0;
   int selindex = pos_.index_i;
   int item_index_raw = pos_.index_i;
+
+  if (data_.size() == 0) return;
+
+  item_index = items_.empty() ? 0 : (unsigned)(
+    (pos_.index_i % (int)data_.size() + (int)data_.size()) % (int)data_.size());
+
   for (auto *item : items_)
   {
     if (data_.empty())

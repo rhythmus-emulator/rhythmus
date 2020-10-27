@@ -53,7 +53,7 @@ struct MusicWheelData
   void SetPlayRecord();
 };
 
-/* @brief Pure music wheel item interface */
+/* @brief music wheel item wrapper */
 class MusicWheelItem : public WheelItem
 {
 public:
@@ -87,7 +87,7 @@ public:
   virtual void NavigateRight();
   virtual void RebuildData();
   virtual void RebuildDataContent(WheelItemData &data);
-  virtual void CreateWheelWrapper(unsigned max_size);
+  virtual WheelItem *CreateWheelWrapper();
 
   void OpenSection(const std::string &section);
   void CloseSection();
