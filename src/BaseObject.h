@@ -200,10 +200,10 @@ public:
   DrawProperty& GetCurrentFrame();
   void AddFrameByLR2command(const std::string &cmd);
   void AddFrameByLR2command(const char **argv);
-  void SetX(int x);
-  void SetY(int y);
-  void SetWidth(int w);
-  void SetHeight(int h);
+  void SetX(float x);
+  void SetY(float y);
+  void SetWidth(float w);
+  void SetHeight(float h);
   void SetOpacity(float opa);
   void SetClip(bool clip);
   void SetPos(int x, int y);
@@ -221,6 +221,8 @@ public:
   void SetLoop(unsigned loop_start_time);
   float GetX() const;
   float GetY() const;
+  float GetWidth() const;
+  float GetHeight() const;
   void SetDebug(const std::string &debug_msg);
   void BringToTop();
 

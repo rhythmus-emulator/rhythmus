@@ -29,8 +29,8 @@ bool OnMouse::IsEntered(float x, float y)
   auto &f = GetCurrentFrame();
   x -= f.pos.x + onmouse_rect_.x;
   y -= f.pos.y + onmouse_rect_.y;
-  return (x >= 0 && x <= GetWidth(onmouse_rect_)
-    && y >= 0 && y <= GetHeight(onmouse_rect_));
+  return (x >= 0 && x <= rhythmus::GetWidth(onmouse_rect_)
+    && y >= 0 && y <= rhythmus::GetHeight(onmouse_rect_));
 }
 
 void OnMouse::doRender()

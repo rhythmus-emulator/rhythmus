@@ -195,8 +195,8 @@ void Sprite::doRender()
   // texture animation
   if (sprani_.divx > 1 || sprani_.divy > 1)
   {
-    float w = GetWidth(texcrop) / sprani_.divx;
-    float h = GetHeight(texcrop) / sprani_.divy;
+    float w = rhythmus::GetWidth(texcrop) / sprani_.divx;
+    float h = rhythmus::GetHeight(texcrop) / sprani_.divy;
     int ix = frame_ % sprani_.divx;
     int iy = frame_ / sprani_.divx % sprani_.divy;
     texcrop.x += w * ix;

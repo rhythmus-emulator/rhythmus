@@ -40,13 +40,13 @@ void Bargraph::doUpdate(double)
   // update width / height of bar sprite
   if (direction_ == 0)
   {
-    bar_.SetWidth(GetWidth(GetCurrentFrame().pos) * value_);
-    bar_.SetHeight(GetHeight(GetCurrentFrame().pos));
+    bar_.SetWidth(rhythmus::GetWidth(GetCurrentFrame().pos) * value_);
+    bar_.SetHeight(rhythmus::GetHeight(GetCurrentFrame().pos));
   }
   else if (direction_ == 1)
   {
-    bar_.SetWidth(GetWidth(GetCurrentFrame().pos));
-    bar_.SetHeight(GetHeight(GetCurrentFrame().pos) * value_);
+    bar_.SetWidth(rhythmus::GetWidth(GetCurrentFrame().pos));
+    bar_.SetHeight(rhythmus::GetHeight(GetCurrentFrame().pos) * value_);
   }
 }
 

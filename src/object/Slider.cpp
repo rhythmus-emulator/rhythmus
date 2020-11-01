@@ -102,8 +102,8 @@ void Slider::OnAnimation(DrawProperty &frame)
   if (use_range_override)
   {
     // TODO: also cursor size reset when OnResize()
-    cursor_.SetWidth(GetWidth(frame.pos));
-    cursor_.SetHeight(GetHeight(frame.pos));
+    cursor_.SetWidth(rhythmus::GetWidth(frame.pos));
+    cursor_.SetHeight(rhythmus::GetHeight(frame.pos));
 
     if (type == 0)
       frame.pos.w = frame.pos.y + range_.y;
@@ -121,7 +121,7 @@ void Slider::doUpdate(double)
   // Update updated value if editable.
   if (editable_ && cursor_.IsDragging())
   {
-    value_ = cursor_.GetY() / GetHeight(f.pos);
+    value_ = cursor_.GetY() / rhythmus::GetHeight(f.pos);
     value_ = std::max(std::min(1.0f, value_), 0.0f);
   }
 
@@ -130,18 +130,18 @@ void Slider::doUpdate(double)
   {
   case 0:
     cursor_.SetX(0);
-    cursor_.SetY(GetHeight(f.pos) * value_);
+    cursor_.SetY(rhythmus::GetHeight(f.pos) * value_);
     break;
   case 2:
     cursor_.SetX(0);
-    cursor_.SetY(GetHeight(f.pos) * (1.0f - value_));
+    cursor_.SetY(rhythmus::GetHeight(f.pos) * (1.0f - value_));
     break;
   case 1:
-    cursor_.SetX(GetWidth(f.pos) * (1.0f - value_));
+    cursor_.SetX(rhythmus::GetWidth(f.pos) * (1.0f - value_));
     cursor_.SetY(0);
     break;
   case 3:
-    cursor_.SetX(GetWidth(f.pos) * value_);
+    cursor_.SetX(rhythmus::GetWidth(f.pos) * value_);
     cursor_.SetY(0);
     break;
   }

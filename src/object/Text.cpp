@@ -184,8 +184,8 @@ void Text::UpdateTextRenderContext()
   text_render_ctx_.width = 0;
   text_render_ctx_.height = 0;
   text_render_ctx_.drawsize = Vector2(
-    GetWidth(GetCurrentFrame().pos),
-    GetHeight(GetCurrentFrame().pos)
+    rhythmus::GetWidth(GetCurrentFrame().pos),
+    rhythmus::GetHeight(GetCurrentFrame().pos)
   );
 
   // If no glyph, then maybe no glyph supported by this font.
@@ -364,8 +364,8 @@ void Text::OnAnimation(DrawProperty &frame)
   // simulate align center as topleft by making drawing size as zero
   if (set_xy_aligncenter_)
   {
-    float dw = GetWidth(frame.pos) * text_alignment_.x;
-    float dh = GetHeight(frame.pos) * text_alignment_.y;
+    float dw = rhythmus::GetWidth(frame.pos) * text_alignment_.x;
+    float dh = rhythmus::GetHeight(frame.pos) * text_alignment_.y;
     frame.pos.x -= dw;
     frame.pos.z -= dw;
     frame.pos.y -= dh;
@@ -382,8 +382,8 @@ void Text::doUpdate(double delta)
 void Text::doRender()
 {
   if (!font_) return;
-  const float width = GetWidth(GetCurrentFrame().pos);
-  const float height = GetHeight(GetCurrentFrame().pos);
+  const float width = rhythmus::GetWidth(GetCurrentFrame().pos);
+  const float height = rhythmus::GetHeight(GetCurrentFrame().pos);
   float twidth = text_render_ctx_.width;
   float theight = text_render_ctx_.height;
 

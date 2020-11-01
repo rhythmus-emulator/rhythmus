@@ -92,11 +92,11 @@ void Dialog::doUpdate(double delta)
   if (IsVisible())
   {
     // update size of bg / title / text
-    float width = GetWidth(GetCurrentFrame().pos) - padding_[1] - padding_[3];
-    float height = GetHeight(GetCurrentFrame().pos) - padding_[0] - padding_[2];
+    float width = rhythmus::GetWidth(GetCurrentFrame().pos) - padding_[1] - padding_[3];
+    float height = rhythmus::GetHeight(GetCurrentFrame().pos) - padding_[0] - padding_[2];
     background_.SetSize(
-      GetWidth(GetCurrentFrame().pos),
-      GetHeight(GetCurrentFrame().pos)
+      rhythmus::GetWidth(GetCurrentFrame().pos),
+      rhythmus::GetHeight(GetCurrentFrame().pos)
     );
     title_.SetPos(Vector4{ padding_[1], padding_[0],
       width, title_height_ });

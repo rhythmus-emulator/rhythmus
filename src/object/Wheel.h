@@ -141,7 +141,9 @@ public:
   virtual BaseObject *CreateLVItemContent(void *data);
   virtual WheelItem *CreateWheelWrapper();
   void SetWheelWrapperCount(unsigned max_size);
+  void SetWheelWrapperCount(unsigned max_size, const std::string &item_type);
   void SetWheelPosMethod(WheelPosMethod method);
+  void SetWheelItemType(const std::string &item_type);
 
   void set_item_min_index(unsigned min_index);
   void set_item_max_index(unsigned max_index);
@@ -199,7 +201,7 @@ protected:
   // total item height
   unsigned item_total_height_;
 
-  // ListViewItem type
+  // WheelItem type
   std::string item_type_;
 
   // scroll from ~ to

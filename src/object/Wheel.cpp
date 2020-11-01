@@ -322,9 +322,34 @@ void Wheel::SetWheelWrapperCount(unsigned max_size)
   }
 }
 
+void Wheel::SetWheelWrapperCount(unsigned max_size, const std::string &item_type)
+{
+  if (item_type_ == item_type) {
+    SetWheelWrapperCount(max_size);
+  }
+  else {
+    // re-create all wrappers.
+    SetWheelWrapperCount(0);
+    item_type_ = item_type;
+    SetWheelWrapperCount(max_size);
+  }
+}
+
 void Wheel::SetWheelPosMethod(WheelPosMethod method)
 {
   pos_method_ = method;
+}
+
+void Wheel::SetWheelItemType(const std::string &item_type)
+{
+  unsigned itemcount = 0;
+  if (item_type_ == item_type) return;
+  item_type_ = item_type;
+
+  // re-create all wrappers.
+  itemcount = items_.size();
+  SetWheelWrapperCount(0);
+  SetWheelWrapperCount(itemcount);
 }
 
 void Wheel::set_item_min_index(unsigned min_index)
@@ -346,6 +371,10 @@ void Wheel::NavigateDown()
 {
   if (!is_loop_ && data_index_ >= (int)size() - 1)
     return;
+
+  // finish animation if not
+  for (auto *i : items_)
+    i->HurryTween();
 
   // change data index
   data_index_++;
@@ -372,6 +401,10 @@ void Wheel::NavigateUp()
 {
   if (!is_loop_ && data_index_ == 0)
     return;
+
+  // finish animation if not
+  for (auto *i : items_)
+    i->HurryTween();
 
   // change data index
   data_index_--;
@@ -400,7 +433,7 @@ void Wheel::NavigateRight() {}
 
 unsigned Wheel::CalculateItemCount() const
 {
-  float height = GetHeight(frame_.pos);
+  float height = rhythmus::GetHeight(frame_.pos);
   return static_cast<unsigned>(height / item_height_);
 }
 
@@ -476,10 +509,10 @@ void Wheel::doUpdate(double delta)
     // TODO: multiply listviewitem total height if scroll_idx_to is out of index.
     pos_.y = GetItemYPosByIndex(scroll_idx_from_) * (1.0f - scroll_ratio)
            + GetItemYPosByIndex(scroll_idx_to_) * scroll_ratio;
-  }
 
-  // calculate each LVitem position-based-index and position
-  //UpdateItemPos();
+    // calculate each LVitem position-based-index and position
+    UpdateItemPos();
+  }
 
   // rebuild LVitem if current index is changed
   if (index_current_ != pos_.index_i)

@@ -381,7 +381,7 @@ void Number::OnAnimation(DrawProperty &frame)
 {
   if (keta_ > 1)
   {
-    float w = GetWidth(frame.pos);
+    float w = rhythmus::GetWidth(frame.pos);
     frame.pos.z = frame.pos.x + w * keta_;
   }
 }

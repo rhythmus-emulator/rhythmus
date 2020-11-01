@@ -575,6 +575,7 @@ void MusicWheel::RebuildDataContent(WheelItemData &data)
 
 WheelItem *MusicWheel::CreateWheelWrapper()
 {
+  // TODO: check item_type_ == "LR2"
   return new MusicWheelItem();
 }
 
@@ -687,7 +688,7 @@ public:
     if (loader->get_object("musicwheel") == NULL)
     {
       wheel->BringToTop();
-      wheel->SetWheelWrapperCount(30);
+      wheel->SetWheelWrapperCount(30, "LR2");
       wheel->SetWheelPosMethod(WheelPosMethod::kMenuPosFixed);
       loader->set_object("musicwheel", wheel);
     }

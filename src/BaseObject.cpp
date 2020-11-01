@@ -607,26 +607,26 @@ DrawProperty& BaseObject::GetCurrentFrame()
   return frame_;
 }
 
-void BaseObject::SetX(int x)
+void BaseObject::SetX(float x)
 {
-  float delta = x - GetLastFrame().pos.x;
-  GetLastFrame().pos.x += delta;
-  GetLastFrame().pos.z += delta;
+  float width = GetWidth();
+  GetLastFrame().pos.x = x;
+  GetLastFrame().pos.z = x + width;
 }
 
-void BaseObject::SetY(int y)
+void BaseObject::SetY(float y)
 {
-  float delta = y - GetLastFrame().pos.y;
-  GetLastFrame().pos.y += delta;
-  GetLastFrame().pos.w += delta;
+  float height = GetHeight();
+  GetLastFrame().pos.y = y;
+  GetLastFrame().pos.w = y + height;
 }
 
-void BaseObject::SetWidth(int w)
+void BaseObject::SetWidth(float w)
 {
   GetLastFrame().pos.z = GetLastFrame().pos.x + w;
 }
 
-void BaseObject::SetHeight(int h)
+void BaseObject::SetHeight(float h)
 {
   GetLastFrame().pos.w = GetLastFrame().pos.y + h;
 }
@@ -774,6 +774,9 @@ float BaseObject::GetY() const
 {
   return frame_.pos.y;
 }
+
+float BaseObject::GetWidth() const { return frame_.pos.w - frame_.pos.x; }
+float BaseObject::GetHeight() const { return frame_.pos.z - frame_.pos.y; }
 
 void BaseObject::SetDebug(const std::string &debug_msg)
 {
@@ -1213,19 +1216,19 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
   {
     static auto fn_X = [](void *o, CommandArgs& args, const std::string &) {
       auto *obj = static_cast<BaseObject*>(o);
-      int vi = args.Get<int>(0);
+      auto vi = args.Get<float>(0);
       obj->SetX(vi);
     };
     static auto fn_Y = [](void *o, CommandArgs& args, const std::string &) {
       auto *obj = static_cast<BaseObject*>(o);
-      int vi = args.Get<int>(0);
+      auto vi = args.Get<float>(0);
       obj->SetY(vi);
     };
     static auto fn_W = [](void *o, CommandArgs& args, const std::string &) {
-      static_cast<BaseObject*>(o)->SetWidth(args.Get<int>(0));
+      static_cast<BaseObject*>(o)->SetWidth(args.Get<float>(0));
     };
     static auto fn_H = [](void *o, CommandArgs& args, const std::string &) {
-      static_cast<BaseObject*>(o)->SetHeight(args.Get<int>(0));
+      static_cast<BaseObject*>(o)->SetHeight(args.Get<float>(0));
     };
     static auto fn_Pos = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->SetPos(args.Get<int>(0), args.Get<int>(1));
