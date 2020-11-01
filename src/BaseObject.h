@@ -222,6 +222,7 @@ public:
   float GetX() const;
   float GetY() const;
   void SetDebug(const std::string &debug_msg);
+  void BringToTop();
 
   /**
    * 0: Center

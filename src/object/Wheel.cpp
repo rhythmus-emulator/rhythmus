@@ -22,6 +22,11 @@ WheelItem::WheelItem() :
   dataindex_(0), itemindex_(0),
   data_(nullptr), is_focused_(false), content_(nullptr)
 {
+  memset(&item_dprop_.pos.a, 0, sizeof(Vector4));
+  item_dprop_.align.x = item_dprop_.align.y = 0.5f;
+  memset(&item_dprop_.rotate.x, 0, sizeof(Vector3));
+  item_dprop_.scale.x = item_dprop_.scale.y = 1.0f;
+  item_dprop_.color.a = item_dprop_.color.r = item_dprop_.color.g = item_dprop_.color.b = 1.0f;
 }
 
 WheelItem::WheelItem(const WheelItem& obj) : BaseObject(obj),
@@ -114,7 +119,8 @@ private:
 // --------------------------------- class Menu
 
 Wheel::Wheel()
-  : is_loop_(true), index_previous_(-1), data_top_index_(0), data_index_(0),
+  : pos_method_(WheelPosMethod::kMenuPosExpr), is_loop_(true), index_previous_(-1),
+    data_top_index_(0), data_index_(0),
     item_count_(16), set_item_count_auto_(false), item_height_(80), item_total_height_(0),
     item_center_index_(8), item_focus_min_(4), item_focus_max_(12),
     scroll_time_(200.0f), scroll_time_remain_(.0f)
@@ -301,14 +307,24 @@ void Wheel::SetWheelWrapperCount(unsigned max_size)
 {
   if (max_size < items_.size()) {
     for (unsigned i = max_size; i < items_.size(); ++i)
+    {
+      RemoveChild(items_[i]);
       delete items_[i];
+    }
     items_.resize(max_size);
   }
   else if (max_size > items_.size()) {
     while (items_.size() < max_size) {
-      items_.push_back(CreateWheelWrapper());
+      auto *item = CreateWheelWrapper();
+      items_.push_back(item);
+      AddChild(item);
     }
   }
+}
+
+void Wheel::SetWheelPosMethod(WheelPosMethod method)
+{
+  pos_method_ = method;
 }
 
 void Wheel::set_item_min_index(unsigned min_index)
@@ -441,7 +457,7 @@ void Wheel::UpdateItemPos()
 
 void Wheel::doUpdate(double delta)
 {
-  // Update current scroll and index
+  // Update current scroll and index position
   if (scroll_time_remain_ > 0 && scroll_time_ > 0)
   {
     // current scroll delta ( 0 ~ 1 )
@@ -463,7 +479,7 @@ void Wheel::doUpdate(double delta)
   }
 
   // calculate each LVitem position-based-index and position
-  UpdateItemPos();
+  //UpdateItemPos();
 
   // rebuild LVitem if current index is changed
   if (index_current_ != pos_.index_i)

@@ -338,6 +338,7 @@ const std::string& BaseObject::get_name() const
 void BaseObject::AddChild(BaseObject* obj)
 {
   children_.push_back(obj);
+  obj->parent_ = this;
 }
 
 void BaseObject::RemoveChild(BaseObject* obj)
@@ -346,6 +347,7 @@ void BaseObject::RemoveChild(BaseObject* obj)
   if (it != children_.end())
     children_.erase(it);
   if (obj->is_allocated_) delete obj;
+  else obj->parent_ = nullptr;
 }
 
 void BaseObject::RemoveAllChild()
@@ -776,6 +778,17 @@ float BaseObject::GetY() const
 void BaseObject::SetDebug(const std::string &debug_msg)
 {
   debug_ = debug_msg;
+}
+
+void BaseObject::BringToTop()
+{
+  if (!parent_) return;
+  auto b = parent_->children_.begin();
+  auto e = parent_->children_.end();
+  auto it = std::find(b, e, this);
+  if (it != e) {
+    std::rotate(it, it + 1, e);
+  }
 }
 
 void BaseObject::AddFrameByLR2command(const std::string &cmd)

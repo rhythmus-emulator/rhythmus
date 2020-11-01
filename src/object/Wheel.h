@@ -141,6 +141,7 @@ public:
   virtual BaseObject *CreateLVItemContent(void *data);
   virtual WheelItem *CreateWheelWrapper();
   void SetWheelWrapperCount(unsigned max_size);
+  void SetWheelPosMethod(WheelPosMethod method);
 
   void set_item_min_index(unsigned min_index);
   void set_item_max_index(unsigned max_index);

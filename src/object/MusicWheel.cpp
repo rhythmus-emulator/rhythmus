@@ -686,7 +686,9 @@ public:
     if (!wheel) return;
     if (loader->get_object("musicwheel") == NULL)
     {
+      wheel->BringToTop();
       wheel->SetWheelWrapperCount(30);
+      wheel->SetWheelPosMethod(WheelPosMethod::kMenuPosFixed);
       loader->set_object("musicwheel", wheel);
     }
 
