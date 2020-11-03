@@ -722,6 +722,8 @@ public:
 
   static void bar_center(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
+    unsigned center_idx = 0;
+
     /* for first-appearence */
     auto *scene = (Scene*)loader->get_object("scene");
     if (!scene) return;
@@ -729,7 +731,10 @@ public:
     if (!wheel) return;
     loader->set_object("musicwheel", wheel);
 
-    wheel->set_item_center_index((unsigned)ctx->get_int(1));
+    center_idx = (unsigned)ctx->get_int(1);
+    wheel->set_item_center_index(center_idx);
+    wheel->set_item_min_index(center_idx);
+    wheel->set_item_max_index(center_idx);
   }
 
   static void bar_available(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
@@ -740,9 +745,8 @@ public:
     auto *wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
     if (!wheel) return;
     loader->set_object("musicwheel", wheel);
-
-    wheel->set_item_min_index(0);
-    wheel->set_item_max_index((unsigned)ctx->get_int(1));
+    //wheel->set_item_min_index(0);
+    //wheel->set_item_max_index((unsigned)ctx->get_int(1));
   }
 
   static void src_bar_title(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)

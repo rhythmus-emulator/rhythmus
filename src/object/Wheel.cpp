@@ -379,9 +379,10 @@ void Wheel::NavigateDown()
   // change data index
   data_index_++;
   int item_focus_index = data_index_ - data_top_index_;
+
+  // do scolling only if focus index is out of setting.
   if (item_focus_index > (int)item_focus_max_)
   {
-    // do scolling
     scroll_idx_from_ = data_top_index_;
     scroll_idx_to_ = data_top_index_ + 1;
     scroll_time_remain_ = scroll_time_;
@@ -409,9 +410,10 @@ void Wheel::NavigateUp()
   // change data index
   data_index_--;
   int item_focus_index = data_index_ - data_top_index_;
+
+  // do scolling only if focus index is out of setting.
   if (item_focus_index < (int)item_focus_min_)
   {
-    // do scolling
     scroll_idx_from_ = data_top_index_;
     scroll_idx_to_ = data_top_index_ - 1;
     scroll_time_remain_ = scroll_time_;
@@ -440,17 +442,9 @@ unsigned Wheel::CalculateItemCount() const
 void Wheel::UpdateItemPos()
 {
   DrawProperty d;
-  float ratio = fmod(pos_.index_f, 1);
+  float ratio = modf_pos(pos_.index_f, 1.0f);
   unsigned j = 0;
   int x, y;
-
-#if 0
-  // Fast-forward animation if they were playing
-  for (auto *item : items_)
-    item->HurryTween();
-
-  // XXX: Update motion to item_pos_list if they were in tweening
-#endif
 
   switch (pos_method_)
   {
@@ -459,12 +453,19 @@ void Wheel::UpdateItemPos()
     // actual item array are rotated when listview is scrolled
     // to reduce LoadFromData(..) call, so item object by actual item index
     // should be obtained by items_abs_ array.
-    for (unsigned i = 0; i + 1 < items_.size(); ++i)
-    {
-      MakeTween(d,
-        items_[i]->get_item_dprop(),
-        items_[i + 1]->get_item_dprop(),
-        ratio, EaseTypes::kEaseIn);
+    for (unsigned i = 0; i + 1 < items_.size(); ++i) {
+      if (scroll_idx_from_ < scroll_idx_to_) {
+        MakeTween(d,
+          items_[i]->get_item_dprop(),
+          items_[i + 1]->get_item_dprop(),
+          ratio, EaseTypes::kEaseIn);
+      }
+      else {
+        MakeTween(d,
+          items_[i + 1]->get_item_dprop(),
+          items_[i]->get_item_dprop(),
+          1.0f - ratio, EaseTypes::kEaseIn);
+      }
 
       // TODO: set alpha, rotation
       items_[i]->SetPos((int)d.pos.x, (int)d.pos.y);
