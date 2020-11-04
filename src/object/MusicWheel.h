@@ -60,12 +60,15 @@ public:
   MusicWheelItem();
   virtual void Load(const MetricGroup &metric);
   virtual void LoadFromData(void *d);
+
   Sprite *get_background(unsigned type);
+  Number *get_level(unsigned type);
+  Text *get_title();
 
 private:
   Sprite background_[NUM_SELECT_BAR_TYPES];
   Number level_[NUM_LEVEL_TYPES];
-  std::unique_ptr<Text> title_;
+  Text title_;
 
   virtual void doRender();
 };

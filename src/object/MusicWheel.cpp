@@ -56,16 +56,20 @@ void MusicWheelData::SetPlayRecord()
 
 MusicWheelItem::MusicWheelItem()
 {
+  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
+    AddChild(&background_[i]);
+  for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
+    AddChild(&level_[i]);
+  AddChild(&title_);
 }
 
 /* @warn use same metric that MusicWheel used. */
 void MusicWheelItem::Load(const MetricGroup &metric)
 {
-  title_ = std::make_unique<Text>();
-  title_->set_name("MusicWheelTitle");
-  title_->Load(metric);
+  title_.set_name("MusicWheelTitle");
+  title_.Load(metric);
 
-  /* title object won't be affected by op code. */
+  /* title object is not affected by op code. */
   //title_->SetIgnoreVisibleGroup(true);
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
@@ -80,13 +84,6 @@ void MusicWheelItem::Load(const MetricGroup &metric)
     level_[i].set_name("MusicWheelLevel" + std::to_string(i));
     level_[i].Load(metric);
   }
-
-  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
-    AddChild(&background_[i]);
-  for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
-    AddChild(&level_[i]);
-  //AddChild(&*title_); -- TODO: this method makes double-free with unique destructor. need to be fixed
-  //AddChild(&*level_);
 }
 
 static const int _type_to_baridx[] = {
@@ -122,7 +119,7 @@ void MusicWheelItem::LoadFromData(void *d)
   // TODO: if data is nullptr, then clear all data and set as empty item
   if (data == nullptr)
   {
-    if (title_) title_->Hide();
+    title_.Hide();
     for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
       background_[i].Hide();
     for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
@@ -130,7 +127,7 @@ void MusicWheelItem::LoadFromData(void *d)
     return;
   }
 
-  title_->SetText(data->info.title);
+  title_.SetText(data->info.title);
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
@@ -158,10 +155,9 @@ void MusicWheelItem::LoadFromData(void *d)
   }
 }
 
-Sprite *MusicWheelItem::get_background(unsigned type)
-{
-  return &background_[type];
-}
+Sprite *MusicWheelItem::get_background(unsigned type) { return &background_[type]; }
+Number *MusicWheelItem::get_level(unsigned type) { return &level_[type]; }
+Text *MusicWheelItem::get_title() { return &title_; }
 
 void MusicWheelItem::doRender()
 {
@@ -676,26 +672,31 @@ int MusicWheel::GetDifficultyFilter() const
 class LR2CSVMusicWheelHandlers
 {
 public:
-  static void src_bar_body(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static MusicWheel *get_musicwheel(LR2CSVExecutor *loader)
   {
-    unsigned bgtype = 0;
-
-    /* for first-appearence */
-    auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return;
-    auto *wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
-    if (!wheel) return;
+    auto *wheel = (MusicWheel*)loader->get_object("musicwheel");
     if (loader->get_object("musicwheel") == NULL)
     {
+      /* for first-appearence */
+      auto *scene = (Scene*)loader->get_object("scene");
+      if (!scene) return nullptr;
+      wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
+      if (!wheel) return nullptr;
       wheel->BringToTop();
       wheel->SetWheelWrapperCount(30, "LR2");
       wheel->SetWheelPosMethod(WheelPosMethod::kMenuPosFixed);
       loader->set_object("musicwheel", wheel);
     }
+    return wheel;
+  }
 
+  static void src_bar_body(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  {
+    auto *wheel = get_musicwheel(loader);
+    unsigned bgtype = 0;
+    if (!wheel) return;
     bgtype = (unsigned)ctx->get_int(1);
-    for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i)
-    {
+    for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i) {
       auto *item = static_cast<MusicWheelItem*>(wheel->GetMenuItemWrapperByIndex(i));
       auto *bg = item->get_background(bgtype);
       LR2CSVExecutor::CallHandler("#SRC_IMAGE", bg, loader, ctx);
@@ -704,7 +705,7 @@ public:
 
   static void dst_bar_body_off(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *wheel = (MusicWheel*)loader->get_object("musicwheel");
+    auto *wheel = get_musicwheel(loader);
     unsigned itemindex = 0;
     std::string itemname;
     if (!wheel) return;
@@ -722,14 +723,8 @@ public:
 
   static void bar_center(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
+    auto *wheel = get_musicwheel(loader);
     unsigned center_idx = 0;
-
-    /* for first-appearence */
-    auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return;
-    auto *wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
-    if (!wheel) return;
-    loader->set_object("musicwheel", wheel);
 
     center_idx = (unsigned)ctx->get_int(1);
     wheel->set_item_center_index(center_idx);
@@ -739,11 +734,8 @@ public:
 
   static void bar_available(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    /* for first-appearence */
-    auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return;
-    auto *wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
-    if (!wheel) return;
+    // TODO
+    auto *wheel = get_musicwheel(loader);
     loader->set_object("musicwheel", wheel);
     //wheel->set_item_min_index(0);
     //wheel->set_item_max_index((unsigned)ctx->get_int(1));
@@ -751,12 +743,23 @@ public:
 
   static void src_bar_title(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-
+    auto *wheel = get_musicwheel(loader);
+    for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i) {
+      auto *item = (MusicWheelItem*)wheel->GetMenuItemWrapperByIndex(i);
+      auto *title = item->get_title();
+      LR2CSVExecutor::CallHandler("#SRC_TEXT", title, loader, ctx);
+    }
   }
 
   static void dst_bar_title(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-
+    auto *wheel = get_musicwheel(loader);
+    for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i) {
+      auto *item = (MusicWheelItem*)wheel->GetMenuItemWrapperByIndex(i);
+      auto *title = item->get_title();
+      loader->set_object("text", title);
+      LR2CSVExecutor::CallHandler("#DST_TEXT", title, loader, ctx);
+    }
   }
 
   static void src_bar_flash(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
