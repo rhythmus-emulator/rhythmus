@@ -247,8 +247,8 @@ void MusicWheel::Load(const MetricGroup &metric)
   sort_.invalidate = true;
 
   /* copy item metric for creation */
-  if (metric.get_group("item"))
-    item_metric = *metric.get_group("item");
+  //if (metric.get_group("item"))
+  //  item_metric = *metric.get_group("item");
 
   /* limit gamemode and sort filter types by metric */
   if (metric.exist("GamemodeFilter"))
@@ -292,6 +292,65 @@ void MusicWheel::Load(const MetricGroup &metric)
   }
 
   Wheel::Load(metric);
+}
+
+void MusicWheel::InitializeLR2()
+{
+  MusicWheelData section;
+
+  /* create section datas */
+  data_sections_.clear();
+  section.SetSection("all_songs", "All Songs");
+  data_sections_.push_back(section);
+  section.SetSection("new_songs", "New Songs");
+  data_sections_.push_back(section);
+
+  /* load system preference */
+  filter_.gamemode = *PREFERENCE->gamemode;
+  filter_.difficulty = *PREFERENCE->select_difficulty_mode;
+  filter_.invalidate = true;
+  sort_.type = *PREFERENCE->select_sort_type;
+  sort_.invalidate = true;
+
+  /* limit gamemode and sort filter types by metric */
+  {
+    for (size_t i = 0; i < Gamemode::kGamemodeEnd; ++i)
+      filter_.avail_gamemode[i] = 0;
+    CommandArgs filters("none,IIDXSP,IIDXDP");
+    for (size_t i = 0; i < filters.size(); ++i)
+    {
+      filter_.avail_gamemode[
+        StringToGamemode(filters.Get<std::string>(i).c_str())] = 1;
+    }
+    if (filter_.avail_gamemode[filter_.gamemode] == 0)
+      filter_.gamemode = Gamemode::kGamemodeNone;
+  }
+
+  {
+    for (size_t i = 0; i < Difficulty::kDifficultyEnd; ++i)
+      filter_.avail_difficulty[i] = 0;
+    CommandArgs diffs("none,beginner,easy,normal,hard,insane");
+    for (size_t i = 0; i < diffs.size(); ++i)
+    {
+      filter_.avail_difficulty[
+        StringToDifficulty(diffs.Get<std::string>(i).c_str())] = 1;
+    }
+    if (filter_.avail_difficulty[filter_.difficulty] == 0)
+      filter_.difficulty = Difficulty::kDifficultyNone;
+  }
+
+  {
+    for (size_t i = 0; i < Sorttype::kSortEnd; ++i)
+      sort_.avail_type[i] = 0;
+    CommandArgs sorts("none,title,level,clear");
+    for (size_t i = 0; i < sorts.size(); ++i)
+    {
+      sort_.avail_type[
+        StringToSorttype(sorts.Get<std::string>(i).c_str())] = 1;
+    }
+    if (sort_.avail_type[sort_.type] == 0)
+      sort_.type = Sorttype::kNoSort;
+  }
 }
 
 MusicWheelData* MusicWheel::get_data(int dataindex)
@@ -682,6 +741,7 @@ public:
       if (!scene) return nullptr;
       wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
       if (!wheel) return nullptr;
+      wheel->InitializeLR2();
       wheel->BringToTop();
       wheel->SetWheelWrapperCount(30, "LR2");
       wheel->SetWheelPosMethod(WheelPosMethod::kMenuPosFixed);

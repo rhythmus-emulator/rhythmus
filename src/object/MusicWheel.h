@@ -80,6 +80,7 @@ public:
   ~MusicWheel();
 
   virtual void Load(const MetricGroup &metric);
+  void InitializeLR2();
 
   MusicWheelData *get_data(int dataindex);
   MusicWheelData *get_selected_data(int player_num);
@@ -129,8 +130,6 @@ private:
   std::vector<MusicWheelData> data_sections_;
   /* data for song list. */
   std::vector<MusicWheelSongData> data_songs_;
-
-  MetricGroup item_metric;
 
   /* Keypools updated by MusicWheel object */
   KeyData<std::string> info_title;
