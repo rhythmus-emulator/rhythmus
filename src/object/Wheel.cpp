@@ -261,10 +261,12 @@ void Wheel::RebuildItems()
   {
     if (data_.empty())
     {
+      // set empty content (TODO: fix this method)
       item->set_content(nullptr);
     }
     else if (!loop && (item_index_raw < 0 || item_index_raw >= items_.size()))
     {
+      // hide looping item
       item->Hide();
     }
     else if (item->is_empty() || item->get_dataindex() != item_index)

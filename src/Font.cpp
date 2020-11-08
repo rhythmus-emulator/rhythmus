@@ -271,7 +271,7 @@ void Font::Load(const std::string &path)
   {
     LoadLR2BitmapFont(path);
   }
-  else if (ext == ".lr2font" && path.size() > 13)
+  else if (ext == "lr2font" && path.size() > 13)
   {
     // /font.lr2font file
     std::string newpath = path.substr(0, path.size() - 13) + ".dxa";

@@ -128,6 +128,7 @@ void MusicWheelItem::LoadFromData(void *d)
   }
 
   title_.SetText(data->info.title);
+  title_.Show();
 
   for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
   {
@@ -162,7 +163,7 @@ Text *MusicWheelItem::get_title() { return &title_; }
 void MusicWheelItem::doRender()
 {
   WheelItem::doRender();
-  GRAPHIC->DrawRect(0, 0, 200, 60, 0x66FF9999);
+  //GRAPHIC->DrawRect(0, 0, 200, 60, 0x66FF9999);
 }
 
 // --------------------------- class MusicWheel
