@@ -396,7 +396,7 @@ static std::map<std::string, LR2CSVCommandHandler> &getLR2CSVHandler()
 }
 
 LR2CSVExecutor::LR2CSVExecutor(LR2CSVContext *ctx)
-  : ctx_(ctx), image_count_(0), font_count_(0), command_count_(0) {}
+  : ctx_(ctx), image_count_(0), font_count_(0), command_index_(0), command_count_(0) {}
 
 LR2CSVExecutor::~LR2CSVExecutor() {}
 
@@ -418,12 +418,14 @@ void LR2CSVExecutor::Run()
   while (ctx_->next())
   {
     const char *cmd = ctx_->get_str(0);
+    int index = ctx_->get_int(1);
     auto i = getLR2CSVHandler().find(cmd);
     if (i != getLR2CSVHandler().end())
     {
-      if (command_ != cmd)
+      if (command_ != cmd || command_index_ != index)
       {
         command_ = cmd;
+        command_index_ = index;
         command_count_ = 0;
       }
       (*i->second)(nullptr, this, ctx_);

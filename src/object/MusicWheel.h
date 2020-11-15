@@ -70,6 +70,7 @@ private:
   Number level_[NUM_LEVEL_TYPES];
   Text title_;
 
+  virtual void doUpdate(double delta);
   virtual void doRender();
 };
 

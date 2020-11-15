@@ -526,6 +526,7 @@ public:
     // these attributes are only affective for first run
     if (loader->get_command_index() == 0)
     {
+      const int loop = ctx->get_int(16);
       const int timer = ctx->get_int(17);
 
       // LR2 needs to keep its animation queue, so don't use stop.
@@ -533,6 +534,8 @@ public:
       o->AddCommand(format_string("LR%dOff", timer), "hide");
       //o->SetBlending(ctx->get_int(12));
       //o->SetFiltering(ctx->get_int(13));
+      if (loop >= 0)
+        o->SetLoop(loop);
     }
 
     // TODO: load blending from LR2DST

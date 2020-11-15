@@ -128,6 +128,7 @@ private:
   unsigned image_count_;
   unsigned font_count_;
   std::string command_;
+  int command_index_;
   unsigned command_count_;
   std::map<std::string, void*> objects_;
 };

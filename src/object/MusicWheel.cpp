@@ -160,6 +160,18 @@ Sprite *MusicWheelItem::get_background(unsigned type) { return &background_[type
 Number *MusicWheelItem::get_level(unsigned type) { return &level_[type]; }
 Text *MusicWheelItem::get_title() { return &title_; }
 
+void MusicWheelItem::doUpdate(double delta)
+{
+  float w, h;
+  WheelItem::doUpdate(delta);
+  w = rhythmus::GetWidth(frame_.pos);
+  h = rhythmus::GetHeight(frame_.pos);
+  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i) {
+    background_[i].SetWidth(w);
+    background_[i].SetHeight(h);
+  }
+}
+
 void MusicWheelItem::doRender()
 {
   WheelItem::doRender();
@@ -805,6 +817,9 @@ public:
   static void src_bar_title(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *wheel = get_musicwheel(loader);
+    unsigned itemindex = 0;
+    itemindex = (unsigned)ctx->get_int(1);
+    if (itemindex != 0) return; // TODO: bar title for index 1
     for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i) {
       auto *item = (MusicWheelItem*)wheel->GetMenuItemWrapperByIndex(i);
       auto *title = item->get_title();
@@ -815,6 +830,9 @@ public:
   static void dst_bar_title(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *wheel = get_musicwheel(loader);
+    unsigned itemindex = 0;
+    itemindex = (unsigned)ctx->get_int(1);
+    if (itemindex != 0) return; // TODO: bar title for index 1
     for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i) {
       auto *item = (MusicWheelItem*)wheel->GetMenuItemWrapperByIndex(i);
       auto *title = item->get_title();
