@@ -514,7 +514,7 @@ void Wheel::doUpdate(double delta)
            + GetItemYPosByIndex(scroll_idx_to_) * scroll_ratio;
 
     // calculate each LVitem position-based-index and position
-    //UpdateItemPos();
+    UpdateItemPos();
   }
 
   // rebuild LVitem if current index is changed

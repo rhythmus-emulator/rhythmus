@@ -457,13 +457,8 @@ void BaseObject::RunCommand(std::string command)
   // RunCommand parameter must be passed by value, not by reference
   // since original command string might be destroyed while processing command
   // e.g. command 'flush' clears event early and it destroys original command.
-  //
-  // @brief
-  // Each command should create a single animation.
-  //
 
   if (command.empty()) return;
-  ani_.emplace_back(Animation(&GetCurrentFrame()));
   size_t ia = 0, ib = 0;
   std::string cmd_type, value;
   while (ib <= command.size())
@@ -775,8 +770,8 @@ float BaseObject::GetY() const
   return frame_.pos.y;
 }
 
-float BaseObject::GetWidth() const { return frame_.pos.w - frame_.pos.x; }
-float BaseObject::GetHeight() const { return frame_.pos.z - frame_.pos.y; }
+float BaseObject::GetWidth() const { return frame_.pos.z - frame_.pos.x; }
+float BaseObject::GetHeight() const { return frame_.pos.w - frame_.pos.y; }
 
 void BaseObject::SetDebug(const std::string &debug_msg)
 {
