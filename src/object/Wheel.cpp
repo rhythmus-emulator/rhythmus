@@ -255,7 +255,7 @@ void Wheel::RebuildItems()
   if (data_.size() == 0) return;
 
   item_index = items_.empty() ? 0 : (unsigned)(
-    (pos_.index_i % (int)data_.size() + (int)data_.size()) % (int)data_.size());
+    (data_top_index_ % (int)data_.size() + (int)data_.size()) % (int)data_.size());
 
   for (auto *item : items_)
   {
@@ -444,9 +444,16 @@ unsigned Wheel::CalculateItemCount() const
 void Wheel::UpdateItemPos()
 {
   DrawProperty d;
-  float ratio = modf_pos(pos_.index_f, 1.0f);
+  float ratio =
+    (float)(scroll_idx_from_ > scroll_idx_to_ ? scroll_idx_from_ : scroll_idx_to_)
+    - pos_.index_f;
   unsigned j = 0;
   int x, y;
+
+  /* when from > to (NavigateUp),
+   * then ratio change from 0.0f to 1.0f.
+   * when from < to (NavigateDown), 
+   * ratio change from 1.0f to 0.0f. */
 
   switch (pos_method_)
   {
@@ -455,18 +462,18 @@ void Wheel::UpdateItemPos()
     // actual item array are rotated when listview is scrolled
     // to reduce LoadFromData(..) call, so item object by actual item index
     // should be obtained by items_abs_ array.
-    for (unsigned i = 0; i + 1 < items_.size(); ++i) {
-      if (scroll_idx_from_ < scroll_idx_to_) {
+    for (unsigned i = 1; i + 1 < items_.size(); ++i) {
+      if (scroll_idx_from_ > scroll_idx_to_) {
         MakeTween(d,
           items_[i]->get_item_dprop(),
           items_[i + 1]->get_item_dprop(),
-          ratio, EaseTypes::kEaseIn);
+          1.0f - ratio, EaseTypes::kEaseIn);
       }
       else {
         MakeTween(d,
-          items_[i + 1]->get_item_dprop(),
           items_[i]->get_item_dprop(),
-          1.0f - ratio, EaseTypes::kEaseIn);
+          items_[i - 1]->get_item_dprop(),
+          ratio, EaseTypes::kEaseIn);
       }
 
       // TODO: set alpha, rotation
