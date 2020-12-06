@@ -14,43 +14,58 @@ namespace rhythmus
 
 class PlayRecord;
 
-enum Songitemtype
+enum class MusicWheelDataType
 {
-  kSongitemSong,
-  kSongitemFolder,
-  kSongitemCustomFolder,
-  kSongitemNewFolder,
-  kSongitemRivalFolder,
-  kSongitemRivalSong,
-  kSongitemCourseFolder,
-  kSongitemCourse,
-  kSongitemRandomSong,
-  kSongitemRandomCourse,
-  kSongitemEnd,
+  None,
+  Song,
+  Folder,
+  CustomFolder,
+  NewFolder,
+  RivalFolder,
+  RivalSong,
+  CourseFolder,
+  Course,
+  RandomSong,
+  RandomCourse
 };
 
-struct MusicWheelData;
-
-struct MusicWheelSongData
+class MusicWheelData
 {
-  std::vector<MusicWheelData*> charts;
-};
+public:
+  MusicWheelData();
+  MusicWheelData(MusicWheelDataType type, const std::string& id, const std::string& name, bool is_section);
+  MusicWheelData(const ChartMetaData* c);
 
-struct MusicWheelData
-{
-  SongListData info;
-  std::string name;
-  std::string sectionname;
-  int type;
-  const PlayRecord *record;
+  void SetFromChart(const ChartMetaData* chart);
+  void SetAsSection(const std::string& name);
+  void SetRandom(bool is_random);
+  const ChartMetaData* GetChart() const;
+  void NextChart();
+  void SetNextChartId(const std::string& id);
+  std::string GetNextChartId() const;
+  void set_id(const std::string& id);
+  const std::string& get_id() const;
+  const std::string& get_parent_id() const;
+  void set_type(MusicWheelDataType type);
+  MusicWheelDataType get_type() const;
+  bool IsSection() const;
+  bool IsRandom() const;
+
+  std::string title;        // title for displaying
+  int level;
+  int diff;
   int clear;
   double rate;
-  size_t chartidx;
+  std::string songpath;     // for filtering and grouping
 
-  MusicWheelData();
-  void ApplyFromSongListData(SongListData &song);
-  void SetSection(const std::string &sectionname, const std::string &title);
-  void SetPlayRecord();
+private:
+  const ChartMetaData* chart_;
+  MusicWheelDataType type_;
+  std::string id_;          // unique ID
+  std::string parent_id_;   // parent ID for section
+  std::string next_id_;     // for moving to next item
+  bool is_section_;
+  bool is_random_;
 };
 
 /* @brief music wheel item wrapper */
@@ -116,21 +131,19 @@ private:
   } sort_;
   struct {
     int gamemode;
+    int key;
     int difficulty;
-    int avail_gamemode[Gamemode::kGamemodeEnd];
-    int avail_difficulty[Difficulty::kDifficultyEnd];
     bool invalidate;
   } filter_;
   std::string current_section_;
 
-  /* source charts (only filtered by gamemode) */
-  std::vector<void*> charts_;
+  /* display item per chart. if not, per song. */
+  bool item_per_chart_;
+
   /* filtered items */
-  std::vector<MusicWheelData> data_filtered_;
-  /* section items (created in Load procedure) */
+  std::vector<MusicWheelData> data_charts_;
+  /* section items (created by default) */
   std::vector<MusicWheelData> data_sections_;
-  /* data for song list. */
-  std::vector<MusicWheelSongData> data_songs_;
 
   /* Keypools updated by MusicWheel object */
   KeyData<std::string> info_title;

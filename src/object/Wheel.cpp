@@ -214,13 +214,17 @@ void Wheel::ClearData()
     p->LoadFromData(nullptr);
   /* now delete all data. */
   for (auto& data : data_)
-  {
     delete data.content;
-  }
   data_.clear();
 }
 
-void* Wheel::GetSelectedMenuData() { return GetMenuDataByIndex(data_index_); }
+void* Wheel::GetSelectedMenuData()
+{
+  int size = (int)data_.size();
+  if (data_.empty()) return nullptr;
+  else return GetMenuDataByIndex((data_index_ % size + size) % size);
+}
+
 void* Wheel::GetMenuDataByIndex(unsigned index) { return data_[index].p; }
 void* Wheel::GetMenuItemWrapperByIndex(unsigned index) { return items_[index]; }
 unsigned Wheel::GetMenuItemWrapperCount() const { return items_.size(); };

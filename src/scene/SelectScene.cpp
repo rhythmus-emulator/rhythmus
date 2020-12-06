@@ -96,8 +96,10 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
       }
       END_EACH_PLAYER()
 #endif
+
+      // TODO: use SongId for playlist queue
       SongPlayer::getInstance().AddSongtoPlaylist(
-        d->info.songpath, d->info.chartpath
+        d->GetChart()->songpath, d->GetChart()->chartpath
       );
 
       // Song selection - immediately change scene mode

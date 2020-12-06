@@ -30,15 +30,7 @@ enum GameBootMode
 enum Gamemode
 {
   kGamemodeNone,
-  kGamemode4Key,
-  kGamemode5Key,
-  kGamemode6Key,
-  kGamemode7Key,
-  kGamemode8Key,
-  kGamemodeIIDXSP,
-  kGamemodeIIDXDP,
-  kGamemodeIIDX5Key,
-  kGamemodeIIDX10Key,
+  kGamemodeIIDX,
   kGamemodePopn,
   kGamemodeEZ2DJ,
   kGamemodeDDR,

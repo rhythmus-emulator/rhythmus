@@ -10,8 +10,13 @@
 
 namespace rparser { class Song; class Chart; }
 
+struct sqlite3;
+
 namespace rhythmus
 {
+
+struct ChartMetaData;
+struct SongMetaData;
 
 enum Difficulty
 {
@@ -39,8 +44,21 @@ enum Sorttype
 const char* SorttypeToString(int gamemode);
 int StringToSorttype(const char* s);
 
-/* @brief Brief song data for caching in database */
-struct SongListData
+/* @brief song data cached in database */
+struct SongMetaData
+{
+  std::string path;
+  int type;
+  int64_t modified_time;
+
+  // in-memory attributes
+
+  unsigned count;         // chart count
+  ChartMetaData* chart;   // any chart data
+};
+
+/* @brief chart data cached in database */
+struct ChartMetaData
 {
   std::string id;
   std::string title;
@@ -61,6 +79,12 @@ struct SongListData
   int bpm_min;
   int is_longnote;
   int is_backspin;
+  int64_t modified_time;
+
+  // in-memory attributes
+
+  SongMetaData* song;
+  ChartMetaData *next, *prev;
 };
 
 /* @brief song, charts (per player) to play */
@@ -75,20 +99,27 @@ class SongList
 {
 public:
   SongList();
+  ~SongList();
 
   static void Initialize();
   static void Cleanup();
 
   void Load();
+  void Update();
   void Save();
   void Clear();
-  void Update();
+
+  SongMetaData* FindSong(const std::string& path);
+  ChartMetaData* FindChart(const std::string& id);
+
+  const std::vector<SongMetaData*> &GetSongList() const;
+  const std::vector<ChartMetaData *> &GetChartList() const;
 
   /**
    * @brief
    * Load a song file into song list if file not exist in songlist.
    */
-  void LoadFileIntoSongList(
+  void LoadFileIntoChartList(
     const std::string& songpath,
     const std::string& chartname = std::string()
   );
@@ -97,17 +128,14 @@ public:
   bool is_loaded() const;
   std::string get_loading_filename() const;
 
-  size_t size();
-  std::vector<SongListData>::iterator begin();
-  std::vector<SongListData>::iterator end();
-  const SongListData& get(int i) const;
-  SongListData get(int i);
+  size_t song_count() const;
+  size_t chart_count() const;
 
   friend class SongListUpdateTask;
 
 private:
-  // loaded songs
-  std::vector<SongListData> songs_;
+  std::vector<SongMetaData*> songs_;
+  std::vector<ChartMetaData*> charts_;
 
   // songs to load
   std::mutex loading_mutex_;
@@ -124,10 +152,14 @@ private:
 
   // sqlite handler
   static int sql_dummy_callback(void*, int argc, char **argv, char **colnames);
-  static int sql_songlist_callback(void*, int argc, char **argv, char **colnames);
+  static int sql_chartlist_callback(void*, int argc, char** argv, char** colnames);
+  static int sql_songlist_callback(void*, int argc, char** argv, char** colnames);
 
+  bool LoadFromDatabase(const std::string& path);
+  bool CreateDatabase(sqlite3 *db);
+  bool PushChart(ChartMetaData* p);
+  void PushSong(SongMetaData* p);
   void StartSongLoading(const std::string &name);
-  void PushChart(const SongListData &dat);
   void FinishSongLoading();
 };
 
