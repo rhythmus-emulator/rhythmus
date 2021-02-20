@@ -237,13 +237,8 @@ std::string Sprite::toString() const
 class LR2CSVSpriteHandlers
 {
 public:
-  static void src_image(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool src_image(Sprite *&o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *o = _this ? (Sprite*)_this : (Sprite*)BaseObject::CreateObject("sprite");
-    auto* scene = ((BaseObject*)loader->get_object("scene"));
-    loader->set_object("sprite", o);
-    scene->AddChild(o);
-
     Vector4 r{
       ctx->get_int(3), ctx->get_int(4), ctx->get_int(5), ctx->get_int(6)
     };
@@ -254,51 +249,26 @@ public:
     else
       o->SetImageCoord(Vector4{ r.x, r.y, r.x + r.z, r.y + r.w });
     o->SetAnimatedTexture(ctx->get_int(7), ctx->get_int(8), ctx->get_int(9));
-    o->SetDebug(format_string("LR2SRC-%u", ctx->get_str(21)));
+    return true;
   }
 
-  static void dst_image(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool dst_image(Sprite*& o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    const char *args[21];
-    auto *o = _this ? (Sprite*)_this : (Sprite*)loader->get_object("sprite");
-    if (!o)
-    {
-      Logger::Warn("Warning: invalid #DST_IMAGE command.");
-      return;
-    }
-
-    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
-    o->AddFrameByLR2command(args + 1);
-
-    // these attributes are only affective for first run
-    if (loader->get_command_index() == 0)
-    {
-      const int loop = ctx->get_int(16);
-      const int timer = ctx->get_int(17);
-
-      // LR2 needs to keep its animation queue, so don't use stop.
-      o->AddCommand(format_string("LR%d", timer), "replay");
-      o->AddCommand(format_string("LR%dOff", timer), "hide");
+    // XXX: check object type before execution to prevent user-fault ...
+    // But it may cause side effect in case of inherited object, so be careful.
+    if (loader->get_command_index() == 0) {
       o->SetBlending(ctx->get_int(12));
       o->SetFiltering(ctx->get_int(13));
-      if (loop >= 0)
-        o->SetLoop(loop);
-
-      // XXX: move this flag to Sprite,
-      // as LR2_TEXT object don't work with this..?
-      o->SetVisibleFlag(
-        format_string("F%s", ctx->get_str(18)),
-        format_string("F%s", ctx->get_str(19)),
-        format_string("F%s", ctx->get_str(20)),
-        std::string()
-      );
     }
+    return true;
   }
 
   LR2CSVSpriteHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVCommandHandler)&src_image);
-    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVCommandHandler)&dst_image);
+    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVHandlerFunc)&src_image);
+    LR2CSVExecutor::AddTrigger("#SRC_IMAGE", "#SRC_BASE_");
+    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVHandlerFunc)&dst_image);
+    LR2CSVExecutor::AddTrigger("#DST_IMAGE", "#DST_BASE_");
   }
 };
 

@@ -31,6 +31,14 @@ void ConvertFromString(const std::string& src, T& dst);
 template <typename T>
 std::string ConvertToString(const T& dst);
 
+class PrefData;
+class KeySetting;
+class MetricGroup;
+
+extern PrefData* PREFDATA;
+extern KeySetting* KEYPREF;
+extern MetricGroup* METRIC;
+
 /*
  * @brief   Key-value properties used for setting object property.
  *
@@ -126,267 +134,114 @@ private:
   std::vector<MetricGroup> children_;
 };
 
-class Option
+/* TODO: data should contain constraint info?
+ * no... it's "Option List", not option value */
+struct OptionDesc
+{
+  std::string name;
+  std::string constraint;
+  std::string desc;
+  std::string def;
+};
+
+class PrefData
 {
 public:
-  Option();
-
-  template <typename T> T value() const;
-
-  const std::string& type() const;
-  const std::string& desc() const;
-  Option &set_description(const std::string& desc);
-
-  // @brief get option string used when calling SetOption()
-  const std::string& get_constraint() const;
-
-  // @brief select next item / value
-  virtual void Next();
-
-  // @brief select previous item / value
-  virtual void Prev();
-
-  // @brief Clear all constraints.
+  PrefData();
+  bool LoadOption(const std::string &path);
+  bool LoadOptionFromMetric(const MetricGroup& m);
+  bool LoadValue(const std::string &path);
+  bool SaveValue(const std::string &path);
+  bool SaveValue();
   void Clear();
-
-  // @brief set default option value.
-  Option &SetDefault(const std::string &default__);
-
-  // @brief separate selectable options with comma
-  // Starts with '!F' : file option (input as file filter)
-  // Starts with '!N' : number option (input as min,max)
-  // @warn  must call reset() method after setting SetOption()
-  //        to make option value valid.
-  virtual void SetOption(const std::string& optionstr);
-
-  // @brief set value
-  // @warn may be value is changed due to validation check
-  //       in case of constraint exists.
-  virtual void set_value(const std::string& value);
-  virtual void set_value(int value);
-
-  // @brief reset value
-  Option &reset_value();
-
-  // @brief whether to save with constraint if it exists
-  void save_with_constraint(bool v);
-
-  // @brief utility function to create option
-  static Option* CreateOption(const std::string &optionstr);
-
-  Option &show();
-  Option &hide();
-
-protected:
-  std::string desc_;
-  std::string value_;
-  std::string type_;
-  std::string default_;
-
-  // selectable options, if necessary.
-  std::vector<std::string> options_;
-
-  // currently selected index
-  size_t curr_sel_idx_;
-
-  // option for original string
-  std::string constraint_;
-
-  // save with constraint, not only option value.
-  // (just for option item but not want to save the options)
-  bool save_with_constraint_;
-
-  // Is this option is visible for modifying?
-  // default: true
-  bool visible_;
-};
-
-class FileOption : public Option
-{
-public:
-  FileOption();
-  virtual void SetOption(const std::string& optionstr);
+  void set(const std::string& key, const std::string& value);
+  const std::string* get(const std::string& key) const;
+  std::string* get(const std::string& key);
+  OptionDesc* get_option(const std::string& key);
+  void add_option(const OptionDesc& option);
 private:
+  std::string path_;
+  std::vector<OptionDesc> options_;
+  std::map<std::string, std::string> values_;
+  void InitValueWithOption(const OptionDesc& option);
 };
 
-class TextOption : public Option
-{
-public:
-  TextOption();
-  virtual void Next();
-  virtual void Prev();
-  virtual void set_value(const std::string& value);
-private:
-};
-
-class NumberOption : public Option
-{
-public:
-  NumberOption();
-
-  // @brief get value as int (or index)
-  int value_int() const;
-  int value_min() const;
-  int value_max() const;
-
-  // @brief set number option with (min),(max)
-  virtual void SetOption(const std::string& optionstr);
-  virtual void Next();
-  virtual void Prev();
-
-  virtual void set_value(const std::string& value);
-  virtual void set_value(int value);
-
-private:
-  // selected value (for number)
-  int number_;
-
-  // constraint for value (for number)
-  int number_min_, number_max_;
-};
-
-/* @brief Option group container. */
-class OptionList
-{
-public:
-  OptionList();
-  ~OptionList();
-
-  bool LoadFromFile(const std::string &filepath);
-  void LoadFromMetrics(const MetricGroup &metric);
-
-  /* @brief read only option value from file */
-  bool ReadFromFile(const std::string &filepath);
-
-  /* @brief save only option value to file */
-  bool SaveToFile(const std::string &path);
-
-  Option *GetOption(const std::string &key) const;
-  Option &SetOption(const std::string &key, const std::string &optionstr);
-  Option &SetOption(const std::string &key, Option *option);
-  void AddOptionFromMetric(MetricGroup *metric);
-  void DeleteOption(const std::string &key);
-  void Clear();
-
-  template <typename T>
-  T GetValue(const std::string &key) const
-  {
-    Option *option = GetOption(key);
-    R_ASSERT(option);
-    return option->value<T>();
-  }
-
-  template <typename T>
-  bool GetValueSafe(const std::string &key, T& value) const
-  {
-    Option *option = GetOption(key);
-    if (!option)
-      return false;
-    value = option->value<T>();
-    return true;
-  }
-
-  template <typename T>
-  void SetValue(const std::string &key, T val) const
-  {
-    Option *option = GetOption(key);
-    R_ASSERT(option);
-    return option->set_value(val);
-  }
-
-private:
-  std::map<std::string, Option*> options_;
-};
-
-/* @brief Preference element for set/get value with type. */
+/**
+ * @brief Utility for get/setting Preference value */
 template <typename T>
-class Preference
+class PrefValue
 {
 public:
-  Preference() : is_static_(false) {};
-  Preference(const T& default_value) : v_(default_value), is_static_(false) {};
-  Preference(const T& default_value, const std::string &desc, const std::string &constraint, bool is_static)
-    : v_(default_value), desc_(desc), constraint_(constraint), is_static_(is_static) {};
+  PrefValue(const std::string& name) : name_(name), updated_(false)
+  {
+    R_ASSERT(PREFDATA != nullptr);
+    _value_load();
+  }
+  PrefValue(const std::string& name, const T& _default) :
+    name_(name), v_(_default), updated_(false)
+  {
+    R_ASSERT(PREFDATA != nullptr);
+    _value_load();
+  }
+  ~PrefValue()
+  {
+    if (updated_) _value_set();
+  }
   T& operator*() { return v_; }
   const T& operator*() const { return v_; }
+  T& get() { return v_; }
+  const T& get() const { return v_; }
+  bool operator==(const T& v) const { return v_ == v; }
+  T& operator=(const T& v) { v_ = v; updated_ = true; return v_; }
+private:
+  void _value_load();
+  void _value_set();
+  std::string name_;
+  T v_;
+  bool updated_;
+};
 
-  const void set_desc(const std::string &v) { desc_ = v; }
-  const void set_constraint(const std::string &v) { constraint_ = v; }
-  const std::string &get_desc() { return desc_; }
-  const std::string &get_constraint() { return constraint_; }
-  bool is_static() const { return is_static_; }
+class PrefOptionList
+{
+public:
+  PrefOptionList(const std::string& name, const std::string& values);
+  PrefOptionList(const std::string& name, const std::vector<std::string>& list);
+  void set(const std::string& value);
+  void set(unsigned i);
+  const std::string& get() const;
+  void next();
+  void prev();
+  unsigned index() const;
+  const std::string& get_constraint() const;
+private:
+  PrefValue<std::string> v_;
+  std::vector<std::string> list_;
+  std::string desc_;
+  unsigned index_;
+protected:
+  std::string constraint_;
+};
+
+class PrefOptionFile : public PrefOptionList
+{
+public:
+  PrefOptionFile(const std::string& name, const std::string& path);
+};
+
+/* @brief Input setting for play. */
+class KeySetting
+{
+public:
+  KeySetting();
+  void Default();
+  void Load(const MetricGroup &metric);
+  void Load(const std::string& s);
+  void Save(MetricGroup &metric);
+  void Save(std::string& s);
+  int GetTrackFromKeycode(int keycode) const;
 
 private:
-  T v_;
-  std::string desc_;        // description of preference
-  std::string constraint_;  // constraint of preference (used by option class)
-  bool is_static_;          // is static preference (which means irremovable)
-};
-
-/* @brief Load/Save preference values by types, and Get/Set easily. */
-class PreferenceList
-{
-public:
-  virtual ~PreferenceList();
-
-  void AddInt(const std::string &key, Preference<int> *pf);
-  void AddFloat(const std::string &key, Preference<float> *pf);
-  void AddString(const std::string &key, Preference<std::string> *pf);
-  void AddFile(const std::string &key, Preference<std::string> *pf);
-
-  void SetInt(const std::string &key, int v);
-  void SetFloat(const std::string &key, float v);
-  void SetString(const std::string &key, const std::string &v);
-  void SetFile(const std::string &key, const std::string &v);
-
-  Preference<int>* GetInt(const std::string &key);
-  Preference<float>* GetFloat(const std::string &key);
-  Preference<std::string>* GetString(const std::string &key);
-  Preference<std::string>* GetFile(const std::string &key);
-
-  void Load(const std::string &path);
-  void Load(const MetricGroup &m);
-  bool Save(const std::string &path);
-
-  // clear all preference except static preference.
-  void Clear();
-
-protected:
-  std::map<std::string, Preference<int>*> pref_i_;
-  std::map<std::string, Preference<float>*> pref_f_;
-  std::map<std::string, Preference<std::string>*> pref_s_;
-  std::map<std::string, Preference<std::string>*> pref_file_;
-  std::vector<void*> non_static_prefs_;
-};
-
-/* @brief Preference for global use. */
-class SystemPreference : public PreferenceList
-{
-public:
-  SystemPreference();
-  virtual ~SystemPreference();
-
-  Preference<std::string> resolution;
-
-  Preference<int> sound_buffer_size;
-  Preference<int> volume;
-
-  Preference<int> gamemode;
-  Preference<int> logging;
-  Preference<int> maximum_thread;
-
-  Preference<std::string> soundset;
-  Preference<std::string> theme;
-  Preference<std::string> theme_test;
-  Preference<std::string> theme_select;
-  Preference<std::string> theme_decide;
-  Preference<std::string> theme_play_7key;
-  Preference<std::string> theme_result;
-  Preference<std::string> theme_courseresult;
-  Preference<int> theme_load_async;
-
-  Preference<int> select_sort_type;
-  Preference<int> select_difficulty_mode;
+  int keycode_per_track_[kMaxLaneCount][4];
 };
 
 /* @brief Container for Option, ThemeOption, and ThemeMetrics. */
@@ -402,22 +257,5 @@ private:
   /* static class. */
   Setting();
 };
-
-/* @brief Input setting for play. */
-class KeySetting
-{
-public:
-  KeySetting();
-  void Default();
-  void Load(const MetricGroup &metric);
-  void Save(MetricGroup &metric);
-  int GetTrackFromKeycode(int keycode) const;
-
-private:
-  int keycode_per_track_[kMaxLaneCount][4];
-};
-
-extern SystemPreference *PREFERENCE;
-extern MetricGroup      *METRIC;
 
 }

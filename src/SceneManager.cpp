@@ -9,6 +9,8 @@
 #include "LR2/LR2Flag.h"
 #include "Util.h"
 #include "Setting.h"
+#include "Script.h"
+#include "Logger.h"
 #include "common.h"
 
 namespace rhythmus
@@ -18,7 +20,8 @@ namespace rhythmus
 
 SceneManager::SceneManager()
   : current_scene_(nullptr), background_scene_(nullptr), next_scene_(nullptr),
-    hovered_obj_(nullptr), focused_obj_(nullptr), dragging_obj_(nullptr)
+    hovered_obj_(nullptr), focused_obj_(nullptr), dragging_obj_(nullptr),
+    px(.0f), py(.0f)
 {
 }
 
@@ -41,6 +44,12 @@ void SceneManager::Initialize()
   // so be careful to call this method after initializing Event module.
   R_ASSERT(SCENEMAN == nullptr);
   SCENEMAN = new SceneManager();
+
+  // check and set scene theme
+  std::vector<std::string> theme_list;
+  SCENEMAN->GetThemeList(theme_list);
+  PrefOptionList theme_pref("theme", theme_list);
+  SCENEMAN->SetTheme(theme_pref.get());
 
   // create system-default overlay scene.
   Scene *s = new OverlayScene();
@@ -264,6 +273,75 @@ void SceneManager::OnInputEvent(const InputEvent& e)
   //
   if (current_scene_ && current_scene_->IsInputAvailable())
     current_scene_->ProcessInputEvent(e);
+}
+
+void SceneManager::GetThemeList(std::vector<std::string>& list)
+{
+  const std::string _theme_directory = "themes/";
+  std::vector<std::string> paths;
+  list.clear();
+  PATH->GetDescendantDirectories(_theme_directory, paths);
+  for (const auto& s : paths) {
+    std::string theme_name = s.substr(_theme_directory.size());
+    if (theme_name == "_fallback") continue;
+    list.push_back(theme_name);
+  }
+}
+
+enum ThemeType
+{
+  TT_None,
+  TT_LR2,
+  TT_Stepmania
+};
+
+void SceneManager::SetTheme(const std::string& name)
+{
+  ThemeType theme_type = TT_None;
+  const std::string theme_path = format_string("themes/%s/*", name.c_str());
+  const std::string theme_LR2_path = format_string("themes/%s/select", name.c_str());
+  std::vector<std::string> files;
+  scene_scripts_.clear();
+
+  // detect theme type by checking files
+  PATH->GetAllPaths(theme_path, files);
+  if (std::find(files.begin(), files.end(), theme_LR2_path)
+      != files.end()) {
+    theme_type = TT_LR2;
+  }
+  files.clear();
+
+  switch (theme_type) {
+  case TT_LR2:
+    // fill scene_scripts_ by executing all scripts
+    // (don't execute script, only running as pre-loading mode for loading configs)
+    Script::SetPreloadMode(true);
+    PATH->GetAllPaths(format_string("themes/%s/*/*.lr2skin", name.c_str()), files);
+    for (const auto& f : files) {
+      Script::Load(f, nullptr);
+    }
+    if (scene_scripts_.size() == 0) {
+      Logger::Warn("No scene scripts detected, maybe invalid LR2SKIN file?");
+    }
+    Script::SetPreloadMode(false);
+    break;
+  default:
+    R_ASSERT(0 && "Unknown Theme Type");
+    break;
+  }
+}
+
+void SceneManager::SetSceneScript(const std::string& name, const std::string& script_path)
+{
+  scene_scripts_[name] = script_path;
+}
+
+void SceneManager::RunSceneScript(Scene *s)
+{
+  if (!s || s->get_name().empty()) return;
+  auto i = scene_scripts_.find(s->get_name());
+  if (i != scene_scripts_.end())
+    Script::Load(i->second, s);
 }
 
 Scene* SceneManager::get_current_scene()

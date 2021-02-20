@@ -213,12 +213,25 @@ void PathCache::CacheSystemDirectory()
 void PathCache::CacheDirectory(const std::string& dir)
 {
   // XXX: currently only files are cached.
-  GetFilesFromDirectory(dir, path_cached_, 500 /* not so deep ...? */);
+  // XXX: need to convert to absolute path ...
+  // XXX: set maximum depth?
+  std::vector<DirItem> diritem;
+  GetDirectoryItems(dir, diritem, true);
+  for (auto& d : diritem) {
+    d.filename = dir + d.filename;
+    for (unsigned i = 0; i < d.filename.size(); ++i)
+      if (d.filename[i] == '\\') d.filename[i] = '/';
+    path_cached_.emplace_back(d);
+  }
 }
 
 void PathCache::MakePathHigherPriority(const std::string& path)
 {
-  auto it = std::find(path_cached_.begin(), path_cached_.end(), path);
+  auto it = path_cached_.begin();
+  while (it != path_cached_.end()) {
+    if (it->filename == path) break;
+    ++it;
+  }
   if (it == path_cached_.end()) return;
   std::rotate(path_cached_.begin(), it, path_cached_.end());
 }
@@ -272,15 +285,41 @@ std::string PathCache::GetPath(const std::string& masked_path) const
 void PathCache::GetAllPaths(const std::string& masked_path, std::vector<std::string> &out) const
 {
   // check masking first -- if not, return as it is.
-  if (masked_path.find('*') == std::string::npos)
+  if (masked_path.find('*') == std::string::npos) {
+    for (const auto& path : path_cached_) {
+      if (path.filename == masked_path) {
+        out.push_back(PrefixReplace(masked_path));
+        break;
+      }
+    }
     return;
+  }
 
   // do path mask matching for cached paths
-  for (const auto& path : path_cached_)
-  {
-    if (CheckMasking(path, masked_path))
-    {
-      out.push_back(PrefixReplace(path));
+  for (const auto& path : path_cached_) {
+    if (CheckMasking(path.filename, masked_path)) {
+      out.push_back(PrefixReplace(path.filename));
+    }
+  }
+}
+
+void PathCache::GetDirectories(const std::string& masked_path, std::vector<std::string>& out) const
+{
+  // XXX: uppercase comparsion for non-case-sensitive?
+  for (const auto& path : path_cached_) {
+    if (path.is_file == 0 && CheckMasking(path.filename, masked_path)) {
+      out.push_back(path.filename);
+    }
+  }
+}
+
+void PathCache::GetDescendantDirectories(const std::string& dirpath, std::vector<std::string>& out) const
+{
+  for (const auto& path : path_cached_) {
+    if (path.is_file == 0 &&
+        strncmp(dirpath.c_str(), path.filename.c_str(), dirpath.size()) == 0 &&
+        path.filename.find_last_of('/') <= dirpath.size()) {
+      out.push_back(path.filename);
     }
   }
 }
@@ -299,11 +338,9 @@ std::string PathCache::ResolveMaskedPath(const std::string &masked_path) const
 
   // do path mask matching for cached paths
   std::string replaced_path = PrefixReplace(masked_path);
-  for (const auto& path : path_cached_)
-  {
-    if (CheckMasking(path, replaced_path))
-    {
-      return path;
+  for (const auto& path : path_cached_) {
+    if (CheckMasking(path.filename, replaced_path)) {
+      return path.filename;
     }
   }
 

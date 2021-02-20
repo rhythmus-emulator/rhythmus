@@ -466,11 +466,8 @@ std::string Text::toString() const
 class LR2CSVTextandlers
 {
 public:
-  static void src_text(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static void src_text(Text* const&o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *o = _this ? (Text*)_this : (Text*)BaseObject::CreateObject("text");
-    loader->set_object("text", o);
-
     o->SetFont(format_string("font%s", ctx->get_str(2)));
 
     /* track change of text table */
@@ -510,19 +507,8 @@ public:
     /* TODO: panel */
   }
 
-  static void dst_text(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static void dst_text(Text* const& o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    const char *args[21];
-    auto *o = _this ? (Text*)_this : (Text*)loader->get_object("text");
-    if (!o)
-    {
-      Logger::Warn("Invalid #DST_TEXT command.");
-      return;
-    }
-
-    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
-    o->AddFrameByLR2command(args + 1);
-
     // these attributes are only affective for first run
     if (loader->get_command_index() == 0)
     {
@@ -544,8 +530,10 @@ public:
 
   LR2CSVTextandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_TEXT", (LR2CSVCommandHandler)&src_text);
-    LR2CSVExecutor::AddHandler("#DST_TEXT", (LR2CSVCommandHandler)&dst_text);
+    LR2CSVExecutor::AddHandler("#SRC_TEXT", (LR2CSVHandlerFunc)&src_text);
+    LR2CSVExecutor::AddTrigger("#SRC_TEXT", "#SRC_BASE_");
+    LR2CSVExecutor::AddHandler("#DST_TEXT", (LR2CSVHandlerFunc)&dst_text);
+    LR2CSVExecutor::AddTrigger("#DST_TEXT", "#DST_BASE_");
   }
 };
 

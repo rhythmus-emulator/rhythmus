@@ -269,12 +269,16 @@ class EventMessage
 {
 public:
   EventMessage() = default;
-  EventMessage(const std::string &name);
+  EventMessage(const std::string& name);
+  EventMessage(const std::string& name, const std::string& content);
   void SetEventName(const std::string &name);
+  void SetContent(const std::string& content);
   const std::string &GetEventName() const;
+  const std::string& content() const;
 
 private:
   std::string name_;
+  std::string content_;
 };
 
 /* @brief Base EventReceiver class, invoked when event occured. */
@@ -294,14 +298,14 @@ private:
   std::vector<std::string> subscription_;
 };
 
-typedef std::map<std::string, std::function<void()> > EventFnMap;
+typedef std::map<std::string, std::function<void (const EventMessage&)> > EventFnMap;
 
 /* @brief EventReceiver with EventMap. */
 class EventReceiverMap : public EventReceiver
 {
 public:
   virtual ~EventReceiverMap();
-  void AddEvent(const std::string &event_name, const std::function<void()> &func);
+  void AddEvent(const std::string &event_name, const std::function<void (const EventMessage&)> &func);
   void Clear();
 private:
   virtual bool OnEvent(const EventMessage& msg);
@@ -336,8 +340,6 @@ private:
 
   /* subscribers are stored in it */
   std::map<std::string, std::set<EventReceiver*> > event_subscribers_;
-
-  int current_evtidx_;
 
   friend class EventReceiver;
 };

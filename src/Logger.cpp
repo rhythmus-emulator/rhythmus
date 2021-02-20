@@ -38,7 +38,7 @@ Logger::~Logger()
 void Logger::Initialize()
 {
   // fetch preference
-  enable_logging_ = *PREFERENCE->logging;
+  enable_logging_ = PrefValue<bool>("logging").get();
 
   // start logging
   if (enable_logging_)

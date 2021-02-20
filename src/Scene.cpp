@@ -171,15 +171,7 @@ void Scene::LoadScene()
   LoadFromName();
 
   // Load script file
-  if (!get_name().empty())
-  {
-    auto *pref = PREFERENCE->GetFile(get_name());
-    if (pref) metric_filename = **pref;
-    if (!metric_filename.empty())
-    {
-      Script::Load(metric_filename, this);
-    }
-  }
+  SCENEMAN->RunSceneScript(this);
 }
 
 void Scene::StartScene()
@@ -353,88 +345,114 @@ void Scene::doRenderAfter()
 class LR2CSVSceneHandlers
 {
 public:
-  static void image(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool image(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     std::string name, path;
     name = format_string("image%u", loader->get_image_index());
     path = ctx->get_str(1);
     if (path != "CONTINUE")
       PATH->SetAlias(name, LR2CSVContext::SubstitutePath(path));
+    return true;
   }
-  static void lr2font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool lr2font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto &fntstyle = METRIC->add_group(format_string("font%u", loader->get_font_index()));
     const char *path = ctx->get_str(1);
     fntstyle.set("path", LR2CSVContext::SubstitutePath(path));
+    return true;
   }
-  static void font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     // --
+    return true;
   }
-  static void information(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool information(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     // TODO -- "gamemode", "title", "artist", "previewimage"
+    int gamemode = atoi(ctx->get_str(1));
+    static const char *scenename_reserved[] = {
+      // 7, 5, 14, 10, 9
+      "PlayScene", 0, 0, 0, 0,
+      "SelectScene",
+      "DecideScene",
+      "ResultScene",
+    };
+    const char* scenename = nullptr;
+    if (gamemode > 14) return false;
+    scenename = scenename_reserved[gamemode];
+    if (scenename == nullptr) return false;
+    SCENEMAN->SetSceneScript(scenename, ctx->get_path());
+    return true;
   }
-  static void customoption(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool customoption(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    // {"name", "id", "constraint:%3s,%4s,%5s,%6s,%7s,%8s,%9s,%10s", 0},
+    // TODO -- {"name", "id", "constraint:%3s,%4s,%5s,%6s,%7s,%8s,%9s,%10s", 0},
+    return true;
   }
-  static void customfile(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool customfile(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    // {"name", "constraint", "default", 0}
+    // TODO -- {"name", "constraint", "default", 0}
+    return true;
   }
-  static void transcolor(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool transcolor(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     // TODO: change GRAPHIC configuration
+    return true;
   }
-  static void startinput(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool startinput(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return;
+    if (!scene) return false;
     scene->SetInputStartTime(ctx->get_int(1));
+    return true;
   }
-  static void ignoreinput(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool ignoreinput(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     // ignores all input except system keys (e.g. escape)
     // TODO
+    return true;
   }
-  static void fadeout(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool fadeout(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return;
+    if (!scene) return false;
     scene->SetFadeOutTime(ctx->get_int(1));
+    return true;
   }
-  static void fadein(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool fadein(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return;
+    if (!scene) return false;
     scene->SetFadeInTime(ctx->get_int(1));
+    return true;
   }
-  static void timeout(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool timeout(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return;
+    if (!scene) return false;
     scene->SetTimeout(ctx->get_int(1));
+    return true;
   }
-  static void helpfile(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool helpfile(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     // TODO
+    return true;
   }
   LR2CSVSceneHandlers()
   {
-    LR2CSVExecutor::AddHandler("#IMAGE", (LR2CSVCommandHandler)image);
-    LR2CSVExecutor::AddHandler("#LR2FONT", (LR2CSVCommandHandler)lr2font);
-    LR2CSVExecutor::AddHandler("#FONT", (LR2CSVCommandHandler)font);
-    LR2CSVExecutor::AddHandler("#INFORMATION", (LR2CSVCommandHandler)information);
-    LR2CSVExecutor::AddHandler("#CUSTOMOPTION", (LR2CSVCommandHandler)customoption);
-    LR2CSVExecutor::AddHandler("#CUSTOMFILE", (LR2CSVCommandHandler)customfile);
-    LR2CSVExecutor::AddHandler("#TRANSCLOLR", (LR2CSVCommandHandler)transcolor);
-    LR2CSVExecutor::AddHandler("#STARTINPUT", (LR2CSVCommandHandler)startinput);
-    LR2CSVExecutor::AddHandler("#IGNOREINPUT", (LR2CSVCommandHandler)ignoreinput);
-    LR2CSVExecutor::AddHandler("#FADEOUT", (LR2CSVCommandHandler)fadeout);
-    LR2CSVExecutor::AddHandler("#FADEIN", (LR2CSVCommandHandler)fadein);
-    LR2CSVExecutor::AddHandler("#TIMEOUT", (LR2CSVCommandHandler)timeout);
-    LR2CSVExecutor::AddHandler("#HELPFILE", (LR2CSVCommandHandler)helpfile);
+    LR2CSVExecutor::AddHandler("#IMAGE", (LR2CSVHandlerFunc)image);
+    LR2CSVExecutor::AddHandler("#LR2FONT", (LR2CSVHandlerFunc)lr2font);
+    LR2CSVExecutor::AddHandler("#FONT", (LR2CSVHandlerFunc)font);
+    LR2CSVExecutor::AddHandler("#INFORMATION", (LR2CSVHandlerFunc)information);
+    LR2CSVExecutor::AddHandler("#CUSTOMOPTION", (LR2CSVHandlerFunc)customoption);
+    LR2CSVExecutor::AddHandler("#CUSTOMFILE", (LR2CSVHandlerFunc)customfile);
+    LR2CSVExecutor::AddHandler("#TRANSCLOLR", (LR2CSVHandlerFunc)transcolor);
+    LR2CSVExecutor::AddHandler("#STARTINPUT", (LR2CSVHandlerFunc)startinput);
+    LR2CSVExecutor::AddHandler("#IGNOREINPUT", (LR2CSVHandlerFunc)ignoreinput);
+    LR2CSVExecutor::AddHandler("#FADEOUT", (LR2CSVHandlerFunc)fadeout);
+    LR2CSVExecutor::AddHandler("#FADEIN", (LR2CSVHandlerFunc)fadein);
+    LR2CSVExecutor::AddHandler("#TIMEOUT", (LR2CSVHandlerFunc)timeout);
+    LR2CSVExecutor::AddHandler("#HELPFILE", (LR2CSVHandlerFunc)helpfile);
   }
 };
 

@@ -17,6 +17,11 @@ public:
   void Update();
   void Render();
 
+  void GetThemeList(std::vector<std::string>& list);
+  void SetTheme(const std::string& name);
+  void SetSceneScript(const std::string& name, const std::string& script_path);
+  void RunSceneScript(Scene *s);
+
   Scene* get_current_scene();
 
   void ChangeScene(const std::string &scene_name);
@@ -39,6 +44,12 @@ public:
 private:
   SceneManager();
   ~SceneManager();
+
+  // current theme name
+  std::string theme_;
+
+  // theme scripts for specific scene
+  std::map<std::string, std::string> scene_scripts_;
 
   // overlay-displayed scene
   // first element MUST be OverlayScene object.

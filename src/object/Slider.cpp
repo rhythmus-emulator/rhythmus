@@ -190,12 +190,8 @@ std::string Slider::toString() const
 class LR2CSVSliderHandlers
 {
 public:
-  static void src_slider(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool src_slider(Slider* const& o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *o = (Slider*)BaseObject::CreateObject("slider");
-    loader->set_object("slider", o);
-
-
     // TODO: sprite 'src' attribute
     /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
 
@@ -223,21 +219,12 @@ public:
 
     /* disabled? */
     o->SetEditable(ctx->get_int(14) == 0);
+    
+    return true;
   }
 
-  static void dst_slider(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool dst_slider(Slider* const& o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    const char *args[21];
-    auto *o = (Sprite*)loader->get_object("slider");
-    if (!o)
-    {
-      Logger::Warn("Warning: invalid #DST_SLIDER command.");
-      return;
-    }
-
-    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
-    o->AddFrameByLR2command(args + 1);
-
     // these attributes are only affective for first run
     if (loader->get_command_index() == 0)
     {
@@ -246,8 +233,8 @@ public:
       // LR2 needs to keep its animation queue, so don't use stop.
       o->AddCommand(format_string("LR%d", timer), "replay");
       o->AddCommand(format_string("LR%dOff", timer), "hide");
-      o->SetBlending(ctx->get_int(12));
-      o->SetFiltering(ctx->get_int(13));
+      //o->SetBlending(ctx->get_int(12));
+      //o->SetFiltering(ctx->get_int(13));
 
       // XXX: move this flag to Sprite,
       // as LR2_TEXT object don't work with this..?
@@ -258,12 +245,15 @@ public:
         std::string()
       );
     }
+    return true;
   }
 
   LR2CSVSliderHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_SLIDER", (LR2CSVCommandHandler)&src_slider);
-    LR2CSVExecutor::AddHandler("#DST_SLIDER", (LR2CSVCommandHandler)&dst_slider);
+    LR2CSVExecutor::AddHandler("#SRC_SLIDER", (LR2CSVHandlerFunc)& src_slider);
+    LR2CSVExecutor::AddTrigger("#SRC_SLIDER", "#SRC_BASE_");
+    LR2CSVExecutor::AddHandler("#DST_SLIDER", (LR2CSVHandlerFunc)&dst_slider);
+    LR2CSVExecutor::AddTrigger("#DST_SLIDER", "#DST_BASE_");
   }
 };
 

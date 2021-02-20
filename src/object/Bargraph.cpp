@@ -55,32 +55,29 @@ void Bargraph::doRender()
   // null
 }
 
+Sprite* Bargraph::sprite() { return &bar_; }
+
 // ------------------------------------------------------------------ Loader/Helper
 
 class LR2CSVBargraphHandlers
 {
 public:
-  static void src_bargraph(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static void src_bargraph(Bargraph *&o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *o = _this ? (Bargraph*)_this : (Bargraph*)BaseObject::CreateObject("bargraph");
-    loader->set_object("bargraph", o);
-    // TODO: use general SRC property later to bar sprite
-    //LR2CSVExecutor::CallHandler("#SRC_IMAGE", o, loader, ctx);
-
     o->SetDirection(ctx->get_int(9));
     std::string resname = "bargraph";
     resname += ctx->get_str(11);
     o->SetResourceId(resname);
-  }
-  static void dst_bargraph(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto *o = _this ? (Bargraph*)_this : (Bargraph*)loader->get_object("bargraph");
-    LR2CSVExecutor::CallHandler("#DST_IMAGE", o, loader, ctx);
+
+    // Load SRC information to bar_ Sprite.
+    LR2CSVExecutor::CallHandler("#SRC_IMAGE", o->sprite(), loader, ctx);
+    o->sprite()->DeleteAllCommand();
   }
   LR2CSVBargraphHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_BARGRAPH", (LR2CSVCommandHandler)&src_bargraph);
-    LR2CSVExecutor::AddHandler("#DST_BARGRAPH", (LR2CSVCommandHandler)&dst_bargraph);
+    LR2CSVExecutor::AddHandler("#SRC_BARGRAPH", (LR2CSVHandlerFunc)&src_bargraph);
+    LR2CSVExecutor::AddTrigger("#SRC_BARGRAPH", "#SRC_BASE_");
+    LR2CSVExecutor::AddTrigger("#SRC_BARGRAPH", "#DST_BASE_");
   }
 };
 

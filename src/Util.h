@@ -21,6 +21,7 @@ struct DirItem
 
 /* @brief Get all items in a directory (without recursive) */
 bool GetDirectoryItems(const std::string& dirpath, std::vector<DirItem>& out);
+bool GetDirectoryItems(const std::string& dirpath, std::vector<DirItem>& out, bool recursive);
 
 /* @brief string format util */
 template <typename ... Args>

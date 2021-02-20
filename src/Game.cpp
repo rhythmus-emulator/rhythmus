@@ -67,9 +67,7 @@ int StringToGamemode(const char* s)
 std::map<std::string, std::string> gMetricTemp;
 
 // temporary stored preference before initialization
-std::map<std::string, int> gPrefIntTemp;
-std::map<std::string, std::string> gPrefStrTemp;
-std::map<std::string, std::string> gPrefFileTemp;
+std::map<std::string, std::string> gPrefTemp;
 
 /* --------------------------------- class Game */
 
@@ -102,7 +100,6 @@ void Game::Initialize()
 
   // load settings before logging.
   Setting::Initialize();
-  Setting::Reload();
 
   // set system font
   FontManager::SetSystemFont();
@@ -110,13 +107,10 @@ void Game::Initialize()
   // flush temporary variables into setting.
   for (auto i : gMetricTemp)
     METRIC->set(i.first, i.second);
-  for (auto i : gPrefIntTemp)
-    PREFERENCE->SetInt(i.first, i.second);
-  for (auto i : gPrefStrTemp)
-    PREFERENCE->SetString(i.first, i.second);
-  for (auto i : gPrefFileTemp)
-    PREFERENCE->SetFile(i.first, i.second);
+  for (auto i : gPrefTemp)
+    PREFDATA->set(i.first, i.second);
   gMetricTemp.clear();
+  gPrefTemp.clear();
 
   // Start logging.
   Logger::getInstance().Initialize();
@@ -179,6 +173,7 @@ void Game::Loop()
       }
       else
       {
+        // TODO: remove this part, and use dynamic async rendering
         std::this_thread::sleep_for(std::chrono::microseconds(10));
       }
 
@@ -338,24 +333,19 @@ void Game::LoadArgument(const std::string& argv)
   if (argv[0] != '-') return;
   Split(argv, '=', cmd, v);
 
-  if (cmd == "--test")
-  {
+  if (cmd == "--test") {
     game_boot_mode_ = GameBootMode::kBootTest;
-    gPrefFileTemp["TestScene"] = v;
+    gPrefTemp["TestScene"] = v;
   }
-  else if (cmd == "--reset")
-  {
+  else if (cmd == "--reset") {
   } // TODO
-  else if (cmd == "--reloadsong")
-  {
+  else if (cmd == "--reloadsong") {
   } // TODO
-  else if (cmd == "--play")
-  {
+  else if (cmd == "--play") {
     game_boot_mode_ = GameBootMode::kBootPlay;
     SongPlayer::getInstance().SetSongtoPlay(v, "");
   }
-  else if (cmd.substr(0, 2) == "-D")
-  {
+  else if (cmd.substr(0, 2) == "-D") {
     cmd = cmd.substr(2);
     gMetricTemp[cmd] = v;
   }
@@ -417,7 +407,7 @@ GameBootMode Game::get_boot_mode() const
   return game_boot_mode_;
 }
 
-bool Game::is_main_thread() const
+bool Game::is_main_thread()
 {
   return main_thread_id == std::this_thread::get_id();
 }

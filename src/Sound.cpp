@@ -156,7 +156,8 @@ void SoundDriver::Initialize()
   // TODO: Load SoundInfo setting
   //setting.GetValueSafe("AudioSourceCount", source_count_);
   //setting.GetValueSafe("SoundDevice", device_name_);
-  buffer_size_ = (unsigned)*PREFERENCE->sound_buffer_size;
+  const PrefValue<int> buffer_size("sound_buffer_size", kDefaultBufferSize);
+  buffer_size_ = buffer_size.get();
 
   // Additional settings: set audio format.
   bool audio_format_set = true;

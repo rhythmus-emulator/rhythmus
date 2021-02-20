@@ -509,8 +509,9 @@ void GraphicGL::Initialize()
   // Load width / height
   VideoModeParams p = GetVideoMode();
   {
+    const PrefValue<std::string> resolution("resolution");
     std::string w, h;
-    Split( *PREFERENCE->resolution, 'x', w, h );
+    Split( resolution.get().c_str(), 'x', w, h );
     p.width = atoi(w.c_str());
     p.height = atoi(h.c_str());
   }

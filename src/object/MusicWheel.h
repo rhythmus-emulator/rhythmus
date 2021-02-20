@@ -12,22 +12,8 @@
 namespace rhythmus
 {
 
+enum class MusicWheelDataType;
 class PlayRecord;
-
-enum class MusicWheelDataType
-{
-  None,
-  Song,
-  Folder,
-  CustomFolder,
-  NewFolder,
-  RivalFolder,
-  RivalSong,
-  CourseFolder,
-  Course,
-  RandomSong,
-  RandomCourse
-};
 
 class MusicWheelData
 {

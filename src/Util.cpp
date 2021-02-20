@@ -16,9 +16,14 @@ namespace rhythmus
 {
 
 /* copied from rparser/rutil */
-  
-#ifdef WIN32
+
 bool GetDirectoryItems(const std::string& dirpath, std::vector<DirItem>& out)
+{
+  return GetDirectoryItems(dirpath, out, false);
+}
+
+#ifdef WIN32
+bool GetDirectoryItems(const std::string& dirpath, std::vector<DirItem>& out, bool recursive)
 {
   HANDLE hFind = INVALID_HANDLE_VALUE;
   WIN32_FIND_DATAW ffd;
@@ -47,11 +52,11 @@ bool GetDirectoryItems(const std::string& dirpath, std::vector<DirItem>& out)
       if (wcscmp(ffd.cFileName, L".") != 0 && wcscmp(ffd.cFileName, L"..") != 0)
       {
         int is_file = 0;
-        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-        {
-          /// will not recursive currently...
-          //directories.push(wpath + L"\\" + ffd.cFileName);
-          //dir_name.push(curr_dir_name + ffd.cFileName + L"\\");
+        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+          if (recursive) {
+            directories.push(wpath + L"\\" + ffd.cFileName);
+            dir_name.push(curr_dir_name + ffd.cFileName + L"\\");
+          }
         }
         else {
           is_file = 1;
@@ -79,7 +84,7 @@ bool GetDirectoryItems(const std::string& dirpath, std::vector<DirItem>& out)
   return true;
 }
 #else
-bool GetDirectoryItems(const std::string& path, std::vector<DirItem>& out)
+bool GetDirectoryItems(const std::string& path, std::vector<DirItem>& out, bool recursive)
 {
   DIR *dp;
   struct dirent *dirp;
@@ -106,13 +111,13 @@ bool GetDirectoryItems(const std::string& path, std::vector<DirItem>& out)
     }
     while ((dirp = readdir(dp)) != NULL) {
       int is_file = 0;
-      if (dirp->d_type == DT_DIR)
-      {
-        //directories.push(curr_dir + "/" + dirp->d_name);
-        //dir_name.push(curr_dir_name + dirp->d_name + "/");
+      if (dirp->d_type == DT_DIR) {
+        if (recursive) {
+          directories.push(curr_dir + "/" + dirp->d_name);
+          dir_name.push(curr_dir_name + dirp->d_name + "/");
+        }
       }
-      else if (dirp->d_type == DT_REG)
-      {
+      else if (dirp->d_type == DT_REG) {
         is_file = 1;
       }
       std::string fn = curr_dir_name + std::string(dirp->d_name);

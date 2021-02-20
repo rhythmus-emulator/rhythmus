@@ -78,7 +78,7 @@ public:
 
   GameBootMode get_boot_mode() const;
   static const std::string &get_window_title();
-  bool is_main_thread() const;
+  static bool is_main_thread();
 
 private:
   Game();

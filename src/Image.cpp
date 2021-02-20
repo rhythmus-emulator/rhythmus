@@ -244,7 +244,6 @@ int FFmpegContext::DecodePacket(float target_time)
 
   double pts, last_frame_duration;
   bool skip_this_frame = true;
-  int ret;
 #if FFMPEG_USE_DECODE_DEPRECIATED
   int decode_len, got_frame;
   while (packet_offset < packet->size)
@@ -306,6 +305,7 @@ int FFmpegContext::DecodePacket(float target_time)
     }
   }
 #else
+  int ret;
   ret = avcodec_send_packet(context, packet);
   if (ret < 0)
   {

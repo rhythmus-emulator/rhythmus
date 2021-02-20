@@ -151,27 +151,30 @@ void PlayScene::SetReadyTime(int time) { theme_play_param_.ready_time = time; }
 class LR2CSVPlaySceneHandlers
 {
 public:
-  static void loadstart(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool loadstart(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     // ignored.
+    return true;
   }
-  static void loadend(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool loadend(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *scene = (PlayScene*)loader->get_object("playscene");
-    if (!scene) return;
+    if (!scene) return false;
     scene->SetMinimumLoadingTime(ctx->get_int(1));
+    return true;
   }
-  static void scratchside(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool scratchside(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto *scene = (PlayScene*)loader->get_object("playscene");
-    if (!scene) return;
+    if (!scene) return false;
     scene->SetPlayer(ctx->get_int(1));
+    return true;
   }
   LR2CSVPlaySceneHandlers()
   {
-    LR2CSVExecutor::AddHandler("#LOADSTART", (LR2CSVCommandHandler)&loadstart);
-    LR2CSVExecutor::AddHandler("#LOADEND", (LR2CSVCommandHandler)&loadend);
-    LR2CSVExecutor::AddHandler("#SCRATCHSIDE", (LR2CSVCommandHandler)&scratchside);
+    LR2CSVExecutor::AddHandler("#LOADSTART", (LR2CSVHandlerFunc)&loadstart);
+    LR2CSVExecutor::AddHandler("#LOADEND", (LR2CSVHandlerFunc)&loadend);
+    LR2CSVExecutor::AddHandler("#SCRATCHSIDE", (LR2CSVHandlerFunc)&scratchside);
   }
 };
 

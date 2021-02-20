@@ -85,9 +85,11 @@ public:
   int get_int(unsigned idx) const;
   float get_float(unsigned idx) const;
   static std::string SubstitutePath(const std::string& path);
+  const std::string& get_path();
 
 private:
   std::vector<CSVContext> ctx;
+  std::string path_;
 
   struct IfStmt
   {
@@ -103,8 +105,9 @@ private:
 
 class LR2CSVExecutor;
 
+
 /* @brief base handler of LR2CSV */
-typedef void (*LR2CSVCommandHandler)(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx);
+typedef bool (*LR2CSVHandlerFunc)(void *&, LR2CSVExecutor* loader, LR2CSVContext* ctx);
 
 /* @brief executes LR2CSV with registered handler. */
 class LR2CSVExecutor
@@ -112,15 +115,18 @@ class LR2CSVExecutor
 public:
   LR2CSVExecutor(LR2CSVContext *ctx);
   ~LR2CSVExecutor();
-  static void AddHandler(const std::string &cmd, LR2CSVCommandHandler handler);
-  static void CallHandler(const std::string &cmd, void *_this,
-                          LR2CSVExecutor *loader, LR2CSVContext *ctx);
+  static void AddHandler(const std::string &cmd, LR2CSVHandlerFunc handler);
+  static void AddTrigger(const std::string& cmd, const std::string& callback);
+  static void AddTriggerAfter(const std::string& cmd, const std::string& callback);
+  static void CallHandler(const std::string &cmd, void *o, LR2CSVExecutor *loader, LR2CSVContext *ctx);
   virtual void Run();
 
   unsigned get_image_index();
   unsigned get_font_index();
   unsigned get_command_index();
   void reset_command();
+  void set_current_obj(void* obj);
+  void* get_current_obj();
   void set_object(const std::string &name, void *obj);
   void* get_object(const std::string &name);
 private:
@@ -130,6 +136,7 @@ private:
   std::string command_;
   int command_index_;
   unsigned command_count_;
+  void* current_obj_;
   std::map<std::string, void*> objects_;
 };
 
@@ -141,6 +148,7 @@ class LuaExecutor
 namespace Script
 {
   bool Load(const std::string &path, void *baseobject);
+  void SetPreloadMode(bool is_preload);
 }
 
 }

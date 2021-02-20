@@ -294,8 +294,8 @@ BaseObject::BaseObject()
 
 BaseObject::BaseObject(const BaseObject& obj)
   : name_(obj.name_), is_allocated_(obj.is_allocated_), propagate_event_(obj.propagate_event_),
-    parent_(obj.parent_), ani_(obj.ani_), draw_order_(obj.draw_order_),
-    set_xy_as_center_(obj.set_xy_as_center_), visible_(obj.visible_),
+    parent_(obj.parent_), ani_(obj.ani_), position_prop_(obj.position_prop_),
+    draw_order_(obj.draw_order_), set_xy_as_center_(obj.set_xy_as_center_), visible_(obj.visible_),
     hide_if_not_tweening_(obj.hide_if_not_tweening_),
     ignore_visible_group_(obj.ignore_visible_group_),
     is_focusable_(obj.is_focusable_), is_draggable_(false), is_focused_(false),
@@ -1355,49 +1355,38 @@ BaseObject* BaseObject::CreateObject(const std::string &type)
   BaseObject *object = nullptr;
 
   // create object from type string
-  if (type == "image" || type == "sprite")
-  {
+  if (type == "image" || type == "sprite") {
     object = new Sprite();
   }
-  else if (type == "text")
-  {
+  else if (type == "text") {
     object = new Text();
   }
-  else if (type == "number")
-  {
+  else if (type == "number") {
     object = new Number();
   }
-  else if (type == "slider")
-  {
+  else if (type == "slider") {
     object = new Slider();
   }
-  else if (type == "bargraph")
-  {
+  else if (type == "bargraph") {
     object = new Bargraph();
   }
-  else if (type == "onmouse")
-  {
+  else if (type == "onmouse") {
     object = new OnMouse();
   }
-  else if (type == "button")
-  {
+  else if (type == "button") {
     object = new Button();
   }
-  else if (type == "dialog")
-  {
+  else if (type == "dialog") {
     object = new Dialog();
   }
-  else if (type == "listview")
-  {
+  else if (type == "listview") {
     object = new ListView();
   }
-  else if (type == "frame")
-  {
+  else if (type == "frame") {
     // TODO: use BaseFrame() object
     object = new BaseObject();
   }
-  else if (type == "line")
-  {
+  else if (type == "line") {
 
   }
 
@@ -1433,9 +1422,11 @@ std::string BaseObject::toString() const
   return ss.str();
 }
 
+bool BaseObject::is_dynamic() const { return is_allocated_; }
+
 // ------------------------------------------------------------------ Loader/Helper
 
-// Number::OnStart 메서드 구현하기 (Load에서 Async 코드 부분 제거하기)
+// TODO: Number::OnStart 메서드 구현하기 (Load에서 Async 코드 부분 제거하기)
 
 class XMLObjectHandlers
 {
@@ -1473,7 +1464,94 @@ public:
   }
 };
 
+class LR2CSVBaseHandlers
+{
+public:
+  static bool src_base(BaseObject*& o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
+  {
+    if (!ctx->get_str(0)) return false;
+    const std::string type(ctx->get_str(0));
+
+    // if current object is reserved one, then don't overwrite.
+    if (o && !o->is_dynamic())
+      return true;
+    else
+      o = nullptr;
+
+    // create new object
+    if (type == "#SRC_IMAGE")
+      o = BaseObject::CreateObject("sprite");
+    else if (type == "#SRC_TEXT")
+      o = BaseObject::CreateObject("text");
+    else if (type == "#SRC_NUMBER")
+      o = BaseObject::CreateObject("number");
+    else if (type == "#SRC_SLIDER")
+      o = BaseObject::CreateObject("slider");
+    else if (type == "#SRC_BARGRAPH")
+      o = BaseObject::CreateObject("bargraph");
+    else if (type == "#SRC_ONMOUSE")
+      o = BaseObject::CreateObject("onmouse");
+    else if (type == "#SRC_BUTTON")
+      o = BaseObject::CreateObject("button");
+
+    if (!o) {
+      Logger::Warn("Warning: invalid command \"%s\".", ctx->get_str(0));
+      return false;
+    }
+
+    // add to scene
+    auto* scene = ((BaseObject*)loader->get_object("scene"));
+    R_ASSERT(scene != nullptr);
+    scene->AddChild(o);
+
+    // set debug text
+    o->SetDebug(format_string("LR2SRC-%u", ctx->get_str(21)));
+    return true;
+  }
+  static bool dst_base(BaseObject*& o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
+  {
+    const char* args[21];
+
+    if (!o) {
+      Logger::Warn("Warning: invalid command \"%s\".", ctx->get_str(0));
+      return false;
+    }
+
+    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
+    o->AddFrameByLR2command(args + 1);
+
+    // these attributes are only affective for first run
+    if (loader->get_command_index() == 0) {
+      const int loop = ctx->get_int(16);
+      const int timer = ctx->get_int(17);
+
+      // LR2 needs to keep its animation queue, so don't use stop.
+      o->AddCommand(format_string("LR%d", timer), "replay");
+      o->AddCommand(format_string("LR%dOff", timer), "hide");
+      if (loop >= 0)
+        o->SetLoop(loop);
+
+      // XXX: move this flag to Sprite,
+      // as LR2_TEXT object don't work with this..?
+      o->SetVisibleFlag(
+        format_string("F%s", ctx->get_str(18)),
+        format_string("F%s", ctx->get_str(19)),
+        format_string("F%s", ctx->get_str(20)),
+        std::string()
+      );
+    }
+    return true;
+  }
+  LR2CSVBaseHandlers()
+  {
+    LR2CSVExecutor::AddHandler("#SRC_BASE_", (LR2CSVHandlerFunc)& src_base);
+    LR2CSVExecutor::AddHandler("#DST_BASE_", (LR2CSVHandlerFunc)& dst_base);
+  }
+private:
+};
+
 // register handler
 XMLObjectHandlers _XMLObjectHandlers;
+LR2CSVBaseHandlers _LR2CSVBaseHandlers;
 
 }

@@ -152,13 +152,20 @@ void InputEventManager::Flush()
 
 // ------------------------- class EventMessage
 
-EventMessage::EventMessage(const std::string &name)
+EventMessage::EventMessage(const std::string& name)
   : name_(name)
 {
 }
 
+EventMessage::EventMessage(const std::string& name, const std::string& content)
+  : name_(name), content_(content)
+{
+}
+
 void EventMessage::SetEventName(const std::string &name) { name_ = name; }
-const std::string &EventMessage::GetEventName() const { return name_; }
+void EventMessage::SetContent(const std::string& content) { content_ = content; }
+const std::string& EventMessage::GetEventName() const { return name_; }
+const std::string& EventMessage::content() const { return content_; }
 
 
 // ------------------------- class EventReceiver
@@ -196,12 +203,11 @@ bool EventReceiver::OnEvent(const EventMessage& msg)
 
 EventReceiverMap::~EventReceiverMap() {}
 
-void EventReceiverMap::AddEvent(const std::string &event_name, const std::function<void()> &func)
+void EventReceiverMap::AddEvent(const std::string &event_name, const std::function<void (const EventMessage&)> &func)
 {
   auto i = eventFnMap_.find(event_name);
   eventFnMap_[event_name] = func;
-  if (i == eventFnMap_.end())
-  {
+  if (i == eventFnMap_.end()) {
     SubscribeTo(event_name);
   }
 }
@@ -216,7 +222,7 @@ bool EventReceiverMap::OnEvent(const EventMessage& msg)
 {
   auto i = eventFnMap_.find(msg.GetEventName());
   R_ASSERT(i != eventFnMap_.end());
-  i->second();
+  i->second(msg);
   return true;
 }
 
@@ -380,12 +386,12 @@ public:
 
 
     /* create EventMap */
-    fnmap.AddEvent("Load", [this]() {
+    fnmap.AddEvent("Load", [this](const EventMessage&) {
       EVENTMAN->SendEvent("LR0");
     });
 
     /* Events for SelectScene */
-    fnmap.AddEvent("SelectSceneLoad", [this]() {
+    fnmap.AddEvent("SelectSceneLoad", [this](const EventMessage&) {
       /* Panel state clear */
       *F[20] = 1;
       *F[21] = 0;
@@ -410,9 +416,11 @@ public:
       *F[47] = 1;
     });
 
-    fnmap.AddEvent("SongFilterChanged", [this]() {
+    fnmap.AddEvent("SongFilterChanged", [this](const EventMessage&) {
       /* update filter information */
-      // XXX: we're loading it from preference but isn't Metric better?
+      int gamemode = KEYPOOL->GetInt("gamemode").get();
+      int sortmode = KEYPOOL->GetInt("sortmode").get();
+      int difficulty = KEYPOOL->GetInt("difficulty").get();
 
       /* ALL, BEGINNER, NORMAL, HYPER, HARD, ANOTHER, INSANE */
       static const int difficulty_filter[] = { 0, 1, 2, 3, 4, 5, 6 };
@@ -421,26 +429,23 @@ public:
       /* NOSORT(NAME), LEVEL, NAME, CLEAR */
       static const int sort_filter[4] = { 0, 1, 2, 4 };
 
-      for (int i = 0; i < 7; ++i) if (*PREFERENCE->select_difficulty_mode <= difficulty_filter[i])
-      {
+      for (int i = 0; i < 7; ++i) if (difficulty <= difficulty_filter[i]) {
         *F[46] = (i != 0);
         *F[47] = (i == 0);
         *button[10] = i;
         break;
       }
-      for (int i = 0; i < 6; ++i) if (*PREFERENCE->gamemode <= key_filter[i])
-      {
+      for (int i = 0; i < 6; ++i) if (gamemode <= key_filter[i]) {
         *button[11] = i;
         break;
       }
-      for (int i = 0; i < 4; ++i) if (*PREFERENCE->select_sort_type == sort_filter[i])
-      {
+      for (int i = 0; i < 4; ++i) if (sortmode == sort_filter[i]) {
         *button[12] = i;
         break;
       }
     });
 
-    fnmap.AddEvent("SongSelectChanged", [this]() {
+    fnmap.AddEvent("SongSelectChanged", [this](const EventMessage&) {
       int diff_not_exist[5] = {
         *info_difftype_1 < 0,
         *info_difftype_2 < 0,
@@ -535,15 +540,15 @@ public:
       EVENTMAN->SendEvent("LR14Off");
     });
 
-    fnmap.AddEvent("SongSelectChangeUp", []() {
+    fnmap.AddEvent("SongSelectChangeUp", [](const EventMessage&) {
       EVENTMAN->SendEvent("LR12");
     });
 
-    fnmap.AddEvent("SongSelectChangeDown", []() {
+    fnmap.AddEvent("SongSelectChangeDown", [](const EventMessage&) {
       EVENTMAN->SendEvent("LR13");
     });
 
-    fnmap.AddEvent("SongSelectChanged", []() {
+    fnmap.AddEvent("SongSelectChanged", [](const EventMessage&) {
       EVENTMAN->SendEvent("LR10Off");
       EVENTMAN->SendEvent("LR12Off");
       EVENTMAN->SendEvent("LR13Off");
@@ -609,16 +614,16 @@ public:
       }
     };
 
-    fnmap.AddEvent("Click1", []() { fnPanel(1); });
-    fnmap.AddEvent("Click2", []() { fnPanel(2); });
-    fnmap.AddEvent("Click3", []() { fnPanel(3); });
-    fnmap.AddEvent("Click4", []() { fnPanel(4); });
-    fnmap.AddEvent("Click5", []() { fnPanel(5); });
-    fnmap.AddEvent("Click6", []() { fnPanel(6); });
-    fnmap.AddEvent("Click7", []() { fnPanel(7); });
-    fnmap.AddEvent("Click8", []() { fnPanel(8); });
-    fnmap.AddEvent("Click9", []() { fnPanel(9); });
-    fnmap.AddEvent("Click10", []() {
+    fnmap.AddEvent("Click1", [](const EventMessage&) { fnPanel(1); });
+    fnmap.AddEvent("Click2", [](const EventMessage&) { fnPanel(2); });
+    fnmap.AddEvent("Click3", [](const EventMessage&) { fnPanel(3); });
+    fnmap.AddEvent("Click4", [](const EventMessage&) { fnPanel(4); });
+    fnmap.AddEvent("Click5", [](const EventMessage&) { fnPanel(5); });
+    fnmap.AddEvent("Click6", [](const EventMessage&) { fnPanel(6); });
+    fnmap.AddEvent("Click7", [](const EventMessage&) { fnPanel(7); });
+    fnmap.AddEvent("Click8", [](const EventMessage&) { fnPanel(8); });
+    fnmap.AddEvent("Click9", [](const EventMessage&) { fnPanel(9); });
+    fnmap.AddEvent("Click10", [](const EventMessage&) {
 #if 0
       // change difficulty filtering of MusicWheel
       // XXX: use dynamic_cast for safety?
@@ -632,7 +637,7 @@ public:
 #endif
       EVENTMAN->SendEvent("SongSelectChange");
     });
-    fnmap.AddEvent("Click11", []() {
+    fnmap.AddEvent("Click11", [](const EventMessage&) {
 #if 0
       // change key filtering of MusicWheel
       // TODO: make and send message to SelectScene, and process from it.
@@ -645,7 +650,7 @@ public:
 #endif
       EVENTMAN->SendEvent("SongSelectChange");
     });
-    fnmap.AddEvent("Click12", []() {
+    fnmap.AddEvent("Click12", [](const EventMessage&) {
 #if 0
       // change sort of MusicWheel
       // TODO: make and send message to SelectScene, and process from it.
@@ -659,18 +664,18 @@ public:
       EVENTMAN->SendEvent("SongSelectChange");
     });
     /* Events for PlayScene */
-    fnmap.AddEvent("PlayLoading", [this]() {
+    fnmap.AddEvent("PlayLoading", [this](const EventMessage&) {
       *F[80] = 1;   // Loading
       *F[81] = 1;   // Loaded
       EVENTMAN->SendEvent("LR40Off");     // READY
       EVENTMAN->SendEvent("LR41Off");     // START
     });
-    fnmap.AddEvent("PlayReady", [this]() {
+    fnmap.AddEvent("PlayReady", [this](const EventMessage&) {
       *F[80] = 0;   // Loading
       *F[81] = 1;   // Loaded
       EVENTMAN->SendEvent("LR40");        // READY
     });
-    fnmap.AddEvent("PlayStart", [this]() {
+    fnmap.AddEvent("PlayStart", [this](const EventMessage&) {
       EVENTMAN->SendEvent("LR41");        // START
     });
   }

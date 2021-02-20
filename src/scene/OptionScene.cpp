@@ -86,6 +86,8 @@ void BuildOptions()
   AddOption("KeyConfig", { "Common", "4Key", "5Key", "7Key", "BmsSP", "BmsDP", "Popn", "Ez2Dj", "25Key" });
 
   // Theme settings
+  // TODO: set option list context, and run all scene scripts by SceneManager.
+  // then, option list will be filled.
   AddOption("BaseTheme", EnumBaseTheme);
   AddOption("SelectTheme", EnumSelectTheme);
   AddOption("DecideTheme", EnumDecideTheme);

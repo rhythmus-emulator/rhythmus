@@ -30,12 +30,8 @@ void Button::doRender()
 class LR2CSVButtonHandlers
 {
 public:
-  static void src_button(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool src_button(Button* const& o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *o = _this ? (Button*)_this : (Button*)BaseObject::CreateObject("button");
-    loader->set_object("button", o);
-    LR2CSVExecutor::CallHandler("#SRC_IMAGE", o, loader, ctx);
-
     o->SetFocusable(ctx->get_int(11));
 
     /* XXX: change clickable by panel opening */
@@ -64,16 +60,14 @@ public:
 
     /* Set sprite duration to zero to prevent unexpected sprite animation */
     o->SetDuration(0);
-  }
-  static void dst_button(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto *o = _this ? (Button*)_this : (Button*)loader->get_object("button");
-    LR2CSVExecutor::CallHandler("#DST_IMAGE", o, loader, ctx);
+
+    return true;
   }
   LR2CSVButtonHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_BUTTON", (LR2CSVCommandHandler)&src_button);
-    LR2CSVExecutor::AddHandler("#DST_BUTTON", (LR2CSVCommandHandler)&dst_button);
+    LR2CSVExecutor::AddHandler("#SRC_BUTTON", (LR2CSVHandlerFunc)&src_button);
+    LR2CSVExecutor::AddTrigger("#SRC_BUTTON", "#SRC_BASE_");
+    LR2CSVExecutor::AddTrigger("#DST_BUTTON", "#DST_BASE_");
   }
 };
 

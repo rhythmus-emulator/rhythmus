@@ -473,11 +473,9 @@ std::string Number::toString() const
 class LR2CSVNumberHandlers
 {
 public:
-  static void src_number(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool src_number(Number* const& o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     // (null),(image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align),(keta)
-    auto *o = (Number*)BaseObject::CreateObject("number");
-    loader->set_object("number", o);
     std::string imgname = std::string("image") + ctx->get_str(2);
     Rect clip(ctx->get_int(3), ctx->get_int(4),
       ctx->get_int(5),
@@ -505,16 +503,11 @@ public:
     o->SubscribeTo(eventname);
     std::string resname = format_string("N%s", ctx->get_str(11));
     o->SetResourceId(resname);
+
+    return true;
   }
-  static void dst_number(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool dst_number(Number* const& o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    const char *args[21];
-    auto *o = (Number*)loader->get_object("number");
-    if (!o) return;
-
-    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
-    o->AddFrameByLR2command(args + 1);
-
     // these attributes are only affective for first run
     if (loader->get_command_index() == 0)
     {
@@ -526,11 +519,15 @@ public:
       o->SetBlending(ctx->get_int(12));
       //o->SetFiltering(ctx->get_int(13));
     }
+
+    return true;
   }
   LR2CSVNumberHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_NUMBER", (LR2CSVCommandHandler)&src_number);
-    LR2CSVExecutor::AddHandler("#DST_NUMBER", (LR2CSVCommandHandler)&dst_number);
+    LR2CSVExecutor::AddHandler("#SRC_NUMBER", (LR2CSVHandlerFunc)&src_number);
+    LR2CSVExecutor::AddTrigger("#SRC_NUMBER", "#SRC_BASE_");
+    LR2CSVExecutor::AddHandler("#DST_NUMBER", (LR2CSVHandlerFunc)&dst_number);
+    LR2CSVExecutor::AddTrigger("#DST_NUMBER", "#DST_BASE_");
   }
 };
 

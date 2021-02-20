@@ -47,12 +47,8 @@ const char* OnMouse::type() const { return "OnMouse"; }
 class LR2CSVOnMouseHandlers
 {
 public:
-  static void src_onmouse(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool src_onmouse(OnMouse *o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
-    auto *o = _this ? (OnMouse*)_this : (OnMouse*)BaseObject::CreateObject("onmouse");
-    loader->set_object("onmouse", o);
-    LR2CSVExecutor::CallHandler("#SRC_IMAGE", o, loader, ctx);
-
     int panel = ctx->get_int(10);
     if (panel > 0 || panel == -1)
     {
@@ -65,16 +61,14 @@ public:
     Rect r = Vector4(ctx->get_int(11), ctx->get_int(12),
       ctx->get_int(13), ctx->get_int(14));
     o->SetOnmouseRect(r);
-  }
-  static void dst_onmouse(void *_this, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto *o = _this ? (OnMouse*)_this : loader->get_object("onmouse");
-    LR2CSVExecutor::CallHandler("#DST_IMAGE", o, loader, ctx);
+
+    return true;
   }
   LR2CSVOnMouseHandlers()
   {
-    LR2CSVExecutor::AddHandler("#SRC_ONMOUSE", (LR2CSVCommandHandler)&src_onmouse);
-    LR2CSVExecutor::AddHandler("#DST_ONMOUSE", (LR2CSVCommandHandler)&dst_onmouse);
+    LR2CSVExecutor::AddHandler("#SRC_ONMOUSE", (LR2CSVHandlerFunc)&src_onmouse);
+    LR2CSVExecutor::AddTrigger("#SRC_ONMOUSE", "#SRC_BASE_");
+    LR2CSVExecutor::AddTrigger("#DST_ONMOUSE", "#DST_BASE_");
   }
 };
 

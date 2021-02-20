@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Util.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -75,22 +76,24 @@ public:
   PathCache();
 
   /**
-   * @brief
    * Get cached file path masked path.
    * Result is returned as input is if it's not masked path or not found.
    */
   std::string GetPath(const std::string& masked_path, bool &is_found) const;
   std::string GetPath(const std::string& masked_path) const;
 
-  /* @brief get all available paths from cached path */
+  /* get all available paths from cache */
   void GetAllPaths(const std::string& masked_path, std::vector<std::string> &out) const;
 
-  /* @brief add path replacement for some special use */
+  /* get all available directories from cache*/
+  void GetDirectories(const std::string& masked_path, std::vector<std::string>& out) const;
+  void GetDescendantDirectories(const std::string& dirpath, std::vector<std::string>& out) const;
+
+  /* add path replacement for some special use */
   void SetAlias(const std::string& path_from, const std::string& path_to);
 
   /**
-   * @brief
-   * Cache a folder and it's subdirectory path.
+   * Cache a folder recursively.
    * (considering as it's game system directory)
    * Cached paths are used for masked-path searching.
    */
@@ -115,7 +118,7 @@ public:
 
 private:
   // cached paths
-  std::vector<std::string> path_cached_;
+  std::vector<DirItem> path_cached_;
 
   // path replacement
   std::map<std::string, std::string> path_replacement_;

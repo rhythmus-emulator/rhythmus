@@ -497,256 +497,39 @@ void MetricGroup::resolve_fallback(const std::string &key)
 }
 
 
-// ----------------------------- class Option
-
-Option::Option()
-  : type_("option"), curr_sel_idx_(0),
-    save_with_constraint_(false), visible_(false) {}
-
-template <> const std::string& Option::value() const
-{ return value_; }
-template <> std::string Option::value() const
-{ return value_; }
-template <> const char* Option::value() const
-{ return value_.c_str(); }
-template <> int Option::value() const
-{ return atoi(value_.c_str()); }
-template <> size_t Option::value() const
-{ return (size_t)atoi(value_.c_str()); }
-template <> double Option::value() const
-{ return atof(value_.c_str()); }
-template <> float Option::value() const
-{ return (float)atof(value_.c_str()); }
-template <> bool Option::value() const
-{ return strnicmp(value_.c_str(), "true", 4) == 0
-      || strnicmp(value_.c_str(), "on", 2) == 0; }
-
-const std::string& Option::type() const
-{
-  return type_;
-}
-
-const std::string& Option::desc() const
-{
-  return desc_;
-}
-
-Option &Option::set_description(const std::string& desc)
-{
-  desc_ = desc;
-  return *this;
-}
-
-const std::string& Option::get_constraint() const
-{
-  return constraint_;
-}
-
-void Option::Next()
-{
-  if (options_.empty())
-    return;
-  if (curr_sel_idx_ + 1 >= options_.size())
-    return;
-  value_ = options_[++curr_sel_idx_];
-}
-
-void Option::Prev()
-{
-  if (options_.empty())
-    return;
-  if (curr_sel_idx_ == 0)
-    return;
-  value_ = options_[--curr_sel_idx_];
-}
-
-void Option::Clear()
-{
-  options_.clear();
-  constraint_.clear();
-  default_.clear();
-}
-
-Option &Option::SetDefault(const std::string &default__)
-{
-  default_ = default__;
-  return *this;
-}
-
-void Option::SetOption(const std::string& options)
-{
-  constraint_ = options;
-  Split(options, ',', options_);
-  // set default if it's empty.
-  if (default_.empty() && !options_.empty())
-    default_ = options_.front();
-}
-
-void Option::set_value(const std::string& option)
-{
-  auto i = std::find(options_.begin(), options_.end(), option);
-  if (i == options_.end())
-    value_ = default_;
-  else
-    value_ = option;
-}
-
-void Option::set_value(int value)
-{
-  set_value(std::to_string(value));
-}
-
-Option &Option::reset_value()
-{
-  set_value(default_);
-  return *this;
-}
-
-void Option::save_with_constraint(bool v)
-{
-  save_with_constraint_ = v;
-}
-
-Option* Option::CreateOption(const std::string &optionstr)
-{
-  Option *option = nullptr;
-  std::string optionvalue;
-  if (optionstr.size() >= 2 && optionstr[0] == '!')
-  {
-    if (optionstr[1] == 'F')
-    {
-      // create as file option
-      option = new FileOption();
-      optionvalue = optionstr.substr(2);
-    }
-    else if (optionstr[1] == 'N')
-    {
-      // create as number option
-      option = new NumberOption();
-      optionvalue = optionstr.substr(2);
-    }
-    else if (optionstr[1] == 'T')
-    {
-      // create as number option & return it directly
-      option = new TextOption();
-      option->set_value(optionstr.substr(2));
-      return option;
-    }
-  }
-  else
-  {
-    option = new Option();
-    optionvalue = optionstr;
-  }
-
-  if (option)
-    option->SetOption(optionvalue);
-
-  return option;
-}
-
-Option &Option::show() { visible_ = true; return *this; }
-Option &Option::hide() { visible_ = false; return *this; }
-
-FileOption::FileOption() {}
-
-void FileOption::SetOption(const std::string &options)
-{
-  PATH->GetAllPaths(options, options_);
-  // set default if it's empty.
-  if (default_.empty() && !options_.empty())
-    default_ = options_.front();
-}
-
-TextOption::TextOption() {}
-
-void TextOption::Next() {}
-void TextOption::Prev() {}
-void TextOption::set_value(const std::string& value) { value_ = value; }
-
-NumberOption::NumberOption()
-  : number_(0), number_min_(0), number_max_(0x7FFFFFFF)
-{
-  type_ = "number";
-}
-
-int NumberOption::value_int() const
-{
-  return number_min_ + number_;
-}
-
-int NumberOption::value_min() const
-{
-  return number_min_;
-}
-
-int NumberOption::value_max() const
-{
-  return number_max_;
-}
-
-void NumberOption::SetOption(const std::string& options)
-{
-  std::string smin, smax;
-  Split(options, ',', smin, smax);
-  number_min_ = atoi(smin.c_str());
-  number_max_ = atoi(smax.c_str());
-}
-
-void NumberOption::Next() { number_ = std::min(number_max_, number_ + 1); }
-void NumberOption::Prev() { number_ = std::max(number_min_, number_ - 1); }
-
-void NumberOption::set_value(const std::string& value)
-{
-  set_value(atoi(value.c_str()));
-}
-
-void NumberOption::set_value(int value)
-{
-  if (value > number_max_) value = number_max_;
-  if (value < number_min_) value = number_min_;
-  number_ = value;
-  Option::set_value(std::to_string(number_));
-}
-
-
-
 // --------------------------- class OptionList
 
-OptionList::OptionList() {}
+PrefData::PrefData() {}
 
-OptionList::~OptionList()
+bool PrefData::LoadOption(const std::string& path)
 {
-  Clear();
-}
-
-bool OptionList::LoadFromFile(const std::string &filepath)
-{
-  std::string ext = GetExtension(filepath);
-  if (ext != "xml")
-  {
-    std::cerr << "Error: Only xml option file can be read." << std::endl;
+  OptionDesc option;
+  std::string ext = GetExtension(path);
+  if (ext != "xml") {
+    Logger::Error("Error: Only xml option file can be read.");
     return false;
   }
 
   tinyxml2::XMLDocument doc;
-  if (doc.LoadFile(filepath.c_str()) != XML_SUCCESS)
+  if (doc.LoadFile(path.c_str()) != XML_SUCCESS)
     return false;
-  XMLElement *root = doc.RootElement();
-  XMLElement *optnode;
+  XMLElement* root = doc.RootElement();
+  XMLElement* optnode;
 
   optnode = root->FirstChildElement("Option");
-  while (optnode)
-  {
-    const char *name = optnode->Attribute("name");
-    const char *constraint = optnode->Attribute("constraint");
-    const char *desc = optnode->Attribute("desc");
+  while (optnode) {
+    const char* name = optnode->Attribute("name");
+    const char* constraint = optnode->Attribute("constraint");
+    const char* desc = optnode->Attribute("desc");
+    const char* def = optnode->Attribute("default");
     if (!name)
       continue;
+    option.name = name;
+    option.constraint = constraint ? constraint : "";
+    option.desc = desc ? desc : "";
+    option.def = def ? def : "";
 
-    auto &option = SetOption(name, constraint);
-    if (desc)
-      option.set_description(desc);
+    add_option(option);
 
     optnode = optnode->NextSiblingElement("Option");
   }
@@ -754,431 +537,278 @@ bool OptionList::LoadFromFile(const std::string &filepath)
   return true;
 }
 
-void OptionList::LoadFromMetrics(const MetricGroup &metric)
+bool PrefData::LoadOptionFromMetric(const MetricGroup& m)
 {
-  if (!metric.exist("Option"))
-    return;
-  int optioncount = metric.get<int>("Option");
-  for (int i = 0; i < optioncount; ++i)
-  {
-    /* attr,default,select list */
-    CommandArgs args(metric.get_str("Option" + std::to_string(i)), 3, true);
-    auto &option = SetOption(args.Get_str(0), args.Get_str(2));
-    option.SetDefault(args.Get_str(1));
+  if (m.exist("Option")) {
+    OptionDesc option;
+    auto count = m.get<size_t>("Option");
+    for (unsigned i = 0; i < count; ++i) {
+      std::string option_str = m.get_str("Option" + std::to_string(i + 1));
+      CommandArgs args(option_str, 2, true);
+      option.name = args.Get_str(0);
+      option.constraint = args.Get_str(1);
+      add_option(option);
+    }
   }
-}
-
-/* @brief read only option value from file */
-bool OptionList::ReadFromFile(const std::string &filepath)
-{
-  // currently only supports xml type file.
-  std::string ext = GetExtension(filepath);
-  if (ext != "xml")
-  {
-    std::cerr << "Error: Only xml option file can be read." << std::endl;
-    return false;
-  }
-
-  tinyxml2::XMLDocument doc;
-  if (doc.LoadFile(filepath.c_str()) != XML_SUCCESS)
-    return false;
-  XMLElement *root = doc.RootElement();
-
-  for (auto &it : options_)
-  {
-    auto &opt = *it.second;
-    XMLElement *valnode = root->FirstChildElement(it.first.c_str());
-    if (!valnode)
-      continue;
-    const char* val = valnode->Attribute("value");
-    if (!val)
-      continue;
-    opt.set_value(val);
-  }
-
   return true;
 }
 
-/* @brief save only option value to file */
-bool OptionList::SaveToFile(const std::string &path)
+bool PrefData::LoadValue(const std::string& path)
+{
+  // currently only supports xml type file.
+  std::string ext = GetExtension(path);
+  if (ext != "xml") {
+    Logger::Error("Error: Only xml option file can be read.");
+    return false;
+  }
+
+  tinyxml2::XMLDocument doc;
+  if (doc.LoadFile(path.c_str()) != XML_SUCCESS)
+    return false;
+  XMLElement* root = doc.RootElement();
+  XMLElement* node = root->FirstChildElement();
+  while (node) {
+    const char* val = node->Attribute("value");
+    if (!val)
+      continue;
+    set(node->Name(), val);
+    node = node->NextSiblingElement();
+  }
+
+  path_ = path;
+  return true;
+}
+
+bool PrefData::SaveValue(const std::string& path)
 {
   if (path.empty()) return false;
   tinyxml2::XMLDocument doc;
-  XMLElement *root = doc.NewElement(kDefaultRootTagName);
+  XMLElement* root = doc.NewElement(kDefaultRootTagName);
   doc.InsertFirstChild(root);
 
-  XMLElement *nodeval;
-  for (auto &it : options_)
-  {
-    auto &opt = *it.second;
+  XMLElement* nodeval;
+  for (auto& it : values_) {
     nodeval = doc.NewElement(it.first.c_str());
     root->InsertFirstChild(nodeval);
-    nodeval->SetAttribute("value", opt.value<std::string>().c_str());
+    nodeval->SetAttribute("value", it.second.c_str());
   }
 
+  path_ = path;
   return doc.SaveFile(path.c_str()) == XML_SUCCESS;
 }
 
-Option *OptionList::GetOption(const std::string &key) const
+bool PrefData::SaveValue()
 {
-  auto it = options_.find(key);
-  if (it != options_.end())
-    return it->second;
-  else
-    return nullptr;
+  return SaveValue(path_);
 }
 
-Option &OptionList::SetOption(const std::string &key, const std::string &optionstr)
+void PrefData::Clear()
 {
-  return SetOption(key, Option::CreateOption(optionstr));
-}
-
-Option &OptionList::SetOption(const std::string &key, Option *option)
-{
-  auto it = options_.find(key);
-  if (it == options_.end())
-  {
-    options_[key] = option;
-  }
-  else
-  {
-    delete it->second;
-    it->second = option;
-  }
-  return *option;
-}
-
-void OptionList::AddOptionFromMetric(MetricGroup *metric)
-{
-  if (!metric) return;
-  if (metric->exist("Option"))
-  {
-    auto count = metric->get<size_t>("Option");
-    for (unsigned i = 0; i < count; ++i)
-    {
-      std::string option_str = metric->get_str("Option" + std::to_string(i+1));
-      CommandArgs args(option_str, 2, true);
-      SetOption(args.Get_str(0), args.Get_str(0));
-    }
-  }
-}
-
-void OptionList::DeleteOption(const std::string &key)
-{
-  auto it = options_.find(key);
-  if (it == options_.end()) return;
-  delete it->second;
-  options_.erase(it);
-}
-
-void OptionList::Clear()
-{
-  for (auto &it : options_)
-    delete it.second;
   options_.clear();
+  values_.clear();
 }
 
-
-// ------------------------------ class Setting
-
-void Setting::Initialize()
+void PrefData::set(const std::string& key, const std::string& value)
 {
-  PREFERENCE = new SystemPreference();
-  METRIC = new MetricGroup();
-  METRIC->set_name("game");
+  // XXX: delete if value is empty?
+  values_[key] = value;
 }
 
-void Setting::Cleanup()
+const std::string* PrefData::get(const std::string& key) const
 {
-  delete PREFERENCE;
-  delete METRIC;
-  PREFERENCE = nullptr;
-  METRIC = nullptr;
+  auto i = values_.find(key);
+  if (i == values_.end()) return nullptr;
+  else return &i->second;
 }
 
-void Setting::Reload()
+std::string* PrefData::get(const std::string& key)
 {
-  static const char *metric_option_attrs[] = {
-    "SoundSet",
-    "SelectScene",
-    "DecideScene",
-    "Play7Key",
-    "ResultScene",
-    "CourseResultScene",
-    0
-  };
-  static const char* fallback_metric_path = "themes/_fallback/theme.xml";
+  auto i = values_.find(key);
+  if (i == values_.end()) return nullptr;
+  else return &i->second;
+}
 
-  // clear non-static preference and clear theme metric.
-  PREFERENCE->Clear();
-  METRIC->clear();
+OptionDesc* PrefData::get_option(const std::string& key)
+{
+  for (unsigned i = 0; i < options_.size(); ++i)
+    if (options_[i].name == key)
+      return &options_[i];
+  return nullptr;
+}
 
-  // read metrics --> create non-static preference
-  METRIC->Load(fallback_metric_path);
-  {
-    std::string filepath;
-    for (size_t i = 0; metric_option_attrs[i]; ++i)
-    {
-      auto *pref = PREFERENCE->GetFile(metric_option_attrs[i]);
-      if (!pref || (**pref).empty()) continue;
-
-      MetricGroup m;
-      if (m.Load(**pref))
-        PREFERENCE->Load(m);
+void PrefData::add_option(const OptionDesc& option)
+{
+  if (option.name.empty()) return;
+  for (unsigned i = 0; i < options_.size(); ++i) {
+    if (options_[i].name == option.name) {
+      options_[i] = option;
+      return;
     }
   }
-
-  // read preference value
-  PREFERENCE->Load(kSettingPath);
+  options_.push_back(option);
+  InitValueWithOption(option);
 }
 
-void Setting::Save()
+void PrefData::InitValueWithOption(const OptionDesc& option)
 {
-  PREFERENCE->Save(kSettingPath);
+  // TODO: check is default value fits with constraint?
+  // TODO: check constraint if value if already set before adding option?
+  if (!option.def.empty())
+    set(option.name, option.def);
+}
+
+// PrefValue class
+
+void PrefValue<std::string>::_value_load()
+{
+  std::string* v = PREFDATA->get(name_);
+  if (!v) return;
+  v_ = *v;
+}
+
+void PrefValue<std::string>::_value_set()
+{
+  PREFDATA->set(name_, v_);
+}
+
+void PrefValue<int>::_value_load()
+{
+  std::string* v = PREFDATA->get(name_);
+  if (!v) return;
+  v_ = atoi(v->c_str());
+}
+
+void PrefValue<int>::_value_set()
+{
+  char _t[32];
+  itoa(v_, _t, 10);
+  PREFDATA->set(name_, _t);
+}
+
+void PrefValue<unsigned>::_value_load()
+{
+  std::string* v = PREFDATA->get(name_);
+  if (!v) return;
+  v_ = (unsigned) atoi(v->c_str());
+}
+
+void PrefValue<unsigned>::_value_set()
+{
+  char _t[32];
+  itoa((int) v_, _t, 10);
+  PREFDATA->set(name_, _t);
+}
+
+void PrefValue<bool>::_value_load()
+{
+  std::string *v = PREFDATA->get(name_);
+  if (!v) return;
+  v_ = (*v == "1") || (*v == "true");
+}
+
+void PrefValue<bool>::_value_set()
+{
+  PREFDATA->set(name_, v_ ? "true" : "false");
 }
 
 
-// ------------------------------------------------------------- PreferenceList
+// PrefOptions class
 
-PreferenceList::~PreferenceList() { Clear(); }
-
-void PreferenceList::AddInt(const std::string &key, Preference<int> *pf)
+PrefOptionList::PrefOptionList(const std::string& name, const std::string& values) :
+  v_(name), index_(0), constraint_(values)
 {
-  auto i = pref_i_.find(key);
-  R_ASSERT(i == pref_i_.end());
-  pref_i_[key] = pf;
-  if (!pf->is_static())
-    non_static_prefs_.push_back(pf);
-}
-
-void PreferenceList::AddFloat(const std::string &key, Preference<float> *pf)
-{
-  auto i = pref_f_.find(key);
-  R_ASSERT(i == pref_f_.end());
-  pref_f_[key] = pf;
-  if (!pf->is_static())
-    non_static_prefs_.push_back(pf);
-}
-
-void PreferenceList::AddString(const std::string &key,
-  Preference<std::string> *pf)
-{
-  auto i = pref_s_.find(key);
-  R_ASSERT(i == pref_s_.end());
-  pref_s_[key] = pf;
-  if (!pf->is_static())
-    non_static_prefs_.push_back(pf);
-}
-
-void PreferenceList::AddFile(const std::string &key,
-  Preference<std::string> *pf)
-{
-  auto i = pref_file_.find(key);
-  R_ASSERT(i == pref_file_.end());
-  pref_file_[key] = pf;
-  if (!pf->is_static())
-    non_static_prefs_.push_back(pf);
-}
-
-void PreferenceList::SetInt(const std::string &key, int v)
-{
-  auto *pf = GetInt(key);
-  if (pf) *pf = v;
-}
-
-void PreferenceList::SetFloat(const std::string &key, float v)
-{
-  auto *pf = GetFloat(key);
-  if (pf) *pf = v;
-}
-
-void PreferenceList::SetString(const std::string &key, const std::string &v)
-{
-  auto *pf = GetString(key);
-  if (pf) *pf = v;
-}
-
-void PreferenceList::SetFile(const std::string &key, const std::string &v)
-{
-  auto *pf = GetFile(key);
-  if (pf) *pf = v;
-}
-
-Preference<int>* PreferenceList::GetInt(const std::string &key)
-{
-  auto i = pref_i_.find(key);
-  if (i != pref_i_.end()) return i->second;
-  else return nullptr;
-}
-
-Preference<float>* PreferenceList::GetFloat(const std::string &key)
-{
-  auto i = pref_f_.find(key);
-  if (i != pref_f_.end()) return i->second;
-  else return nullptr;
-}
-
-Preference<std::string>* PreferenceList::GetString(const std::string &key)
-{
-  auto i = pref_s_.find(key);
-  if (i != pref_s_.end()) return i->second;
-  else return nullptr;
-}
-
-Preference<std::string>* PreferenceList::GetFile(const std::string &key)
-{
-  auto i = pref_file_.find(key);
-  if (i != pref_file_.end()) return i->second;
-  else return nullptr;
-}
-
-void PreferenceList::Load(const std::string &path)
-{
-  MetricGroup m;
-  m.Load(path);
-  Load(m);
-}
-
-void PreferenceList::Load(const MetricGroup &m)
-{
-  // Add elements if necessary
-  for (auto i = m.group_cbegin(); i != m.group_cend(); ++i)
-  {
-    if (i->name() == "option")
-    {
-      std::string name;
-      std::string type;
-      std::string constraint;
-      std::string desc = "(none)";
-      i->get_safe("name", name);
-      i->get_safe("type", type);
-      i->get_safe("con", constraint);
-      i->get_safe("desc", desc);
-      if (name.empty() || type.empty()) continue;
-      if (type == "int" || type == "number")
-      {
-        int def;
-        i->get_safe("def", def);
-        pref_i_[name] = new Preference<int>(def, desc, constraint, false);
-      }
-      else if (type == "float")
-      {
-        double def;
-        i->get_safe("def", def);
-        pref_f_[name] = new Preference<float>((float)def, desc, constraint, false);
-      }
-      else if (type == "text" || type == "string" || type == "option"
-            || type == "file")
-      {
-        std::string def;
-        i->get_safe("def", def);
-        auto *pref = new Preference<std::string>(def, desc, constraint, false);
-        if (type == "file")
-          pref_file_[name] = pref;
-        else
-          pref_s_[name] = pref;
-      }
+  Split(values, ',', list_);
+  for (unsigned i = 0; i < list_.size(); ++i) {
+    if (v_ == list_[i]) {
+      index_ = i;
+      return;
     }
   }
-
-  // Load values
-  for (auto i : pref_i_)
-    m.get_safe(format_string("%s.value", i.first.c_str()), **i.second);
-  for (auto i : pref_f_)
-    m.get_safe(format_string("%s.value", i.first.c_str()), **i.second);
-  for (auto i : pref_s_)
-    m.get_safe(format_string("%s.value", i.first.c_str()), **i.second);
-  for (auto i : pref_file_)
-    m.get_safe(format_string("%s.value", i.first.c_str()), **i.second);
+  set(0);
 }
 
-bool PreferenceList::Save(const std::string &path)
+PrefOptionList::PrefOptionList(const std::string& name, const std::vector<std::string>& list) :
+  v_(name), list_(list), index_(0)
 {
-  if (path.empty()) return false;
-  tinyxml2::XMLDocument doc;
-  XMLElement *root = doc.NewElement(kDefaultRootTagName);
-  doc.InsertFirstChild(root);
-
-  XMLElement *nodeval;
-
-  for (auto &i : pref_i_)
-  {
-    nodeval = doc.NewElement(i.first.c_str());
-    root->InsertFirstChild(nodeval);
-    nodeval->SetAttribute("value", **i.second);
+  for (unsigned i = 0; i < list_.size(); ++i) {
+    if (v_ == list_[i]) {
+      index_ = i;
+      return;
+    }
   }
-  for (auto &i : pref_f_)
-  {
-    nodeval = doc.NewElement(i.first.c_str());
-    root->InsertFirstChild(nodeval);
-    nodeval->SetAttribute("value", **i.second);
-  }
-  for (auto &i : pref_s_)
-  {
-    nodeval = doc.NewElement(i.first.c_str());
-    root->InsertFirstChild(nodeval);
-    nodeval->SetAttribute("value", (**i.second).c_str());
-  }
-  for (auto &i : pref_file_)
-  {
-    nodeval = doc.NewElement(i.first.c_str());
-    root->InsertFirstChild(nodeval);
-    nodeval->SetAttribute("value", (**i.second).c_str());
-  }
-
-  return doc.SaveFile(path.c_str()) == XML_SUCCESS;
+  set(0);
 }
 
-void PreferenceList::Clear()
+void PrefOptionList::set(const std::string& value)
 {
-  // Non-static preference objects should be stored separated.
-  // If not, static preference memory will be removed first,
-  // And Clear() method will be work after that. And at that time
-  // we cannot see preference->is_static? member correctly,
-  // which will see wrong memory address and cause SIGSEGV.
-  for (auto *p : non_static_prefs_)
-    delete p;
-  non_static_prefs_.clear();
-
-  // XXX: tidy code with template
-  for (auto i = pref_i_.begin(); i != pref_i_.end(); )
-  {
-    if (!i->second->is_static())
-      pref_i_.erase(i++);
-    else
-      ++i;
-  }
-
-  for (auto i = pref_f_.begin(); i != pref_f_.end(); )
-  {
-    if (!i->second->is_static())
-      pref_f_.erase(i++);
-    else
-      ++i;
-  }
-
-  for (auto i = pref_s_.begin(); i != pref_s_.end(); )
-  {
-    if (!i->second->is_static())
-      pref_s_.erase(i++);
-    else
-      ++i;
-  }
-
-  for (auto i = pref_file_.begin(); i != pref_file_.end(); )
-  {
-    if (!i->second->is_static())
-      pref_file_.erase(i++);
-    else
-      ++i;
+  unsigned i = 0;
+  if (list_.empty()) return;
+  for (unsigned i = 0; i < list_.size(); ++i) {
+    if (value == list_[i]) {
+      v_ = value;
+      index_ = i;
+      break;
+    }
   }
 }
 
-SystemPreference::SystemPreference() :
-  resolution("1280x800", "Screen resolution",
-    "640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200", true),
-  sound_buffer_size(2048, "Sound buffer size (bigger, longer latency)",
-    "512,1024,2048,3072,4096,8192", true),
+void PrefOptionList::set(unsigned i)
+{
+  if (list_.empty()) return;
+  index_ = i < list_.size() ? i : 0;
+  v_ = list_[index_];
+}
+
+const std::string& PrefOptionList::get() const
+{
+  return v_.get();
+}
+
+void PrefOptionList::next()
+{
+  if (list_.empty()) return;
+  index_ = (index_ + 1) % list_.size();
+  v_ = list_[index_];
+}
+
+void PrefOptionList::prev()
+{
+  if (list_.empty()) return;
+  index_ = index_ == 0 ? list_.size() - 1 : index_ - 1;
+  v_ = list_[index_];
+}
+
+unsigned PrefOptionList::index() const
+{
+  return index_;
+}
+
+const std::string& PrefOptionList::get_constraint() const
+{
+  return constraint_;
+}
+
+static std::vector<std::string> GetFileList(const std::string& path)
+{
+  std::vector<std::string> l;
+  PATH->GetAllPaths(path, l);
+  return l;
+}
+
+PrefOptionFile::PrefOptionFile(const std::string& name, const std::string& path) :
+  PrefOptionList(name, GetFileList(path))
+{
+  constraint_ = path;
+}
+
+// ------------------------------------------------------------- Preference
+
+/**
+Preference::Preference() :
+  resolution("1280x800",// "Screen resolution",
+    "640x480,800x600,1280x960,1280x720,1440x900,1600x1050,1920x1200"),
+  sound_buffer_size(2048,// "Sound buffer size (bigger, longer latency)",
+    "512,1024,2048,3072,4096,8192"),
   gamemode(3, "Set gamemode to play.", "ALL,4Key,5Key,6Key,7Key,8Key,Popn,10Key,14Key", true),
   logging(1, "For development.", "0,1", true),
   maximum_thread(4, "Maximum working thread count that program will use", "0,1,2,3,4,6,8,12,16", true),
@@ -1214,7 +844,7 @@ SystemPreference::SystemPreference() :
 SystemPreference::~SystemPreference()
 {
 }
-
+*/
 
 // ------------------------------------------------------------------ KeyConfig
 
@@ -1251,11 +881,35 @@ void KeySetting::Load(const MetricGroup &metric)
       metric.get_safe(format_string("Key%02u%02u", i, j), keycode_per_track_[i][j]);
 }
 
+void KeySetting::Load(const std::string& s)
+{
+  unsigned si = 0;
+  char _t[5];
+  _t[4] = '\0';
+
+  // TODO: keymap per gamemode
+  while (si < s.size() / 4) {
+    memcpy(_t, s.c_str() + si * 4, 4);
+    keycode_per_track_[si / 4][si % 4] = (unsigned)atoi(_t);
+    ++si;
+  }
+}
+
 void KeySetting::Save(MetricGroup &metric)
 {
   for (unsigned i = 0; i < kMaxLaneCount; ++i)
     for (unsigned j = 0; j < 4; ++j)
       metric.set(format_string("Key%02u%02u", i, j), keycode_per_track_[i][j]);
+}
+
+void KeySetting::Save(std::string& s)
+{
+  std::stringstream ss;
+  // TODO: keymap per gamemode
+  for (unsigned i = 0; i < kMaxLaneCount; ++i)
+    for (unsigned j = 0; j < 4; ++j)
+      ss << format_string("%04u", keycode_per_track_[i][j]);
+  s = ss.str();
 }
 
 int KeySetting::GetTrackFromKeycode(int keycode) const
@@ -1267,8 +921,75 @@ int KeySetting::GetTrackFromKeycode(int keycode) const
   return -1;
 }
 
-MetricGroup *METRIC = nullptr;
-SystemPreference *PREFERENCE = nullptr;
+
+
+// ------------------------------ class Setting
+
+/**
+ * Initialize config objects.
+ * @warn Must be called before initializing all other objects.
+ */
+void Setting::Initialize()
+{
+  METRIC = new MetricGroup();
+  METRIC->set_name("game");
+  PREFDATA = new PrefData();
+  KEYPREF = new KeySetting();
+  Setting::Reload();
+}
+
+/**
+ * Cleanup config objects.
+ * @warn Must be called after all other objects are destroyed.
+ */
+void Setting::Cleanup()
+{
+  delete KEYPREF;
+  delete PREFDATA;
+  delete METRIC;
+  KEYPREF = nullptr;
+  PREFDATA = nullptr;
+  METRIC = nullptr;
+}
+
+void Setting::Reload()
+{
+  static const char* metric_option_attrs[] = {
+    "SoundSet",
+    "SelectScene",
+    "DecideScene",
+    "Play7Key",
+    "ResultScene",
+    "CourseResultScene",
+    0
+  };
+  static const char* fallback_metric_path = "themes/_fallback/theme.xml";
+
+  // clear non-static preference and clear theme metric.
+  PREFDATA->Clear();
+  KEYPREF->Default();
+  METRIC->clear();
+
+  // read preference value
+  METRIC->Load(fallback_metric_path);
+  PREFDATA->LoadValue(kSettingPath);
+  auto* key = PREFDATA->get("key");
+  if (key) KEYPREF->Load(*key);
+}
+
+void Setting::Save()
+{
+  std::string key;
+  KEYPREF->Save(key);
+  PREFDATA->set("key", key);
+  if (!PREFDATA->SaveValue())
+    Logger::Error("Failed to save system preference.");
+}
+
+
+PrefData* PREFDATA = nullptr;
+KeySetting* KEYPREF = nullptr;
+MetricGroup* METRIC = nullptr;
 
 // ------------------------ Serialization
 
@@ -1458,7 +1179,7 @@ const char *_metricname[] = {
 class LR2CSVSoundHandlers
 {
 public:
-  static void set_sound_metric(LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool set_sound_metric(LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     unsigned i = 0;
     MetricGroup *soundmetric = METRIC->get_group("Sound");
@@ -1472,13 +1193,14 @@ public:
       }
       ++i;
     }
+    return true;
   }
   LR2CSVSoundHandlers()
   {
     unsigned i = 0;
     while (_LR2name[i])
     {
-      LR2CSVExecutor::AddHandler(_LR2name[i], (LR2CSVCommandHandler)&set_sound_metric);
+      LR2CSVExecutor::AddHandler(_LR2name[i], (LR2CSVHandlerFunc)&set_sound_metric);
       ++i;
     }
   }

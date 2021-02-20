@@ -69,6 +69,7 @@ struct ChartMetaData
   std::string songpath;
   std::string chartpath;
   int type;
+  int key;
   int level;
   int difficulty;
   int judgediff;

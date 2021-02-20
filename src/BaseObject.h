@@ -288,6 +288,9 @@ public:
   virtual const char* type() const;
   virtual std::string toString() const;
 
+  // is dynamically created (allocated) object?
+  bool is_dynamic() const;
+
   /**
    * @brief Creates new object by given type.
    */

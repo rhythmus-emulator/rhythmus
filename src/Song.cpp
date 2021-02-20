@@ -193,6 +193,7 @@ public:
           break;
         }
         cdat->type = type;
+        cdat->key = c->GetKeycount();
         cdat->difficulty = difficulty;
         cdat->level = meta.level;
         cdat->judgediff = meta.difficulty;
@@ -293,13 +294,14 @@ bool SongList::LoadFromDatabase(const std::string& path)
       Logger::Error("Failed to query song table from database, maybe corrupted? (%s)", errmsg);
       sqlite3_free(errmsg);
       sqlite3_close(db);
+      Clear();
       return false;
     }
 
     // Load all cached charts
     rc = sqlite3_exec(db,
       "SELECT id, title, subtitle, artist, subartist, genre, "
-      "songpath, chartpath, type, level, judgediff, modified_date, "
+      "songpath, chartpath, type, key, level, judgediff, modified_date, "
       "notecount, length_ms, bpm_max, bpm_min, is_longnote, is_backspin "
       "from charts;",
       &SongList::sql_chartlist_callback, this, &errmsg);
@@ -307,6 +309,7 @@ bool SongList::LoadFromDatabase(const std::string& path)
       Logger::Error("Failed to query chart table from database, maybe corrupted? (%s)", errmsg);
       sqlite3_free(errmsg);
       sqlite3_close(db);
+      Clear();
       return false;
     }
     sqlite3_close(db);
@@ -316,13 +319,40 @@ bool SongList::LoadFromDatabase(const std::string& path)
   for (auto* c : charts_) {
     auto* song = FindSong(c->songpath);
     if (!song) {
+      // XXX: mismatched chart should be deleted from array?
       Logger::Error("Failed to find songs matching with chart %s (%s)",
                     c->chartpath.c_str(), c->songpath.c_str());
       continue;
     }
     c->song = song;
-    if (song->chart == nullptr) song->chart = c;
+    if (song->chart == nullptr) {
+      song->chart = c;
+      c->prev = c->next = c;
+    }
+    else {
+      c->next = song->chart;
+      c->prev = song->chart->prev;
+      song->chart->next = c;
+      song->chart->prev->next = c;
+    }
     song->count++;
+  }
+
+  // Logging
+  if (PrefValue<bool>("log_songlist") == true) {
+    unsigned i = 0, cnt = 0;
+    Logger::Info("-- Songlist Logging: LoadFromDatabase --");
+    for (auto* s : songs_) {
+      i = 0;
+      auto* chart = s->chart;
+      Logger::Info("Song: %s (%d, %lu)", s->path, s->type, s->modified_time);
+      do {
+        Logger::Info("[%u] %s (%d)", i, chart->title, chart->difficulty);
+        ++i;
+      } while (chart != s->chart);
+      cnt += i;
+    }
+    Logger::Info("Chart count: %u/%u", cnt, charts_.size());
   }
 
   return true;
@@ -330,17 +360,10 @@ bool SongList::LoadFromDatabase(const std::string& path)
 
 bool SongList::CreateDatabase(sqlite3 *db)
 {
-  // Delete all records and tables
   char* errmsg;
   int rc;
-  rc = sqlite3_exec(db, "DROP TABLE charts;",
-    &SongList::sql_dummy_callback, this, &errmsg);
-  if (rc != SQLITE_OK)
-  {
-    // drop table might be failed, ignore.
-    sqlite3_free(errmsg);
-  }
 
+  // Delete all records and tables
   rc = sqlite3_exec(db, "DROP TABLE songs;",
     &SongList::sql_dummy_callback, this, &errmsg);
   if (rc != SQLITE_OK)
@@ -349,9 +372,17 @@ bool SongList::CreateDatabase(sqlite3 *db)
     sqlite3_free(errmsg);
   }
 
+  rc = sqlite3_exec(db, "DROP TABLE charts;",
+    &SongList::sql_dummy_callback, this, &errmsg);
+  if (rc != SQLITE_OK)
+  {
+    // drop table might be failed, ignore.
+    sqlite3_free(errmsg);
+  }
+
   // Create tables
-  sqlite3_exec(db, "CREATE TABLE songs("
-    "path CHAR(128) PRIMARY KEY,"
+  rc = sqlite3_exec(db, "CREATE TABLE songs("
+    "path CHAR(1024) PRIMARY KEY,"
     "type INT,"
     "modified_date INT"
     ");",
@@ -363,7 +394,8 @@ bool SongList::CreateDatabase(sqlite3 *db)
     sqlite3_close(db);
     return false;
   }
-  sqlite3_exec(db, "CREATE TABLE charts("
+
+  rc = sqlite3_exec(db, "CREATE TABLE charts("
     "id CHAR(128) PRIMARY KEY,"
     "title CHAR(128),"
     "subtitle CHAR(128),"
@@ -371,8 +403,9 @@ bool SongList::CreateDatabase(sqlite3 *db)
     "subartist CHAR(128),"
     "genre CHAR(64),"
     "songpath CHAR(1024) NOT NULL,"
-    "chartpath CHAR(512) NOT NULL,"
+    "chartpath CHAR(1024) NOT NULL,"
     "type INT,"
+    "key INT,"
     "level INT,"
     "judgediff INT,"
     "modified_date INT,"
@@ -500,7 +533,7 @@ void SongList::Update()
     TaskPool::getInstance().EnqueueTask(t);
 
   Logger::Info("Songlist reload status: File found(song) %u, "
-               "Cache found(chart) %u, Validate(song) %u",
+               "Cache found(song) %u, Validate(song) %u",
     dir.size(), songs_.size(), total_inval_size_);
 }
 
@@ -510,13 +543,13 @@ int SongList::sql_songlist_callback(void* _self, int argc, char** argv, char** c
   SongMetaData* song = new SongMetaData();
 
   song->path = argv[0];
-  song->type = 0;
-  song->modified_time = atoi(argv[1]);
+  song->type = atoi(argv[1]);
+  song->modified_time = atoi(argv[2]);
   song->count = 0;
   song->chart = nullptr;
 
   self->PushSong(song);
-  return true;
+  return 0; /* normal return */
 }
 
 int SongList::sql_chartlist_callback(void *_self, int argc, char **argv, char **colnames)
@@ -533,24 +566,23 @@ int SongList::sql_chartlist_callback(void *_self, int argc, char **argv, char **
   chart->songpath = argv[6];
   chart->chartpath = argv[7];
   chart->type = atoi(argv[8]);
-  chart->level = atoi(argv[9]);
-  chart->judgediff = atoi(argv[10]);
-  chart->modified_date = atoi(argv[11]);
-  chart->notecount = atoi(argv[12]);
-  chart->length_ms = atoi(argv[13]);
-  chart->bpm_max = atoi(argv[14]);
-  chart->bpm_min = atoi(argv[15]);
-  chart->is_longnote = atoi(argv[16]);
-  chart->is_backspin = atoi(argv[17]);
+  chart->key = atoi(argv[9]);
+  chart->level = atoi(argv[10]);
+  chart->judgediff = atoi(argv[11]);
+  chart->modified_date = atoi(argv[12]);
+  chart->notecount = atoi(argv[13]);
+  chart->length_ms = atoi(argv[14]);
+  chart->bpm_max = atoi(argv[15]);
+  chart->bpm_min = atoi(argv[16]);
+  chart->is_longnote = atoi(argv[17]);
+  chart->is_backspin = atoi(argv[18]);
   chart->song = nullptr;
   chart->next = chart->prev = nullptr;
 
-  if (self->PushChart(chart))
-    return true;
+  if (!self->PushChart(chart))
+    delete chart; /* if duplicated then delete */
 
-  // if failed
-  delete chart;
-  return false;
+  return 0; /* normal return */
 }
 
 void SongList::Save()
@@ -568,15 +600,15 @@ void SongList::Save()
     {
       std::string sql = format_string(
         "INSERT INTO songs VALUES ("
-        "'%s', %d"
+        "'%s', %d, %d"
         ");",
-        s->path.c_str(), s->modified_time
+        s->path.c_str(), s->type, s->modified_time
       );
       sqlite3_exec(db, sql.c_str(),
         &SongList::sql_dummy_callback, this, &errmsg);
       if (rc != SQLITE_OK)
       {
-        std::cerr << "Failed SQL: " << errmsg << ")" << std::endl;
+        Logger::Error("Failed SQL: %s", errmsg);
         sqlite3_free(errmsg);
         sqlite3_close(db);
         return;
@@ -586,19 +618,21 @@ void SongList::Save()
     {
       std::string sql = format_string(
         "INSERT INTO charts VALUES ("
-        "'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s',"
-        "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d"
+        "'%s', '%s', '%s', '%s', '%s',"
+        "'%s', '%s', '%s',"
+        "%d, %d, %d, %d, %d, "
+        "%d, %d, %d, %d, %d, %d"
         ");",
         s->id.c_str(), s->title.c_str(), s->subtitle.c_str(), s->artist.c_str(), s->subartist.c_str(),
-        s->genre.c_str(),
-        s->songpath.c_str(), s->chartpath.c_str(), s->type, s->level, s->judgediff, s->modified_date,
+        s->genre.c_str(), s->songpath.c_str(), s->chartpath.c_str(),
+        s->type, s->key, s->level, s->judgediff, s->modified_date,
         s->notecount, s->length_ms, s->bpm_max, s->bpm_min, s->is_longnote, s->is_backspin
       );
       sqlite3_exec(db, sql.c_str(),
         &SongList::sql_dummy_callback, this, &errmsg);
       if (rc != SQLITE_OK)
       {
-        std::cerr << "Failed SQL: " << errmsg << ")" << std::endl;
+        Logger::Error("Failed SQL: %s", errmsg);
         sqlite3_free(errmsg);
         sqlite3_close(db);
         return;
