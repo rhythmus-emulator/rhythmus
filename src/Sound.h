@@ -75,7 +75,7 @@ public:
   rmixer::Channel *get_channel();
 
   bool is_empty() const;
-  bool is_loading() const;
+  bool is_loaded() const;
 
 private:
   SoundData *sounddata_;

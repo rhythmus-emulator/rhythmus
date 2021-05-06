@@ -13,10 +13,11 @@ namespace rhythmus
 
 // ------------------------- class SongResource
 
-SongPlayer::SongPlayer()
-  : song_(nullptr), playlist_index_(0), state_(SongPlayerState::STOPPED),
-    load_progress_(.0), play_progress_(.0),
-    load_bga_(true), play_after_loading_(false), action_after_playing_(1)
+SongPlayer::SongPlayer() :
+  song_(nullptr), playlist_index_(0), state_(SongPlayerState::STOPPED),
+  load_count_(0), total_count_(0), load_callback_(load_count_),
+  load_progress_(.0), play_progress_(.0),
+  load_bga_(true), play_after_loading_(false), action_after_playing_(1)
 {
   memset(sessions_, 0, sizeof(sessions_));
 }
@@ -66,8 +67,7 @@ bool SongPlayer::LoadNext()
     return true;
 
   /* if nothing in playlist (unable to load), then reset and return false */
-  if (playlist_.empty())
-  {
+  if (playlist_.empty()) {
     Stop();
     return false;
   }
@@ -77,13 +77,14 @@ bool SongPlayer::LoadNext()
    * reset variables and fetch play info.
    */
   state_ = SongPlayerState::LOADING;
+  load_count_ = 0;
+  total_count_ = 0;
   load_progress_ = 0;
   auto *pctx = GetSongPlayinfo();
   ++playlist_index_;
 
   /* load song file without resource. */
-  if (!pctx)
-  {
+  if (!pctx) {
     Stop();
     Logger::Error("Attempt to play song but no song queued for playing.");
     return false;
@@ -116,7 +117,7 @@ bool SongPlayer::LoadNext()
     c->Update();
     sessions_[i] = new PlaySession(i, p, *c);
 
-    /* load resource (expecting async mode) */
+    /* load resource in async */
     LoadResourceFromChart(*c, i);
   }
   END_EACH_PLAYER();
@@ -217,20 +218,13 @@ void SongPlayer::Update(float delta)
   case SongPlayerState::LOADING:
     // update load progress
     {
-    size_t load_count = 0;
-    size_t total_load_count = image_arr_.size() + sound_arr_.size();
-    for (auto *img : image_arr_)
-      if (!img->is_loading()) load_count++;
-    for (auto *snd : sound_arr_)
-      if (!snd->is_loading()) load_count++;
-    if (total_load_count == 0)
+    if (total_count_ == 0)
       load_progress_ = 1.0;
     else
-      load_progress_ = load_count / (double)total_load_count;
+      load_progress_ = load_count_ / (double)total_count_;
     }
     // if done, check play immediate after loading.
-    if (load_progress_ >= 1.0)
-    {
+    if (load_progress_ >= 1.0) {
       if (play_after_loading_)
         Play();
       else
@@ -316,9 +310,10 @@ void SongPlayer::LoadSongAsync(const std::string& path)
 
 void SongPlayer::LoadResourceFromChart(rparser::Chart &c, unsigned session)
 {
+  R_ASSERT(state_ == SongPlayerState::LOADING);
+
   auto *dir = song_->GetDirectory();
-  if (!dir)
-  {
+  if (!dir) {
     /* some types of song (e.g. MIDI based like VOS) has no resource directory. */
     return;
   }
@@ -333,30 +328,25 @@ void SongPlayer::LoadResourceFromChart(rparser::Chart &c, unsigned session)
   /* read resources */
   const char *fn, *p;
   size_t len;
-  for (unsigned i = 0; i < kMaxChannelCount; ++i)
-  {
-    if (!bga_fn_[session][i].empty())
-    {
-      Image *img;
+  for (unsigned i = 0; i < kMaxChannelCount; ++i) {
+    if (!bga_fn_[session][i].empty()) {
       fn = bga_fn_[session][i].c_str();
-      if (dir->GetFile(bga_fn_[session][i], &p, len) && len > 0)
-      {
-        img = new Image();
-        img->Load(p, len, fn);
-        bga_[session][i] = img;
-        image_arr_.push_back(img);
+      if (dir->GetFile(bga_fn_[session][i], &p, len) && len > 0) {
+        bga_[session][i] = IMAGEMAN->LoadAsync(p, len, fn, &load_callback_);
+        image_arr_.push_back(bga_[session][i]);
+        total_count_++;
       }
     }
-    if (!bgm_fn_[session][i].empty())
-    {
+    if (!bgm_fn_[session][i].empty()) {
       Sound *s;
       fn = bgm_fn_[session][i].c_str();
-      if (dir->GetFile(bgm_fn_[session][i], &p, len) && len > 0)
-      {
+      if (dir->GetFile(bgm_fn_[session][i], &p, len) && len > 0) {
         s = new Sound();
-        s->Load(p, len, fn);
+        // TODO: Add LoadAsync() method to Sound object
+        s->Load(SOUNDMAN->LoadAsync(p, len, fn, &load_callback_));
         bgm_[session][i] = s;
         sound_arr_.push_back(s);
+        total_count_++;
       }
     }
   }

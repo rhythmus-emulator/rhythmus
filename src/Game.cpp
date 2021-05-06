@@ -119,7 +119,7 @@ void Game::Initialize()
   GAME->InitializeHandler();
 
   // initialize threadpool / graphic / sound
-  TaskPool::getInstance().SetPoolSize(4);
+  TaskPool::Initialize();
   Graphic::CreateGraphic();
   SoundDriver::getInstance().Initialize();
 
@@ -148,8 +148,7 @@ void Game::Loop()
         * COMMENT: Event must be processed before Update() method
         * (e.g. Wheel flickering when items Rebuild after Event flush)
         */
-      if (GRAPHIC->IsVsyncUpdatable())
-      {
+      if (GRAPHIC->IsVsyncUpdatable()) {
         Timer::Update();
         InputEventManager::Flush();
         EVENTMAN->Flush();
@@ -171,8 +170,7 @@ void Game::Loop()
         /* Flush stdout into log message */
         Logger::getInstance().Flush();
       }
-      else
-      {
+      else {
         // TODO: remove this part, and use dynamic async rendering
         std::this_thread::sleep_for(std::chrono::microseconds(10));
       }
@@ -198,13 +196,14 @@ void Game::Loop()
 void Game::Cleanup()
 {
   // Stop all working tasks first
-  TaskPool::getInstance().ClearTaskPool();
+  TASKMAN->AbortAllTask();
 
   // Delete all other elements
   SongPlayer::getInstance().Stop();
   SongList::Cleanup();
   PlayerManager::Cleanup();
   SceneManager::Cleanup();
+  TaskPool::Destroy();
   Graphic::DeleteGraphic();
   SoundDriver::getInstance().Destroy();
   Setting::Save();

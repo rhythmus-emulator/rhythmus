@@ -11,6 +11,8 @@
 namespace rhythmus
 {
 
+class Task;
+
 class SceneTask
 {
 public:
@@ -63,6 +65,8 @@ public:
   /* @brief start scene e.g. start scene timer */
   virtual void StartScene();
 
+  bool IsLoading() const;
+
   /* @brief Register as predefined object. (for static allocated object) */
   void RegisterPredefObject(BaseObject *obj);
 
@@ -96,6 +100,8 @@ protected:
 
   std::string prev_scene_, next_scene_;
 
+  // Task ID for checking scene loading
+  Task* scene_loading_task_;
 private:
   // fade in/out specified time
   // fade_duration with positive: fade-in

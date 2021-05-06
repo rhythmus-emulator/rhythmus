@@ -53,14 +53,12 @@ void Sprite::Load(const MetricGroup &m)
   else if (m.exist("src"))
     SetImage(m.get_str("src"));
 
-  if (m.exist("crop"))
-  {
+  if (m.exist("crop")) {
     CommandArgs args(m.get_str("crop"), 4, true);
     SetImageCoord(Vector4{ args.Get<int>(0), args.Get<int>(1),
       args.Get<int>(2), args.Get<int>(3) });
   }
-  else if (m.exist("croptex"))
-  {
+  else if (m.exist("croptex")) {
     CommandArgs args(m.get_str("croptex"), 4, true);
     SetTextureCoord(Vector4{ args.Get<int>(0), args.Get<int>(1),
       args.Get<int>(2), args.Get<int>(3) });
@@ -74,8 +72,7 @@ void Sprite::OnReady()
 
 void Sprite::SetImage(const std::string &path)
 {
-  if (img_)
-  {
+  if (img_) {
     IMAGEMAN->Unload(img_);
     img_ = nullptr;
   }

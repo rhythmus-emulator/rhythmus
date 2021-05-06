@@ -88,12 +88,9 @@ void SceneManager::Update()
 
   // Check is it okay to change scene (when loading is done)
   // StartScene is called here. (time critical process)
-  // XXX: Checking scene loading by ResourceManager is too naive...
-  if (next_scene_)
-  {
+  if (next_scene_) {
     loading_next_scene = true;
-    if (!ResourceManager::IsLoading())
-    {
+    if (!next_scene_->IsLoading()) {
       delete current_scene_;
       current_scene_ = next_scene_;
       next_scene_ = nullptr;
@@ -121,18 +118,15 @@ void SceneManager::Update()
     background_scene_->Update(delta);
 
   // update main scene
-  try
-  {
+  try {
     if (!loading_next_scene && current_scene_ && !GAME->IsPaused())
       current_scene_->Update(delta);
   }
-  catch (const RetryException& e)
-  {
+  catch (const RetryException& e) {
     /* TODO: create retryexception dialog */
     GAME->AlertMessageBox(e.exception_name(), e.what());
   }
-  catch (const RuntimeException& e)
-  {
+  catch (const RuntimeException& e) {
     GAME->AlertMessageBox(e.exception_name(), e.what());
   }
 }
@@ -336,12 +330,13 @@ void SceneManager::SetSceneScript(const std::string& name, const std::string& sc
   scene_scripts_[name] = script_path;
 }
 
-void SceneManager::RunSceneScript(Scene *s)
+std::string SceneManager::GetSceneScript(Scene *s)
 {
-  if (!s || s->get_name().empty()) return;
+  if (!s || s->get_name().empty()) return "";
   auto i = scene_scripts_.find(s->get_name());
   if (i != scene_scripts_.end())
-    Script::Load(i->second, s);
+    return i->second;
+  return "";
 }
 
 Scene* SceneManager::get_current_scene()

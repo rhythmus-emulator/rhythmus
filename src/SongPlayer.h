@@ -8,6 +8,7 @@
 #include "rparser.h"
 #include <list>
 #include <mutex>
+#include <atomic>
 
 namespace rhythmus
 {
@@ -25,6 +26,15 @@ enum class SongPlayerState
   PLAYING,
   PAUSED,
   FINISHED
+};
+
+class SongResourceLoadCallback : public ITaskCallback
+{
+public:
+  SongResourceLoadCallback(std::atomic<unsigned>& v) : v_(&v) {};
+  virtual void run() { (*v_)++; }
+private:
+  std::atomic<unsigned>* v_;
 };
 
 /* @brief A singleton class. Contains song and resources. */
@@ -136,6 +146,11 @@ private:
 
   /* current state of SongPlayer */
   SongPlayerState state_;
+
+  /* loaded object count */
+  std::atomic<unsigned> load_count_;
+  unsigned total_count_;
+  SongResourceLoadCallback load_callback_;
 
   /* load progress */
   double load_progress_;

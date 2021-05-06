@@ -9,7 +9,6 @@ class OnMouse : public Sprite
 public:
   OnMouse();
   virtual ~OnMouse();
-  virtual void Load(const MetricGroup &metric);
   virtual bool IsEntered(float x, float y);
   virtual const char* type() const;
 

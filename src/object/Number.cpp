@@ -52,7 +52,6 @@ void Number::SetGlyphFromFont(const MetricGroup &m)
   font_ = FONTMAN->Load(m);
   if (!font_)
     return;
-  SleepUntilLoadFinish(font_);   // XXX: Need to remove this code
   AllocNumberGlyph(1);
 
   std::vector<TextVertexInfo> textvertex;
@@ -68,7 +67,6 @@ void Number::SetGlyphFromImage(const std::string &path, const Rect &imgcoord,
   img_ = IMAGEMAN->Load(path);
   if (!img_)
     return;
-  SleepUntilLoadFinish(img_);   // XXX: Need to remove this code
 
   /* add glyphs */
   Vector2 gsize{ imgcoord.z / divx, imgcoord.w / divy };

@@ -760,16 +760,13 @@ void GraphicGL::SetTexture(unsigned texunit, unsigned tex_id)
     return;
 
   // @warn  This might cause bug... remove later
-  if (tex_id_ != tex_id)
-  {
+  if (tex_id_ != tex_id) {
     tex_id_ = tex_id;
-    if (tex_id)
-    {
+    if (tex_id) {
       //glEnable(GL_TEXTURE_2D);
       glBindTexture(GL_TEXTURE_2D, tex_id);
     }
-    else
-    {
+    else {
       //glDisable(GL_TEXTURE_2D);
       glBindTexture(GL_TEXTURE_2D, def_tex_id_);
     }
@@ -862,6 +859,9 @@ void GraphicGL::BeginFrame()
 
   // To calculate FPS
   Graphic::BeginFrame();
+
+  // clear state
+  tex_id_ = 0;
 
   SetDefaultRenderState();
   glEnable(GL_TEXTURE_2D);
@@ -1124,6 +1124,9 @@ void GraphicGLShader::BeginFrame()
 
   // To calculate FPS
   Graphic::BeginFrame();
+
+  // clear state
+  tex_id_ = 0;
 
   SetDefaultRenderState();
   glEnable(GL_TEXTURE_2D);

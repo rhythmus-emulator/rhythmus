@@ -66,7 +66,7 @@ public:
   LR2CSVButtonHandlers()
   {
     LR2CSVExecutor::AddHandler("#SRC_BUTTON", (LR2CSVHandlerFunc)&src_button);
-    LR2CSVExecutor::AddTrigger("#SRC_BUTTON", "#SRC_BASE_");
+    LR2CSVExecutor::AddTrigger("#SRC_BUTTON", "#SRC_IMAGE");
     LR2CSVExecutor::AddTrigger("#DST_BUTTON", "#DST_BASE_");
   }
 };

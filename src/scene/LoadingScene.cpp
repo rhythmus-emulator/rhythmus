@@ -44,15 +44,12 @@ void LoadingScene::StartScene()
 
 void LoadingScene::ProcessInputEvent(const InputEvent& e)
 {
-  if (e.type() == InputEvents::kOnKeyUp)
-  {
-    if (e.KeyCode() == RI_KEY_ESCAPE)
-    {
+  if (e.type() == InputEvents::kOnKeyUp) {
+    if (e.KeyCode() == RI_KEY_ESCAPE) {
       // cancel all loading thread and exit game instantly
       Game::Exit();
     }
-    else if (SONGLIST->is_loaded())
-    {
+    else if (SONGLIST->is_loaded()) {
       CloseScene(true);
     }
   }
@@ -69,10 +66,8 @@ void LoadingScene::doUpdate(double)
     message_text_.SetText("Loading " + std::to_string(prog) + "%");
     current_file_text_.SetText(path);
   }
-  else
-  {
-    if (!check_loaded)
-    {
+  else {
+    if (!check_loaded) {
       // run first time when loading is done
       Logger::Info("LoadingScene: Song list loading finished.");
       EVENTMAN->SendEvent("SongListLoadFinished");

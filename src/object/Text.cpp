@@ -111,8 +111,7 @@ void Text::SetFont(const std::string& path)
 
   // Search for font MetricGroup with given name.
   MetricGroup *fontmetric = METRIC->get_group(path);
-  if (fontmetric)
-  {
+  if (fontmetric) {
     SetFont(*fontmetric);
     return;
   }
@@ -154,7 +153,7 @@ void Text::SetText(const std::string& s)
   if (text_ == s) return;
   ClearText();
   text_ = s;
-  if (!font_ || font_->is_loading()) return;
+  if (!font_) return;
 
   font_->PrepareText(s);
   font_->GetTextVertexInfo(text_, text_render_ctx_.textvertex, do_line_breaking_);

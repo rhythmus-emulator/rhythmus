@@ -530,7 +530,7 @@ void SongList::Update()
     }
   }
   for (auto *t : tasklist)
-    TaskPool::getInstance().EnqueueTask(t);
+    TASKMAN->EnqueueTask(t);
 
   Logger::Info("Songlist reload status: File found(song) %u, "
                "Cache found(song) %u, Validate(song) %u",
@@ -655,10 +655,8 @@ void SongList::Clear()
 void SongList::LoadFileIntoChartList(const std::string& songpath, const std::string& chartname)
 {
   // check a file is already exists
-  for (const auto *c : charts_)
-  {
-    if (c->songpath == songpath)
-    {
+  for (const auto *c : charts_) {
+    if (c->songpath == songpath) {
       if (chartname.empty() || c->chartpath == chartname)
         return; /* chart already exists */
     }
@@ -670,7 +668,7 @@ void SongList::LoadFileIntoChartList(const std::string& songpath, const std::str
     path += "|" + chartname;
   is_loaded_ = false;
   Task* t = new SongListUpdateTask(path);
-  TaskPool::getInstance().EnqueueTask(t);
+  TASKMAN->EnqueueTask(t);
 }
 
 int SongList::sql_dummy_callback(void*, int argc, char **argv, char **colnames)

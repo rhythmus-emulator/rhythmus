@@ -434,8 +434,7 @@ void Sound::Unload()
     channel_->Stop();
     channel_->UnlockChannel();
     channel_ = nullptr;
-    if (sounddata_ && is_sound_from_rm_)
-    {
+    if (sounddata_ && is_sound_from_rm_) {
       SOUNDMAN->Unload(sounddata_);
       sounddata_ = nullptr;
     }
@@ -464,9 +463,9 @@ bool Sound::is_empty() const
   return channel_ == 0;
 }
 
-bool Sound::is_loading() const
+bool Sound::is_loaded() const
 {
-  return (sounddata_ && sounddata_->is_loading());
+  return sounddata_ != nullptr;
 }
 
 }

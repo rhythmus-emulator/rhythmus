@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "SceneManager.h"       /* preference */
+#include "TaskPool.h"
 #include "Script.h"
 #include "Util.h"
 #include "Logger.h"
@@ -125,7 +126,7 @@ Scene::Scene()
   : fade_time_(0), fade_duration_(0),
     fade_in_time_(0), fade_out_time_(0),
     is_input_available_(true), begin_input_time_(0), next_scene_time_(0),
-    do_sort_objects_(false), enable_caching_(false)
+    do_sort_objects_(false), enable_caching_(false), scene_loading_task_(nullptr)
 {
 }
 
@@ -160,18 +161,37 @@ void Scene::Load(const MetricGroup &m)
   }
 }
 
+class SceneLoadTask : public Task {
+public:
+  SceneLoadTask(Scene* s) : s(s) {}
+
+  virtual void run()
+  {
+    // Load start event : Loading
+    EVENTMAN->SendEvent("Loading");
+
+    // Load metrics (e.g. Stepmania)
+    s->LoadFromName();
+
+    // Load script file
+    std::string script_path = SCENEMAN->GetSceneScript(s);
+    Script::Load(script_path, s);
+  }
+
+  virtual void abort() {}
+
+private:
+  Scene* s;
+};
+
 void Scene::LoadScene()
 {
-  std::string metric_filename;
-
-  // Load start event : Loading
-  EVENTMAN->SendEvent("Loading");
-
-  // Load metrics (e.g. Stepmania)
-  LoadFromName();
-
-  // Load script file
-  SCENEMAN->RunSceneScript(this);
+  if (scene_loading_task_ || IsLoading()) {
+    Logger::Warn("Task is already in loading, or loaded.");
+    return;
+  }
+  scene_loading_task_ = new SceneLoadTask(this);
+  TASKMAN->EnqueueTask(scene_loading_task_);
 }
 
 void Scene::StartScene()
@@ -215,6 +235,11 @@ void Scene::StartScene()
 
   // Now trigger actual 'OnLoad' event.
   EVENTMAN->SendEvent("Load");
+}
+
+bool Scene::IsLoading() const
+{
+  return TASKMAN->IsRunning(scene_loading_task_);
 }
 
 void Scene::RegisterPredefObject(BaseObject *obj)

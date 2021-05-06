@@ -4,7 +4,6 @@
 #include "Font.h"
 #include "Sound.h"
 #include "Timer.h"
-#include "TaskPool.h"
 #include "Logger.h"
 #include "Util.h"
 #include "common.h"
@@ -33,7 +32,7 @@ public:
   {
     p_ = p;
     len_ = len;
-    filename_ = name_optional;
+    if (name_optional) filename_ = name_optional;
   }
 
   void SetFilename(const std::string &filename)
@@ -55,8 +54,7 @@ public:
   {
     std::lock_guard<std::mutex> resource_lock(gResourceLoadLock);
 
-    if (obj_)
-    {
+    if (obj_) {
       if (p_ != nullptr && len_ > 0)
         obj_->Load(p_, len_,
           filename_.empty() ? nullptr : filename_.c_str());
@@ -65,8 +63,7 @@ public:
       else
         obj_->Load(filename_);
       obj_->set_parent_task(nullptr);
-      if (obj_->get_error_code() != 0)
-      {
+      if (obj_->get_error_code() != 0) {
         Logger::Error("Cannot read image %s: %s (%d)",
             filename_.c_str(), obj_->get_error_msg(),
           obj_->get_error_code());
@@ -93,7 +90,7 @@ private:
 
 
 ResourceElement::ResourceElement()
-  : parent_task_(0), ref_count_(1), is_loading_(false), error_msg_(0), error_code_(0) {}
+  : parent_task_(0), ref_count_(1), error_msg_(0), error_code_(0) {}
 
 ResourceElement::~ResourceElement() {}
 
@@ -110,17 +107,9 @@ const std::string &ResourceElement::get_name() const
 void ResourceElement::set_parent_task(Task *task)
 {
   parent_task_ = task;
-  is_loading_ = (task != nullptr);
 }
 
 Task *ResourceElement::get_parent_task() { return parent_task_; }
-
-bool ResourceElement::is_loading() const
-{
-  // parent_task_ : loader task used by async load method.
-  // is_loading_ : flag used by sync load method
-  return parent_task_ != nullptr || is_loading_;
-}
 
 ResourceElement *ResourceElement::clone() const
 {
@@ -142,17 +131,6 @@ void ResourceElement::clear_error()
 {
   error_msg_ = 0;
   error_code_ = 0;
-}
-
-// @DEPRECIATED
-// This function must be called when an object need to be loaded for sure
-// Even if ResourceContainer::load_async is true, because shared object
-// can be fetch although it isn't loaded.
-// (actually being loaded by other thread)
-void SleepUntilLoadFinish(const ResourceElement *e)
-{
-  if (!e) return;
-  while (e->is_loading()) Sleep(1);
 }
 
 void ResourceContainer::AddResource(ResourceElement *elem)
@@ -368,7 +346,7 @@ std::string PathCache::PrefixReplace(const std::string &path) const
 
 // --------------------------------------------------------- class ImageManager
 
-ImageManager::ImageManager() : load_async_(true) {}
+ImageManager::ImageManager() {}
 
 ImageManager::~ImageManager()
 {
@@ -376,6 +354,7 @@ ImageManager::~ImageManager()
     Logger::Error("ImageManager has unreleased resources. memory leak!");
 }
 
+/* This function gurantees synchronized result. */
 Image* ImageManager::Load(const std::string &path)
 {
   Image *r = nullptr;
@@ -383,32 +362,26 @@ Image* ImageManager::Load(const std::string &path)
   if (newpath.empty()) return nullptr;
   lock_.lock();
   r = (Image*)SearchResource(newpath.c_str());
-  if (!r)
-  {
+  if (!r) {
     r = new Image();
     r->set_name(newpath);
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
-    /* if not main thread, it's still "async";
-     * don't need to create other thread. */
-    if (load_async_ && GAME->is_main_thread())
-    {
-      auto *task = new ResourceLoaderTask<Image>(r);
+    lock_.unlock();
+    r->Load(newpath);
+#if 0
+    if (GAME->is_main_thread()) {
+      r->Load(newpath);
+    }
+    else {
+      auto* task = new ResourceLoaderTask<Image>(r);
       task->SetFilename(newpath);
       r->set_parent_task(task);
-      TaskPool::getInstance().EnqueueTask(task);
+      TASKMAN->Await(task);
     }
-    else
-    {
-      r->is_loading_ = true;
-      // unlock here first, as this method takes long
-      lock_.unlock();
-      r->Load(newpath);
-      lock_.lock();
-      r->is_loading_ = false;
-    }
+#endif
   }
-  lock_.unlock();
+  else lock_.unlock();
   return r;
 }
 
@@ -418,47 +391,97 @@ Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
   lock_.lock();
   if (name_opt)
     r = (Image*)SearchResource(name_opt);
-  if (!r)
-  {
+  if (!r) {
     r = new Image();
     if (name_opt) r->set_name(name_opt);
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
-    /* if not main thread, it's still "async";
-     * don't need to create other thread. */
-    if (load_async_ && GAME->is_main_thread())
-    {
-      auto *task = new ResourceLoaderTask<Image>(r);
-      task->SetData(p, len, name_opt);
-      r->set_parent_task(task);
-      TaskPool::getInstance().EnqueueTask(task);
-    }
-    else
-    {
-      r->is_loading_ = true;
-      // unlock here first, as this method takes long
-      lock_.unlock();
+    lock_.unlock();
+    r->Load(p, len, name_opt);
+#if 0
+    if (GAME->is_main_thread()) {
       r->Load(p, len, name_opt);
-      lock_.lock();
-      r->is_loading_ = false;
     }
+    else {
+      auto* task = new ResourceLoaderTask<Image>(r);
+      r->set_parent_task(task);
+      task->SetData(p, len, name_opt);
+      TASKMAN->Await(task);
+    }
+#endif
   }
-  lock_.unlock();
+  else lock_.unlock();
+  return r;
+}
+
+Image* ImageManager::LoadAsync(const std::string& path, ITaskCallback *callback)
+{
+  Image* r = nullptr;
+  std::string newpath = PATH->GetPath(path);
+  if (newpath.empty()) return nullptr;
+  lock_.lock();
+  r = (Image*)SearchResource(newpath.c_str());
+  if (!r) {
+    r = new Image();
+    r->set_name(newpath);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
+    lock_.unlock();
+    auto* task = new ResourceLoaderTask<Image>(r);
+    task->set_callback(callback);
+    task->SetFilename(newpath);
+    r->set_parent_task(task);
+    TASKMAN->Await(task);
+  }
+  else {
+    // already loaded or being loaded.
+    // instantly run callback and return object.
+    lock_.unlock();
+    if (callback) callback->run();
+  }
+  return r;
+}
+
+Image* ImageManager::LoadAsync(const char* p, size_t len, const char* name_opt, ITaskCallback *callback)
+{
+  Image* r = nullptr;
+  lock_.lock();
+  if (name_opt)
+    r = (Image*)SearchResource(name_opt);
+  if (!r) {
+    r = new Image();
+    if (name_opt) r->set_name(name_opt);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
+    lock_.unlock();
+    auto* task = new ResourceLoaderTask<Image>(r);
+    task->set_callback(callback);
+    task->SetData(p, len, name_opt);
+    r->set_parent_task(task);
+    TASKMAN->Await(task);
+  }
+  else {
+    // already loaded or being loaded.
+    // instantly run callback and return object.
+    lock_.unlock();
+    if (callback) callback->run();
+  }
   return r;
 }
 
 void ImageManager::Unload(Image *image)
 {
+  /* WARN: must be called at main thread */
   DropResource(image);
 }
 
 void ImageManager::Update(double ms)
 {
-  for (auto *e : *this)
-  {
+  /* update images; e.g. Refresh movie bitmap or uploading texture */
+  /* WARN: must be called at main thread */
+  for (auto *e : *this) {
     ((Image*)e)->Update(ms);
-    if (e->get_error_code())
-    {
+    if (e->get_error_code()) {
       Logger::Error("Image object error: %s (%d)",
         e->get_error_msg(), e->get_error_code());
       e->clear_error();
@@ -466,12 +489,10 @@ void ImageManager::Update(double ms)
   }
 }
 
-void ImageManager::set_load_async(bool load_async) { load_async_ = load_async; }
-
 
 // --------------------------------------------------------- class SoundManager
 
-SoundManager::SoundManager() : load_async_(false) {}
+SoundManager::SoundManager() {}
 
 SoundManager::~SoundManager()
 {
@@ -486,30 +507,16 @@ SoundData* SoundManager::Load(const std::string &path)
   std::string newpath = PATH->GetPath(path);
   lock_.lock();
   r = (SoundData*)SearchResource(newpath.c_str());
-  if (!r)
-  {
+  if (!r) {
     r = new SoundData();
     r->set_name(newpath);
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
-    /* if not main thread, it's still "async";
-     * don't need to create other thread. */
-    if (load_async_ && GAME->is_main_thread())
-    {
-      auto *task = new ResourceLoaderTask<SoundData>(r);
-      task->SetFilename(newpath);
-      r->set_parent_task(task);
-      TaskPool::getInstance().EnqueueTask(task);
-    }
-    else
-    {
-      r->is_loading_ = true;
-      // unlock here first, as this method takes long
-      lock_.unlock();
-      r->Load(newpath);
-      lock_.lock();
-      r->is_loading_ = false;
-    }
+    // Sound is always loaded as async.
+    auto *task = new ResourceLoaderTask<SoundData>(r);
+    task->SetFilename(newpath);
+    r->set_parent_task(task);
+    TASKMAN->EnqueueTask(task);
   }
   lock_.unlock();
   return r;
@@ -527,26 +534,68 @@ SoundData* SoundManager::Load(const char *p, size_t len, const char *name_opt)
     if (name_opt) r->set_name(name_opt);
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
-    /* if not main thread, it's still "async";
-     * don't need to create other thread. */
-    if (load_async_ && GAME->is_main_thread())
-    {
-      auto *task = new ResourceLoaderTask<SoundData>(r);
-      task->SetData(p, len, name_opt);
-      r->set_parent_task(task);
-      TaskPool::getInstance().EnqueueTask(task);
-    }
-    else
-    {
-      r->is_loading_ = true;
-      // unlock here first, as this method takes long
-      lock_.unlock();
-      r->Load(p, len, name_opt);
-      lock_.lock();
-      r->is_loading_ = false;
-    }
+    // Sound is always loaded as async.
+    auto* task = new ResourceLoaderTask<SoundData>(r);
+    task->SetData(p, len, name_opt);
+    r->set_parent_task(task);
+    TASKMAN->EnqueueTask(task);
   }
   lock_.unlock();
+  return r;
+}
+
+SoundData* SoundManager::LoadAsync(const std::string& path, ITaskCallback* callback)
+{
+  SoundData* r = nullptr;
+  std::string newpath = PATH->GetPath(path);
+  if (newpath.empty()) return nullptr;
+  lock_.lock();
+  r = (SoundData*)SearchResource(newpath.c_str());
+  if (!r) {
+    r = new SoundData();
+    r->set_name(newpath);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
+    lock_.unlock();
+    auto* task = new ResourceLoaderTask<SoundData>(r);
+    task->set_callback(callback);
+    task->SetFilename(newpath);
+    r->set_parent_task(task);
+    TASKMAN->Await(task);
+  }
+  else {
+    // already loaded or being loaded.
+    // instantly run callback and return object.
+    lock_.unlock();
+    if (callback) callback->run();
+  }
+  return r;
+}
+
+SoundData* SoundManager::LoadAsync(const char* p, size_t len, const char* name_opt, ITaskCallback* callback)
+{
+  SoundData* r = nullptr;
+  lock_.lock();
+  if (name_opt)
+    r = (SoundData*)SearchResource(name_opt);
+  if (!r) {
+    r = new SoundData();
+    if (name_opt) r->set_name(name_opt);
+    // register resource first regardless it is succeed to load or not.
+    AddResource(r);
+    lock_.unlock();
+    auto* task = new ResourceLoaderTask<SoundData>(r);
+    task->set_callback(callback);
+    task->SetData(p, len, name_opt);
+    r->set_parent_task(task);
+    TASKMAN->Await(task);
+  }
+  else {
+    // already loaded or being loaded.
+    // instantly run callback and return object.
+    lock_.unlock();
+    if (callback) callback->run();
+  }
   return r;
 }
 
@@ -555,12 +604,10 @@ void SoundManager::Unload(SoundData *sound)
   DropResource(sound);
 }
 
-void SoundManager::set_load_async(bool load_async) { load_async_ = load_async; }
-
 
 // ---------------------------------------------------------- class FontManager
 
-FontManager::FontManager() : load_async_(true) {}
+FontManager::FontManager() {}
 
 FontManager::~FontManager()
 {
@@ -575,32 +622,26 @@ Font* FontManager::Load(const std::string &path)
   lock_.lock();
   std::string newpath = PATH->GetPath(path);
   r = (Font*)SearchResource(newpath.c_str());
-  if (!r)
-  {
+  if (!r) {
     r = new Font();
     r->set_name(newpath);
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
-    /* if not main thread, it's still "async";
-     * don't need to create other thread. */
-    if (load_async_ && GAME->is_main_thread())
-    {
-      auto *task = new ResourceLoaderTask<Font>(r);
+    lock_.unlock();
+    r->Load(newpath);
+#if 0
+    if (GAME->is_main_thread()) {
+      r->Load(newpath);
+    }
+    else {
+      auto* task = new ResourceLoaderTask<Font>(r);
       task->SetFilename(newpath);
       r->set_parent_task(task);
-      TaskPool::getInstance().EnqueueTask(task);
+      TASKMAN->Await(task);
     }
-    else
-    {
-      r->is_loading_ = true;
-      // unlock here first, as this method takes long
-      lock_.unlock();
-      r->Load(newpath);
-      lock_.lock();
-      r->is_loading_ = false;
-    }
+#endif
   }
-  lock_.unlock();
+  else lock_.unlock();
   return r;
 }
 
@@ -611,33 +652,26 @@ Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
   if (name_opt)
     r = (Font*)SearchResource(name_opt);
 
-  if (!r)
-  {
+  if (!r) {
     r = new Font();
     if (name_opt) r->set_name(name_opt);
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
-
-    /* if not main thread, it's still "async";
-      * don't need to create other thread. */
-    if (load_async_ && GAME->is_main_thread())
-    {
-      auto *task = new ResourceLoaderTask<Font>(r);
+    lock_.unlock();
+    r->Load(p, len, name_opt);
+#if 0
+    if (GAME->is_main_thread()) {
+      r->Load(p, len, name_opt);
+    }
+    else {
+      auto* task = new ResourceLoaderTask<Font>(r);
       task->SetData(p, len, name_opt);
       r->set_parent_task(task);
-      TaskPool::getInstance().EnqueueTask(task);
+      TASKMAN->Await(task);
     }
-    else
-    {
-      r->is_loading_ = true;
-      // unlock here first, as this method takes long
-      lock_.unlock();
-      r->Load(p, len, name_opt);
-      lock_.lock();
-      r->is_loading_ = false;
-    }
+#endif
   }
-  lock_.unlock();
+  else lock_.unlock();
   return r;
 }
 
@@ -650,32 +684,26 @@ Font* FontManager::Load(const MetricGroup &metrics)
     r = (Font*)SearchResource(name);
   if (!r && metrics.get_safe("path", name) && !name.empty())
     r = (Font*)SearchResource(name);
-  if (!r)
-  {
+  if (!r) {
     r = new Font();
     if (!name.empty()) r->set_name(name);
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
-    /* if not main thread, it's still "async";
-     * don't need to create other thread. */
-    if (load_async_ && GAME->is_main_thread())
-    {
-      auto *task = new ResourceLoaderTask<Font>(r);
+    lock_.unlock();
+    r->Load(metrics);
+#if 0
+    if (GAME->is_main_thread()) {
+      r->Load(metrics);
+    }
+    else {
+      auto* task = new ResourceLoaderTask<Font>(r);
       task->SetMetric(metrics);
       r->set_parent_task(task);
-      TaskPool::getInstance().EnqueueTask(task);
+      TASKMAN->Await(task);
     }
-    else
-    {
-      r->is_loading_ = true;
-      // unlock here first, as this method takes long
-      lock_.unlock();
-      r->Load(metrics);
-      lock_.lock();
-      r->is_loading_ = false;
-    }
+#endif
   }
-  lock_.unlock();
+  else lock_.unlock();
   return r;
 }
 
@@ -686,19 +714,16 @@ void FontManager::Unload(Font *font)
 
 void FontManager::Update(double ms)
 {
-  for (auto *e : *this)
-  {
+  /* update font object */
+  for (auto *e : *this) {
     ((Font*)e)->Update((float)ms);
-    if (e->get_error_code())
-    {
+    if (e->get_error_code()) {
       Logger::Error("Font object error: %s (%d)",
         e->get_error_msg(), e->get_error_code());
       e->clear_error();
     }
   }
 }
-
-void FontManager::set_load_async(bool load_async) { load_async_ = load_async; }
 
 void FontManager::SetSystemFont()
 {
@@ -752,11 +777,6 @@ void ResourceManager::Update(double ms)
 {
   IMAGEMAN->Update(ms);
   FONTMAN->Update(ms);
-}
-
-bool ResourceManager::IsLoading()
-{
-  return TaskPool::getInstance().is_idle() == false;
 }
 
 

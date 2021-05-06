@@ -1,5 +1,6 @@
 #pragma once
 
+#include "TaskPool.h"
 #include "Util.h"
 #include <string>
 #include <vector>
@@ -26,7 +27,6 @@ public:
   const std::string &get_name() const;
   void set_parent_task(Task *task);
   Task *get_parent_task();
-  bool is_loading() const;
   ResourceElement *clone() const;
 
   const char *get_error_msg() const;
@@ -42,14 +42,11 @@ private:
   Task *parent_task_;
   std::string name_;
   mutable int ref_count_;
-  bool is_loading_;
 
 protected:
   const char* error_msg_;
   int error_code_;
 };
-
-void SleepUntilLoadFinish(const ResourceElement *e);
 
 /* @brief Base container for ResourceElement. */
 class ResourceContainer
@@ -132,23 +129,24 @@ private:
 };
 
 /* @brief Image object manager. */
-class ImageManager : private ResourceContainer
+class ImageManager : public ResourceContainer
 {
 public:
   ImageManager();
   virtual ~ImageManager();
   Image* Load(const std::string &path);
   Image* Load(const char *p, size_t len, const char *name_opt);
+  Image* LoadAsync(const std::string& path, ITaskCallback* callback);
+  Image* LoadAsync(const char* p, size_t len, const char* name_opt, ITaskCallback* callback);
   void Unload(Image *image);
   void Update(double ms);
-  void set_load_async(bool load_async);
   
 private:
-  bool load_async_;
   std::mutex lock_;
 };
 
-/* @brief Font object manager. */
+/* Sound object manager.
+ * @warn Sound is always loaded in async. */
 class SoundManager : private ResourceContainer
 {
 public:
@@ -156,11 +154,11 @@ public:
   ~SoundManager();
   SoundData* Load(const std::string &path);
   SoundData* Load(const char *p, size_t len, const char *name_opt);
+  SoundData* LoadAsync(const std::string& path, ITaskCallback* callback);
+  SoundData* LoadAsync(const char* p, size_t len, const char* name_opt, ITaskCallback* callback);
   void Unload(SoundData *sound);
-  void set_load_async(bool load_async);
 
 private:
-  bool load_async_;
   std::mutex lock_;
 };
 
@@ -175,13 +173,11 @@ public:
   Font* Load(const MetricGroup &metrics);
   void Unload(Font *font);
   void Update(double ms);
-  void set_load_async(bool load_async);
 
   static void SetSystemFont();
   static Font* GetSystemFont();
 
 private:
-  bool load_async_;
   std::mutex lock_;
 };
 
@@ -206,8 +202,6 @@ public:
    * Update status of registered resource.
    */
   static void Update(double ms);
-
-  static bool IsLoading();
 
 private:
   ResourceManager() {};

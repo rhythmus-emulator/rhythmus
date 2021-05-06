@@ -2,6 +2,7 @@
 #include "Image.h"
 #include "Timer.h"
 #include "Setting.h"
+#include "Game.h"
 #include "Util.h"
 #include "common.h"
 #include <FreeImage.h>
@@ -545,8 +546,7 @@ void Image::Load(const char* p, size_t len, const char *ext_hint_opt)
   error_code_ = 0;
   error_msg_ = 0;
 
-  if (ext_hint_opt)
-  {
+  if (ext_hint_opt) {
     bool is_image = false;
     static const char *ext_img_hints[] = {
       "jpg", "png", "gif", "jpeg", "bmp", "tga", 0
@@ -562,8 +562,7 @@ void Image::Load(const char* p, size_t len, const char *ext_hint_opt)
     else
       LoadImageFromMemory(p, len);
   }
-  else
-  {
+  else {
     if (!LoadImageFromMemory(p, len))
       LoadMovieFromMemory(p, len);
   }
@@ -576,25 +575,23 @@ void Image::Load(const MetricGroup &m)
 
 void Image::Commit()
 {
-  if (!data_ptr_)
-  {
+  if (!data_ptr_) {
     error_msg_ = "Cannot commit image as it's not loaded.";
     error_code_ = -2;
     return;
   }
 
+  R_ASSERT(Game::is_main_thread());
   tex_.set(GRAPHIC->CreateTexture(data_ptr_, width_, height_));
 
-  if (*tex_ == 0)
-  {
+  if (*tex_ == 0) {
     error_msg_ = "Allocating textureID failed";
     error_code_ = -2;
     return;
   }
 
   /* if movie type -- won't remove bitmap (need to update continously) */
-  if (ffmpeg_ctx_ == 0)
-  {
+  if (ffmpeg_ctx_ == 0) {
     UnloadBitmap();
   }
 }
@@ -602,8 +599,7 @@ void Image::Commit()
 void Image::Update(double delta)
 {
   /* upload texture first. */
-  if (data_ptr_ && is_invalid_)
-  {
+  if (data_ptr_ && is_invalid_) {
     Commit();
     is_invalid_ = false;
   }
@@ -708,8 +704,8 @@ void Image::UnloadMovie()
 
 void Image::UnloadTexture()
 {
-  if (*tex_)
-  {
+  if (*tex_) {
+    R_ASSERT(Game::is_main_thread());
     GRAPHIC->DeleteTexture(*tex_);
     tex_.set(0);
   }

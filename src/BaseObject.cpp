@@ -1377,10 +1377,12 @@ BaseObject* BaseObject::CreateObject(const std::string &type)
     object = new Button();
   }
   else if (type == "dialog") {
-    object = new Dialog();
+    // TODO: add command process handler
+    //object = new Dialog();
   }
   else if (type == "listview") {
-    object = new ListView();
+    // TODO: add command process handler
+    //object = new ListView();
   }
   else if (type == "frame") {
     // TODO: use BaseFrame() object
@@ -1390,8 +1392,7 @@ BaseObject* BaseObject::CreateObject(const std::string &type)
 
   }
 
-  if (object)
-  {
+  if (object) {
     object->is_allocated_ = true;
   }
 

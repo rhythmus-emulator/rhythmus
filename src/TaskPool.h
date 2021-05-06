@@ -17,6 +17,10 @@ namespace rhythmus
 
 class TaskPool;
 class TaskThread;
+class ITaskCallback {
+public:
+  virtual void run() = 0;
+};
 
 /* @brief A task which is used for execution */
 class Task
@@ -24,11 +28,16 @@ class Task
 public:
   // constructor for temporary task
   Task();
+  explicit Task(bool is_async_task);
 
   virtual void run() = 0;
   virtual void abort() = 0;
+  void run_task();
+  void abort_task();
   void wait();
+  void set_callback(ITaskCallback *callback);
 
+  unsigned get_task_id() const;
   bool is_started() const;
   bool is_finished() const;
 
@@ -36,6 +45,9 @@ public:
   friend class TaskThread;
 
 private:
+  /* identifier for task. */
+  unsigned id_;
+
   /* task status
    * 0: not run
    * 1: running
@@ -46,9 +58,14 @@ private:
   /* owner of this task */
   TaskThread *current_thread_;
 
+  ITaskCallback *callback_;
+
   /* condition variable for task is done */
   std::condition_variable task_done_cond_;
   std::mutex mutex_;
+
+  void _run_state();
+  void _finish_state();
 };
 
 using TaskAuto = std::shared_ptr<Task>;
@@ -62,11 +79,13 @@ public:
   TaskThread& operator=(TaskThread&&) noexcept;
   ~TaskThread();
   void run();
+  void exit();
   void abort();
   void set_task(Task* task);
   bool is_idle() const;
 
   friend class TaskPool;
+  friend class TaskThread;
 
 private:
   std::thread thread_;
@@ -78,22 +97,25 @@ private:
 class TaskPool
 {
 public:
-  TaskPool(size_t size = 0);
-  ~TaskPool();
+  static void Initialize();
+  static void Destroy();
 
   void SetPoolSize(size_t size);
   size_t GetPoolSize() const;
   void ClearTaskPool();
-  void EnqueueTask(Task* task);
+  unsigned EnqueueTask(Task* task);
+  void Await(Task* task);
   Task* DequeueTask();
+  bool IsRunning(const Task* task);
 
   void AbortAllTask();
   void WaitAllTask();
   bool is_idle() const;
 
-  static TaskPool& getInstance();
-
 private:
+  TaskPool(size_t size = 0);
+  ~TaskPool();
+
   size_t pool_size_;
   std::vector<TaskThread*> worker_pool_;
   bool stop_;
@@ -104,5 +126,7 @@ private:
   std::mutex task_pool_mutex_;
   std::condition_variable task_pool_cond_;
 };
+
+extern TaskPool* TASKMAN;
 
 }

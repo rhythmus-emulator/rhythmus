@@ -329,8 +329,7 @@ void Font::Clear()
 
 void Font::Update(float)
 {
-  if (fbitmap_commitlist_.size() != 0)
-  {
+  if (fbitmap_commitlist_.size() != 0) {
     std::lock_guard<std::mutex> lock(fbitmap_commitlock_);
     for (auto* b : fbitmap_commitlist_)
     {
@@ -340,6 +339,7 @@ void Font::Update(float)
   }
 }
 
+// Callable from sub-thread.
 void Font::CommitBitmap(FontBitmap *fbitmap)
 {
   std::lock_guard<std::mutex> lock(fbitmap_commitlock_);
@@ -430,8 +430,6 @@ void Font::LoadFreetypeFont(const std::string &path)
 void Font::LoadLR2BitmapFont(const std::string &path)
 {
   R_ASSERT(is_empty());
-  // its name is always path itself.
-  set_name(path);
 
 #if USE_LR2_FONT == 1
   DXAExtractor dxa;
@@ -443,9 +441,8 @@ void Font::LoadLR2BitmapFont(const std::string &path)
   }
 
   std::map<std::string, const DXAExtractor::DXAFile*> dxa_file_mapper;
-  const DXAExtractor::DXAFile* dxa_file_lr2font;
-  for (const auto& f : dxa)
-  {
+  const DXAExtractor::DXAFile* dxa_file_lr2font = nullptr;
+  for (const auto& f : dxa) {
     // make file mapper & find font file (LR2FONT)
     std::string fn = f.filename;
     if (fn.size() > 2 && fn[0] == '.' && fn[1] == '/')
@@ -939,8 +936,6 @@ int Font::height() const
 void Font::DrawText(float x, float y, const std::string &text_utf8)
 {
   std::vector<TextVertexInfo> tvi;
-
-  if (is_loading()) return;
 
   if (x != .0f || y != .0f) {
     Vector3 t(x, y, 0.0f);

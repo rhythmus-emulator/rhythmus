@@ -14,11 +14,6 @@ OnMouse::OnMouse()
 
 OnMouse::~OnMouse() {}
 
-void OnMouse::Load(const MetricGroup &metric)
-{
-  Sprite::Load(metric);
-}
-
 void OnMouse::SetOnmouseRect(const Rect& r)
 {
   onmouse_rect_ = r;
@@ -47,7 +42,7 @@ const char* OnMouse::type() const { return "OnMouse"; }
 class LR2CSVOnMouseHandlers
 {
 public:
-  static bool src_onmouse(OnMouse *o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
+  static bool src_onmouse(OnMouse *&o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     int panel = ctx->get_int(10);
     if (panel > 0 || panel == -1)
@@ -67,7 +62,7 @@ public:
   LR2CSVOnMouseHandlers()
   {
     LR2CSVExecutor::AddHandler("#SRC_ONMOUSE", (LR2CSVHandlerFunc)&src_onmouse);
-    LR2CSVExecutor::AddTrigger("#SRC_ONMOUSE", "#SRC_BASE_");
+    LR2CSVExecutor::AddTrigger("#SRC_ONMOUSE", "#SRC_IMAGE");
     LR2CSVExecutor::AddTrigger("#DST_ONMOUSE", "#DST_BASE_");
   }
 };

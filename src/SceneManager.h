@@ -20,7 +20,7 @@ public:
   void GetThemeList(std::vector<std::string>& list);
   void SetTheme(const std::string& name);
   void SetSceneScript(const std::string& name, const std::string& script_path);
-  void RunSceneScript(Scene *s);
+  std::string GetSceneScript(Scene *s);
 
   Scene* get_current_scene();
 
