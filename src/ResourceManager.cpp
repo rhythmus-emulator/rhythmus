@@ -175,175 +175,6 @@ ResourceContainer::iterator ResourceContainer::end() { return elems_.end(); }
 bool ResourceContainer::is_empty() const { return elems_.empty(); }
 
 
-
-// ------------------------------------------------------------ class PathCache
-
-PathCache::PathCache() {}
-
-void PathCache::CacheSystemDirectory()
-{
-  /* cache system paths for resource. (not song path) */
-  CacheDirectory("themes/");
-  CacheDirectory("sound/");
-  CacheDirectory("bgm/"); /* for LR2 compatiblity */
-}
-
-void PathCache::CacheDirectory(const std::string& dir)
-{
-  // XXX: currently only files are cached.
-  // XXX: need to convert to absolute path ...
-  // XXX: set maximum depth?
-  std::vector<DirItem> diritem;
-  GetDirectoryItems(dir, diritem, true);
-  for (auto& d : diritem) {
-    d.filename = dir + d.filename;
-    for (unsigned i = 0; i < d.filename.size(); ++i)
-      if (d.filename[i] == '\\') d.filename[i] = '/';
-    path_cached_.emplace_back(d);
-  }
-}
-
-void PathCache::MakePathHigherPriority(const std::string& path)
-{
-  auto it = path_cached_.begin();
-  while (it != path_cached_.end()) {
-    if (it->filename == path) break;
-    ++it;
-  }
-  if (it == path_cached_.end()) return;
-  std::rotate(path_cached_.begin(), it, path_cached_.end());
-}
-
-void PathCache::SetPrefixReplace(const std::string &prefix_from,
-                                 const std::string &prefix_to)
-{
-  path_prefix_replace_from_ = prefix_from;
-  path_prefix_replace_to_ = prefix_to;
-}
-
-void PathCache::ClearPrefixReplace()
-{
-  path_prefix_replace_from_.clear();
-  path_prefix_replace_to_.clear();
-}
-
-std::string PathCache::GetPath(const std::string& masked_path,
-                               bool &is_found) const
-{
-  is_found = false;
-
-  // attempt to find path replacement first ...
-  auto it = path_replacement_.find(masked_path);
-  if (it != path_replacement_.end())
-  {
-    is_found = true;
-    return it->second;
-  }
-
-  // check masking first -- if not, return as it is.
-  if (masked_path.find('*') == std::string::npos)
-    return PrefixReplace(masked_path);
-
-  // do path mask matching for cached paths
-  std::string r = ResolveMaskedPath(masked_path);
-  if (r.empty())
-  {
-    is_found = false;
-    return PrefixReplace(masked_path);
-  }
-  return r;
-}
-
-std::string PathCache::GetPath(const std::string& masked_path) const
-{
-  bool _;
-  return GetPath(masked_path, _);
-}
-
-void PathCache::GetAllPaths(const std::string& masked_path, std::vector<std::string> &out) const
-{
-  // check masking first -- if not, return as it is.
-  if (masked_path.find('*') == std::string::npos) {
-    for (const auto& path : path_cached_) {
-      if (path.filename == masked_path) {
-        out.push_back(PrefixReplace(masked_path));
-        break;
-      }
-    }
-    return;
-  }
-
-  // do path mask matching for cached paths
-  for (const auto& path : path_cached_) {
-    if (CheckMasking(path.filename, masked_path)) {
-      out.push_back(PrefixReplace(path.filename));
-    }
-  }
-}
-
-void PathCache::GetDirectories(const std::string& masked_path, std::vector<std::string>& out) const
-{
-  // XXX: uppercase comparsion for non-case-sensitive?
-  for (const auto& path : path_cached_) {
-    if (path.is_file == 0 && CheckMasking(path.filename, masked_path)) {
-      out.push_back(path.filename);
-    }
-  }
-}
-
-void PathCache::GetDescendantDirectories(const std::string& dirpath, std::vector<std::string>& out) const
-{
-  for (const auto& path : path_cached_) {
-    if (path.is_file == 0 &&
-        strncmp(dirpath.c_str(), path.filename.c_str(), dirpath.size()) == 0 &&
-        path.filename.find_last_of('/') <= dirpath.size()) {
-      out.push_back(path.filename);
-    }
-  }
-}
-
-void PathCache::SetAlias(const std::string& path_from, const std::string& path_to)
-{
-  // check masked path. if so, resolve it.
-  path_replacement_[path_from] = ResolveMaskedPath(path_to);
-}
-
-std::string PathCache::ResolveMaskedPath(const std::string &masked_path) const
-{
-  // check masking first -- if not, return as it is.
-  if (masked_path.find('*') == std::string::npos)
-    return PrefixReplace(masked_path);
-
-  // do path mask matching for cached paths
-  std::string replaced_path = PrefixReplace(masked_path);
-  for (const auto& path : path_cached_) {
-    if (CheckMasking(path.filename, replaced_path)) {
-      return path.filename;
-    }
-  }
-
-  // if not found, return empty string
-  return std::string();
-}
-
-std::string PathCache::PrefixReplace(const std::string &path) const
-{
-  std::string newpath = path;
-  for (size_t i = 0; i < newpath.size(); ++i)
-    if (newpath[i] == '\\') newpath[i] = '/';
-  if (startsWith(newpath, "./"))
-    newpath = newpath.substr(2);
-  if (path_prefix_replace_from_.empty()) return newpath;
-  if (strnicmp(
-    path_prefix_replace_from_.c_str(),
-    newpath.c_str(), path_prefix_replace_from_.size()) == 0)
-  {
-    return path_prefix_replace_to_ + newpath.substr(path_prefix_replace_from_.size());
-  }
-  else return newpath;
-}
-
-
 // --------------------------------------------------------- class ImageManager
 
 ImageManager::ImageManager() {}
@@ -354,21 +185,25 @@ ImageManager::~ImageManager()
     Logger::Error("ImageManager has unreleased resources. memory leak!");
 }
 
+Image* ImageManager::Load(const std::string& path)
+{
+  return Load(FilePath(path));
+}
+
 /* This function gurantees synchronized result. */
-Image* ImageManager::Load(const std::string &path)
+Image* ImageManager::Load(const FilePath& path)
 {
   Image *r = nullptr;
-  std::string newpath = PATH->GetPath(path);
-  if (newpath.empty()) return nullptr;
+  if (!path.valid()) return nullptr;
   lock_.lock();
-  r = (Image*)SearchResource(newpath.c_str());
+  r = (Image*)SearchResource(path.get());
   if (!r) {
     r = new Image();
-    r->set_name(newpath);
+    r->set_name(path.get());
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
     lock_.unlock();
-    r->Load(newpath);
+    r->Load(path.get());
 #if 0
     if (GAME->is_main_thread()) {
       r->Load(newpath);
@@ -414,22 +249,21 @@ Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
   return r;
 }
 
-Image* ImageManager::LoadAsync(const std::string& path, ITaskCallback *callback)
+Image* ImageManager::LoadAsync(const FilePath& path, ITaskCallback *callback)
 {
   Image* r = nullptr;
-  std::string newpath = PATH->GetPath(path);
-  if (newpath.empty()) return nullptr;
+  if (!path.valid()) return nullptr;
   lock_.lock();
-  r = (Image*)SearchResource(newpath.c_str());
+  r = (Image*)SearchResource(path.get());
   if (!r) {
     r = new Image();
-    r->set_name(newpath);
+    r->set_name(path.get());
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
     lock_.unlock();
     auto* task = new ResourceLoaderTask<Image>(r);
     task->set_callback(callback);
-    task->SetFilename(newpath);
+    task->SetFilename(path.get());
     r->set_parent_task(task);
     TASKMAN->Await(task);
   }
@@ -500,21 +334,25 @@ SoundManager::~SoundManager()
     Logger::Error("SoundManager has unreleased resources. memory leak!");
 }
 
-SoundData* SoundManager::Load(const std::string &path)
+SoundData* SoundManager::Load(const std::string& path)
 {
-  if (path.empty()) return nullptr;
+  return Load(FilePath(path));
+}
+
+SoundData* SoundManager::Load(const FilePath& path)
+{
+  if (!path.valid()) return nullptr;
   SoundData *r = nullptr;
-  std::string newpath = PATH->GetPath(path);
   lock_.lock();
-  r = (SoundData*)SearchResource(newpath.c_str());
+  r = (SoundData*)SearchResource(path.get());
   if (!r) {
     r = new SoundData();
-    r->set_name(newpath);
+    r->set_name(path.get());
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
     // Sound is always loaded as async.
     auto *task = new ResourceLoaderTask<SoundData>(r);
-    task->SetFilename(newpath);
+    task->SetFilename(path.get());
     r->set_parent_task(task);
     TASKMAN->EnqueueTask(task);
   }
@@ -544,22 +382,21 @@ SoundData* SoundManager::Load(const char *p, size_t len, const char *name_opt)
   return r;
 }
 
-SoundData* SoundManager::LoadAsync(const std::string& path, ITaskCallback* callback)
+SoundData* SoundManager::LoadAsync(const FilePath& path, ITaskCallback* callback)
 {
   SoundData* r = nullptr;
-  std::string newpath = PATH->GetPath(path);
-  if (newpath.empty()) return nullptr;
+  if (!path.valid()) return nullptr;
   lock_.lock();
-  r = (SoundData*)SearchResource(newpath.c_str());
+  r = (SoundData*)SearchResource(path.get());
   if (!r) {
     r = new SoundData();
-    r->set_name(newpath);
+    r->set_name(path.get());
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
     lock_.unlock();
     auto* task = new ResourceLoaderTask<SoundData>(r);
     task->set_callback(callback);
-    task->SetFilename(newpath);
+    task->SetFilename(path.get());
     r->set_parent_task(task);
     TASKMAN->Await(task);
   }
@@ -615,20 +452,24 @@ FontManager::~FontManager()
     Logger::Error("FontManager has unreleased resources. memory leak!");
 }
 
-Font* FontManager::Load(const std::string &path)
+Font* FontManager::Load(const std::string& path)
 {
-  if (path.empty()) return nullptr;
+  return Load(FilePath(path));
+}
+
+Font* FontManager::Load(const FilePath& path)
+{
+  if (!path.valid()) return nullptr;
   Font *r = nullptr;
   lock_.lock();
-  std::string newpath = PATH->GetPath(path);
-  r = (Font*)SearchResource(newpath.c_str());
+  r = (Font*)SearchResource(path.get());
   if (!r) {
     r = new Font();
-    r->set_name(newpath);
+    r->set_name(path.get());
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
     lock_.unlock();
-    r->Load(newpath);
+    r->Load(path.get());
 #if 0
     if (GAME->is_main_thread()) {
       r->Load(newpath);
@@ -751,13 +592,9 @@ Font* FontManager::GetSystemFont()
 
 void ResourceManager::Initialize()
 {
-  PATH = new PathCache();
   IMAGEMAN = new ImageManager();
   SOUNDMAN = new SoundManager();
   FONTMAN = new FontManager();
-
-  /* Cache system directory hierarchy. */
-  PATH->CacheSystemDirectory();
 }
 
 void ResourceManager::Cleanup()
@@ -780,7 +617,6 @@ void ResourceManager::Update(double ms)
 }
 
 
-PathCache *PATH = nullptr;
 ImageManager *IMAGEMAN = nullptr;
 SoundManager *SOUNDMAN = nullptr;
 FontManager *FONTMAN = nullptr;

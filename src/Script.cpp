@@ -37,11 +37,11 @@ XMLContext::~XMLContext()
   delete (tinyxml2::XMLDocument*)ctx;
 }
 
-bool XMLContext::Load(const std::string &path)
+bool XMLContext::Load(const FilePath& path)
 {
   auto* doc = (tinyxml2::XMLDocument*)ctx;
 
-  if (doc->LoadFile(path.c_str()) != XML_SUCCESS)
+  if (path.valid() && doc->LoadFile(path.get_cstr()) != XML_SUCCESS)
   {
     //throw FileNotFoundException(path);
     return false;
@@ -53,11 +53,21 @@ bool XMLContext::Load(const std::string &path)
   return true;
 }
 
-bool XMLContext::Save(const std::string &path)
+bool XMLContext::Load(const std::string &path)
+{
+  return Load(FilePath(path));
+}
+
+bool XMLContext::Save(const FilePath& path)
 {
   auto* doc = (tinyxml2::XMLDocument*)ctx;
   if (!doc) return false;
-  return doc->SaveFile(path.c_str()) == XML_SUCCESS;
+  return doc->SaveFile(path.get_cstr()) == XML_SUCCESS;
+}
+
+bool XMLContext::Save(const std::string &path)
+{
+  return Load(FilePath(path));
 }
 
 bool XMLContext::next()
@@ -190,19 +200,23 @@ CSVContext::~CSVContext()
 
 void CSVContext::set_separator(char c) { sep = c; }
 
-bool CSVContext::Load(const std::string &path)
+bool CSVContext::Load(const FilePath& path)
 {
   std::string r;
-  std::ifstream is(path.c_str());
+  std::ifstream is(path.get_cstr());
   if (is.fail()) return false;
   rows.clear();
-  while (std::getline(is, r))
-  {
+  while (std::getline(is, r)) {
     rows.push_back(r);
   }
   row_idx = 0;
   next();
   return true;
+}
+
+bool CSVContext::Load(const std::string &path)
+{
+  return Load(FilePath(path));
 }
 
 bool CSVContext::next()
@@ -263,9 +277,15 @@ LR2CSVContext::~LR2CSVContext()
 
 bool LR2CSVContext::Load(const std::string &path)
 {
+  return Load(FilePath(path));
+}
+
+bool LR2CSVContext::Load(const FilePath& path)
+{
   ctx.clear();
-  path_ = path;
-  return LoadContextStack(path);
+  path_ = path.get();
+  folder_ = GetFolderPath(path_);
+  return LoadContextStack(path_);
 }
 
 bool LR2CSVContext::next()
@@ -342,7 +362,7 @@ bool LR2CSVContext::next()
 
     if (stricmp("#INCLUDE", cmd) == 0 && MODE_PRELOAD == false)
     {
-      LoadContextStack(c.get_str(1));
+      LoadContextStack(FilePath(c.get_str(1)));
       continue; // fetch next line
     }
 
@@ -369,11 +389,10 @@ float LR2CSVContext::get_float(unsigned idx) const
   else return ctx.back().get_float(idx);
 }
 
-bool LR2CSVContext::LoadContextStack(const std::string &path)
+bool LR2CSVContext::LoadContextStack(const FilePath& path)
 {
   ctx.emplace_back(CSVContext());
-  if (!ctx.back().Load(SubstitutePath(path)))
-  {
+  if (!ctx.back().Load(path)) {
     ctx.pop_back();
     return false;
   }
@@ -383,11 +402,6 @@ bool LR2CSVContext::LoadContextStack(const std::string &path)
 void LR2CSVContext::AddIfStmtStack(bool cond_is_true)
 {
   if_stack_.emplace_back(IfStmt{ cond_is_true ? 1 : 0, cond_is_true });
-}
-
-std::string LR2CSVContext::SubstitutePath(const std::string& path)
-{
-  return Substitute(path, "LR2files/Theme", "themes");
 }
 
 const std::string& LR2CSVContext::get_path()
@@ -522,42 +536,81 @@ void* LR2CSVExecutor::get_object(const std::string &name)
   return objects_[name];
 }
 
+// -------------------------------------------------------------- LR2SSExecutor
+
+static std::map<std::string, LR2SSHandlerFunc>& getLR2SSHandler()
+{
+  static std::map<std::string, LR2SSHandlerFunc> gLR2SSHandlers;
+  return gLR2SSHandlers;
+}
+
+LR2SSExecutor::LR2SSExecutor(LR2CSVContext* ctx) : ctx_(ctx) {}
+
+LR2SSExecutor::~LR2SSExecutor() {}
+
+void LR2SSExecutor::AddHandler(const std::string& cmd, LR2SSHandlerFunc handler)
+{
+  getLR2SSHandler()[cmd] = handler;
+}
+
+void LR2SSExecutor::Run()
+{
+  while (ctx_->next()) {
+    const char* cmd = ctx_->get_str(0);
+    const char* path = ctx_->get_str(1);
+    if (!cmd || !path || !*cmd)
+      continue;
+    auto i = getLR2SSHandler().find(cmd);
+    if (i != getLR2SSHandler().end()) {
+      i->second(path, ctx_);
+    }
+  }
+}
+
 
 namespace Script
 {
 
-bool Load(const std::string &path, void *baseobject)
+bool Load(const FilePath& path, void* baseobject)
 {
-  std::string ext = GetExtension(path);
-  if (ext == "xml")
-  {
+  std::string ext = GetExtension(path.get());
+  if (ext == "xml") {
     XMLContext ctx;
     if (!ctx.Load(path))
     {
-      Logger::Error("XML file load failed: %s", path.c_str());
+      Logger::Error("XML file load failed: %s", path.get_cstr());
       return false;
     }
     XMLExecutor loader(&ctx);
     loader.SetCurrentObject(baseobject);
     return loader.Run();
   }
-  else if (ext == "lr2skin" || ext == "lr2ss")
-  {
+  else if (ext == "lr2skin" || ext == "lr2ss") {
     LR2CSVContext ctx;
     if (!ctx.Load(path)) {
-      Logger::Error("LR2CSV file load failed: %s", path.c_str());
+      Logger::Error("LR2CSV file load failed: %s", path.get_cstr());
       return false;
     }
-    LR2CSVExecutor loader(&ctx);
-    loader.set_object("scene", baseobject);
-    loader.Run();
+    if (ext == "lr2skin") {
+      LR2CSVExecutor loader(&ctx);
+      loader.set_object("scene", baseobject);
+      loader.Run();
+    }
+    else if (ext == "lr2ss") {
+      LR2SSExecutor ex(&ctx);
+      ex.Run();
+    }
     return true;
   }
-  else
-  {
-    Logger::Error("Unsupported script: %s", path.c_str());
+  else {
+    Logger::Error("Unsupported script: %s", path.get_cstr());
     return false;
   }
+}
+
+bool Load(const std::string &path, void *baseobject)
+{
+  return Load(FilePath(path), baseobject);
 }
 
 void SetPreloadMode(bool is_preload)

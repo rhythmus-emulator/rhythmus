@@ -376,14 +376,14 @@ public:
     name = format_string("image%u", loader->get_image_index());
     path = ctx->get_str(1);
     if (path != "CONTINUE")
-      PATH->SetAlias(name, LR2CSVContext::SubstitutePath(path));
+      PATH->SetSymbolLink(name, FilePath(path).get());
     return true;
   }
   static bool lr2font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
   {
     auto &fntstyle = METRIC->add_group(format_string("font%u", loader->get_font_index()));
     const char *path = ctx->get_str(1);
-    fntstyle.set("path", LR2CSVContext::SubstitutePath(path));
+    fntstyle.set("path", path);
     return true;
   }
   static bool font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)

@@ -27,14 +27,29 @@ SceneManager::SceneManager()
 
 SceneManager::~SceneManager()
 {
-  if (current_scene_)
-  {
+  if (current_scene_) {
     delete current_scene_;
     current_scene_ = 0;
   }
   for (auto *s : overlay_scenes_)
     delete s;
   overlay_scenes_.clear();
+}
+
+static void LoadSceneThemeFromConfig()
+{
+  std::vector<std::string> theme_list;
+  SCENEMAN->GetThemeList(theme_list);
+  PrefOptionList theme_pref("theme", theme_list);
+  SCENEMAN->LoadThemeConfig(theme_pref.get());
+}
+
+static void LoadSoundThemeFromConfig()
+{
+  std::vector<std::string> scfg_list;
+  PATH->GetAllPaths("sound/*.lr2ss", scfg_list);
+  PrefOptionList scfg_pref("soundtheme", scfg_list);
+  Script::Load(scfg_pref.get(), nullptr);
 }
 
 void SceneManager::Initialize()
@@ -45,11 +60,11 @@ void SceneManager::Initialize()
   R_ASSERT(SCENEMAN == nullptr);
   SCENEMAN = new SceneManager();
 
-  // check and set scene theme
-  std::vector<std::string> theme_list;
-  SCENEMAN->GetThemeList(theme_list);
-  PrefOptionList theme_pref("theme", theme_list);
-  SCENEMAN->SetTheme(theme_pref.get());
+  // load theme config
+  LoadSceneThemeFromConfig();
+
+  // load sound config
+  LoadSoundThemeFromConfig();
 
   // create system-default overlay scene.
   Scene *s = new OverlayScene();
@@ -289,7 +304,7 @@ enum ThemeType
   TT_Stepmania
 };
 
-void SceneManager::SetTheme(const std::string& name)
+void SceneManager::LoadThemeConfig(const std::string& name)
 {
   ThemeType theme_type = TT_None;
   const std::string theme_path = format_string("themes/%s/*", name.c_str());
@@ -360,8 +375,7 @@ void SceneManager::ChangeScene(const std::string &scene_name)
 
   bool is_exit = false;
 
-  if (next_scene_)
-  {
+  if (next_scene_) {
     std::cout << "Warning: Next scene is already set & cached." << std::endl;
     return;
   }
@@ -373,8 +387,7 @@ void SceneManager::ChangeScene(const std::string &scene_name)
   if (it == sceneCreateFn.end())
     is_exit = true;
 
-  if (is_exit)
-  {
+  if (is_exit) {
     // prepare to exit game
     Game::Exit();
     return;

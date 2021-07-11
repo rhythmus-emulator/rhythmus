@@ -20,6 +20,7 @@ public:
 
 private:
   MusicWheel wheel_;
+  Sound bgm_;
 };
 
 }

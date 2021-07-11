@@ -139,6 +139,15 @@ std::string GetExtension(const std::string& path)
   return rutil::GetExtension(path);
 }
 
+std::string GetFolderPath(const std::string& path)
+{
+  size_t pos = path.find_last_of('/');
+  if (pos != std::string::npos)
+    return path.substr(0, pos);
+  else
+    return std::string();
+}
+
 std::string Upper(const std::string &s)
 {
   return rutil::upper(s);
@@ -210,6 +219,11 @@ void Split(const std::string& str, char sep, std::string &s1, std::string &s2)
 bool IsFile(const std::string& path)
 {
   return rutil::IsFile(path);
+}
+
+bool IsDirectory(const std::string& path)
+{
+  return rutil::IsDirectory(path);
 }
 
 void GetDirectoriesFromPath(const std::string& dir_path, std::vector<std::string> &out)

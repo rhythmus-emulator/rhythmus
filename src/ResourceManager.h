@@ -2,6 +2,7 @@
 
 #include "TaskPool.h"
 #include "Util.h"
+#include "Path.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -66,77 +67,16 @@ private:
   std::mutex lock_;
 };
 
-/* @brief Cache directory/files managed by program. */
-class PathCache
-{
-public:
-  PathCache();
-
-  /**
-   * Get cached file path masked path.
-   * Result is returned as input is if it's not masked path or not found.
-   */
-  std::string GetPath(const std::string& masked_path, bool &is_found) const;
-  std::string GetPath(const std::string& masked_path) const;
-
-  /* get all available paths from cache */
-  void GetAllPaths(const std::string& masked_path, std::vector<std::string> &out) const;
-
-  /* get all available directories from cache*/
-  void GetDirectories(const std::string& masked_path, std::vector<std::string>& out) const;
-  void GetDescendantDirectories(const std::string& dirpath, std::vector<std::string>& out) const;
-
-  /* add path replacement for some special use */
-  void SetAlias(const std::string& path_from, const std::string& path_to);
-
-  /**
-   * Cache a folder recursively.
-   * (considering as it's game system directory)
-   * Cached paths are used for masked-path searching.
-   */
-  void CacheDirectory(const std::string& dir);
-
-  void CacheSystemDirectory();
-
-  /**
-   * @brief
-   * Set higher priority for specific cached file path (if exists).
-   * Used when specific file should be matched first than others.
-   */
-  void MakePathHigherPriority(const std::string& path);
-
-  /**
-   * @brief
-   * Use when resource path need to be replaced.
-   * (for LR2)
-   */
-  void SetPrefixReplace(const std::string &prefix_from, const std::string &prefix_to);
-  void ClearPrefixReplace();
-
-private:
-  // cached paths
-  std::vector<DirItem> path_cached_;
-
-  // path replacement
-  std::map<std::string, std::string> path_replacement_;
-
-  // path prefix replacement
-  std::string path_prefix_replace_from_;
-  std::string path_prefix_replace_to_;
-
-  std::string ResolveMaskedPath(const std::string &path) const;
-  std::string PrefixReplace(const std::string &path) const;
-};
-
 /* @brief Image object manager. */
 class ImageManager : public ResourceContainer
 {
 public:
   ImageManager();
   virtual ~ImageManager();
-  Image* Load(const std::string &path);
+  Image* Load(const std::string& path);
+  Image* Load(const FilePath& path);
   Image* Load(const char *p, size_t len, const char *name_opt);
-  Image* LoadAsync(const std::string& path, ITaskCallback* callback);
+  Image* LoadAsync(const FilePath& path, ITaskCallback* callback);
   Image* LoadAsync(const char* p, size_t len, const char* name_opt, ITaskCallback* callback);
   void Unload(Image *image);
   void Update(double ms);
@@ -152,9 +92,10 @@ class SoundManager : private ResourceContainer
 public:
   SoundManager();
   ~SoundManager();
-  SoundData* Load(const std::string &path);
+  SoundData* Load(const std::string& path);
+  SoundData* Load(const FilePath& path);
   SoundData* Load(const char *p, size_t len, const char *name_opt);
-  SoundData* LoadAsync(const std::string& path, ITaskCallback* callback);
+  SoundData* LoadAsync(const FilePath& path, ITaskCallback* callback);
   SoundData* LoadAsync(const char* p, size_t len, const char* name_opt, ITaskCallback* callback);
   void Unload(SoundData *sound);
 
@@ -168,7 +109,8 @@ class FontManager : private ResourceContainer
 public:
   FontManager();
   ~FontManager();
-  Font* Load(const std::string &path);
+  Font* Load(const std::string& path);
+  Font* Load(const FilePath& path);
   Font* Load(const char *p, size_t len, const char *name_opt);
   Font* Load(const MetricGroup &metrics);
   void Unload(Font *font);
@@ -207,8 +149,6 @@ private:
   ResourceManager() {};
 };
 
-
-extern PathCache *PATH;
 extern ImageManager *IMAGEMAN;
 extern SoundManager *SOUNDMAN;
 extern FontManager *FONTMAN;

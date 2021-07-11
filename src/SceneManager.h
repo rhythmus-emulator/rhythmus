@@ -18,7 +18,7 @@ public:
   void Render();
 
   void GetThemeList(std::vector<std::string>& list);
-  void SetTheme(const std::string& name);
+  void LoadThemeConfig(const std::string& name);
   void SetSceneScript(const std::string& name, const std::string& script_path);
   std::string GetSceneScript(Scene *s);
 

@@ -20,12 +20,15 @@ SelectScene::SelectScene()
 
 void SelectScene::LoadScene()
 {
+  MetricValue<std::string> bgm_path("SelectSceneBgm");
+
   // Before starting, unload song.
   SongPlayer::getInstance().Stop();
   PlayerManager::CreateGuestPlayerIfEmpty();
 
   RegisterPredefObject(&wheel_);
   AddChild(&wheel_);
+  bgm_.Load(*bgm_path);
 
   Scene::LoadScene();
 }
@@ -33,6 +36,7 @@ void SelectScene::LoadScene()
 void SelectScene::StartScene()
 {
   Scene::StartScene();
+  bgm_.Play();
   EVENTMAN->SendEvent("SelectSceneLoad");
 }
 

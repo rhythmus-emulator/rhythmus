@@ -26,6 +26,7 @@ set (RHYTHMUS_SOURCES
   SceneManager.cpp
   Scene.cpp
   Script.cpp
+  ScriptLR2.cpp
   Event.cpp
   Song.cpp
   SongPlayer.cpp
@@ -34,6 +35,7 @@ set (RHYTHMUS_SOURCES
   KeyPool.cpp
   TaskPool.cpp
   Util.cpp
+  Path.cpp
 
   PlaySession.cpp
   PlaySession7Key.cpp
@@ -82,6 +84,7 @@ set (RHYTHMUS_HEADERS
   SceneManager.h
   Scene.h
   Script.h
+  ScriptLR2.h
   Event.h
   Song.h
   SongPlayer.h
@@ -90,6 +93,7 @@ set (RHYTHMUS_HEADERS
   KeyPool.h
   TaskPool.h
   Util.h
+  Path.h
 
   PlaySession.h
   PlaySession7Key.h

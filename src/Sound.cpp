@@ -120,6 +120,7 @@ void SoundDriver::sound_thread_body()
     }
 
     // CPU halt
+    // Avoid using Sleep(..) function to minimize sound delay.
     //Sleep(1);
     std::this_thread::sleep_for(std::chrono::milliseconds(kSleepMilisecond));
   }
@@ -161,10 +162,8 @@ void SoundDriver::Initialize()
 
   // Additional settings: set audio format.
   bool audio_format_set = true;
-  if (sinfo_.is_signed == 1)
-  {
-    if (sinfo_.channels == 1)
-    {
+  if (sinfo_.is_signed == 1) {
+    if (sinfo_.channels == 1) {
       switch (sinfo_.bitsize)
       {
       case 8:
@@ -178,10 +177,8 @@ void SoundDriver::Initialize()
         break;
       }
     }
-    else if (sinfo_.channels == 2)
-    {
-      switch (sinfo_.bitsize)
-      {
+    else if (sinfo_.channels == 2) {
+      switch (sinfo_.bitsize) {
       case 8:
         audio_format_ = AL_FORMAT_STEREO8;
         break;
@@ -203,8 +200,7 @@ void SoundDriver::Initialize()
   device = alcOpenDevice(
     device_name_.empty() ? nullptr : device_name_.c_str()
   );
-  if (!device)
-  {
+  if (!device) {
     Logger::getInstance(LogMode::kLogError)
       << "Sound device initializing failed. Error: " << alGetError()
       << "(device name: " << device_name_ << ")" << Logger::endl;
@@ -324,13 +320,11 @@ bool SoundData::Load(const std::string &path)
   result_ = -1;
   if (sound_) return false;
   sound_ = new rmixer::Sound();
-  if (!sound_->Load(path, SoundDriver::getMixer().GetSoundInfo()))
-  {
+  if (!sound_->Load(path, SoundDriver::getMixer().GetSoundInfo())) {
     delete sound_;
     sound_ = nullptr;
   }
-  else
-  {
+  else {
     result_ = 0;
   }
   return sound_ != nullptr;
@@ -342,13 +336,11 @@ bool SoundData::Load(const char *p, size_t len, const char *name_opt)
   result_ = -1;
   if (sound_) return false;
   sound_ = new rmixer::Sound();
-  if (!sound_->Load(p, len, name_opt, SoundDriver::getMixer().GetSoundInfo()))
-  {
+  if (!sound_->Load(p, len, name_opt, SoundDriver::getMixer().GetSoundInfo())) {
     delete sound_;
     sound_ = nullptr;
   }
-  else
-  {
+  else {
     result_ = 0;
   }
   return sound_ != nullptr;

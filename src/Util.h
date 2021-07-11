@@ -35,6 +35,8 @@ std::string format_string(const std::string& format, Args ... args)
 
 std::string GetExtension(const std::string& path);
 
+std::string GetFolderPath(const std::string& path);
+
 std::string Lower(const std::string &s);
 
 std::string Upper(const std::string &s);
@@ -52,6 +54,8 @@ void Split(const std::string& str, char sep, std::vector<std::string>& vsOut);
 void Split(const std::string& str, char sep, std::string &s1, std::string &s2);
 
 bool IsFile(const std::string& path);
+
+bool IsDirectory(const std::string& path);
 
 void GetDirectoriesFromPath(const std::string& dir_path, std::vector<std::string> &out);
 

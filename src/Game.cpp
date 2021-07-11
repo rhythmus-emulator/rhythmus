@@ -95,13 +95,19 @@ void Game::Initialize()
   // thread id initialize
   main_thread_id = std::this_thread::get_id();
 
-  // before starting initialization, resource must be initialized
-  ResourceManager::Initialize();
+  // before starting initialization, path must be initialized
+  PathCache::Initialize();
 
   // load settings before logging.
   Setting::Initialize();
 
-  // set system font
+  // if LR2 compatibility mode is on
+  if (true/* TODO */) {
+    PathCache::AddLR2SymLink();
+  }
+
+  // resource pool init & set system font
+  ResourceManager::Initialize();
   FontManager::SetSystemFont();
 
   // flush temporary variables into setting.

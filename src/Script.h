@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Setting.h"  // MetricGroup
+#include "Path.h"     // FilePath
 #include <string>
 #include <map>
 #include <vector>
@@ -15,7 +16,9 @@ public:
   XMLContext();
   XMLContext(const std::string &rootnodename);
   virtual ~XMLContext();
+  bool Load(const FilePath& path);
   bool Load(const std::string &path);
+  bool Save(const FilePath& path);
   bool Save(const std::string &path);
   bool next();
   bool step_in();
@@ -58,6 +61,7 @@ public:
   CSVContext();
   virtual ~CSVContext();
   void set_separator(char c);
+  bool Load(const FilePath& path);
   bool Load(const std::string &path);
   bool next();
   const char *get_str(unsigned idx) const;
@@ -80,16 +84,17 @@ public:
   LR2CSVContext();
   virtual ~LR2CSVContext();
   bool Load(const std::string &path);
+  bool Load(const FilePath& path);
   bool next();
   const char *get_str(unsigned idx) const;
   int get_int(unsigned idx) const;
   float get_float(unsigned idx) const;
-  static std::string SubstitutePath(const std::string& path);
   const std::string& get_path();
 
 private:
   std::vector<CSVContext> ctx;
   std::string path_;
+  std::string folder_;
 
   struct IfStmt
   {
@@ -99,7 +104,7 @@ private:
 
   std::vector<IfStmt> if_stack_;
 
-  bool LoadContextStack(const std::string &path);
+  bool LoadContextStack(const FilePath& path);
   void AddIfStmtStack(bool cond_is_true);
 };
 
@@ -140,6 +145,21 @@ private:
   std::map<std::string, void*> objects_;
 };
 
+/* @brief base handler of LR2SS */
+typedef void (*LR2SSHandlerFunc)(const char *path, LR2CSVContext* ctx);
+
+/* @brief executes lr2ss file. */
+class LR2SSExecutor
+{
+public:
+  LR2SSExecutor(LR2CSVContext* ctx);
+  ~LR2SSExecutor();
+  static void AddHandler(const std::string& cmd, LR2SSHandlerFunc handler);
+  virtual void Run();
+private:
+  LR2CSVContext* ctx_;
+};
+
 /* @brief executes Lua script. script context is remained while program is run. */
 class LuaExecutor
 {
@@ -147,6 +167,7 @@ class LuaExecutor
 
 namespace Script
 {
+  bool Load(const FilePath& path, void* baseobject);
   bool Load(const std::string &path, void *baseobject);
   void SetPreloadMode(bool is_preload);
 }

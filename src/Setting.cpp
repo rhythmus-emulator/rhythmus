@@ -497,6 +497,39 @@ void MetricGroup::resolve_fallback(const std::string &key)
 }
 
 
+// ---------------------------------------------------------- class MetricValue
+
+void MetricValue<std::string>::_value_load()
+{
+  if (METRIC->exist(name_)) v_ = METRIC->get_str(name_);
+}
+
+void MetricValue<std::string>::_value_set()
+{
+  METRIC->set(name_, v_);
+}
+
+void MetricValue<int>::_value_load()
+{
+  if (METRIC->exist(name_)) v_ = METRIC->get<int>(name_);
+}
+
+void MetricValue<int>::_value_set()
+{
+  METRIC->set(name_, v_);
+}
+
+void MetricValue<bool>::_value_load()
+{
+  if (METRIC->exist(name_)) v_ = METRIC->get<int>(name_);
+}
+
+void MetricValue<bool>::_value_set()
+{
+  METRIC->set(name_, v_);
+}
+
+
 // --------------------------- class OptionList
 
 PrefData::PrefData() {}
@@ -1144,69 +1177,5 @@ std::string ConvertToString(const std::vector<double>& dst)
   }
   return ss.str();
 }
-
-// ------------------------------------------------------------------ Loader/Helper
-
-const char *_LR2name[] = {
-  "SELECT",
-  "DECIDE",
-  "EXSELECT",
-  "EXDECIDE",
-  "FOLDER_OPEN",
-  "FOLDER_CLOSE",
-  "PANEL_OPEN",
-  "PANEL_CLOSE",
-  "OPTION_CHANGE",
-  "DIFFICULTY",
-  "SCREENSHOT",
-  "CLEAR",
-  "FAIL",
-  "MINE",
-  "SCRATCH",
-  "COURSECLEAR",
-  "COURSEFAIL",
-  0
-};
-
-const char *_metricname[] = {
-  "SongSelect",
-  "SongDecide",
-  "SongExSelect",
-  "SongExDecide",
-  0
-};
-
-class LR2CSVSoundHandlers
-{
-public:
-  static bool set_sound_metric(LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    unsigned i = 0;
-    MetricGroup *soundmetric = METRIC->get_group("Sound");
-    R_ASSERT(soundmetric);
-    while (_LR2name[i])
-    {
-      if (strcmp(ctx->get_str(0), _LR2name[i]) == 0)
-      {
-        soundmetric->set(_metricname[i], ctx->get_str(1));
-        break;
-      }
-      ++i;
-    }
-    return true;
-  }
-  LR2CSVSoundHandlers()
-  {
-    unsigned i = 0;
-    while (_LR2name[i])
-    {
-      LR2CSVExecutor::AddHandler(_LR2name[i], (LR2CSVHandlerFunc)&set_sound_metric);
-      ++i;
-    }
-  }
-};
-
-// register handler
-LR2CSVSoundHandlers _LR2CSVSoundHandlers;
 
 }

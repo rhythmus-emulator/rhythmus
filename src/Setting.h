@@ -134,6 +134,42 @@ private:
   std::vector<MetricGroup> children_;
 };
 
+/**
+ * @brief Utility for get/setting Preference value
+ */
+template <typename T>
+class MetricValue
+{
+public:
+  MetricValue(const std::string& name) : name_(name), updated_(false)
+  {
+    R_ASSERT(METRIC != nullptr);
+    _value_load();
+  }
+  MetricValue(const std::string& name, const T& _default) :
+    name_(name), v_(_default), updated_(false)
+  {
+    R_ASSERT(METRIC != nullptr);
+    _value_load();
+  }
+  ~MetricValue()
+  {
+    if (updated_) _value_set();
+  }
+  T& operator*() { return v_; }
+  const T& operator*() const { return v_; }
+  T& get() { return v_; }
+  const T& get() const { return v_; }
+  bool operator==(const T& v) const { return v_ == v; }
+  T& operator=(const T& v) { v_ = v; updated_ = true; return v_; }
+private:
+  void _value_load();
+  void _value_set();
+  std::string name_;
+  T v_;
+  bool updated_;
+};
+
 /* TODO: data should contain constraint info?
  * no... it's "Option List", not option value */
 struct OptionDesc
@@ -167,7 +203,8 @@ private:
 };
 
 /**
- * @brief Utility for get/setting Preference value */
+ * @brief Utility for get/setting Preference value
+ */
 template <typename T>
 class PrefValue
 {
