@@ -204,17 +204,6 @@ Image* ImageManager::Load(const FilePath& path)
     AddResource(r);
     lock_.unlock();
     r->Load(path.get());
-#if 0
-    if (GAME->is_main_thread()) {
-      r->Load(newpath);
-    }
-    else {
-      auto* task = new ResourceLoaderTask<Image>(r);
-      task->SetFilename(newpath);
-      r->set_parent_task(task);
-      TASKMAN->Await(task);
-    }
-#endif
   }
   else lock_.unlock();
   return r;
@@ -233,17 +222,6 @@ Image* ImageManager::Load(const char *p, size_t len, const char *name_opt)
     AddResource(r);
     lock_.unlock();
     r->Load(p, len, name_opt);
-#if 0
-    if (GAME->is_main_thread()) {
-      r->Load(p, len, name_opt);
-    }
-    else {
-      auto* task = new ResourceLoaderTask<Image>(r);
-      r->set_parent_task(task);
-      task->SetData(p, len, name_opt);
-      TASKMAN->Await(task);
-    }
-#endif
   }
   else lock_.unlock();
   return r;
@@ -265,7 +243,7 @@ Image* ImageManager::LoadAsync(const FilePath& path, ITaskCallback *callback)
     task->set_callback(callback);
     task->SetFilename(path.get());
     r->set_parent_task(task);
-    TASKMAN->Await(task);
+    TASKMAN->EnqueueTask(task);
   }
   else {
     // already loaded or being loaded.
@@ -292,7 +270,7 @@ Image* ImageManager::LoadAsync(const char* p, size_t len, const char* name_opt, 
     task->set_callback(callback);
     task->SetData(p, len, name_opt);
     r->set_parent_task(task);
-    TASKMAN->Await(task);
+    TASKMAN->EnqueueTask(task);
   }
   else {
     // already loaded or being loaded.
@@ -398,7 +376,7 @@ SoundData* SoundManager::LoadAsync(const FilePath& path, ITaskCallback* callback
     task->set_callback(callback);
     task->SetFilename(path.get());
     r->set_parent_task(task);
-    TASKMAN->Await(task);
+    TASKMAN->EnqueueTask(task);
   }
   else {
     // already loaded or being loaded.
@@ -425,7 +403,7 @@ SoundData* SoundManager::LoadAsync(const char* p, size_t len, const char* name_o
     task->set_callback(callback);
     task->SetData(p, len, name_opt);
     r->set_parent_task(task);
-    TASKMAN->Await(task);
+    TASKMAN->EnqueueTask(task);
   }
   else {
     // already loaded or being loaded.

@@ -173,6 +173,9 @@ void Game::Loop()
         SCENEMAN->Render();
         GRAPHIC->EndFrame();
 
+        /* Flush enqueued task */
+        TASKMAN->Update();
+
         /* Flush stdout into log message */
         Logger::getInstance().Flush();
       }

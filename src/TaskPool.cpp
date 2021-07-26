@@ -9,13 +9,9 @@ unsigned __task_id = 1;
 
 // --------------------------------- class Task
 
-Task::Task()
-  : id_(__task_id++), status_(0), current_thread_(nullptr), callback_(nullptr)
-{
-}
-
-Task::Task(bool is_async_task)
-  : id_(__task_id++), status_(0), current_thread_(nullptr), callback_(nullptr)
+Task::Task() :
+  id_(__task_id++), status_(0), current_thread_(nullptr),
+  callback_(nullptr), group_(nullptr)
 {
 }
 
@@ -49,6 +45,11 @@ void Task::set_callback(ITaskCallback *callback)
   callback_ = callback;
 }
 
+void Task::set_group(TaskGroup* g)
+{
+  group_ = g;
+}
+
 unsigned Task::get_task_id() const
 {
   return id_;
@@ -75,6 +76,21 @@ void Task::_finish_state()
   current_thread_ = nullptr;
   task_done_cond_.notify_all();
   if (callback_) callback_->run();
+}
+
+//---------------------------- class TaskGroup
+
+bool TaskGroup::IsIdle() const { return total_tasks_ == 0; }
+bool TaskGroup::IsFinished() const { return total_tasks_ == loaded_tasks_; }
+double TaskGroup::GetProgress() const { return (double)loaded_tasks_ / total_tasks_; }
+void TaskGroup::AddFinishedTask()
+{
+  // XXX: MUST be called in main thread (TASKMAN::Update)
+  R_ASSERT(loaded_tasks_ < total_tasks_);
+  ++loaded_tasks_;
+  if (loaded_tasks_ == total_tasks_) {
+    OnFinishedCallback();
+  }
 }
 
 //---------------------------- class TaskThread
@@ -128,8 +144,9 @@ void TaskThread::run()
       // run
       this->current_task_->run_task();
 
-      // mark as finished state and delete task
-      delete this->current_task_;
+      // mark as finished state and move to finished task
+      this->current_task_->current_thread_ = nullptr;
+      this->pool_->EnqueueFinishedTask(this->current_task_);
       this->current_task_ = nullptr;
     }
   });
@@ -141,16 +158,12 @@ void TaskThread::abort()
     current_task_->abort_task();
 }
 
-void TaskThread::set_task(Task* task)
-{
-  current_task_ = task;
-}
-
 bool TaskThread::is_idle() const { return current_task_ == nullptr; }
 
 // ----------------------------- class TaskPool
 
-TaskPool::TaskPool(size_t size) : pool_size_(0), stop_(false)
+TaskPool::TaskPool(size_t size) :
+  pool_size_(0), task_count_(0), stop_(false), curr_taskgroup_(nullptr)
 {
   SetPoolSize(size);
 }
@@ -170,6 +183,16 @@ void TaskPool::Destroy()
 {
   delete TASKMAN;
   TASKMAN = nullptr;
+}
+
+void TaskPool::SetTaskGroup(TaskGroup* g)
+{
+  curr_taskgroup_ = g;
+}
+
+void TaskPool::UnsetTaskGroup()
+{
+  curr_taskgroup_ = nullptr;
 }
 
 void TaskPool::SetPoolSize(size_t size)
@@ -194,9 +217,10 @@ size_t TaskPool::GetPoolSize() const
   return pool_size_;
 }
 
-unsigned TaskPool::EnqueueTask(Task* task)
+void TaskPool::EnqueueTask(Task* task)
 {
   R_ASSERT(task != nullptr);
+  task->set_group(curr_taskgroup_);
   // if new task is added after AbortAllTask() while Destroy(),
   // then TASKMAN hangs. To prevent it, Don't enqueue new task while halting.
   // such case may occur when running task enqueue new task during destruction.
@@ -204,20 +228,16 @@ unsigned TaskPool::EnqueueTask(Task* task)
     task->abort();
     task->_finish_state();
     delete task;
-    return 0;
+    return;
   }
-  std::lock_guard<std::mutex> lock(task_pool_mutex_);
-  task_pool_.push_back(task);
-  task_pool_cond_.notify_one();
-  return task->get_task_id();
+  task_pool_internal_.push_back(task);
+  ++task_count_;
 }
 
-void TaskPool::Await(Task* task)
+void TaskPool::EnqueueFinishedTask(Task* task)
 {
-  EnqueueTask(task);
-  if (stop_) return;
-  task->wait();
-  delete task;
+  std::lock_guard<std::mutex> lock(finished_task_pool_mutex_);
+  finished_task_pool_.push_back(task);
 }
 
 Task* TaskPool::DequeueTask()
@@ -236,21 +256,37 @@ Task* TaskPool::DequeueTask()
   return task;
 }
 
-bool TaskPool::IsRunning(const Task* task)
+void TaskPool::Update()
 {
-  std::unique_lock<std::mutex> lock(task_pool_mutex_);
-  if (!task) return false;
-  for (const auto t : task_pool_)
-    if (t == task) return true;
-  for (auto* worker : worker_pool_)
-    if (worker->current_task_ == task) return true;
-  return false;
+  // inform tasks to run Task object.
+  if (!task_pool_internal_.empty()) {
+    {
+      std::lock_guard<std::mutex> lock(task_pool_mutex_);
+      for (auto* t : task_pool_internal_) task_pool_.push_back(t);
+      task_pool_internal_.clear();
+    }
+    task_pool_cond_.notify_all();
+  }
+
+  // process finished task
+  if (!finished_task_pool_.empty()) {
+    std::list<Task*> tlist;
+    {
+      std::lock_guard<std::mutex> lock(finished_task_pool_mutex_);
+      finished_task_pool_.swap(tlist);
+    }
+    for (auto* t : tlist) {
+      if (t->group_) t->group_->AddFinishedTask();
+      delete t;
+      R_ASSERT(task_count_ > 0);
+      --task_count_;
+    }
+  }
 }
 
 void TaskPool::ClearTaskPool()
 {
-  // abort all running tasks
-  // and notify all waiting thread to exit
+  // abort all running tasks and notify all waiting thread to exit
   stop_ = true;
   AbortAllTask();
   for (auto* t : task_pool_) delete t;
@@ -263,44 +299,25 @@ void TaskPool::ClearTaskPool()
   }
   worker_pool_.clear();
   pool_size_ = 0;
+  // To clear finished tasks completely
+  Update();
+  R_ASSERT(task_count_ == 0);
+  // reset stop status flag
   stop_ = false;
 }
 
 
 void TaskPool::AbortAllTask()
 {
-  {
-    std::unique_lock<std::mutex> lock(task_pool_mutex_);
-    for (auto* wthr : worker_pool_)
-      wthr->abort();
-    for (auto* t : task_pool_) {
-      t->abort_task();
-    }
-  }
-  WaitAllTask();
-}
-
-void TaskPool::WaitAllTask()
-{
-  {
-    std::unique_lock<std::mutex> lock(task_pool_mutex_);
-    while (!task_pool_.empty()) {
-      task_pool_.back()->wait();
-    }
-  }
-  for (auto *wthr : worker_pool_) {
-    if (wthr->current_task_)
-      wthr->current_task_->wait();
-  }
-  // XXX: waiting main thread is impossible, so just ignore it.
+  for (auto* wthr : worker_pool_)
+    wthr->abort();
+  for (auto* t : task_pool_)
+    t->abort_task();
 }
 
 bool TaskPool::is_idle() const
 {
-  if (!task_pool_.empty()) return false;
-  for (auto *tt : worker_pool_)
-    if (!tt->is_idle()) return false;
-  return true;
+  return task_count_ == 0;
 }
 
 TaskPool* TASKMAN;

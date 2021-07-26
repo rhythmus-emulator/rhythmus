@@ -20,6 +20,8 @@ SelectScene::SelectScene()
 
 void SelectScene::LoadScene()
 {
+  Scene::LoadScene();
+
   MetricValue<std::string> bgm_path("SelectSceneBgm");
 
   // Before starting, unload song.
@@ -29,8 +31,6 @@ void SelectScene::LoadScene()
   RegisterPredefObject(&wheel_);
   AddChild(&wheel_);
   bgm_.Load(*bgm_path);
-
-  Scene::LoadScene();
 }
 
 void SelectScene::StartScene()

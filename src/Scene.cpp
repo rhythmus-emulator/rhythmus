@@ -190,6 +190,8 @@ void Scene::LoadScene()
     Logger::Warn("Task is already in loading, or loaded.");
     return;
   }
+  // TODO: scene load should be in main thread
+  // (only resource loading in sub-thread)
   scene_loading_task_ = new SceneLoadTask(this);
   TASKMAN->EnqueueTask(scene_loading_task_);
 }
@@ -239,7 +241,8 @@ void Scene::StartScene()
 
 bool Scene::IsLoading() const
 {
-  return TASKMAN->IsRunning(scene_loading_task_);
+  // TODO: change into TaskGroup later
+  return TASKMAN->is_idle() == false;
 }
 
 void Scene::RegisterPredefObject(BaseObject *obj)
