@@ -29,7 +29,8 @@ constexpr int kVertexMaxSize = 1024 * 4;
 namespace rhythmus
 {
 
-Graphic *GRAPHIC = nullptr;
+Graphic* GRAPHIC = nullptr;
+TextureLoader* TEXLOADER = nullptr;
 
 void RectF::set_points(float x1, float y1, float x2, float y2)
 {
@@ -473,6 +474,79 @@ double Graphic::delta() const
 }
 
 const char* Graphic::name() { return "Base"; }
+
+
+// -------------------------------------------------------------- class Texture
+
+Texture::Texture() : id_(0), is_loading_(false) {}
+
+Texture::~Texture()
+{
+  if (is_loading_) {
+    TEXLOADER->Cancel(this);
+  }
+  R_ASSERT(is_loading_ == false);
+}
+
+void Texture::set(unsigned texid) { id_ = texid; }
+const unsigned Texture::get() const { return id_; }
+unsigned Texture::operator*() { return id_; }
+const unsigned Texture::operator*() const { return id_; }
+bool Texture::is_loading() const { return is_loading_; }
+
+void TextureLoader::Initialize() { TEXLOADER = new TextureLoader(); }
+void TextureLoader::Destroy() { delete TEXLOADER; }
+
+/* WARN: source expected to be in 32bit format. */
+void TextureLoader::Load(Texture* t, void* src, unsigned w, unsigned h)
+{
+  std::lock_guard<std::mutex> lock(commitlistmutex_);
+  t->is_loading_ = true;
+  auto it = commitlist_.begin();
+  while (it != commitlist_.end()) {
+    if (it->t == t) {
+      *it = TextureCommitContext{ t, src, w, h };
+      break;
+    }
+  }
+  commitlist_.emplace_back(TextureCommitContext{ t, src, w, h, });
+}
+
+void TextureLoader::Cancel(Texture* t)
+{
+  if (!t->is_loading_) return;
+  std::lock_guard<std::mutex> lock(commitlistmutex_);
+  t->is_loading_ = false;
+  auto it = commitlist_.begin();
+  while (it != commitlist_.end()) {
+    if (it->t == t) {
+      commitlist_.erase(it);
+      break;
+    }
+  }
+  // XXX: not reachable?
+}
+
+void TextureLoader::Update()
+{
+  if (commitlist_.empty()) return;
+  std::list<TextureCommitContext> templist;
+  {
+    std::lock_guard<std::mutex> lock(commitlistmutex_);
+    std::swap(templist, commitlist_);
+  }
+  for (auto& c : templist) {
+    Texture* t = c.t;
+    if (t->id_ == 0)
+      t->set(GRAPHIC->CreateTexture((uint8_t*)c.src, c.w, c.h));
+    else
+      GRAPHIC->UpdateTexture(t->id_, (uint8_t*)c.src, 0, 0, c.w, c.h);
+    if (t->id_ == 0) {
+      Logger::Warn("Allocating textureID failed in TextureLoader::Update.");
+    }
+    t->is_loading_ = false;
+  }
+}
 
 #if USE_GLEW == 1
 // ------------------------------------------------------------ class GraphicGL

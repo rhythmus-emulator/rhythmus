@@ -414,12 +414,6 @@ bool IsMovieFile(const std::string& path)
 }
 
 
-Texture::Texture() : id_(0) {}
-void Texture::set(unsigned texid) { id_ = texid; }
-const unsigned Texture::get() const { return id_; }
-unsigned Texture::operator*() { return id_; }
-const unsigned Texture::operator*() const { return id_; }
-
 // -------------------------------- class Image
 
 Image::Image()
@@ -457,6 +451,9 @@ void Image::LoadImageFromPath(const std::string& path)
   data_ptr_ = FreeImage_GetBits(bitmap);
   bitmap_ctx_ = (void*)bitmap;
   path_ = path;
+
+  // If use TEXLOADER, original bitmap will remain in memory.
+  //TEXLOADER->Load(&tex_, data_ptr_, width_, height_);
 }
 
 /* Return boolean value: whether is image file */
@@ -484,6 +481,8 @@ bool Image::LoadImageFromMemory(const char* p, size_t len)
   path_ = "(memory)";
 
   FreeImage_CloseMemory(memstream);
+  // If use TEXLOADER, original bitmap will remain in memory.
+  //TEXLOADER->Load(&tex_, data_ptr_, width_, height_);
   return true;
 }
 
@@ -573,6 +572,7 @@ void Image::Load(const MetricGroup &m)
   Load(m.get_str("path"));
 }
 
+/* WARN: must run in main thread. */
 void Image::Commit()
 {
   if (!data_ptr_) {

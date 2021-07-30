@@ -117,7 +117,7 @@ void Text::SetFont(const std::string& path)
   }
 
   // if not, then load from path directly.
-  font_ = FONTMAN->Load(path);
+  font_ = FONTMAN->Load(path, true);
 
   // if text previously exists, call SetText() internally.
   if (!text_.empty())
@@ -127,7 +127,7 @@ void Text::SetFont(const std::string& path)
 void Text::SetFont(const MetricGroup &m)
 {
   ClearFont();
-  font_ = FONTMAN->Load(m);
+  font_ = FONTMAN->Load(m, true);
 
   /* if text previously exists, call SetText() internally */
   if (!text_.empty())

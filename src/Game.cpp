@@ -127,6 +127,7 @@ void Game::Initialize()
   // initialize threadpool / graphic / sound
   TaskPool::Initialize();
   Graphic::CreateGraphic();
+  TextureLoader::Initialize();
   SoundDriver::getInstance().Initialize();
 
   // initialize all other modules ...
@@ -169,6 +170,7 @@ void Game::Loop()
 
         /* Scene update & rendering */
         SCENEMAN->Update();
+        TEXLOADER->Update();
         GRAPHIC->BeginFrame();
         SCENEMAN->Render();
         GRAPHIC->EndFrame();
@@ -213,6 +215,7 @@ void Game::Cleanup()
   PlayerManager::Cleanup();
   SceneManager::Cleanup();
   TaskPool::Destroy();
+  TextureLoader::Destroy();
   Graphic::DeleteGraphic();
   SoundDriver::getInstance().Destroy();
   Setting::Save();

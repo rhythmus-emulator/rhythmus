@@ -18,20 +18,6 @@ enum ImageErrorCode
 
 class MetricGroup;
 
-/* @brief Contains texture id which is used for rendering. */
-class Texture
-{
-public:
-  Texture();
-  void set(unsigned texid);
-  const unsigned get() const;
-  unsigned operator*();
-  const unsigned operator*() const;
-
-private:
-  unsigned id_;
-};
-
 /**
  * @brief Contains loaded bitmap image / texture.
  * @warn After Commit(), image data will be deleted to save memory space.

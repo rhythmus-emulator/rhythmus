@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
+#include <list>
+#include <mutex>
 #include "Error.h"
 #include "config.h"
 
@@ -10,6 +12,7 @@ namespace rhythmus
 {
 
 class Image;
+class Texture;
 
 // @DEPRECIATED
 struct RectF {
@@ -213,7 +216,49 @@ private:
   bool is_game_running_;
 };
 
-}
+/* @brief Contains texture id which is used for rendering. */
+class Texture
+{
+public:
+  Texture();
+  virtual ~Texture();
+  void set(unsigned texid);
+  const unsigned get() const;
+  unsigned operator*();
+  const unsigned operator*() const;
+  bool is_loading() const;
+  friend class TextureLoader;
+
+private:
+  unsigned id_;
+  bool is_loading_;
+};
+
+struct TextureCommitContext
+{
+  Texture* t;
+  void* src;
+  unsigned w;
+  unsigned h;
+};
+
+/* @brief Make texture load queue and load them at once in Update().
+ * By this way texture could be loaded in sub-thread */
+class TextureLoader
+{
+public:
+  static void Initialize();
+  static void Destroy();
+
+  void Load(Texture* t, void *src, unsigned w, unsigned h);
+  void Cancel(Texture* t);
+  void Update();
+private:
+  std::list<TextureCommitContext> commitlist_;
+  std::mutex commitlistmutex_;
+};
+
+}   // namespace rhythmus
 
 #if USE_GLEW == 1
 namespace rhythmus
@@ -326,5 +371,6 @@ private:
 
 namespace rhythmus
 {
-extern Graphic *GRAPHIC;
+extern Graphic* GRAPHIC;
+extern TextureLoader* TEXLOADER;
 }

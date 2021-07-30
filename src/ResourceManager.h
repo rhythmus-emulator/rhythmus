@@ -111,8 +111,12 @@ public:
   ~FontManager();
   Font* Load(const std::string& path);
   Font* Load(const FilePath& path);
-  Font* Load(const char *p, size_t len, const char *name_opt);
-  Font* Load(const MetricGroup &metrics);
+  Font* Load(const char* p, size_t len, const char* name_opt);
+  Font* Load(const MetricGroup& metrics);
+  Font* Load(const std::string& path, bool async);
+  Font* Load(const FilePath& path, bool async);
+  Font* Load(const char *p, size_t len, const char *name_opt, bool async);
+  Font* Load(const MetricGroup &metrics, bool async);
   void Unload(Font *font);
   void Update(double ms);
 

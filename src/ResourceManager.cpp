@@ -432,10 +432,30 @@ FontManager::~FontManager()
 
 Font* FontManager::Load(const std::string& path)
 {
-  return Load(FilePath(path));
+  return Load(path, false);
 }
 
 Font* FontManager::Load(const FilePath& path)
+{
+  return Load(path, false);
+}
+
+Font* FontManager::Load(const char* p, size_t len, const char* name_opt)
+{
+  return Load(p, len, name_opt, false);
+}
+
+Font* FontManager::Load(const MetricGroup& metrics)
+{
+  return Load(metrics, false);
+}
+
+Font* FontManager::Load(const std::string& path, bool async)
+{
+  return Load(FilePath(path));
+}
+
+Font* FontManager::Load(const FilePath& path, bool async)
 {
   if (!path.valid()) return nullptr;
   Font *r = nullptr;
@@ -447,24 +467,21 @@ Font* FontManager::Load(const FilePath& path)
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
     lock_.unlock();
-    r->Load(path.get());
-#if 0
-    if (GAME->is_main_thread()) {
-      r->Load(newpath);
+    if (!async) {
+      r->Load(path.get());
     }
     else {
       auto* task = new ResourceLoaderTask<Font>(r);
-      task->SetFilename(newpath);
+      task->SetFilename(path.get());
       r->set_parent_task(task);
-      TASKMAN->Await(task);
+      TASKMAN->EnqueueTask(task);
     }
-#endif
   }
   else lock_.unlock();
   return r;
 }
 
-Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
+Font* FontManager::Load(const char *p, size_t len, const char *name_opt, bool async)
 {
   Font *r = nullptr;
   lock_.lock();
@@ -477,24 +494,21 @@ Font* FontManager::Load(const char *p, size_t len, const char *name_opt)
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
     lock_.unlock();
-    r->Load(p, len, name_opt);
-#if 0
-    if (GAME->is_main_thread()) {
+    if (!async) {
       r->Load(p, len, name_opt);
     }
     else {
       auto* task = new ResourceLoaderTask<Font>(r);
       task->SetData(p, len, name_opt);
       r->set_parent_task(task);
-      TASKMAN->Await(task);
+      TASKMAN->EnqueueTask(task);
     }
-#endif
   }
   else lock_.unlock();
   return r;
 }
 
-Font* FontManager::Load(const MetricGroup &metrics)
+Font* FontManager::Load(const MetricGroup &metrics, bool async)
 {
   Font *r = nullptr;
   std::string name;
@@ -509,18 +523,15 @@ Font* FontManager::Load(const MetricGroup &metrics)
     // register resource first regardless it is succeed to load or not.
     AddResource(r);
     lock_.unlock();
-    r->Load(metrics);
-#if 0
-    if (GAME->is_main_thread()) {
+    if (!async) {
       r->Load(metrics);
     }
     else {
       auto* task = new ResourceLoaderTask<Font>(r);
       task->SetMetric(metrics);
       r->set_parent_task(task);
-      TASKMAN->Await(task);
+      TASKMAN->EnqueueTask(task);
     }
-#endif
   }
   else lock_.unlock();
   return r;

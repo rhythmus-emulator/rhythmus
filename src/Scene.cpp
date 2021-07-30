@@ -192,8 +192,18 @@ void Scene::LoadScene()
   }
   // TODO: scene load should be in main thread
   // (only resource loading in sub-thread)
-  scene_loading_task_ = new SceneLoadTask(this);
-  TASKMAN->EnqueueTask(scene_loading_task_);
+  //scene_loading_task_ = new SceneLoadTask(this);
+  //TASKMAN->EnqueueTask(scene_loading_task_);
+
+    // Load start event : Loading
+  EVENTMAN->SendEvent("Loading");
+
+  // Load metrics (e.g. Stepmania)
+  LoadFromName();
+
+  // Load script file
+  std::string script_path = SCENEMAN->GetSceneScript(this);
+  Script::Load(script_path, this);
 }
 
 void Scene::StartScene()
