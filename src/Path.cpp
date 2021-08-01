@@ -1,5 +1,6 @@
 #include "Path.h"
 #include "Setting.h"
+#include "Logger.h"
 
 namespace rhythmus
 {
@@ -177,6 +178,8 @@ FilePath::FilePath(const std::string& path) : path_(path), is_valid_(false)
   else if (PATH) {
     path_ = PATH->GetPath(path, is_valid_);
   }
+  if (!is_valid_)
+    Logger::Warn("FilePath: cannot find path(%s)", path.c_str());
 }
 
 bool FilePath::valid() const { return is_valid_; }

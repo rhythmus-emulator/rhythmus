@@ -17,5 +17,6 @@ themes/WMIX_HD
 system/*
 sound/*
 player/*
+bgm/
 *.lnk
 .gdb_history
