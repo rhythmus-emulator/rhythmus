@@ -1,6 +1,7 @@
 #include "Path.h"
 #include "Setting.h"
 #include "Logger.h"
+#include "Util.h"
 
 namespace rhythmus
 {
@@ -170,6 +171,28 @@ std::string PathCache::PreprocessPath(const std::string &path) const
 
 FilePath::FilePath(const std::string& path) : path_(path), is_valid_(false)
 {
+  InitalizePath(path);
+  if (!is_valid_)
+    Logger::Warn("FilePath: cannot find path(%s)", path.c_str());
+}
+
+FilePath::FilePath(const std::string& path, bool use_alternative_path) : path_(path), is_valid_(false)
+{
+  InitalizePath(path);
+  if (use_alternative_path && !is_valid_) {
+    std::string alterpath;
+    auto i = path.find_last_of('.');
+    if (i != std::string::npos) {
+      alterpath = path.substr(0, i) + ".*";
+      InitalizePath(alterpath);
+    }
+  }
+  if (!is_valid_)
+    Logger::Warn("FilePath: cannot find path(%s)", path.c_str());
+}
+
+void FilePath::InitalizePath(const std::string& path)
+{
   // first attempt real file path,
   // then scan global cached path object (PathCache).
   if (IsFile(path)) {
@@ -178,8 +201,6 @@ FilePath::FilePath(const std::string& path) : path_(path), is_valid_(false)
   else if (PATH) {
     path_ = PATH->GetPath(path, is_valid_);
   }
-  if (!is_valid_)
-    Logger::Warn("FilePath: cannot find path(%s)", path.c_str());
 }
 
 bool FilePath::valid() const { return is_valid_; }

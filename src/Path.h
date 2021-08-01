@@ -70,10 +70,12 @@ private:
 class FilePath {
 public:
   FilePath(const std::string& path);
+  FilePath(const std::string& path, bool use_alternative_path);
   bool valid() const;
   const std::string& get() const;
   const char* get_cstr() const;
 private:
+  void InitalizePath(const std::string& path);
   std::string path_;
   bool is_valid_;
 };
