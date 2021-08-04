@@ -412,16 +412,9 @@ const std::string& LR2CSVContext::get_path()
 
 // ------------------------------------------------------------- LR2CSVExecutor
 
-struct LR2CSVHandler
+static std::map<std::string, LR2CSVHandlerFunc> &getLR2CSVHandler()
 {
-  LR2CSVHandlerFunc func;
-  std::vector<std::string> trigger;
-  std::vector<std::string> trigger_after;
-};
-
-static std::map<std::string, LR2CSVHandler> &getLR2CSVHandler()
-{
-  static std::map<std::string, LR2CSVHandler> gLR2CSVHandlers;
+  static std::map<std::string, LR2CSVHandlerFunc> gLR2CSVHandlers;
   return gLR2CSVHandlers;
 }
 
@@ -432,56 +425,20 @@ LR2CSVExecutor::~LR2CSVExecutor() {}
 
 void LR2CSVExecutor::AddHandler(const std::string &cmd, LR2CSVHandlerFunc handler)
 {
-  getLR2CSVHandler()[cmd].func = handler;
-}
-
-void LR2CSVExecutor::AddTrigger(const std::string& cmd, const std::string& callback)
-{
-  getLR2CSVHandler()[cmd].trigger.push_back(callback);
-}
-
-void LR2CSVExecutor::AddTriggerAfter(const std::string& cmd, const std::string& callback)
-{
-  getLR2CSVHandler()[cmd].trigger_after.push_back(callback);
-}
-
-static bool _ExecuteHandler(LR2CSVHandler& handler, void *&o, LR2CSVExecutor* e, LR2CSVContext* ctx)
-{
-  // Check trigger before execution
-  for (const auto& cmd : handler.trigger) {
-    auto& i = getLR2CSVHandler().find(cmd);
-    if (i != getLR2CSVHandler().end())
-      if (!_ExecuteHandler(i->second, o, e, ctx))
-        return false;
-  }
-
-  // Run main function
-  if (handler.func)
-    if (!(handler.func)(o, e, ctx))
-      return false;
-
-  // Check trigger after execution
-  for (const auto& cmd : handler.trigger_after) {
-    auto& i = getLR2CSVHandler().find(cmd);
-    if (i != getLR2CSVHandler().end())
-      if (!_ExecuteHandler(i->second, o, e, ctx))
-        return false;
-  }
-
-  return true;
+  getLR2CSVHandler()[cmd] = handler;
 }
 
 void LR2CSVExecutor::CallHandler(const std::string &cmd, void *o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
 {
+  R_ASSERT(0 && "deprecated!!");
   auto &i = getLR2CSVHandler().find(cmd);
   if (i != getLR2CSVHandler().end())
-    _ExecuteHandler(i->second, o, loader, ctx);
+    i->second(o, loader, ctx);
 }
 
 void LR2CSVExecutor::Run()
 {
-  // reset environment
-  current_obj_ = nullptr;
+  void *current_obj = nullptr;
 
   while (ctx_->next()) {
     const char *cmd = ctx_->get_str(0);
@@ -500,7 +457,10 @@ void LR2CSVExecutor::Run()
         command_count_ = 0;
       }
 
-      _ExecuteHandler(i->second, current_obj_, this, ctx_);
+      // check if proper object exist for current command
+      auto oi = objects_.find(cmd);
+      if (oi != objects_.end()) current_obj = oi->second;
+      i->second(current_obj, this, ctx_);
 
       // Add function execution count (continually)
       command_count_++;
@@ -518,10 +478,6 @@ unsigned LR2CSVExecutor::get_command_index()
 }
 
 void LR2CSVExecutor::reset_command() { command_.clear(); command_count_ = 0; }
-
-void LR2CSVExecutor::set_current_obj(void* obj) { current_obj_ = obj; }
-
-void* LR2CSVExecutor::get_current_obj() { return current_obj_; }
 
 void LR2CSVExecutor::set_object(const std::string &name, void *obj)
 {

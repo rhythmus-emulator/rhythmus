@@ -57,31 +57,4 @@ void Bargraph::doRender()
 
 Sprite* Bargraph::sprite() { return &bar_; }
 
-// ------------------------------------------------------------------ Loader/Helper
-
-class LR2CSVBargraphHandlers
-{
-public:
-  static void src_bargraph(Bargraph *&o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    o->SetDirection(ctx->get_int(9));
-    std::string resname = "bargraph";
-    resname += ctx->get_str(11);
-    o->SetResourceId(resname);
-
-    // Load SRC information to bar_ Sprite.
-    LR2CSVExecutor::CallHandler("#SRC_IMAGE", o->sprite(), loader, ctx);
-    o->sprite()->DeleteAllCommand();
-  }
-  LR2CSVBargraphHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_BARGRAPH", (LR2CSVHandlerFunc)&src_bargraph);
-    LR2CSVExecutor::AddTrigger("#SRC_BARGRAPH", "#SRC_BASE_");
-    LR2CSVExecutor::AddTrigger("#SRC_BARGRAPH", "#DST_BASE_");
-  }
-};
-
-// register handler
-LR2CSVBargraphHandlers _LR2CSVBargraphHandlers;
-
 }

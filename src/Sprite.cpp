@@ -229,47 +229,4 @@ std::string Sprite::toString() const
   return BaseObject::toString() + ss.str();
 }
 
-// ------------------------------------------------------------------ Loader/Helper
-
-class LR2CSVSpriteHandlers
-{
-public:
-  static bool src_image(Sprite *&o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    Vector4 r{
-      ctx->get_int(3), ctx->get_int(4), ctx->get_int(5), ctx->get_int(6)
-    };
-    // Use whole image if width/height is zero.
-    o->SetImage(format_string("image%s", ctx->get_str(2)));
-    if (r.z < 0 || r.w < 0)
-      o->SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
-    else
-      o->SetImageCoord(Vector4{ r.x, r.y, r.x + r.z, r.y + r.w });
-    o->SetAnimatedTexture(ctx->get_int(7), ctx->get_int(8), ctx->get_int(9));
-    return true;
-  }
-
-  static bool dst_image(Sprite*& o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    // XXX: check object type before execution to prevent user-fault ...
-    // But it may cause side effect in case of inherited object, so be careful.
-    if (loader->get_command_index() == 0) {
-      o->SetBlending(ctx->get_int(12));
-      o->SetFiltering(ctx->get_int(13));
-    }
-    return true;
-  }
-
-  LR2CSVSpriteHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVHandlerFunc)&src_image);
-    LR2CSVExecutor::AddTrigger("#SRC_IMAGE", "#SRC_BASE_");
-    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVHandlerFunc)&dst_image);
-    LR2CSVExecutor::AddTrigger("#DST_IMAGE", "#DST_BASE_");
-  }
-};
-
-// register handlers
-LR2CSVSpriteHandlers _LR2CSVSpriteHandlers;
-
 }
