@@ -85,6 +85,10 @@ public:
   void SetFadeOutTime(int time);
   void SetFadeInTime(int time);
   void SetTimeout(int time);
+  void AddImageSymbolLink(const std::string& path);
+  void AddFontSymbolLink(const std::string& path);
+
+  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
 
   /* @brief Event processing for scene specific action */
   virtual void ProcessInputEvent(const InputEvent& e);
@@ -103,6 +107,8 @@ protected:
   // Task ID for checking scene loading
   Task* scene_loading_task_;
 private:
+  unsigned imgidx_, fntidx_;
+
   // fade in/out specified time
   // fade_duration with positive: fade-in
   // fade_duration with negative: fade-out

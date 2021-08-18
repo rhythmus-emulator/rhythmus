@@ -1,6 +1,6 @@
 #include "SongPlayer.h"
 #include "ResourceManager.h"
-#include "Song.h" /* SongPlayinfo class */
+#include "Song.h" /* SongPlayinfo class, ChartFromId method */
 #include "PlaySession.h"
 #include "Player.h"
 #include "Timer.h"
@@ -58,6 +58,16 @@ void SongPlayer::AddSongtoPlaylist(const std::string &songpath, const std::strin
     playinfo.chartpaths[0] = chartpath;
   }
   playlist_.push_back(playinfo);
+}
+
+void SongPlayer::AddSongtoPlaylistFromId(const std::string& id)
+{
+  auto* d = SONGLIST->FindChart(id);
+  if (d == nullptr) {
+    Logger::Error("SongPlayer: ChartId %s is not exists.", id.c_str());
+    return;
+  }
+  AddSongtoPlaylist(d->songpath, d->chartpath);
 }
 
 bool SongPlayer::LoadNext()

@@ -31,9 +31,9 @@ void LoadingScene::LoadScene()
   );
 
   // Register childs
-  AddChild(&message_text_);
-  AddChild(&current_file_text_);
-  AddChild(&loading_bar_);
+  AddStaticChild(&message_text_);
+  AddStaticChild(&current_file_text_);
+  AddStaticChild(&loading_bar_);
 }
 
 void LoadingScene::StartScene()

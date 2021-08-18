@@ -10,25 +10,24 @@ namespace rhythmus
 void OptionItem::Load(const MetricGroup &metric)
 {
   option_name.SetFont("SystemFont");  // XXX: fix later
-  WheelItem::Load(metric);
+  BaseObject::Load(metric);
 }
 
 // --------------------------- class OptionMenu
 
 OptionMenu::OptionMenu()
 {
-  set_item_min_index(0);
-  set_item_max_index(10);
 }
 
 void OptionMenu::Load(const MetricGroup &metric)
 {
-  Wheel::Load(metric);
+  BaseObject::Load(metric);
 }
 
-WheelItem* OptionMenu::CreateMenuItem()
+void* OptionMenu::GetSelectedMenuData()
 {
-  return new OptionItem();
+  // TODO
+  return nullptr;
 }
 
 }

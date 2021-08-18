@@ -18,6 +18,7 @@
 #pragma once
 
 #include "Graphic.h"
+#include "Animation.h"
 #include "Event.h"
 #include "Setting.h"
 
@@ -33,15 +34,13 @@ namespace rhythmus
 
 class BaseObject;
 class CommandArgs;
+class LR2FnArgs;
 
-/** @brief Drawing properties of Object */
-struct DrawProperty
+
+struct ChildData
 {
-  Vector4 pos;    // x1, y1, x2, y2
-  Vector4 color;  // a, r, g, b
-  Vector3 rotate; // rotation
-  Point align;    // center(align) of object (.0f ~ .1f)
-  Point scale;    // object scale
+  BaseObject* p;
+  bool is_static;
 };
 
 /** @brief Command function type for object. */
@@ -49,83 +48,6 @@ typedef std::function<void(void*, CommandArgs&, const std::string&)> CommandFn;
 
 /** @brief Command mapping for object. */
 typedef std::map<std::string, CommandFn> CommandFnMap;
-
-/** @brief Tweens' ease type */
-enum EaseTypes
-{
-  kEaseNone,
-  kEaseLinear,
-  kEaseIn,
-  kEaseOut,
-  kEaseInOut,
-  kEaseInOutBack,
-};
-
-void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
-  float r, int ease_type);
-
-/**
- * @brief
- * Declaration for state of current tween
- * State includes:
- * - Drawing state (need to be animated)
- * - Tween itself information: Easetype, Time (duration), ...
- * - Loop
- * - Tween ease type
- * - Event to be called (kind of triggering)
- */
-struct AnimationFrame
-{
-  DrawProperty draw_prop;
-  double time;              // timepoint of this frame
-  int ease_type;            // tween ease type
-};
-
-class Animation
-{
-public:
-  Animation(const DrawProperty *initial_state);
-  void Clear();
-  void DuplicateFrame(double duration);
-  void AddFrame(const AnimationFrame &frame);
-  void AddFrame(AnimationFrame &&frame);
-  void AddFrame(const DrawProperty &draw_prop, double time, int ease_type);
-  void SetCommand(const std::string &cmd);
-  void Update(double &ms, std::string &command_to_invoke, DrawProperty *out);
-  void Replay();
-  void Play();
-  void Pause();
-  void HurryTween();
-  void GetDrawProperty(DrawProperty &out);
-  void SetEaseType(int ease_type);
-  void SetLoop(unsigned repeat_start_time);
-  void DeleteLoop();
-  const DrawProperty &LastFrame() const;
-  DrawProperty &LastFrame();
-  double GetTweenLength() const;
-  size_t size() const;
-  bool empty() const;
-  bool is_finished() const;
-
-  // used if currently tweening.
-  // ex) if 500~1500 tween (not starting from zero),
-  //     then if tween time is
-  // 50ms   : false
-  // 700ms  : true
-  // 1600ms : false (actually, animation is already finished)
-  bool is_tweening() const;
-
-private:
-  std::vector<AnimationFrame> frames_;
-  int current_frame_;         // current frame. if -1, then time is yet to first frame.
-  double current_frame_time_; // current frame eclipsed time
-  double frame_time_;         // eclipsed time of whole animation
-  bool is_finished_;
-  bool repeat_;
-  bool paused_;
-  unsigned repeat_start_time_;
-  std::string command;        // commands to be triggered when this tween starts
-};
 
 /**
  * @brief
@@ -145,6 +67,7 @@ public:
 
   // Add child to be updated / rendered.
   void AddChild(BaseObject* obj);
+  void AddStaticChild(BaseObject* obj);
 
   // Remove child.
   void RemoveChild(BaseObject *obj);
@@ -156,9 +79,9 @@ public:
   void set_parent(BaseObject* obj);
   BaseObject* get_parent();
   BaseObject* GetLastChild();
+  BaseObject* GetLastChildWithName(const std::string& name);
   BaseObject *GetChildAtPosition(float x, float y);
-  bool IsHeapAllocated(bool v) const;
-
+  
   // Load object property from metric info.
   virtual void Load(const MetricGroup &metric);
 
@@ -181,8 +104,6 @@ public:
   void QueueCommand(const std::string &command);
   void AddCommand(const std::string &name, const std::string &command);
   void LoadCommand(const MetricGroup& metric);
-  void LoadCommandWithPrefix(const std::string &prefix, const MetricGroup& metric);
-  void HurryTween();
 
   /**
    * @brief
@@ -193,13 +114,17 @@ public:
    */
   void RunCommand(const std::string &commandname, const std::string& value);
 
+  /* Execute LR2 command for this object
+   * @comment implementation is written in macro. */
+  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
+
   /* @brief Inherited from EventReceiver */
   virtual bool OnEvent(const EventMessage& msg);
 
   DrawProperty& GetLastFrame();
   DrawProperty& GetCurrentFrame();
-  void AddFrameByLR2command(const std::string &cmd);
-  void AddFrameByLR2command(const char **argv);
+  Animation& GetAnimation();
+  QueuedAnimation& GetQueuedAnimation();
   void SetX(float x);
   void SetY(float y);
   void SetWidth(float w);
@@ -270,11 +195,9 @@ public:
   virtual void OnText(uint32_t codepoint);
   virtual void OnAnimation(DrawProperty &frame);
 
-  void SetDeltaTime(double time);
   void Stop();
   void Replay();
   void Pause();
-  double GetTweenLength() const;
   bool IsTweening() const;
   bool IsVisible() const;
 
@@ -287,9 +210,6 @@ public:
 
   virtual const char* type() const;
   virtual std::string toString() const;
-
-  // is dynamically created (allocated) object?
-  bool is_dynamic() const;
 
   /**
    * @brief Creates new object by given type.
@@ -304,10 +224,7 @@ protected:
   BaseObject *parent_;
 
   // child objects which are going to be rendered.
-  std::vector<BaseObject*> children_;
-
-  // is this object allocated from heap memory?
-  bool is_allocated_;
+  std::vector<ChildData> children_;
 
   // propagate event(command) to children?
   bool propagate_event_;
@@ -325,8 +242,11 @@ protected:
   // if false - xy is the topleft of object.
   bool set_xy_as_center_;
 
-  // queued animation list
-  std::list<Animation> ani_;
+  // framed animation
+  Animation ani_;
+
+  // queued animation
+  QueuedAnimation qani_;
 
   // current drawing state
   DrawProperty frame_;
@@ -368,6 +288,7 @@ protected:
   // information for debugging
   std::string debug_;
 
+  void SortChildren();
   void FillVertexInfo(VertexInfo *vi);
   virtual void doUpdate(double delta);
   virtual void doRender();

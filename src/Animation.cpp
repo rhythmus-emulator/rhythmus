@@ -1,327 +1,75 @@
 #include "Animation.h"
-#include "Timer.h"
+#include "Logger.h"
+#include "ScriptLR2.h"
 #include "common.h"
 
 namespace rhythmus
 {
 
-SpriteAnimation::SpriteAnimation()
-{
-  memset(&current_tween_, 0, sizeof(current_tween_));
-  current_tween_.sw = current_tween_.sh = 1.0f;
-  current_tween_.display = true;
-  SetRGB(1.0f, 1.0f, 1.0f);
-  SetAlpha(1.0f);
-  SetScale(1.0f, 1.0f);
-
-  ani_texture_.cnt = 1;
-  ani_texture_.divx = 1;
-  ani_texture_.divy = 1;
-  ani_texture_.interval = 0;
-  ani_texture_.idx = 0;
-  ani_texture_.eclipsed_time = 0;
-  ani_texture_.sx = ani_texture_.sy = 0.0f;
-  ani_texture_.sw = ani_texture_.sh = 1.0f;
-  use_ani_texture_ = false;
-}
-
-SpriteAnimation::~SpriteAnimation()
-{
-}
-
-bool SpriteAnimation::IsActive() const
-{
-  return !tweens_.empty();
-}
-
-void SpriteAnimation::Tick(int delta_ms)
-{
-  if (delta_ms == 0) return;
-
-  // Update AnimatedTexture (src)
-  if (ani_texture_.interval > 0)
-  {
-    ani_texture_.eclipsed_time += delta_ms;
-    ani_texture_.idx =
-      ani_texture_.eclipsed_time * ani_texture_.divx * ani_texture_.divy
-      / ani_texture_.interval % ani_texture_.cnt;
-    ani_texture_.eclipsed_time %= ani_texture_.interval;
-  }
-
-  // Update tween time (dst)
-  while (IsActive() && delta_ms > 0)
-  {
-    Tween &t = tweens_.front();
-    if (delta_ms + t.time_eclipsed >= t.time_duration)  // in case of last tween
-    {
-      delta_ms -= t.time_duration - t.time_eclipsed;
-
-      // kind of trick: if single tween with loop,
-      // It's actually useless. turn off loop attr.
-      if (tweens_.size() == 1)
-        t.loop = false;
-
-      // loop tween by push it back.
-      if (t.loop)
-      {
-        t.time_eclipsed = t.time_loopstart;
-        tweens_.push_back(t);
-      }
-
-      // kind of trick: if current tween is last one,
-      // Do UpdateTween here. We expect last tween state
-      // should be same as current tween in that case.
-      if (tweens_.size() == 1)
-        current_tween_ = t.ti;
-
-      tweens_.pop_front();
-    }
-    else
-    {
-      t.time_eclipsed += delta_ms;
-      delta_ms = 0; // actually break loop.
-    }
-  }
-
-  UpdateTween();
-}
-
-void SpriteAnimation::AddTween(const Tween& tween)
-{
-  tweens_.push_back(tween);
-}
-
-void SpriteAnimation::AddTween(float x, float y, float w, float h,
-  float r, float g, float b, float a, uint32_t time_delta, bool loop)
-{
-  tweens_.emplace_back(Tween{
-    /* TweenInfo */ {0, 0, w, h, r, g, b,
-    a, a, a, a, .0f, .0f, 1.0f, 1.0f,
-    /* ProjectionInfo */ {.0f, .0f, .0f, .0f, .0f, x, y, 1.0f, 1.0f },
-    true},
-    time_delta, 0, 0, loop, TweenTypes::kTweenTypeEaseOut});
-}
-
-void SpriteAnimation::AddTweenHideDuration(uint32_t time_delta)
-{
-  tweens_.emplace_back(Tween{
-    /* TweenInfo */ {0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, .0f, .0f, 1.0f, 1.0f,
-    /* ProjectionInfo */ {.0f, .0f, .0f, .0f, .0f, 0, 0, 1.0f, 1.0f },
-    false},
-    time_delta, 0, 0, false, TweenTypes::kTweenTypeNone });
-}
-
-Tween& SpriteAnimation::GetLastTween()
-{
-  return tweens_.back();
-}
-
-const Tween& SpriteAnimation::GetLastTween() const
-{
-  return tweens_.back();
-}
-
-/* This method should be called just after all fixed tween is appended. */
-void SpriteAnimation::SetTweenLoopTime(uint32_t time_msec)
-{
-  for (auto& t : tweens_)
-  {
-    if (time_msec < t.time_duration)
-    {
-      t.time_loopstart = time_msec;
-      t.loop = true;
-      time_msec = 0;
-    }
-    else {
-      t.time_loopstart = 0;
-      t.loop = false;
-      time_msec -= t.time_duration;
-    }
-  }
-}
-
-const TweenInfo& SpriteAnimation::GetCurrentTweenInfo() const
-{
-  return current_tween_;
-}
-
-
-void SpriteAnimation::Load(SpriteAnimation& from_other)
-{
-  LoadSource(from_other);
-  LoadTween(from_other);
-}
-
-void SpriteAnimation::LoadSource(SpriteAnimation& from_other)
-{
-
-}
-
-void SpriteAnimation::LoadTween(SpriteAnimation& from_other)
-{
-
-}
-
-void SpriteAnimation::LoadTweenCurr(SpriteAnimation& from_other)
-{
-  LoadTweenCurr(from_other.current_tween_);
-}
-
-void SpriteAnimation::LoadTweenCurr(TweenInfo& target)
-{
-  current_tween_ = target;
-}
-
-void SpriteAnimation::GetVertexInfo(VertexInfo* vi)
-{
-  const TweenInfo &ti = GetCurrentTweenInfo();
-
-  float x1, y1, x2, y2, sx1, sx2, sy1, sy2;
-
-  x1 = ti.x;
-  y1 = ti.y;
-  x2 = x1 + ti.w;
-  y2 = y1 + ti.h;
-  sx1 = ti.sx;
-  sy1 = ti.sy;
-  sx2 = sx1 + ti.sw;
-  sy2 = sy1 + ti.sh;
-
-  // for predefined src width / height (-1 means use whole texture)
-  if (ti.sw == -1) sx1 = 0.0, sx2 = 1.0;
-  if (ti.sh == -1) sy1 = 0.0, sy2 = 1.0;
-
-  vi[0].x = x1;
-  vi[0].y = y1;
-  vi[0].z = 0;
-  vi[0].sx = sx1;
-  vi[0].sy = sy1;
-  vi[0].r = ti.r;
-  vi[0].g = ti.g;
-  vi[0].b = ti.b;
-  vi[0].a = ti.aTL;
-
-  vi[1].x = x1;
-  vi[1].y = y2;
-  vi[1].z = 0;
-  vi[1].sx = sx1;
-  vi[1].sy = sy2;
-  vi[1].r = ti.r;
-  vi[1].g = ti.g;
-  vi[1].b = ti.b;
-  vi[1].a = ti.aBL;
-
-  vi[2].x = x2;
-  vi[2].y = y2;
-  vi[2].z = 0;
-  vi[2].sx = sx2;
-  vi[2].sy = sy2;
-  vi[2].r = ti.r;
-  vi[2].g = ti.g;
-  vi[2].b = ti.b;
-  vi[2].a = ti.aBR;
-
-  vi[3].x = x2;
-  vi[3].y = y1;
-  vi[3].z = 0;
-  vi[3].sx = sx2;
-  vi[3].sy = sy1;
-  vi[3].r = ti.r;
-  vi[3].g = ti.g;
-  vi[3].b = ti.b;
-  vi[3].a = ti.aTR;
-}
-
-void SpriteAnimation::GetDrawInfo(DrawInfo& di)
-{
-  GetVertexInfo(di.vi);
-  di.pi = current_tween_.pi;
-}
-
 #define TWEEN_ATTRS \
-  TWEEN(x) \
-  TWEEN(y) \
-  TWEEN(w) \
-  TWEEN(h) \
-  TWEEN(r) \
-  TWEEN(g) \
-  TWEEN(b) \
-  TWEEN(aTL) \
-  TWEEN(aTR) \
-  TWEEN(aBR) \
-  TWEEN(aBL) \
-  TWEEN(sx) \
-  TWEEN(sy) \
-  TWEEN(sw) \
-  TWEEN(sh) \
-  TWEEN(pi.rotx) \
-  TWEEN(pi.roty) \
-  TWEEN(pi.rotz) \
-  TWEEN(pi.tx) \
-  TWEEN(pi.ty) \
-  TWEEN(pi.x) \
-  TWEEN(pi.y) \
-  TWEEN(pi.sx) \
-  TWEEN(pi.sy) \
+  TWEEN(pos) \
+  TWEEN(color) \
+  TWEEN(rotate) \
+  TWEEN(align) \
+  TWEEN(scale)
 
 
-void MakeTween(TweenInfo& ti, const TweenInfo& t1, const TweenInfo& t2,
-  double r, int ease_type)
+void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
+  float r, int ease_type)
 {
   switch (ease_type)
   {
-  case TweenTypes::kTweenTypeLinear:
+  case EaseTypes::kEaseLinear:
   {
 #define TWEEN(attr) \
-  ti.attr = t1.attr * (1 - r) + t2.attr * r;
+  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
 
     TWEEN_ATTRS;
 
 #undef TWEEN
     break;
   }
-  case TweenTypes::kTweenTypeEaseIn:
+  case EaseTypes::kEaseIn:
   {
     // use cubic function
     r = r * r * r;
 #define TWEEN(attr) \
-  ti.attr = t1.attr * (1 - r) + t2.attr * r;
+  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
 
     TWEEN_ATTRS;
 
 #undef TWEEN
     break;
   }
-  case TweenTypes::kTweenTypeEaseOut:
+  case EaseTypes::kEaseOut:
   {
     // use cubic function
     r = 1 - r;
     r = r * r * r;
     r = 1 - r;
 #define TWEEN(attr) \
-  ti.attr = t1.attr * (1 - r) + t2.attr * r;
+  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
 
     TWEEN_ATTRS;
 
 #undef TWEEN
     break;
   }
-  case TweenTypes::kTweenTypeEaseInOut:
+  case EaseTypes::kEaseInOut:
   {
     // use cubic function
     r = 2 * r - 1;
     r = r * r * r;
     r = 0.5f + r / 2;
 #define TWEEN(attr) \
-  ti.attr = t1.attr * (1 - r) + t2.attr * r;
+  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
 
     TWEEN_ATTRS;
 
 #undef TWEEN
     break;
   }
-  case TweenTypes::kTweenTypeNone:
+  case EaseTypes::kEaseNone:
   default:
   {
 #define TWEEN(attr) \
@@ -335,158 +83,251 @@ void MakeTween(TweenInfo& ti, const TweenInfo& t1, const TweenInfo& t2,
   }
 }
 
-void SpriteAnimation::UpdateTween()
+// ---------------------------------------------------------------- class Tween
+
+Animation::Animation()
+  : time_(0), frame_(-1),
+    paused_(false), repeat_(false), repeat_start_time_(0),
+    is_timeline_finished_(false)
 {
-  TweenInfo& ti = current_tween_;
+}
 
-  // DST calculation start.
-  if (IsActive())
+void Animation::Clear()
+{
+  frames_.clear();
+}
+
+void Animation::DuplicateFrame(double delta)
+{
+  if (frames_.empty()) return;
+  if (delta > 0) frames_.push_back(frames_.back());
+  frames_.back().time += delta;
+}
+
+void Animation::AddFrame(const AnimationFrame &frame)
+{
+  if (!frames_.empty() && frames_.back().time >= frame.time)
+    frames_.back() = frame;
+  else
+    frames_.push_back(frame);
+}
+
+void Animation::AddFrame(AnimationFrame &&frame)
+{
+  if (!frames_.empty() && frames_.back().time >= frame.time)
+    frames_.back() = frame;
+  else
+    frames_.emplace_back(frame);
+}
+
+void Animation::AddFrame(const DrawProperty &draw_prop, double time, int ease_type)
+{
+  if (!frames_.empty() && frames_.back().time >= time) {
+    /* XXX: incomplete, time may be small then previous frame.
+     * need to use ASSERT? */
+    frames_.back().time = time;
+    frames_.back().draw_prop = draw_prop;
+    frames_.back().ease_type = ease_type;
+  }
+  else
+    frames_.emplace_back(AnimationFrame{ draw_prop, time, ease_type });
+}
+
+void Animation::AddFrame(const LR2FnArgs& arg)
+{
+  int time = arg.get_int(2);
+  int x = arg.get_int(3);
+  int y = arg.get_int(4);
+  int w = arg.get_int(5);
+  int h = arg.get_int(6);
+  int lr2acc = arg.get_int(7);
+  int a = arg.get_int(8);
+  int r = arg.get_int(9);
+  int g = arg.get_int(10);
+  int b = arg.get_int(11);
+  //int blend = arg.get_int(12);
+  //int filter = arg.get_int(13);
+  int angle = arg.get_int(14);
+  //int center = arg.get_int(15);
+  //int loop = arg.get_int(16);
+  int acc = 0;
+  // timer/op code is ignored here.
+
+  // set attributes
+  DrawProperty f;
+  f.pos = Vector4{ x, y, x + w, y + h };
+  f.color = Vector4{ r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f };
+  f.rotate = Vector3{ 0.0f, 0.0f, glm::radians((float)angle) };
+  f.scale = Vector2{ 1.0f, 1.0f };
+  memset(&f.align, 0, sizeof(f.align));
+
+  switch (lr2acc)
   {
-    if (tweens_.size() == 1)
-    {
-      ti = tweens_.front().ti;
-    }
-    else
-    {
-      const Tween &t1 = tweens_.front();
-      const Tween &t2 = *std::next(tweens_.begin());
-      ti.display = t1.ti.display;
-
-      // If not display, we don't need to calculate further away.
-      if (ti.display)
-      {
-        float r = (float)t1.time_eclipsed / t1.time_duration;
-        MakeTween(ti, t1.ti, t2.ti, r, t1.ease_type);
-      }
-    }
+  case 0:
+    acc = EaseTypes::kEaseLinear;
+    break;
+  case 1:
+    acc = EaseTypes::kEaseIn;
+    break;
+  case 2:
+    acc = EaseTypes::kEaseOut;
+    break;
+  case 3:
+    acc = EaseTypes::kEaseInOut;
+    break;
   }
 
-  // SRC calculation start
-  // If use_ani_texture_ set,
-  // it uses animated SRC info instead of Vertex SRC info.
-  if (use_ani_texture_)
-  {
-    if (ani_texture_.interval > 0)
-    {
-      ti.sw = ani_texture_.sw / ani_texture_.divx;
-      ti.sh = ani_texture_.sh / ani_texture_.divy;
-      ti.sx = ani_texture_.sx + ti.sw * (ani_texture_.idx % ani_texture_.divx);
-      ti.sy = ani_texture_.sy + ti.sh * (ani_texture_.idx / ani_texture_.divx % ani_texture_.divy);
+  // add new animation
+  AddFrame(f, time, acc);
+}
+
+void Animation::Update(double ms)
+{
+  // don't do anything if empty.
+  if (frames_.empty() || paused_ || is_timeline_finished_) return;
+
+  // find out which frame is it in.
+  const double last_time = GetLastTime();
+  time_ += ms;
+  if (repeat_ && time_ > last_time) {
+    const double actual_loop_time = last_time - repeat_start_time_;
+    if (actual_loop_time <= 0)  // XXX: edge case (no loop actually)
+      time_ = last_time;
+    else {
+      time_ = fmod(time_ - last_time, actual_loop_time) + repeat_start_time_;
+      frame_ = -1;
     }
-    else
-    {
-      ti.sx = ani_texture_.sx;
-      ti.sy = ani_texture_.sy;
-      ti.sw = ani_texture_.sw;
-      ti.sh = ani_texture_.sh;
+  }
+  else if (!repeat_ && time_ > last_time) {
+    //ms -= last_time - time_;
+    time_ = last_time;
+    is_timeline_finished_ = true;
+  }
+  for (; frame_ < (int)frames_.size() - 1; ++frame_) {
+    if (time_ < frames_[frame_ + 1].time)
+      break;
+  }
+}
+
+void Animation::Replay()
+{
+  Stop();
+  Play();
+}
+
+void Animation::Play()
+{
+  paused_ = false;
+}
+
+void Animation::Pause()
+{
+  paused_ = true;
+}
+
+void Animation::Stop()
+{
+  time_ = 0;
+  frame_ = -1;
+  paused_ = true;
+  is_timeline_finished_ = false;
+}
+
+void Animation::HurryTween()
+{
+  frame_ = (int)frames_.size() - 1;
+  time_ = GetLastTime();
+}
+
+void Animation::GetDrawProperty(DrawProperty &out)
+{
+  if (!is_timeline_finished_ && !frames_.empty()) {
+    if (frame_ < 0) {
+      // even animation is not started, returns first frame.
+      out = frames_.front().draw_prop;
+    }
+    else if (frame_ == frames_.size() - 1) {
+      // last frame
+      out = frames_.back().draw_prop;
+    }
+    else {
+      MakeTween(out,
+        frames_[frame_].draw_prop,
+        frames_[frame_ + 1].draw_prop,
+        (float)((time_ - frames_[frame_].time) / (frames_[frame_ + 1].time - frames_[frame_].time)),
+        frames_[frame_].ease_type);
     }
   }
 }
 
-void SpriteAnimation::SetSource(float sx, float sy, float sw, float sh)
+void Animation::SetLoop(unsigned repeat_start_time)
 {
-  ani_texture_.cnt = 1;
-  ani_texture_.divx = 1;
-  ani_texture_.divy = 1;
-  ani_texture_.eclipsed_time = 0;
-  ani_texture_.idx = 0;
-  ani_texture_.interval = 0;
-  ani_texture_.sx = sx;
-  ani_texture_.sy = sy;
-  ani_texture_.sw = sw;
-  ani_texture_.sh = sh;
+  repeat_ = true;
+  repeat_start_time_ = (double)repeat_start_time;
 }
 
-void SpriteAnimation::SetAnimatedSource(
-  float sx, float sy, float sw, float sh,
-  int divx, int divy, int timer, int loop_time)
+void Animation::SetEase(int ease)
 {
-  ani_texture_.cnt = divx * divy;
-  ani_texture_.divx = divx;
-  ani_texture_.divy = divy;
-  ani_texture_.eclipsed_time = 0;
-  ani_texture_.idx = 0;
-  ani_texture_.interval = loop_time;
-  ani_texture_.sx = sx;
-  ani_texture_.sy = sy;
-  ani_texture_.sw = sw;
-  ani_texture_.sh = sh;
+  if (is_empty()) return;
+  frames_.back().ease_type = ease;
 }
 
-void SpriteAnimation::UseAnimatedTexture(bool use_ani_tex)
+void Animation::DeleteLoop()
 {
-  use_ani_texture_ = use_ani_tex;
+  repeat_ = false;
+  repeat_start_time_ = 0;
 }
 
-void SpriteAnimation::SetPosition(float x, float y)
+const DrawProperty &Animation::LastFrame() const
 {
-  current_tween_.pi.x = x;
-  current_tween_.pi.y = y;
+  return frames_.back().draw_prop;
 }
 
-void SpriteAnimation::MovePosition(float x, float y)
+DrawProperty &Animation::LastFrame()
 {
-  current_tween_.pi.x += x;
-  current_tween_.pi.y += y;
+  return frames_.back().draw_prop;
 }
 
-void SpriteAnimation::SetSize(float w, float h)
+double Animation::GetLastTime() const
 {
-  current_tween_.w = w;
-  current_tween_.h = h;
+  if (frames_.empty()) return 0;
+  else return frames_.back().time;
 }
 
-void SpriteAnimation::SetAlpha(float a)
+int Animation::GetFrame() const
 {
-  current_tween_.aBL =
-    current_tween_.aBR =
-    current_tween_.aTL =
-    current_tween_.aTR = a;
+  return frame_;
 }
 
-void SpriteAnimation::SetRGB(float r, float g, float b)
+size_t Animation::frame_size() const { return frames_.size(); }
+bool Animation::is_empty() const { return frames_.empty(); }
+bool Animation::is_playing() const { return !paused_ && is_tweening(); }
+bool Animation::is_finished() const { return is_timeline_finished_ || frames_.empty(); }
+
+bool Animation::is_tweening() const
 {
-  current_tween_.r = r;
-  current_tween_.g = g;
-  current_tween_.b = b;
+  return !frames_.empty() && !is_timeline_finished_;
 }
 
-void SpriteAnimation::SetScale(float x, float y)
+// ---------------------------------------------------------------- QueuedAnimation
+
+QueuedAnimation::QueuedAnimation()
+  : paused_(true)
+{}
+
+void QueuedAnimation::Play(const DrawProperty& init_state)
 {
-  current_tween_.pi.sx = x;
-  current_tween_.pi.sy = y;
+  init_state_ = init_state;
 }
 
-void SpriteAnimation::SetRotation(float x, float y, float z)
+void QueuedAnimation::SetCommand(const std::string& command)
 {
-  current_tween_.pi.rotx = x;
-  current_tween_.pi.roty = y;
-  current_tween_.pi.rotz = z;
+  /* TODO */
 }
 
-void SpriteAnimation::SetCenter(float x, float y)
+bool QueuedAnimation::is_empty() const
 {
-  current_tween_.pi.tx = x;
-  current_tween_.pi.ty = y;
-}
-
-void SpriteAnimation::Show()
-{
-  current_tween_.display = true;
-}
-
-void SpriteAnimation::Hide()
-{
-  current_tween_.display = false;
-}
-
-bool SpriteAnimation::IsDisplay() const
-{
-  return current_tween_.display &&
-    current_tween_.aBL > 0 &&
-    current_tween_.aBR > 0 &&
-    current_tween_.aTL > 0 &&
-    current_tween_.aTR > 0;
+  return frames_.empty();
 }
 
 }

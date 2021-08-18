@@ -11,6 +11,7 @@ if (DEFINED USE_GLEW_ES)
 endif()
 
 set (RHYTHMUS_SOURCES
+  Animation.cpp
   ResourceManager.cpp
   Image.cpp
   BaseObject.cpp
@@ -52,6 +53,7 @@ set (RHYTHMUS_SOURCES
   object/ListView.cpp
   object/Wheel.cpp
   object/MusicWheel.cpp
+  object/LR2MusicWheel.cpp
   object/OptionMenu.cpp
   object/Text.cpp
   object/Number.cpp
@@ -70,6 +72,7 @@ set (RHYTHMUS_SOURCES
 set (RHYTHMUS_HEADERS
   common.h
   config.h
+  Animation.h
   ResourceManager.h
   Image.h
   BaseObject.h

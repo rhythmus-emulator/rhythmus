@@ -1,7 +1,7 @@
 #include "Sprite.h"
 #include "Game.h"
 #include "ResourceManager.h"
-#include "Script.h"
+#include "ScriptLR2.h"
 #include "Logger.h"
 #include "KeyPool.h"
 #include "Util.h"
@@ -228,5 +228,40 @@ std::string Sprite::toString() const
   }
   return BaseObject::toString() + ss.str();
 }
+
+
+
+#define HANDLERLR2_OBJNAME Sprite
+REGISTER_LR2OBJECT(Sprite);
+
+class SpriteLR2Handler : public LR2FnClass {
+public:
+  HANDLERLR2(SRC_IMAGE) {
+    Vector4 r{
+      args.get_int(3), args.get_int(4), args.get_int(5), args.get_int(6)
+    };
+    // Use whole image if width/height is zero.
+    o->SetImage(format_string("image%s", args.get_str(2)));
+    if (r.z < 0 || r.w < 0)
+      o->SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
+    else
+      o->SetImageCoord(Vector4{ r.x, r.y, r.x + r.z, r.y + r.w });
+    o->SetAnimatedTexture(args.get_int(7), args.get_int(8), args.get_int(9));
+  }
+  HANDLERLR2(DST_IMAGE) {
+    if (o->GetAnimation().is_empty() /* if first run */) {
+      o->SetBlending(args.get_int(12));
+      o->SetFiltering(args.get_int(13));
+    }
+  }
+  SpriteLR2Handler() : LR2FnClass(
+    GetTypename<Sprite>(), GetTypename<BaseObject>()
+  ) {
+    ADDSHANDLERLR2(SRC_IMAGE);
+    ADDSHANDLERLR2(DST_IMAGE);
+  }
+};
+
+SpriteLR2Handler _SpriteLR2Handler;
 
 }

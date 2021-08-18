@@ -1,6 +1,6 @@
 #include "Text.h"
 #include "ResourceManager.h"
-#include "Script.h"
+#include "ScriptLR2.h"
 #include "KeyPool.h"
 #include "Logger.h"
 #include "Util.h"
@@ -459,5 +459,78 @@ std::string Text::toString() const
   ss << "do_line_breaking: " << do_line_breaking_ << std::endl;
   return BaseObject::toString();
 }
+
+
+#define HANDLERLR2_OBJNAME Text
+REGISTER_LR2OBJECT(Text);
+
+class TextLR2Handler : public LR2FnClass {
+public:
+  HANDLERLR2(SRC_TEXT) {
+    o->SetFont(format_string("font%s", args.get_str(2)));
+
+    /* track change of text table */
+    std::string eventname = format_string("Text%s", args.get_str(3));
+    o->AddCommand(eventname, "refresh");
+    o->SubscribeTo(eventname);
+    std::string resname = format_string("S%s", args.get_str(3));
+    o->SetTextResource(resname);
+    o->Refresh();   // manually refresh to fill text vertices
+
+    /* alignment */
+    const int lr2align = args.get_int(4);
+    switch (lr2align)
+    {
+    case 0:
+      // topleft
+      o->SetTextFitting(TextFitting::kTextFitMaxSize);
+      o->SetTextAlignment(0.0f, 0.0f);
+      break;
+    case 1:
+      // topcenter
+      o->SetTextFitting(TextFitting::kTextFitMaxSize);
+      o->SetTextAlignment(0.5f, 0.0f);
+      break;
+    case 2:
+      // topright
+      o->SetTextFitting(TextFitting::kTextFitMaxSize);
+      o->SetTextAlignment(1.0f, 0.0f);
+      break;
+    }
+    o->SetLR2StyleText(true);
+
+    /* editable (focusable) */
+    if (args.get_int(5) > 0)
+      o->SetFocusable(true);
+
+    /* TODO: panel */
+  }
+  HANDLERLR2(DST_TEXT) {
+    // these attributes are only affective for first run
+    if (o->GetAnimation().is_empty()) {
+      const int loop = args.get_int(16);
+      const int timer = args.get_int(17);
+
+      // LR2 needs to keep its animation queue, so don't use stop.
+      o->AddCommand(format_string("LR%d", timer), "replay");
+      o->AddCommand(format_string("LR%dOff", timer), "hide");
+      //o->SetBlending(ctx->get_int(12));
+      //o->SetFiltering(ctx->get_int(13));
+      if (loop >= 0)
+        o->SetLoop(loop);
+    }
+
+    // TODO: load blending from LR2DST
+    // TODO: fetch font size
+  }
+  TextLR2Handler() : LR2FnClass(
+    GetTypename<Text>(), GetTypename<BaseObject>()
+  ) {
+    ADDSHANDLERLR2(SRC_TEXT);
+    ADDSHANDLERLR2(DST_TEXT);
+  }
+};
+
+TextLR2Handler _TextLR2Handler;
 
 RHYTHMUS_NAMESPACE_END

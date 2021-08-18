@@ -1,171 +1,227 @@
 #pragma once
 
-#include "Song.h"
-#include "Game.h"
-#include "Wheel.h"
-#include "Text.h"
-#include "Number.h"
-#include "KeyPool.h"
-#include <memory>
+#include "Sprite.h"
+#include "Font.h"
+#include "Sound.h"
 #include <string>
+#include <memory>
 
 namespace rhythmus
 {
 
-enum class MusicWheelDataType;
-class PlayRecord;
-
-class MusicWheelData
+enum MusicWheelPosMethod
 {
-public:
-  MusicWheelData();
-  MusicWheelData(MusicWheelDataType type, const std::string& id, const std::string& name, bool is_section);
-  MusicWheelData(const ChartMetaData* c);
-
-  void SetFromChart(const ChartMetaData* chart);
-  void SetAsSection(const std::string& name);
-  void SetRandom(bool is_random);
-  const ChartMetaData* GetChart() const;
-  void NextChart();
-  void SetNextChartId(const std::string& id);
-  std::string GetNextChartId() const;
-  void set_id(const std::string& id);
-  const std::string& get_id() const;
-  const std::string& get_parent_id() const;
-  void set_type(MusicWheelDataType type);
-  MusicWheelDataType get_type() const;
-  bool IsSection() const;
-  bool IsRandom() const;
-
-  std::string title;        // title for displaying
-  int level;
-  int diff;
-  int clear;
-  double rate;
-  std::string songpath;     // for filtering and grouping
-
-private:
-  const ChartMetaData* chart_;
-  MusicWheelDataType type_;
-  std::string id_;          // unique ID
-  std::string parent_id_;   // parent ID for section
-  std::string next_id_;     // for moving to next item
-  bool is_section_;
-  bool is_random_;
+  kMenuPosFixed,    // for fixed position by index for each listview items
+  kMenuPosExpr,     // expression based menu position
 };
 
-/* @brief music wheel item wrapper */
-class MusicWheelItem : public WheelItem
+struct MusicWheelPos
+{
+  int index_i;    // index of integer
+  float index_f;  // index of decimal
+  float y;        // current y pos
+};
+
+struct MusicWheelItemPos
+{
+  unsigned index;
+  float y;
+  DrawProperty p;
+};
+
+struct MusicWheelItemData
+{
+  unsigned index;
+  float y, height;
+  void *p;
+  BaseObject *content;
+  Point margin;
+};
+
+/* @brief Context of rendering select item */
+class MusicWheelItem : public BaseObject
 {
 public:
   MusicWheelItem();
-  virtual void Load(const MetricGroup &metric);
-  virtual void LoadFromData(void *d);
+  MusicWheelItem(const MusicWheelItem& obj);
+  virtual BaseObject *clone();
 
-  Sprite *get_background(unsigned type);
-  Number *get_level(unsigned type);
-  Text *get_title();
+  virtual void Load(const MetricGroup &m);
+  virtual void LoadFromData(void *data);
+  void LoadFromWheelData(const MusicWheelItemData& lvdata);
+
+  void* get_data();
+  DrawProperty &get_item_dprop();
+  bool is_empty() const;
 
 private:
-  Sprite background_[NUM_SELECT_BAR_TYPES];
-  Number level_[NUM_LEVEL_TYPES];
-  Text title_;
+  void set_dataindex(unsigned dataindex);
+  unsigned get_dataindex() const;
+  void set_itemindex(int itemindex);
+  int get_itemindex() const;
+  void set_content(BaseObject *content);
+  void set_focus(bool focused);
 
-  virtual void doUpdate(double delta);
-  virtual void doRender();
+  friend class MusicWheel;
+
+private:
+  unsigned dataindex_;  // index of actual data
+  int itemindex_;       // index number of listview item (no duplication)
+
+  // select item data ptr
+  void* data_;
+
+  // check is current item is selected
+  bool is_focused_;
+
+  // listview item content
+  BaseObject *content_;
+
+  // property to be used for drawn.
+  DrawProperty item_dprop_;
+
+  // margin of a item
+  Point margin_;
+
+  virtual void OnAnimation(DrawProperty &frame);
 };
 
-class MusicWheel : public Wheel
+/*
+ * @brief Menu with infinite-loop functionality
+ * @warn  Dynamic position setting (x,y,w,h) is impossible for each item.
+ *        All items should take same space(margin).
+ *        But you might use margin property for each wheel item contents
+ *        for simulating dynamic x/y pos.
+ */
+class MusicWheel : public BaseObject
 {
 public:
   MusicWheel();
   ~MusicWheel();
 
   virtual void Load(const MetricGroup &metric);
-  void InitializeLR2();
+  virtual void OnReady();
 
-  MusicWheelData *get_data(int dataindex);
-  MusicWheelData *get_selected_data(int player_num);
+  /* @brief Get total data count */
+  unsigned size() const;
+
+  /* @brief get current selected index */
+  unsigned index() const;
+
+
+  /* @brief Add data to be displayed.
+   * @warn  RebuildItems() must be called after calling this method.
+   *        Also, pointer object is not owned(deleted) by ListView. */
+  void AddData(void* d);
+  void AddData(void* d, const Point &margin);
+  void ClearData();
+
+  void* GetSelectedMenuData();
+  void* GetMenuDataByIndex(unsigned index);
+  void* GetMenuItemWrapperByIndex(unsigned index);
+  unsigned GetMenuItemWrapperCount() const;
+  void SelectMenuByIndex(int index);
+  float GetItemYPosByIndex(int index);
+
+  /* @brief Rebuild source data. */
+  virtual void RebuildData();
+
+  /* @brief Build items to display which is suitable for current data_index.
+   * This method must be called when data_index is changed. */
+  virtual void RebuildItems();
+
+  /* @brief Build data content. called when it is begin displayed. */
+  virtual void RebuildDataContent(MusicWheelItemData &data);
+
+  MusicWheelItem *GetWheelItem(unsigned data_index);
+  virtual BaseObject *CreateLVItemContent(void *data);
+  virtual MusicWheelItem *CreateWheelWrapper();
+  void SetWheelWrapperCount(unsigned max_size);
+  void SetWheelWrapperCount(unsigned max_size, const std::string &item_type);
+  void SetWheelPosMethod(MusicWheelPosMethod method);
+  void SetWheelItemType(const std::string &item_type);
+
+  void set_item_min_index(unsigned min_index);
+  void set_item_max_index(unsigned max_index);
+  void set_item_center_index(unsigned index);
+
+  virtual void NavigateDown();
+  virtual void NavigateUp();
+  virtual void NavigateLeft();
+  virtual void NavigateRight();
+
+  /* TODO: curve & rot with z pos? */
 
   virtual void OnSelectChange(const void *data, int direction);
   virtual void OnSelectChanged();
-  virtual void NavigateLeft();
-  virtual void NavigateRight();
-  virtual void RebuildData();
-  virtual void RebuildDataContent(WheelItemData &data);
-  virtual WheelItem *CreateWheelWrapper();
 
-  void OpenSection(const std::string &section);
-  void CloseSection();
-  void Sort(int sort);
-  void SetGamemodeFilter(int filter);
-  void SetDifficultyFilter(int filter);
-  void NextSort();
-  void NextGamemodeFilter();
-  void NextDifficultyFilter();
-  int GetSort() const;
-  int GetGamemode() const;
-  int GetDifficultyFilter() const;
+protected:
+  // current listview top item position
+  MusicWheelPos pos_;
+  MusicWheelPosMethod pos_method_;
+  bool is_loop_;
 
-  friend class MusicWheelItem;
+  // previous listview item position for checking item rebuild
+  int index_current_;
+  int index_previous_;
 
-private:
+  // listview item data
+  std::vector<MusicWheelItemData> data_;
+
+  // listview item wrapper
+  std::vector<MusicWheelItem*> items_;
+
+  // current top data position of listview
+  // @warn may be negative or bigger than data size.
+  int data_top_index_;
+
+  // currently selected data index
+  // @warn may be negative or bigger than data size.
+  int data_index_;
+
+  // displayed item count
+  unsigned item_count_;
+
+  // calculate item count automatically
+  bool set_item_count_auto_;
+
+  // center of the item index (which is being selected)
+  unsigned item_center_index_;
+
+  // focus area of the displayed item
+  unsigned item_focus_min_, item_focus_max_;
+
+  // basic item height
+  unsigned item_height_;
+
+  // total item height
+  unsigned item_total_height_;
+
+  // WheelItem type
+  std::string item_type_;
+
+  // scroll from ~ to
+  int scroll_idx_from_, scroll_idx_to_;
+
+  // scroll time
+  float scroll_time_;
+
+  // scroll time (remain)
+  float scroll_time_remain_;
+
+  // struct for item pos parameter with expr.
   struct {
-    int type;
-    int avail_type[Sorttype::kSortEnd];
-    bool invalidate;
-  } sort_;
-  struct {
-    int gamemode;
-    int key;
-    int difficulty;
-    bool invalidate;
-  } filter_;
-  std::string current_section_;
+    double curve_level;
+    double curve_size;
+  } pos_expr_param_;
 
-  /* display item per chart. if not, per song. */
-  bool item_per_chart_;
+  Sprite focus_effect_;
 
-  /* filtered items */
-  std::vector<MusicWheelData> data_charts_;
-  /* section items (created by default) */
-  std::vector<MusicWheelData> data_sections_;
+  Sound wheel_sound_;
 
-  /* Keypools updated by MusicWheel object */
-  KeyData<std::string> info_title;
-  KeyData<std::string> info_subtitle;
-  KeyData<std::string> info_fulltitle;
-  KeyData<std::string> info_genre;
-  KeyData<std::string> info_artist;
-  KeyData<int> info_itemtype;
-  KeyData<int> info_diff;
-  KeyData<int> info_bpmmax;
-  KeyData<int> info_bpmmin;
-  KeyData<int> info_level;
-  KeyData<int> info_difftype_1;
-  KeyData<int> info_difftype_2;
-  KeyData<int> info_difftype_3;
-  KeyData<int> info_difftype_4;
-  KeyData<int> info_difftype_5;
-  KeyData<int> info_difflv_1;
-  KeyData<int> info_difflv_2;
-  KeyData<int> info_difflv_3;
-  KeyData<int> info_difflv_4;
-  KeyData<int> info_difflv_5;
-  KeyData<int> info_score;
-  KeyData<int> info_exscore;
-  KeyData<int> info_totalnote;
-  KeyData<int> info_maxcombo;
-  KeyData<int> info_playcount;
-  KeyData<int> info_clearcount;
-  KeyData<int> info_failcount;
-  KeyData<int> info_cleartype;
-  KeyData<int> info_pg;
-  KeyData<int> info_gr;
-  KeyData<int> info_gd;
-  KeyData<int> info_bd;
-  KeyData<int> info_pr;
-  KeyData<float> info_musicwheelpos;
+  unsigned CalculateItemCount() const;
+  void UpdateItemPos();
+  virtual void doUpdate(double);
 };
 
 }

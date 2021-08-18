@@ -5,6 +5,8 @@
 
 RHYTHMUS_NAMESPACE_BEGIN
 
+class LR2FnArgs;
+
 enum TextFitting
 {
   kTextFitNone,
@@ -22,6 +24,7 @@ public:
 
   virtual void Load(const MetricGroup &metric);
   virtual void OnReady();
+  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
 
   void SetFont(const std::string& path);
   void SetFont(const MetricGroup &m);

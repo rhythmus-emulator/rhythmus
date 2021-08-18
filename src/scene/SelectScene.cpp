@@ -4,6 +4,8 @@
 #include "Player.h"
 #include "Song.h"
 #include "SongPlayer.h"
+#include "object/LR2MusicWheel.h"
+#include "ScriptLR2.h"
 
 namespace rhythmus
 {
@@ -11,7 +13,7 @@ namespace rhythmus
 
 // -------------------------- class SelectScene
 
-SelectScene::SelectScene()
+SelectScene::SelectScene() : wheel_(nullptr)
 {
   set_name("SelectScene");
   next_scene_ = "DecideScene";
@@ -22,12 +24,9 @@ void SelectScene::LoadScene()
 {
   MetricValue<std::string> bgm_path("SelectSceneBgm");
 
-  // Before starting, unload song.
+  // Before starting, unload song and create player instance.
   SongPlayer::getInstance().Stop();
   PlayerManager::CreateGuestPlayerIfEmpty();
-
-  RegisterPredefObject(&wheel_);
-  AddChild(&wheel_);
 
   // load scene script and resources
   Scene::LoadScene();
@@ -67,6 +66,21 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
 
   if (e.type() == InputEvents::kOnKeyDown || e.type() == InputEvents::kOnKeyPress)
   {
+    switch (e.KeyCode()) {
+    case RI_KEY_UP:
+      EVENTMAN->SendEvent("MusicWheelUp");
+      break;
+    case RI_KEY_DOWN:
+      EVENTMAN->SendEvent("MusicWheelDown");
+      break;
+    case RI_KEY_RIGHT:
+      EVENTMAN->SendEvent("MusicWheelExpand");
+      break;
+    case RI_KEY_LEFT:
+      EVENTMAN->SendEvent("MusicWheelCollapse");
+      break;
+    }
+    /*
     if (e.KeyCode() == RI_KEY_UP)
     {
       wheel_.NavigateUp();
@@ -83,17 +97,20 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
     {
       wheel_.NavigateLeft();
     }
+    */
   }
 
   if (e.type() == InputEvents::kOnKeyUp)
   {
     if (e.KeyCode() == RI_KEY_ENTER)
     {
+      EVENTMAN->SendEvent("MusicWheelDecide");
+
       // Register select song / course into Game / Player state.
       // XXX: can we preload selected song from here before PlayScene...?
       // XXX: what about course selection? select in gamemode?
-      auto *d = wheel_.get_selected_data(0);
-      R_ASSERT(d);
+      std::string id = wheel_->GetSelectedItemId();
+      SongPlayer::getInstance().AddSongtoPlaylistFromId(id);
 #if 0
       Game::getInstance().push_song(d.info.songpath);
       FOR_EACH_PLAYER(p, i)
@@ -104,15 +121,122 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
       END_EACH_PLAYER()
 #endif
 
-      // TODO: use SongId for playlist queue
-      SongPlayer::getInstance().AddSongtoPlaylist(
-        d->GetChart()->songpath, d->GetChart()->chartpath
-      );
-
       // Song selection - immediately change scene mode
       CloseScene(true);
     }
   }
 }
+
+Wheel* SelectScene::GetWheelObject()
+{
+  if (wheel_) return wheel_;
+  wheel_ = new LR2MusicWheel();
+  AddChild(wheel_);
+  return wheel_;
+}
+
+LR2MusicWheel* SelectScene::GetLR2WheelObject()
+{
+  if (wheel_ == nullptr) {
+    wheel_ = new LR2MusicWheel();
+    AddChild(wheel_);
+  }
+  return dynamic_cast<LR2MusicWheel*>(wheel_);
+}
+
+
+#define HANDLERLR2_OBJNAME SelectScene
+REGISTER_LR2OBJECT(SelectScene);
+
+class SelectSceneLR2Handler : public LR2FnClass {
+public:
+  static void PropagateToMusicWheel(SelectScene *scene, const LR2FnArgs &args) {
+    auto* wheel = scene->GetLR2WheelObject();
+    wheel->RunLR2Command(args.get_str(0), args);
+  }
+
+  HANDLERLR2(SRC_BAR_BODY) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(DST_BAR_BODY_OFF) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(DST_BAR_BODY_ON) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(BAR_CENTER) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(BAR_AVAILABLE) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(SRC_BAR_TITLE) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(DST_BAR_TITLE) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(SRC_BAR_FLASH) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(DST_BAR_FLASH) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(SRC_BAR_LEVEL) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(DST_BAR_LEVEL) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(SRC_BAR_LAMP) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(DST_BAR_LAMP) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(SRC_MY_BAR_LAMP) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(DST_MY_BAR_LAMP) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(SRC_RIVAL_BAR_LAMP) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(DST_RIVAL_BAR_LAMP) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(SRC_RIVAL_LAMP) {
+    PropagateToMusicWheel(o, args);
+  }
+  HANDLERLR2(DST_RIVAL_LAMP) {
+    PropagateToMusicWheel(o, args);
+  }
+  SelectSceneLR2Handler() : LR2FnClass(
+    GetTypename<SelectScene>(), GetTypename<Scene>()
+  ) {
+    ADDSHANDLERLR2(SRC_BAR_BODY);
+    ADDSHANDLERLR2(DST_BAR_BODY_OFF);
+    ADDSHANDLERLR2(DST_BAR_BODY_ON);
+    ADDSHANDLERLR2(BAR_CENTER);
+    ADDSHANDLERLR2(BAR_AVAILABLE);
+    ADDSHANDLERLR2(SRC_BAR_TITLE);
+    ADDSHANDLERLR2(DST_BAR_TITLE);
+    ADDSHANDLERLR2(SRC_BAR_FLASH);
+    ADDSHANDLERLR2(DST_BAR_FLASH);
+    ADDSHANDLERLR2(SRC_BAR_LEVEL);
+    ADDSHANDLERLR2(DST_BAR_LEVEL);
+    ADDSHANDLERLR2(SRC_BAR_LAMP);
+    ADDSHANDLERLR2(DST_BAR_LAMP);
+    ADDSHANDLERLR2(SRC_MY_BAR_LAMP);
+    ADDSHANDLERLR2(DST_MY_BAR_LAMP);
+    ADDSHANDLERLR2(SRC_RIVAL_BAR_LAMP);
+    ADDSHANDLERLR2(DST_RIVAL_BAR_LAMP);
+    ADDSHANDLERLR2(SRC_RIVAL_LAMP);
+    ADDSHANDLERLR2(DST_RIVAL_LAMP);
+  }
+};
+
+SelectSceneLR2Handler _SelectSceneLR2Handler;
 
 }

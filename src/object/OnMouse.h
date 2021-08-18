@@ -3,12 +3,15 @@
 namespace rhythmus
 {
 
+class LR2FnArgs;
+
 /* @brief special object for LR2. */
 class OnMouse : public Sprite
 {
 public:
   OnMouse();
   virtual ~OnMouse();
+  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
   virtual bool IsEntered(float x, float y);
   virtual const char* type() const;
 

@@ -1,340 +1,133 @@
 #include "MusicWheel.h"
-#include "SceneManager.h"
-#include "Script.h"
-#include "Player.h"
-#include "Setting.h"
-#include "rparser.h"
+#include "Util.h"
 #include "common.h"
 
 namespace rhythmus
 {
 
-unsigned _wheel_index = 0;
-std::string _GenerateNewId()
+// kinda trick to return always positive value when modulous.
+static inline int mod_pos(int a, int b)
 {
-  static char buffer[10];
-  sprintf(buffer, "%04u", _wheel_index);
-  _wheel_index++;
-  return buffer;
+  return ((a % b) + b) % b;
 }
 
-// ----------------------------- MusicWheelData
-
-enum class MusicWheelDataType
+static inline float modf_pos(float a, float b)
 {
-  None,
-  Song,
-  Folder,
-  CustomFolder,
-  NewFolder,
-  RivalFolder,
-  RivalSong,
-  CourseFolder,
-  Course,
-  RandomSong,
-  RandomCourse
+  return fmod(fmod(a, b) + b, b);
+}
+
+// ---------------------------- class ListViewItem
+
+MusicWheelItem::MusicWheelItem() :
+  dataindex_(0), itemindex_(0),
+  data_(nullptr), is_focused_(false), content_(nullptr)
+{
+  memset(&item_dprop_.pos.a, 0, sizeof(Vector4));
+  item_dprop_.align.x = item_dprop_.align.y = 0.5f;
+  memset(&item_dprop_.rotate.x, 0, sizeof(Vector3));
+  item_dprop_.scale.x = item_dprop_.scale.y = 1.0f;
+  item_dprop_.color.a = item_dprop_.color.r = item_dprop_.color.g = item_dprop_.color.b = 1.0f;
+}
+
+MusicWheelItem::MusicWheelItem(const MusicWheelItem& obj) : BaseObject(obj),
+  dataindex_(obj.dataindex_), itemindex_(obj.itemindex_), data_(obj.data_),
+  is_focused_(false), content_(obj.content_), item_dprop_(obj.item_dprop_)
+{
+}
+
+BaseObject *MusicWheelItem::clone()
+{
+  return new MusicWheelItem(*this);
+}
+
+void MusicWheelItem::Load(const MetricGroup &m)
+{
+  BaseObject::Load(m);
+
+  item_dprop_ = frame_;
+}
+
+void MusicWheelItem::LoadFromData(void *data)
+{
+  data_ = data;
+}
+
+void MusicWheelItem::LoadFromWheelData(const MusicWheelItemData& lvdata)
+{
+  LoadFromData(lvdata.p);
+  margin_ = lvdata.margin;
+  dataindex_ = lvdata.index;
+}
+
+void MusicWheelItem::set_dataindex(unsigned dataindex)
+{
+  dataindex_ = dataindex;
+}
+
+unsigned MusicWheelItem::get_dataindex() const
+{
+  return dataindex_;
+}
+
+void MusicWheelItem::set_itemindex(int itemindex)
+{
+  itemindex_ = itemindex;
+}
+
+int MusicWheelItem::get_itemindex() const
+{
+  return itemindex_;
+}
+
+void MusicWheelItem::set_content(BaseObject *content)
+{
+  content_ = content;
+}
+
+void MusicWheelItem::set_focus(bool focused)
+{
+  is_focused_ = focused;
+}
+
+void* MusicWheelItem::get_data()
+{
+  return data_;
+}
+
+DrawProperty &MusicWheelItem::get_item_dprop()
+{
+  return item_dprop_;
+}
+
+bool MusicWheelItem::is_empty() const
+{
+  return data_ == nullptr;
+}
+
+void MusicWheelItem::OnAnimation(DrawProperty &frame)
+{
+  item_dprop_ = frame;
+}
+
+// @brief Test listviewitem for test purpose
+class TestListViewItem : public MusicWheelItem
+{
+public:
+private:
 };
 
-MusicWheelData::MusicWheelData() :
-  level(0), diff(0), clear(0), rate(.0),
-  chart_(nullptr), type_(MusicWheelDataType::None), is_section_(false), is_random_(false)
+// --------------------------------- class Menu
+
+MusicWheel::MusicWheel()
+  : pos_method_(MusicWheelPosMethod::kMenuPosExpr), is_loop_(true), index_previous_(-1),
+    data_top_index_(0), data_index_(0),
+    item_count_(16), set_item_count_auto_(false), item_height_(80), item_total_height_(0),
+    item_center_index_(8), item_focus_min_(4), item_focus_max_(12),
+    scroll_time_(200.0f), scroll_time_remain_(.0f)
 {
-  id_ = _GenerateNewId();
-}
-
-MusicWheelData::MusicWheelData(
-  MusicWheelDataType type, const std::string& id,
-  const std::string& name, bool is_section) :
-  title(name), level(0), diff(0), clear(0), rate(.0),
-  chart_(nullptr), type_(type), id_(id), is_section_(is_section), is_random_(false)
-{
-}
-
-MusicWheelData::MusicWheelData(const ChartMetaData* c) :
-  level(0), diff(0), clear(0), rate(.0),
-  chart_(c), type_(MusicWheelDataType::Song), is_section_(false), is_random_(false)
-{
-  SetFromChart(c);
-}
-
-void MusicWheelData::SetFromChart(const ChartMetaData* chart)
-{
-  is_section_ = false;
-  if (chart == nullptr) {
-    title = "(None)";
-    level = 0;
-    diff = 0;
-    clear = 0;
-    chart_ = nullptr;
-    type_ = MusicWheelDataType::None;
-    return;
-  }
-  chart_ = chart;
-  id_ = chart->id;
-  title = chart->title;
-  level = chart->level;
-  diff = chart->difficulty;
-  clear = ClearTypes::kClearNone;
-  rate = .0;
-  songpath = chart->songpath;
-
-  auto* playrecord = PlayerManager::GetPlayer()->GetPlayRecord(id_);
-  if (playrecord) {
-    clear = playrecord->clear_type;
-    rate = playrecord->rate();
-  }
-}
-
-void MusicWheelData::SetAsSection(const std::string& name)
-{
-  is_section_ = true;
-  title = name;
-  level = 0;
-  diff = 0;
-  clear = 0;
-  rate = .0;
-  chart_ = nullptr;
-  type_ = MusicWheelDataType::Folder;
-}
-
-void MusicWheelData::SetRandom(bool is_random)
-{
-  is_random_ = is_random;
-}
-
-const ChartMetaData* MusicWheelData::GetChart() const
-{
-  return chart_;
-}
-
-void MusicWheelData::NextChart()
-{
-  if (!chart_ || !chart_->next) return;
-  SetFromChart(chart_->next);
-}
-
-void MusicWheelData::SetNextChartId(const std::string& id)
-{
-  next_id_ = id;
-}
-
-std::string MusicWheelData::GetNextChartId() const
-{
-  return next_id_;
-}
-
-void MusicWheelData::set_id(const std::string& id)
-{
-  id_ = id;
-}
-
-const std::string& MusicWheelData::get_id() const
-{
-  return id_;
-}
-
-const std::string& MusicWheelData::get_parent_id() const
-{
-  return parent_id_;
-}
-
-void MusicWheelData::set_type(MusicWheelDataType type)
-{
-  type_ = type;
-}
-
-MusicWheelDataType MusicWheelData::get_type() const
-{
-  return type_;
-}
-
-bool MusicWheelData::IsSection() const { return is_section_; }
-bool MusicWheelData::IsRandom() const { return is_random_; }
-
-// ----------------------------- MusicWheelItem
-
-MusicWheelItem::MusicWheelItem()
-{
-  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
-    AddChild(&background_[i]);
-  for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
-    AddChild(&level_[i]);
-  AddChild(&title_);
-}
-
-/* @warn use same metric that MusicWheel used. */
-void MusicWheelItem::Load(const MetricGroup &metric)
-{
-  title_.set_name("MusicWheelTitle");
-  title_.Load(metric);
-
-  /* title object is not affected by op code. */
-  //title_->SetIgnoreVisibleGroup(true);
-
-  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
-  {
-    std::string attrname = format_string("lr2bar%dsrc", i);
-    background_[i].set_name("MusicWheelType" + std::to_string(i));
-    background_[i].Load(metric);
-  }
-
-  for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
-  {
-    level_[i].set_name("MusicWheelLevel" + std::to_string(i));
-    level_[i].Load(metric);
-  }
-}
-
-static const int _type_to_baridx[] = {
-  0,  /* None */
-  0,
-  1,
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-  7,
-  9
-};
-
-static const bool _type_to_disp_level[] = {
-  true,
-  false,
-  false,
-  false,
-  false,
-  false,
-  false,
-  false,
-  false,
-  false
-};
-
-void MusicWheelItem::LoadFromData(void *d)
-{
-  MusicWheelData *data = static_cast<MusicWheelData*>(d);
-  unsigned item_type = (unsigned)MusicWheelDataType::None;
-  
-  // TODO: if data is nullptr, then clear all data and set as empty item
-  if (data == nullptr)
-  {
-    title_.Hide();
-    for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
-      background_[i].Hide();
-    for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
-      level_[i].Hide();
-    return;
-  }
-
-  item_type = (unsigned)data->get_type();
-  title_.SetText(data->title);
-  title_.Show();
-
-  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i)
-  {
-    if (i == _type_to_baridx[item_type])
-      background_[i].Show();
-    else
-      background_[i].Hide();
-  }
-
-  for (size_t i = 0; i < NUM_LEVEL_TYPES; ++i)
-  {
-    if (i == data->diff && _type_to_disp_level[item_type])
-    {
-      level_[i].Show();
-      level_[i].SetNumber(data->level);
-    }
-    else
-    {
-      level_[i].Hide();
-      // XXX: kind of trick
-      // LR0 event causes level in not hidden state,
-      // so make it empty string instead of hidden.
-      level_[i].SetText(std::string());
-    }
-  }
-}
-
-Sprite *MusicWheelItem::get_background(unsigned type) { return &background_[type]; }
-Number *MusicWheelItem::get_level(unsigned type) { return &level_[type]; }
-Text *MusicWheelItem::get_title() { return &title_; }
-
-void MusicWheelItem::doUpdate(double delta)
-{
-  float w, h;
-  WheelItem::doUpdate(delta);
-  w = rhythmus::GetWidth(frame_.pos);
-  h = rhythmus::GetHeight(frame_.pos);
-  for (size_t i = 0; i < NUM_SELECT_BAR_TYPES; ++i) {
-    background_[i].SetWidth(w);
-    background_[i].SetHeight(h);
-  }
-}
-
-void MusicWheelItem::doRender()
-{
-  WheelItem::doRender();
-  //GRAPHIC->DrawRect(0, 0, 200, 60, 0x66FF9999);
-}
-
-// --------------------------- class MusicWheel
-
-MusicWheel::MusicWheel() :
-  info_title(KEYPOOL->GetString("MusicWheelTitle")),
-  info_subtitle(KEYPOOL->GetString("MusicWheelSubTitle")),
-  info_fulltitle(KEYPOOL->GetString("MusicWheelFullTitle")),
-  info_genre(KEYPOOL->GetString("MusicWheelGenre")),
-  info_artist(KEYPOOL->GetString("MusicWheelArtist")),
-  info_itemtype(KEYPOOL->GetInt("MusicWheelType")),
-  info_diff(KEYPOOL->GetInt("MusicWheelDiff")),
-  info_bpmmax(KEYPOOL->GetInt("MusicWheelBpmMax")),
-  info_bpmmin(KEYPOOL->GetInt("MusicWheelBpmMin")),
-  info_level(KEYPOOL->GetInt("MusicWheelLevel")),
-  info_difftype_1(KEYPOOL->GetInt("MusicWheelDT1")),
-  info_difftype_2(KEYPOOL->GetInt("MusicWheelDT2")),
-  info_difftype_3(KEYPOOL->GetInt("MusicWheelDT3")),
-  info_difftype_4(KEYPOOL->GetInt("MusicWheelDT4")),
-  info_difftype_5(KEYPOOL->GetInt("MusicWheelDT5")),
-  info_difflv_1(KEYPOOL->GetInt("MusicWheelDLV1")),
-  info_difflv_2(KEYPOOL->GetInt("MusicWheelDLV2")),
-  info_difflv_3(KEYPOOL->GetInt("MusicWheelDLV3")),
-  info_difflv_4(KEYPOOL->GetInt("MusicWheelDLV4")),
-  info_difflv_5(KEYPOOL->GetInt("MusicWheelDLV5")),
-  info_score(KEYPOOL->GetInt("MusicWheelScore")),
-  info_exscore(KEYPOOL->GetInt("MusicWheelExScore")),
-  info_totalnote(KEYPOOL->GetInt("MusicWheelTotalNote")),
-  info_maxcombo(KEYPOOL->GetInt("MusicWheelMaxCombo")),
-  info_playcount(KEYPOOL->GetInt("MusicWheelPlayCount")),
-  info_clearcount(KEYPOOL->GetInt("MusicWheelClearCount")),
-  info_failcount(KEYPOOL->GetInt("MusicWheelFailCount")),
-  info_cleartype(KEYPOOL->GetInt("MusicWheelClearType")),
-  info_pg(KEYPOOL->GetInt("MusicWheelPG")),
-  info_gr(KEYPOOL->GetInt("MusicWheelGR")),
-  info_gd(KEYPOOL->GetInt("MusicWheelGD")),
-  info_bd(KEYPOOL->GetInt("MusicWheelBD")),
-  info_pr(KEYPOOL->GetInt("MusicWheelPR")),
-  info_musicwheelpos(KEYPOOL->GetFloat("MusicWheelPos"))
-{
-  set_name("MusicWheel");
-  sort_.type = 0;
-  sort_.invalidate = true;
-  filter_.gamemode = 0;
-  filter_.difficulty = 0;
-  filter_.invalidate = true;
-  item_per_chart_ = true;
-
-  for (size_t i = 0; i < Sorttype::kSortEnd; ++i)
-    sort_.avail_type[i] = 1;
-
-#if 0
-  set_display_count(24);
-  set_focus_max_index(12);
-  set_focus_min_index(12);
-  set_focus_index(12);
-#endif
+  memset(&pos_, 0, sizeof(pos_));
+  memset(&pos_expr_param_, 0, sizeof(pos_expr_param_));
+  pos_expr_param_.curve_level = 1.0;
 }
 
 MusicWheel::~MusicWheel()
@@ -344,445 +137,407 @@ MusicWheel::~MusicWheel()
 
 void MusicWheel::Load(const MetricGroup &metric)
 {
-  /* create section datas */
-  data_sections_.clear();
-  data_sections_.push_back(
-    MusicWheelData(MusicWheelDataType::Folder, "all_songs", "All Songs", true)
-  );
-  data_sections_.push_back(
-    MusicWheelData(MusicWheelDataType::Folder, "new_songs", "New Songs", true)
-  );
+  unsigned wheelwrappersize = 30;
 
-  /* load system preference */
-  filter_.gamemode = PrefValue<int>("gamemode").get();
-  filter_.difficulty = PrefValue<int>("difficulty").get();
-  filter_.invalidate = true;
-  filter_.key = 0;
-  sort_.type = PrefValue<int>("sortmode").get();
-  sort_.invalidate = true;
-
-  /* copy item metric for creation */
-  //if (metric.get_group("item"))
-  //  item_metric = *metric.get_group("item");
-
-  /* limit gamemode and sort filter types by metric */
-  if (metric.exist("SortType"))
+  // Load itemview attributes
+  BaseObject::Load(metric);
+  metric.get_safe("postype", (int&)pos_method_);
+  metric.get_safe("itemtype", item_type_);
+  metric.get_safe("itemheight", item_height_);
+  metric.get_safe("itemcountauto", set_item_count_auto_);
+  metric.get_safe("itemcount", (int&)wheelwrappersize);
+  if (!set_item_count_auto_)
+    metric.get_safe("itemcount", item_count_);
+  else
+    item_count_ = CalculateItemCount();
+  int center_index = -1;
+  metric.get_safe("center_index", center_index);
+  if (center_index >= 0)
   {
-    for (size_t i = 0; i < Sorttype::kSortEnd; ++i)
-      sort_.avail_type[i] = 0;
-    CommandArgs sorts(metric.get_str("SortType"));
-    for (size_t i = 0; i < sorts.size(); ++i)
-    {
-      sort_.avail_type[
-        StringToSorttype(sorts.Get<std::string>(i).c_str())] = 1;
-    }
-    if (sort_.avail_type[sort_.type] == 0)
-      sort_.type = Sorttype::kNoSort;
+    set_item_min_index((unsigned)center_index);
+    set_item_max_index((unsigned)center_index);
+    set_item_center_index((unsigned)center_index);
   }
 
-  Wheel::Load(metric);
-}
-
-void MusicWheel::InitializeLR2()
-{
-  MusicWheelData section;
-
-  /* create section datas */
-  data_sections_.clear();
-  data_sections_.push_back(
-    MusicWheelData(MusicWheelDataType::Folder, "all_songs", "All Songs", true)
-  );
-  data_sections_.push_back(
-    MusicWheelData(MusicWheelDataType::Folder, "new_songs", "New Songs", true)
-  );
-
-  /* load system preference */
-  filter_.gamemode = PrefValue<int>("gamemode").get();
-  filter_.difficulty = PrefValue<int>("difficulty").get();
-  filter_.invalidate = true;
-  filter_.key = 0;
-  sort_.type = PrefValue<int>("sortmode").get();
-  sort_.invalidate = true;
-
-  {
-    for (size_t i = 0; i < Sorttype::kSortEnd; ++i)
-      sort_.avail_type[i] = 0;
-    CommandArgs sorts("none,title,level,clear");
-    for (size_t i = 0; i < sorts.size(); ++i)
-    {
-      sort_.avail_type[
-        StringToSorttype(sorts.Get<std::string>(i).c_str())] = 1;
-    }
-    if (sort_.avail_type[sort_.type] == 0)
-      sort_.type = Sorttype::kNoSort;
+  SetWheelWrapperCount(wheelwrappersize);
+  const MetricGroup *itemmetric = metric.get_group("item");
+  if (itemmetric) {
+    for (auto *item : items_)
+      item->Load(*itemmetric);
   }
 }
 
-MusicWheelData* MusicWheel::get_data(int dataindex)
+void MusicWheel::OnReady()
 {
-  return static_cast<MusicWheelData*>(Wheel::GetMenuDataByIndex(dataindex));
-}
+  // Load sounds
+  std::string soundpath;
+  if (METRIC->get_safe("Sound.SongSelectChange", soundpath))
+    wheel_sound_.Load(soundpath);
 
-MusicWheelData* MusicWheel::get_selected_data(int player_num)
-{
-  return static_cast<MusicWheelData*>(Wheel::GetSelectedMenuData());
-}
+  // Build data & item
+  RebuildData();
+  SelectMenuByIndex(0);
 
-void MusicWheel::OnSelectChange(const void *data, int direction)
-{
-  const auto *d = static_cast<const MusicWheelData*>(data);
+  // selectchange for initiailize.
+  if (data_.empty())
+    OnSelectChange(nullptr, 0);
+  else
+    OnSelectChange(data_[data_index_ % size()].p, 0);
 
-  if (d == nullptr) {
-    static MusicWheelData data_empty;
-    d = &data_empty;
-  }
-
-  // update KeyPool
-  auto* songinfo = d->GetChart();
-  if (songinfo) {
-    *info_title = songinfo->title;
-    *info_subtitle = songinfo->subtitle;
-    *info_fulltitle = songinfo->title + " " + songinfo->subtitle;
-    *info_genre = songinfo->genre;
-    *info_artist = songinfo->artist;
-    *info_diff = songinfo->difficulty;
-    *info_bpmmax = songinfo->bpm_max;
-    *info_bpmmin = songinfo->bpm_min;
-    *info_level = songinfo->level;
-  }
-  else {
-    *info_title = "";
-    *info_subtitle = "";
-    *info_fulltitle = "";
-    *info_genre = "";
-    *info_artist = "";
-    *info_diff = 0;
-    *info_bpmmax = 0;
-    *info_bpmmin = 0;
-    *info_level = 0;
-  }
-  *info_itemtype = (int)d->get_type();
-
-
-  /* TODO: Song difficulty existence
-  int diff_exist[5] = { 0, 0, 0, 0, 0 };
-  int diff_type[5] = { 2, 2, -1, 2 ,3 };
-  uint32_t levels[5] = { 3, 6, 9, 11, 12 };
-   */
-  *info_difftype_1 = 1;
-  *info_difftype_2 = 2;
-  *info_difftype_3 = 2;
-  *info_difftype_4 = 4;
-  *info_difftype_5 = 5;
-  *info_difflv_1 = 2;
-  *info_difflv_2 = 3;
-  *info_difflv_3 = 8;
-  *info_difflv_4 = 11;
-  *info_difflv_5 = 12;
-
-
-  // Load matching playrecord
-  auto *playrecord = PlayerManager::GetPlayer()->GetPlayRecord(d->get_id());
-  if (playrecord)
+  // Call listview item load event
+  for (unsigned i = 0; i < items_.size(); ++i)
   {
-    *info_score = 100000;
-    *info_exscore = 1234;
-    *info_totalnote = 3000;
-    *info_maxcombo = 1000;
-    *info_playcount = 2;
-    *info_clearcount = 1;
-    *info_failcount = 1;
-    *info_cleartype = 2;
-    *info_pg = 1000;
-    *info_gr = 234;
-    *info_gd = 0;
-    *info_bd = 0;
-    *info_pr = 0;
-  }
-
-
-  // update pos
-  *info_musicwheelpos = static_cast<float>(data_index_ * 100.0 / size());
-
-
-  // send event
-  EVENTMAN->SendEvent("SongSelectChanged");
-  if (direction == -1)
-    EVENTMAN->SendEvent("SongSelectChangeUp");
-  else if (direction == 1)
-    EVENTMAN->SendEvent("SongSelectChangeDown");
-}
-
-void MusicWheel::OnSelectChanged()
-{
-  EVENTMAN->SendEvent("SongSelectChanged");
-}
-
-void MusicWheel::NavigateLeft()
-{
-  // Close section only if section is opened.
-  if (!current_section_.empty())
-  {
-    CloseSection();
-    OnSelectChange(get_selected_data(0), 0);
+    std::string cmdname = format_string("Bar%u", i);
+    items_[i]->RunCommandByName(cmdname);
   }
 }
 
-void MusicWheel::NavigateRight()
-{
-  // if selected item is folder and not opened, then go into it.
-  // if selected is folder and opened, then close it.
-  // if song, change select difficulty and rebuild item.
-  auto *sel_data = get_selected_data(0);
-  if (!sel_data) return;
+unsigned MusicWheel::size() const { return (unsigned)data_.size(); }
+unsigned MusicWheel::index() const { return data_index_; }
 
-  if (sel_data->IsSection())
-  {
-    if (sel_data->get_id() == current_section_)
-      CloseSection();
-    else
-      OpenSection(sel_data->get_id());
-  }
-  else if (sel_data->get_type() == MusicWheelDataType::Song)
-  {
-    NextDifficultyFilter();
-  }
-  OnSelectChange(get_selected_data(0), 0);
+void MusicWheel::AddData(void* d)
+{
+  data_.push_back(MusicWheelItemData{ (unsigned)data_.size(), 0.0f, 0.0f, d, nullptr, Point{0.0f, 0.0f} });
+  item_total_height_ += 0;  // TODO
 }
 
-void MusicWheel::RebuildData()
+void MusicWheel::AddData(void* d, const Point &margin)
 {
-  std::string previous_selection;
+  data_.push_back(MusicWheelItemData{ (unsigned)data_.size(), 0.0f, 0.0f, d, nullptr, margin });
+  item_total_height_ += 0;  // TODO
+}
 
-  // clear wheel items and store previously selected item here.
-  // previously selected item will be used to focus item
-  // after section open/close.
-  if (!data_.empty())
-    previous_selection = get_selected_data(0)->get_id();
-  else if (!current_section_.empty())
-    previous_selection = current_section_;
-  ClearData();
+void MusicWheel::ClearData()
+{
+  /* unreference data from bar items. */
+  for (auto* p : items_)
+    p->LoadFromData(nullptr);
+  /* now delete all data. */
+  for (auto& data : data_)
+    delete data.content;
+  data_.clear();
+}
 
-  // filter songs -- invalidates chart data
-  if (filter_.invalidate) {
-    std::vector<const SongMetaData*> songlist;
-    std::vector<const ChartMetaData*> chartlist;
-    size_t i = 0;
-    bool pass_filter;
+void* MusicWheel::GetSelectedMenuData()
+{
+  int size = (int)data_.size();
+  if (data_.empty()) return nullptr;
+  else return GetMenuDataByIndex((data_index_ % size + size) % size);
+}
 
-    filter_.invalidate = false;
-    data_charts_.clear(); // TODO: free memory; ClearMusicWheelData()
+void* MusicWheel::GetMenuDataByIndex(unsigned index) { return data_[index].p; }
+void* MusicWheel::GetMenuItemWrapperByIndex(unsigned index) { return items_[index]; }
+unsigned MusicWheel::GetMenuItemWrapperCount() const { return items_.size(); };
 
-    // song filtering: gamemode
-    for (const auto *song : SONGLIST->GetSongList()) {
-      pass_filter = true;
-
-      switch (filter_.gamemode) {
-        case Gamemode::kGamemodeNone:
-          break;
-        default:
-          pass_filter = (song->type == filter_.gamemode);
-          break;
-      }
-
-      if (pass_filter) songlist.push_back(song);
-    }
-
-    // chart filtering: key, difficulty
-    for (const auto* song : songlist) {
-      ChartMetaData* c = song->chart;
-      MusicWheelData* prev_chart = nullptr;
-      while (c) {
-        pass_filter = (filter_.key == 0 || c->key == filter_.key);
-        pass_filter &= (filter_.difficulty == Difficulty::kDifficultyNone ||
-          c->difficulty == filter_.difficulty);
-
-        // XXX: is chartlist necessary?
-        if (!pass_filter) chartlist.push_back(c);
-
-        // add backptr for selecting next difficulty
-        if (prev_chart) {
-          prev_chart->SetNextChartId(c->id);
-        }
-        data_charts_.push_back(MusicWheelData(c));
-        prev_chart = &data_charts_.back();
-
-        if (!item_per_chart_) break;
-        c = c->next;
-        if (c == song->chart) break;
-      }
-    }
-
-    // XXX: need to send in sort invalidation
-    KEYPOOL->GetInt("difficulty").set(filter_.difficulty);
-    KEYPOOL->GetInt("gamemode").set(filter_.gamemode);
-    KEYPOOL->GetInt("sortmode").set(sort_.type);
-    EVENTMAN->SendEvent("SongFilterChanged");
-  }
-
-  // sort data object
-  if (sort_.invalidate)
-  {
-    sort_.invalidate = false;
-    switch (sort_.type)
-    {
-    case Sorttype::kNoSort:
-      break;
-    case Sorttype::kSortByLevel:
-      std::sort(data_charts_.begin(), data_charts_.end(),
-        [](const MusicWheelData &a, const MusicWheelData &b) {
-        return a.level < b.level;
-      });
-      break;
-    case Sorttype::kSortByTitle:
-      std::sort(data_charts_.begin(), data_charts_.end(),
-        [](const MusicWheelData &a, const MusicWheelData &b) {
-        return a.title < b.title;
-      });
-      break;
-    case Sorttype::kSortByClear:
-      std::sort(data_charts_.begin(), data_charts_.end(),
-        [](const MusicWheelData &a, const MusicWheelData &b) {
-        return a.clear < b.clear;
-      });
-      break;
-    case Sorttype::kSortByRate:
-      std::sort(data_charts_.begin(), data_charts_.end(),
-        [](const MusicWheelData &a, const MusicWheelData &b) {
-        return a.rate < b.rate;
-      });
-      break;
-    default:
-      R_ASSERT(0);
-    }
-  }
-
-  // add songs & default sections/items
-  for (size_t i = 0; i < data_sections_.size(); ++i)
-  {
-    AddData(&data_sections_[i]);
-    if (data_sections_[i].get_id() == current_section_)
-    {
-      // TODO: filtering once again by section type/name
-      for (auto &d : data_charts_)
-        AddData(&d);
-    }
-  }
-  
-  // re-select previous selection
-  data_index_ = 0;
-  for (size_t i = 0; i < data_.size(); ++i)
-  {
-    if (static_cast<MusicWheelData*>(data_[i].p)->get_id() == previous_selection)
-    {
-      data_index_ = i;
-      break;
-    }
-  }
-
-  // rebuild rendering items
+void MusicWheel::SelectMenuByIndex(int index)
+{
+  data_index_ = index;
+  data_top_index_ = index - item_center_index_;
+  scroll_time_remain_ = 0;
   RebuildItems();
 }
 
-void MusicWheel::RebuildDataContent(WheelItemData &data)
+float MusicWheel::GetItemYPosByIndex(int index)
 {
-  // create from MusicWheel.item data
-  // so metric must be alive after object initialization
-  if (!data.content)
+  if (data_.empty()) return .0f;
+  int dataindex = index % data_.size();
+  int loopcount = (index - dataindex) / data_.size();
+  return item_total_height_ * loopcount + data_[dataindex].y;
+}
+
+void MusicWheel::RebuildData()
+{}
+
+void MusicWheel::RebuildItems()
+{
+  // fill content view to ListViewItem template.
+  bool loop = is_loop_;
+  unsigned item_index = 0;
+  int selindex = pos_.index_i;
+  int item_index_raw = pos_.index_i;
+
+  if (data_.size() == 0) return;
+
+  item_index = items_.empty() ? 0 : (unsigned)(
+    (data_top_index_ % (int)data_.size() + (int)data_.size()) % (int)data_.size());
+
+  for (auto *item : items_)
   {
-    MusicWheelItem *item = new MusicWheelItem();
-    item->set_name("MusicWheelItem");
-    item->LoadFromName();
-    item->set_parent(this);
-    data.content = item;
+    if (data_.empty())
+    {
+      // set empty content (TODO: fix this method)
+      item->set_content(nullptr);
+    }
+    else if (!loop && (item_index_raw < 0 || item_index_raw >= items_.size()))
+    {
+      // hide looping item
+      item->Hide();
+    }
+    else if (item->is_empty() || item->get_dataindex() != item_index)
+    {
+      MusicWheelItemData &data = data_[item_index];
+      RebuildDataContent(data);
+      item->LoadFromWheelData(data);
+      item->set_itemindex(selindex);
+      item->set_focus(data_index_ == item_index_raw);
+      item->Show();
+    }
+    item_index_raw++;
+    selindex++;
+    item_index = items_.empty() ? 0 : (item_index + 1) % data_.size();
   }
 }
 
-WheelItem *MusicWheel::CreateWheelWrapper()
+void MusicWheel::RebuildDataContent(MusicWheelItemData &data)
+{}
+
+MusicWheelItem *MusicWheel::GetWheelItem(unsigned data_index)
 {
-  // TODO: check item_type_ == "LR2"
-  return new MusicWheelItem();
+  R_ASSERT(data_index < items_.size());
+  return items_[data_index];
 }
 
-void MusicWheel::OpenSection(const std::string &section)
+BaseObject *MusicWheel::CreateLVItemContent(void *data)
 {
-  current_section_ = section;
-  RebuildData();
+  /* Implement by your own */
+  return nullptr;
 }
 
-void MusicWheel::CloseSection()
+MusicWheelItem *MusicWheel::CreateWheelWrapper()
 {
-  // restore selected index from section index
-  for (size_t i = 0; i < data_sections_.size(); ++i)
-  {
-    if (data_sections_[i].get_id() == current_section_)
+  /* Implement by your own */
+  return nullptr;
+}
+
+void MusicWheel::SetWheelWrapperCount(unsigned max_size)
+{
+  if (max_size < items_.size()) {
+    for (unsigned i = max_size; i < items_.size(); ++i)
     {
-      data_index_ = i;
-      break;
+      RemoveChild(items_[i]);
+      delete items_[i];
+    }
+    items_.resize(max_size);
+  }
+  else if (max_size > items_.size()) {
+    while (items_.size() < max_size) {
+      auto *item = CreateWheelWrapper();
+      items_.push_back(item);
+      AddChild(item);
     }
   }
-  current_section_.clear();
-  RebuildData();
 }
 
-void MusicWheel::Sort(int sort)
+void MusicWheel::SetWheelWrapperCount(unsigned max_size, const std::string &item_type)
 {
-  sort_.type = sort;
-  sort_.invalidate = true;
-}
-
-void MusicWheel::SetGamemodeFilter(int filter)
-{
-  filter_.gamemode = filter;
-  filter_.invalidate = true;
-}
-
-void MusicWheel::SetDifficultyFilter(int filter)
-{
-  filter_.difficulty = filter;
-  filter_.invalidate = true;
-}
-
-void MusicWheel::NextSort()
-{
-  for (size_t i = 0; i < Sorttype::kSortEnd; ++i)
-  {
-    sort_.type = (sort_.type + 1) % Sorttype::kSortEnd;
-    if (sort_.avail_type[sort_.type])
-      break;
+  if (item_type_ == item_type) {
+    SetWheelWrapperCount(max_size);
   }
-  Sort(sort_.type);
+  else {
+    // re-create all wrappers.
+    SetWheelWrapperCount(0);
+    item_type_ = item_type;
+    SetWheelWrapperCount(max_size);
+  }
 }
 
-void MusicWheel::NextGamemodeFilter()
+void MusicWheel::SetWheelPosMethod(MusicWheelPosMethod method)
 {
-  filter_.gamemode = (filter_.gamemode + 1) % Gamemode::kGamemodeEnd;
-  SetGamemodeFilter(filter_.gamemode);
+  pos_method_ = method;
 }
 
-void MusicWheel::NextDifficultyFilter()
+void MusicWheel::SetWheelItemType(const std::string &item_type)
 {
-  filter_.difficulty = (filter_.difficulty + 1) % Difficulty::kDifficultyEnd;
-  SetDifficultyFilter(filter_.difficulty);
-  // TODO: set song index
-  // if next song difficulty is merged into single item,
-  // then replace current data with next difficulty item.
-  // else, search another difficulty item and set data index with that.
+  unsigned itemcount = 0;
+  if (item_type_ == item_type) return;
+  item_type_ = item_type;
+
+  // re-create all wrappers.
+  itemcount = items_.size();
+  SetWheelWrapperCount(0);
+  SetWheelWrapperCount(itemcount);
 }
 
-int MusicWheel::GetSort() const
+void MusicWheel::set_item_min_index(unsigned min_index)
 {
-  return sort_.type;
+  item_focus_min_ = min_index;
 }
 
-int MusicWheel::GetGamemode() const
+void MusicWheel::set_item_max_index(unsigned max_index)
 {
-  return filter_.gamemode;
+  item_focus_max_ = max_index;
 }
 
-int MusicWheel::GetDifficultyFilter() const
+void MusicWheel::set_item_center_index(unsigned center_idx)
 {
-  return filter_.difficulty;
+  item_center_index_ = center_idx;
 }
+
+void MusicWheel::NavigateDown()
+{
+  if (!is_loop_ && data_index_ >= (int)size() - 1)
+    return;
+
+  // finish animation if not
+  for (auto *i : items_)
+    i->GetAnimation().HurryTween();
+
+  // change data index
+  data_index_++;
+  int item_focus_index = data_index_ - data_top_index_;
+
+  // do scolling only if focus index is out of setting.
+  if (item_focus_index > (int)item_focus_max_)
+  {
+    scroll_idx_from_ = data_top_index_;
+    scroll_idx_to_ = data_top_index_ + 1;
+    scroll_time_remain_ = scroll_time_;
+    data_top_index_++;
+
+    // play wheel sound
+    wheel_sound_.Play();
+  }
+
+  RebuildItems();
+  OnSelectChange(
+    data_.empty() ? nullptr : data_[mod_pos(data_index_, (int)size())].p,
+    1);
+}
+
+void MusicWheel::NavigateUp()
+{
+  if (!is_loop_ && data_index_ == 0)
+    return;
+
+  // finish animation if not
+  for (auto *i : items_)
+    i->GetAnimation().HurryTween();
+
+  // change data index
+  data_index_--;
+  int item_focus_index = data_index_ - data_top_index_;
+
+  // do scolling only if focus index is out of setting.
+  if (item_focus_index < (int)item_focus_min_)
+  {
+    scroll_idx_from_ = data_top_index_;
+    scroll_idx_to_ = data_top_index_ - 1;
+    scroll_time_remain_ = scroll_time_;
+    data_top_index_--;
+
+    // play wheel sound
+    wheel_sound_.Play();
+  }
+
+  RebuildItems();
+  OnSelectChange(
+    data_.empty() ? nullptr : data_[mod_pos(data_index_, (int)size())].p,
+    -1);
+}
+
+void MusicWheel::NavigateLeft() {}
+
+void MusicWheel::NavigateRight() {}
+
+unsigned MusicWheel::CalculateItemCount() const
+{
+  float height = rhythmus::GetHeight(frame_.pos);
+  return static_cast<unsigned>(height / item_height_);
+}
+
+void MusicWheel::UpdateItemPos()
+{
+  DrawProperty d;
+  float ratio =
+    (float)(scroll_idx_from_ > scroll_idx_to_ ? scroll_idx_from_ : scroll_idx_to_)
+    - pos_.index_f;
+  unsigned j = 0;
+  int x, y;
+
+  /* when from > to (NavigateUp),
+   * then ratio change from 0.0f to 1.0f.
+   * when from < to (NavigateDown), 
+   * ratio change from 1.0f to 0.0f. */
+
+  switch (pos_method_)
+  {
+  case MusicWheelPosMethod::kMenuPosFixed:
+    // XXX: copy to item_pos_list_ from items_->get_item_dprop() ?
+    // actual item array are rotated when listview is scrolled
+    // to reduce LoadFromData(..) call, so item object by actual item index
+    // should be obtained by items_abs_ array.
+    for (unsigned i = 1; i + 1 < items_.size(); ++i) {
+      if (scroll_idx_from_ > scroll_idx_to_) {
+        MakeTween(d,
+          items_[i]->get_item_dprop(),
+          items_[i + 1]->get_item_dprop(),
+          1.0f - ratio, EaseTypes::kEaseIn);
+      }
+      else {
+        MakeTween(d,
+          items_[i]->get_item_dprop(),
+          items_[i - 1]->get_item_dprop(),
+          ratio, EaseTypes::kEaseIn);
+      }
+
+      // TODO: set alpha, rotation
+      items_[i]->SetPos((int)d.pos.x, (int)d.pos.y);
+    }
+    break;
+  case MusicWheelPosMethod::kMenuPosExpr:
+    for (unsigned i = 0; i < items_.size(); ++i)
+    {
+      // pos: expecting (-1 ~ item_count)
+      float pos = i + ratio;
+      x = static_cast<int>(
+        pos_expr_param_.curve_size *
+        (1.0 - cos(pos / pos_expr_param_.curve_level))
+        );
+      y = static_cast<int>(
+        item_height_ * pos
+        );
+      items_[i]->SetPos(x, y);
+    }
+    break;
+  }
+}
+
+void MusicWheel::doUpdate(double delta)
+{
+  // Update current scroll and index position
+  if (scroll_time_remain_ > 0 && scroll_time_ > 0)
+  {
+    // current scroll delta ( 0 ~ 1 )
+    float scroll_ratio;
+
+    // Update scroll pos
+    scroll_time_remain_ = std::max(.0f, scroll_time_remain_ - (float)delta);
+    // -- for precision
+    if (scroll_time_remain_ < 5.0f)
+      scroll_time_remain_ = .0f;
+    if (scroll_time_ > 0)
+      scroll_ratio = 1.0f - scroll_time_remain_ / scroll_time_;
+
+    pos_.index_f = scroll_idx_from_ * (1.0f - scroll_ratio) + scroll_idx_to_ * scroll_ratio;
+    pos_.index_i = (int)pos_.index_f;
+    // TODO: multiply listviewitem total height if scroll_idx_to is out of index.
+    pos_.y = GetItemYPosByIndex(scroll_idx_from_) * (1.0f - scroll_ratio)
+           + GetItemYPosByIndex(scroll_idx_to_) * scroll_ratio;
+
+    // calculate each LVitem position-based-index and position
+    UpdateItemPos();
+  }
+
+  // rebuild LVitem if current index is changed
+  if (index_current_ != pos_.index_i)
+  {
+    RebuildItems();
+    index_current_ = pos_.index_i;
+  }
+}
+
+void MusicWheel::OnSelectChange(const void *data, int direction) {}
+
+void MusicWheel::OnSelectChanged() {}
 
 }

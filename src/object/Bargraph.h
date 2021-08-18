@@ -3,6 +3,8 @@
 namespace rhythmus
 {
 
+class LR2FnArgs;
+
 /* @brief special object for LR2. */
 class Bargraph : public BaseObject
 {
@@ -10,6 +12,7 @@ public:
   Bargraph();
   virtual ~Bargraph();
   virtual void Load(const MetricGroup &metric);
+  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
   void SetResourceId(const std::string &id);
   void SetDirection(int direction);
   Sprite* sprite();

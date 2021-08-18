@@ -7,6 +7,8 @@
 namespace rhythmus
 {
 
+class LR2FnArgs;
+
 /**
  * sprite animation property
  * divx : sprite division by x pos
@@ -30,6 +32,7 @@ public:
 
   virtual void Load(const MetricGroup &metric);
   virtual void OnReady();
+  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
 
   /* Set sprite's image by path */
   void SetImage(const std::string &path);

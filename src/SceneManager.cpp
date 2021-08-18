@@ -49,7 +49,7 @@ static void LoadSoundThemeFromConfig()
   std::vector<std::string> scfg_list;
   PATH->GetAllPaths("sound/*.lr2ss", scfg_list);
   PrefOptionList scfg_pref("soundtheme", scfg_list);
-  Script::Load(scfg_pref.get(), nullptr);
+  Script::Load(scfg_pref.get(), nullptr, "SoundConfig");
 }
 
 void SceneManager::Initialize()
@@ -324,15 +324,13 @@ void SceneManager::LoadThemeConfig(const std::string& name)
   case TT_LR2:
     // fill scene_scripts_ by executing all scripts
     // (don't execute script, only running as pre-loading mode for loading configs)
-    Script::SetPreloadMode(true);
     PATH->GetAllPaths(format_string("themes/%s/*/*.lr2skin", name.c_str()), files);
     for (const auto& f : files) {
-      Script::Load(f, nullptr);
+      Script::Load(f, (void*)f.c_str(), "ScenePreload");
     }
     if (scene_scripts_.size() == 0) {
       Logger::Warn("No scene scripts detected, maybe invalid LR2SKIN file?");
     }
-    Script::SetPreloadMode(false);
     break;
   default:
     R_ASSERT(0 && "Unknown Theme Type");

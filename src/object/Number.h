@@ -6,6 +6,7 @@
 namespace rhythmus
 {
 
+class LR2FnArgs;
 constexpr size_t kMaxNumberVertex = 16;
 
 /* @brief Optimized for displaying number. */
@@ -17,6 +18,7 @@ public:
 
   virtual void Load(const MetricGroup &metric);
   virtual void OnReady();
+  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
 
   virtual void SetGlyphFromFont(const MetricGroup &m);
   virtual void SetGlyphFromImage(const std::string &path, const Rect &clip,

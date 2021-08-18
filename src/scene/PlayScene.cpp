@@ -2,7 +2,7 @@
 #include "SongPlayer.h"
 #include "Util.h"
 #include "Player.h"
-#include "Script.h"
+#include "ScriptLR2.h"
 #include "SceneManager.h"
 
 namespace rhythmus
@@ -148,37 +148,26 @@ void PlayScene::SetMinimumLoadingTime(int time) { theme_play_param_.load_wait_ti
 void PlayScene::SetReadyTime(int time) { theme_play_param_.ready_time = time; }
 
 
-class LR2CSVPlaySceneHandlers
-{
+#define HANDLERLR2_OBJNAME PlayScene
+REGISTER_LR2OBJECT(PlayScene);
+
+class PlaySceneLR2Handler : public LR2FnClass {
 public:
-  static bool loadstart(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    // ignored.
-    return true;
+  HANDLERLR2(LOADSTART) { // ignored
   }
-  static bool loadend(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto *scene = (PlayScene*)loader->get_object("playscene");
-    if (!scene) return false;
-    scene->SetMinimumLoadingTime(ctx->get_int(1));
-    return true;
+  HANDLERLR2(LOADEND) {
+    o->SetMinimumLoadingTime(args.get_int(1));
   }
-  static bool scratchside(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto *scene = (PlayScene*)loader->get_object("playscene");
-    if (!scene) return false;
-    scene->SetPlayer(ctx->get_int(1));
-    return true;
+  HANDLERLR2(SCRATCHSIDE) {
+    o->SetPlayer(args.get_int(1));
   }
-  LR2CSVPlaySceneHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#LOADSTART", (LR2CSVHandlerFunc)&loadstart);
-    LR2CSVExecutor::AddHandler("#LOADEND", (LR2CSVHandlerFunc)&loadend);
-    LR2CSVExecutor::AddHandler("#SCRATCHSIDE", (LR2CSVHandlerFunc)&scratchside);
+  PlaySceneLR2Handler() : LR2FnClass(GetTypename<PlayScene>()) {
+    ADDSHANDLERLR2(LOADSTART);
+    ADDSHANDLERLR2(LOADEND);
+    ADDSHANDLERLR2(SCRATCHSIDE);
   }
 };
 
-// register handler
-LR2CSVPlaySceneHandlers _LR2CSVPlaySceneHandlers;
+PlaySceneLR2Handler _PlaySceneLR2Handler;
 
 }

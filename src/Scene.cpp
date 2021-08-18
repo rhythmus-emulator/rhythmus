@@ -1,10 +1,19 @@
 #include "Scene.h"
 #include "SceneManager.h"       /* preference */
 #include "TaskPool.h"
-#include "Script.h"
+#include "ScriptLR2.h"
 #include "Util.h"
 #include "Logger.h"
 #include "common.h"
+
+// objects
+#include "Sprite.h"
+#include "object/Text.h"
+#include "object/Number.h"
+#include "object/Button.h"
+#include "object/Slider.h"
+#include "object/Bargraph.h"
+#include "object/OnMouse.h"
 
 namespace rhythmus
 {
@@ -123,7 +132,7 @@ void SceneTaskQueue::Update(float delta)
 // -------------------------------- Scene
 
 Scene::Scene()
-  : fade_time_(0), fade_duration_(0),
+  : imgidx_(0), fntidx_(0), fade_time_(0), fade_duration_(0),
     fade_in_time_(0), fade_out_time_(0),
     is_input_available_(true), begin_input_time_(0), next_scene_time_(0),
     do_sort_objects_(false), enable_caching_(false), scene_loading_task_(nullptr)
@@ -150,39 +159,7 @@ void Scene::Load(const MetricGroup &m)
   if (m.exist("FadeIn"))
     fade_in_time_ = m.get<int>("FadeIn");
   m.get_safe("usecustomlayout", use_custom_layout);
-
-  // sort object if necessary.
-  if (do_sort_objects_)
-  {
-    std::stable_sort(children_.begin(), children_.end(),
-      [](BaseObject *o1, BaseObject *o2) {
-      return o1->GetDrawOrder() < o2->GetDrawOrder();
-    });
-  }
 }
-
-class SceneLoadTask : public Task {
-public:
-  SceneLoadTask(Scene* s) : s(s) {}
-
-  virtual void run()
-  {
-    // Load start event : Loading
-    EVENTMAN->SendEvent("Loading");
-
-    // Load metrics (e.g. Stepmania)
-    s->LoadFromName();
-
-    // Load script file
-    std::string script_path = SCENEMAN->GetSceneScript(s);
-    Script::Load(script_path, s);
-  }
-
-  virtual void abort() {}
-
-private:
-  Scene* s;
-};
 
 void Scene::LoadScene()
 {
@@ -203,7 +180,10 @@ void Scene::LoadScene()
 
   // Load script file
   std::string script_path = SCENEMAN->GetSceneScript(this);
-  Script::Load(script_path, this);
+  Script::Load(script_path, this, get_name());
+
+  // Finialize
+  if (do_sort_objects_) SortChildren();
 }
 
 void Scene::StartScene()
@@ -317,6 +297,20 @@ void Scene::SetFadeOutTime(int time) { fade_out_time_ = time; }
 void Scene::SetFadeInTime(int time) { fade_in_time_ = time; }
 void Scene::SetTimeout(int time) { next_scene_time_ = time; }
 
+void Scene::AddImageSymbolLink(const std::string& path)
+{
+  std::string name = format_string("image%u", imgidx_++);
+  if (path != "CONTINUE")
+    PATH->SetSymbolLink(name, FilePath(path).get());
+}
+
+void Scene::AddFontSymbolLink(const std::string& path)
+{
+  std::string name = format_string("font%u", fntidx_++);
+  if (path != "CONTINUE")
+    PATH->SetSymbolLink(name, FilePath(path).get());
+}
+
 void Scene::ProcessInputEvent(const InputEvent& e)
 {
   if (e.type() == InputEvents::kOnKeyUp)
@@ -378,37 +372,17 @@ void Scene::doRenderAfter()
   }
 }
 
+
 // -------------------------------------------------------------------- Loaders
 
-class LR2CSVSceneHandlers
-{
+#define HANDLERLR2_OBJNAME const char
+
+class ScenePreloadHandler : public LR2FnClass {
 public:
-  static bool image(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    std::string name, path;
-    name = format_string("image%u", loader->get_image_index());
-    path = ctx->get_str(1);
-    if (path != "CONTINUE")
-      PATH->SetSymbolLink(name, FilePath(path).get());
-    return true;
-  }
-  static bool lr2font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto &fntstyle = METRIC->add_group(format_string("font%u", loader->get_font_index()));
-    const char *path = ctx->get_str(1);
-    fntstyle.set("path", path);
-    return true;
-  }
-  static bool font(void*, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    // --
-    return true;
-  }
-  static bool information(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
+  HANDLERLR2(INFORMATION) {
     // TODO -- "gamemode", "title", "artist", "previewimage"
-    int gamemode = atoi(ctx->get_str(1));
-    static const char *scenename_reserved[] = {
+    int gamemode = args.get_int(1);
+    static const char* scenename_reserved[] = {
       // 7, 5, 14, 10, 9
       "PlayScene", 0, 0, 0, 0,
       "SelectScene",
@@ -416,85 +390,218 @@ public:
       "ResultScene",
     };
     const char* scenename = nullptr;
-    if (gamemode > 14) return false;
+    if (gamemode > 14) return;
     scenename = scenename_reserved[gamemode];
-    if (scenename == nullptr) return false;
-    SCENEMAN->SetSceneScript(scenename, ctx->get_path());
-    return true;
+    if (scenename == nullptr) return;
+    SCENEMAN->SetSceneScript(scenename, o);
   }
-  static bool customoption(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
+  ScenePreloadHandler() : LR2FnClass("ScenePreload") {
+    ADDSHANDLERLR2(INFORMATION);
+  }
+};
+
+class SoundConfigHandler : public LR2FnClass {
+public:
+  HANDLERLR2(SELECT) {
+    METRIC->set("SelectSceneBgm", FilePath(args.get_str(1)).get());
+  }
+  SoundConfigHandler() : LR2FnClass("SoundConfig") {
+    ADDSHANDLERLR2(SELECT);
+  }
+};
+
+
+#undef  HANDLERLR2_OBJNAME
+#define HANDLERLR2_OBJNAME Scene
+REGISTER_LR2OBJECT(Scene);
+
+class BaseSceneHandler : public LR2FnClass {
+public:
+  HANDLERLR2(IMAGE) {
+    o->AddImageSymbolLink(args.get_str(1));
+  }
+  HANDLERLR2(LR2FONT) {
+    o->AddFontSymbolLink(args.get_str(1));
+  }
+  HANDLERLR2(FONT) {
+  }
+  HANDLERLR2(INFORMATION) {
+  }
+  HANDLERLR2(CUSTOMOPTION) {
     // TODO -- {"name", "id", "constraint:%3s,%4s,%5s,%6s,%7s,%8s,%9s,%10s", 0},
-    return true;
   }
-  static bool customfile(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
+  HANDLERLR2(CUSTOMFILE) {
     // TODO -- {"name", "constraint", "default", 0}
-    return true;
   }
-  static bool transcolor(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
+  HANDLERLR2(TRANSCLOLR) {
     // TODO: change GRAPHIC configuration
-    return true;
   }
-  static bool startinput(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return false;
-    scene->SetInputStartTime(ctx->get_int(1));
-    return true;
+  HANDLERLR2(STARTINPUT) {
+    o->SetInputStartTime(args.get_int(1));
   }
-  static bool ignoreinput(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    // ignores all input except system keys (e.g. escape)
+  HANDLERLR2(IGNOREINPUT) {
+    // TODO: ignores all input except system keys (e.g. escape)
+  }
+  HANDLERLR2(FADEOUT) {
+    o->SetFadeOutTime(args.get_int(1));
+  }
+  HANDLERLR2(FADEIN) {
+    o->SetFadeInTime(args.get_int(1));
+  }
+  HANDLERLR2(TIMEOUT) {
+    o->SetTimeout(args.get_int(1));
+  }
+  HANDLERLR2(HELPFILE) {
     // TODO
-    return true;
   }
-  static bool fadeout(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return false;
-    scene->SetFadeOutTime(ctx->get_int(1));
-    return true;
+  HANDLERLR2(SRC_IMAGE) {
+    auto* obj = new Sprite();
+    obj->set_name("#IMAGE");
+    obj->RunLR2Command(args.get_str(0), args);
+    obj->RunLR2Command("#SRC", args);
+    o->AddChild(obj);
   }
-  static bool fadein(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return false;
-    scene->SetFadeInTime(ctx->get_int(1));
-    return true;
+  HANDLERLR2(DST_IMAGE) {
+    auto* obj = o->GetLastChildWithName("#IMAGE");
+    if (!obj) {
+      Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
+      return;
+    }
+    obj->RunLR2Command("#DST_IMAGE", args);
+    obj->RunLR2Command("#DST", args);
   }
-  static bool timeout(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    auto *scene = (Scene*)loader->get_object("scene");
-    if (!scene) return false;
-    scene->SetTimeout(ctx->get_int(1));
-    return true;
+  HANDLERLR2(SRC_TEXT) {
+    auto* obj = new Text();
+    obj->set_name("#TEXT");
+    obj->RunLR2Command(args.get_str(0), args);
+    obj->RunLR2Command("#SRC", args);
+    o->AddChild(obj);
   }
-  static bool helpfile(void *, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-  {
-    // TODO
-    return true;
+  HANDLERLR2(DST_TEXT) {
+    auto* obj = o->GetLastChildWithName("#TEXT");
+    if (!obj) {
+      Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
+      return;
+    }
+    obj->RunLR2Command("#DST_TEXT", args);
+    obj->RunLR2Command("#DST", args);
   }
-  LR2CSVSceneHandlers()
+  HANDLERLR2(SRC_NUMBER) {
+    auto* obj = new Number();
+    obj->set_name("#NUMBER");
+    obj->RunLR2Command(args.get_str(0), args);
+    obj->RunLR2Command("#SRC", args);
+    o->AddChild(obj);
+  }
+  HANDLERLR2(DST_NUMBER) {
+    auto* obj = o->GetLastChildWithName("#NUMBER");
+    if (!obj) {
+      Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
+      return;
+    }
+    obj->RunLR2Command("#DST_NUMBER", args);
+    obj->RunLR2Command("#DST", args);
+  }
+  HANDLERLR2(SRC_BUTTON) {
+    auto* obj = new Button();
+    obj->set_name("#BUTTON");
+    obj->RunLR2Command(args.get_str(0), args);
+    obj->RunLR2Command("#SRC", args);
+    o->AddChild(obj);
+  }
+  HANDLERLR2(DST_BUTTON) {
+    auto* obj = o->GetLastChildWithName("#BUTTON");
+    if (!obj) {
+      Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
+      return;
+    }
+    //obj->RunLR2Command("#DST_BUTTON", args);
+    obj->RunLR2Command("#DST", args);
+  }
+  HANDLERLR2(SRC_SLIDER) {
+    auto* obj = new Slider();
+    obj->set_name("#SLIDER");
+    obj->RunLR2Command(args.get_str(0), args);
+    obj->RunLR2Command("#SRC", args);
+    o->AddChild(obj);
+  }
+  HANDLERLR2(DST_SLIDER) {
+    auto* obj = o->GetLastChildWithName("#SLIDER");
+    if (!obj) {
+      Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
+      return;
+    }
+    obj->RunLR2Command("#DST_SLIDER", args);
+    obj->RunLR2Command("#DST", args);
+  }
+  HANDLERLR2(SRC_BARGRAPH) {
+    auto* obj = new Bargraph();
+    obj->set_name("#BARGRAPH");
+    obj->RunLR2Command(args.get_str(0), args);
+    obj->RunLR2Command("#SRC", args);
+    o->AddChild(obj);
+  }
+  HANDLERLR2(DST_BARGRAPH) {
+    auto* obj = o->GetLastChildWithName("#BARGRAPH");
+    if (!obj) {
+      Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
+      return;
+    }
+    //obj->RunLR2Command("#DST_BARGRAPH", args);
+    obj->RunLR2Command("#DST", args);
+  }
+  HANDLERLR2(SRC_ONMOUSE) {
+    auto* obj = new OnMouse();
+    obj->set_name("#ONMOUSE");
+    obj->RunLR2Command(args.get_str(0), args);
+    obj->RunLR2Command("#SRC_IMAGE", args);
+    obj->RunLR2Command("#SRC", args);
+    o->AddChild(obj);
+  }
+  HANDLERLR2(DST_ONMOUSE) {
+    auto* obj = o->GetLastChildWithName("#ONMOUSE");
+    if (!obj) {
+      Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
+      return;
+    }
+    //obj->RunLR2Command("#DST_ONMOUSE", args);
+    obj->RunLR2Command("#DST", args);
+  }
+  BaseSceneHandler() : LR2FnClass(GetTypename<Scene>())
   {
-    LR2CSVExecutor::AddHandler("#IMAGE", (LR2CSVHandlerFunc)image);
-    LR2CSVExecutor::AddHandler("#LR2FONT", (LR2CSVHandlerFunc)lr2font);
-    LR2CSVExecutor::AddHandler("#FONT", (LR2CSVHandlerFunc)font);
-    LR2CSVExecutor::AddHandler("#INFORMATION", (LR2CSVHandlerFunc)information);
-    LR2CSVExecutor::AddHandler("#CUSTOMOPTION", (LR2CSVHandlerFunc)customoption);
-    LR2CSVExecutor::AddHandler("#CUSTOMFILE", (LR2CSVHandlerFunc)customfile);
-    LR2CSVExecutor::AddHandler("#TRANSCLOLR", (LR2CSVHandlerFunc)transcolor);
-    LR2CSVExecutor::AddHandler("#STARTINPUT", (LR2CSVHandlerFunc)startinput);
-    LR2CSVExecutor::AddHandler("#IGNOREINPUT", (LR2CSVHandlerFunc)ignoreinput);
-    LR2CSVExecutor::AddHandler("#FADEOUT", (LR2CSVHandlerFunc)fadeout);
-    LR2CSVExecutor::AddHandler("#FADEIN", (LR2CSVHandlerFunc)fadein);
-    LR2CSVExecutor::AddHandler("#TIMEOUT", (LR2CSVHandlerFunc)timeout);
-    LR2CSVExecutor::AddHandler("#HELPFILE", (LR2CSVHandlerFunc)helpfile);
+    ADDSHANDLERLR2(IMAGE);
+    ADDSHANDLERLR2(LR2FONT);
+    ADDSHANDLERLR2(FONT);
+    ADDSHANDLERLR2(INFORMATION);
+    ADDSHANDLERLR2(CUSTOMOPTION);
+    ADDSHANDLERLR2(CUSTOMFILE);
+    ADDSHANDLERLR2(TRANSCLOLR);
+    ADDSHANDLERLR2(STARTINPUT);
+    ADDSHANDLERLR2(IGNOREINPUT);
+    ADDSHANDLERLR2(FADEOUT);
+    ADDSHANDLERLR2(FADEIN);
+    ADDSHANDLERLR2(TIMEOUT);
+    ADDSHANDLERLR2(HELPFILE);
+    ADDSHANDLERLR2(SRC_IMAGE);
+    ADDSHANDLERLR2(DST_IMAGE);
+    ADDSHANDLERLR2(SRC_TEXT);
+    ADDSHANDLERLR2(DST_TEXT);
+    ADDSHANDLERLR2(SRC_NUMBER);
+    ADDSHANDLERLR2(DST_NUMBER);
+    ADDSHANDLERLR2(SRC_BUTTON);
+    ADDSHANDLERLR2(DST_BUTTON);
+    ADDSHANDLERLR2(SRC_SLIDER);
+    ADDSHANDLERLR2(DST_SLIDER);
+    ADDSHANDLERLR2(SRC_BARGRAPH);
+    ADDSHANDLERLR2(DST_BARGRAPH);
+    ADDSHANDLERLR2(SRC_ONMOUSE);
+    ADDSHANDLERLR2(DST_ONMOUSE);
   }
 };
 
 // register handlers
-LR2CSVSceneHandlers _LR2CSVSceneHandlers;
+ScenePreloadHandler _ScenePreloadHandler;
+SoundConfigHandler _SoundConfigHandler;
+BaseSceneHandler _BaseSceneHandler;
 
 }

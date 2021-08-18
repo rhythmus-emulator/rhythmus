@@ -1,4 +1,5 @@
 #include "Script.h"
+#include "ScriptLR2.h"
 #include "Logger.h"
 #include "SceneManager.h"
 #include "Setting.h"
@@ -13,9 +14,6 @@ namespace rhythmus
 {
 
 using namespace tinyxml2;
-
-// Whether to execute script only for metadata.
-static bool MODE_PRELOAD = false;
 
 // ----------------------------------------------------------------- XMLContext
 
@@ -226,10 +224,8 @@ bool CSVContext::next()
   auto &r = rows[row_idx];
   memset(cols, 0, sizeof(cols));
   cols[ci++] = r.c_str();
-  for (; i < r.size(); ++i)
-  {
-    if (r[i] == sep)
-    {
+  for (; i < r.size() && ci < MAX_CSV_COL; ++i) {
+    if (r[i] == sep) {
       r[i] = '\0';
       cols[ci++] = &r[i + 1];
       i++;
@@ -238,6 +234,11 @@ bool CSVContext::next()
   col_size = ci;
   row_idx++;
   return true;
+}
+
+const char* const* CSVContext::get_row() const
+{
+  return cols;
 }
 
 const char *CSVContext::get_str(unsigned idx) const
@@ -264,270 +265,10 @@ unsigned CSVContext::get_col_size() const
   return col_size;
 }
 
-
-// -------------------------------------------------------------- LR2CSVContext
-
-LR2CSVContext::LR2CSVContext()
-{
-}
-
-LR2CSVContext::~LR2CSVContext()
-{
-}
-
-bool LR2CSVContext::Load(const std::string &path)
-{
-  return Load(FilePath(path));
-}
-
-bool LR2CSVContext::Load(const FilePath& path)
-{
-  ctx.clear();
-  path_ = path.get();
-  folder_ = GetFolderPath(path_);
-  return LoadContextStack(path_);
-}
-
-bool LR2CSVContext::next()
-{
-  while (!ctx.empty())
-  {
-    if (!ctx.back().next())
-    {
-      ctx.pop_back();
-      continue;
-    }
-
-    auto &c = ctx.back();
-    const char *cmd = c.get_str(0);
-    R_ASSERT(cmd);
-
-    // preprocess commands
-    if (cmd[0] == '#')
-    {
-      const char *val = c.get_str(1);
-      if (stricmp("#IF", cmd) == 0)
-      {
-        if (*KEYPOOL->GetInt(val)) AddIfStmtStack(false);
-        else AddIfStmtStack(true);
-        continue; // fetch next line
-      }
-      else if (stricmp("#ELSEIF", cmd) == 0)
-      {
-        if (if_stack_.empty())
-          continue;
-        if (if_stack_.back().cond_is_true ||
-          if_stack_.back().cond_match_count > 0)
-        {
-          if_stack_.back().cond_is_true = false;
-          continue;
-        }
-
-        if (*KEYPOOL->GetInt(val))
-        {
-          if_stack_.back().cond_is_true = true;
-          if_stack_.back().cond_match_count++;
-        }
-        continue; // fetch next line
-      }
-      else if (stricmp("#ELSE", cmd) == 0)
-      {
-        if (if_stack_.empty())
-          continue;
-        if (if_stack_.back().cond_is_true ||
-          if_stack_.back().cond_match_count > 0)
-        {
-          if_stack_.back().cond_is_true = false;
-          continue;
-        }
-        if_stack_.back().cond_is_true = true;
-        if_stack_.back().cond_match_count++;
-        continue; // fetch next line
-      }
-      else if (stricmp("#ENDIF", cmd) == 0)
-      {
-        if (if_stack_.empty())
-        {
-          Logger::Error("LR2CSVContext: #ENDIF without #IF statement, ignored.");
-          break;
-        }
-        if_stack_.pop_back();
-        continue; // fetch next line
-      }
-    }
-
-    /* if conditional statement failed, cannot pass over it. */
-    if (!if_stack_.empty() && !if_stack_.back().cond_is_true)
-      continue;
-
-    if (stricmp("#INCLUDE", cmd) == 0 && MODE_PRELOAD == false)
-    {
-      LoadContextStack(FilePath(c.get_str(1)));
-      continue; // fetch next line
-    }
-
-    return true;
-  }
-  return false;
-}
-
-const char *LR2CSVContext::get_str(unsigned idx) const
-{
-  if (ctx.empty()) return nullptr;
-  else return ctx.back().get_str(idx);
-}
-
-int LR2CSVContext::get_int(unsigned idx) const
-{
-  if (ctx.empty()) return 0;
-  else return ctx.back().get_int(idx);
-}
-
-float LR2CSVContext::get_float(unsigned idx) const
-{
-  if (ctx.empty()) return .0f;
-  else return ctx.back().get_float(idx);
-}
-
-bool LR2CSVContext::LoadContextStack(const FilePath& path)
-{
-  ctx.emplace_back(CSVContext());
-  if (!ctx.back().Load(path)) {
-    ctx.pop_back();
-    return false;
-  }
-  return true;
-}
-
-void LR2CSVContext::AddIfStmtStack(bool cond_is_true)
-{
-  if_stack_.emplace_back(IfStmt{ cond_is_true ? 1 : 0, cond_is_true });
-}
-
-const std::string& LR2CSVContext::get_path()
-{
-  return path_;
-}
-
-
-// ------------------------------------------------------------- LR2CSVExecutor
-
-static std::map<std::string, LR2CSVHandlerFunc> &getLR2CSVHandler()
-{
-  static std::map<std::string, LR2CSVHandlerFunc> gLR2CSVHandlers;
-  return gLR2CSVHandlers;
-}
-
-LR2CSVExecutor::LR2CSVExecutor(LR2CSVContext *ctx)
-  : ctx_(ctx), image_count_(0), font_count_(0), command_index_(0), command_count_(0) {}
-
-LR2CSVExecutor::~LR2CSVExecutor() {}
-
-void LR2CSVExecutor::AddHandler(const std::string &cmd, LR2CSVHandlerFunc handler)
-{
-  getLR2CSVHandler()[cmd] = handler;
-}
-
-void LR2CSVExecutor::CallHandler(const std::string &cmd, void *o, LR2CSVExecutor *loader, LR2CSVContext *ctx)
-{
-  R_ASSERT(0 && "deprecated!!");
-  auto &i = getLR2CSVHandler().find(cmd);
-  if (i != getLR2CSVHandler().end())
-    i->second(o, loader, ctx);
-}
-
-void LR2CSVExecutor::Run()
-{
-  void *current_obj = nullptr;
-
-  while (ctx_->next()) {
-    const char *cmd = ctx_->get_str(0);
-    int index = ctx_->get_int(1);
-    if (!*cmd)
-      continue;
-    // Don't run SRC/DST command if running in preload mode
-    if (MODE_PRELOAD && (strncmp(cmd, "#SRC", 4) == 0 || strncmp(cmd, "#DST", 4) == 0))
-      continue;
-    auto i = getLR2CSVHandler().find(cmd);
-    if (i != getLR2CSVHandler().end()) {
-      // Check is command is changed
-      if (command_ != cmd || command_index_ != index) {
-        command_ = cmd;
-        command_index_ = index;
-        command_count_ = 0;
-      }
-
-      // check if proper object exist for current command
-      auto oi = objects_.find(cmd);
-      if (oi != objects_.end()) current_obj = oi->second;
-      i->second(current_obj, this, ctx_);
-
-      // Add function execution count (continually)
-      command_count_++;
-    }
-  }
-}
-
-unsigned LR2CSVExecutor::get_image_index() { return image_count_++; }
-
-unsigned LR2CSVExecutor::get_font_index() { return font_count_++; }
-
-unsigned LR2CSVExecutor::get_command_index()
-{
-  return command_count_;
-}
-
-void LR2CSVExecutor::reset_command() { command_.clear(); command_count_ = 0; }
-
-void LR2CSVExecutor::set_object(const std::string &name, void *obj)
-{
-  // XXX: Unused?
-  reset_command();
-  objects_[name] = obj;
-}
-
-void* LR2CSVExecutor::get_object(const std::string &name)
-{
-  // XXX: Unused?
-  return objects_[name];
-}
-
-// -------------------------------------------------------------- LR2SSExecutor
-
-static std::map<std::string, LR2SSHandlerFunc>& getLR2SSHandler()
-{
-  static std::map<std::string, LR2SSHandlerFunc> gLR2SSHandlers;
-  return gLR2SSHandlers;
-}
-
-LR2SSExecutor::LR2SSExecutor(LR2CSVContext* ctx) : ctx_(ctx) {}
-
-LR2SSExecutor::~LR2SSExecutor() {}
-
-void LR2SSExecutor::AddHandler(const std::string& cmd, LR2SSHandlerFunc handler)
-{
-  getLR2SSHandler()[cmd] = handler;
-}
-
-void LR2SSExecutor::Run()
-{
-  while (ctx_->next()) {
-    const char* cmd = ctx_->get_str(0);
-    const char* path = ctx_->get_str(1);
-    if (!cmd || !path || !*cmd)
-      continue;
-    auto i = getLR2SSHandler().find(cmd);
-    if (i != getLR2SSHandler().end()) {
-      i->second(path, ctx_);
-    }
-  }
-}
-
-
 namespace Script
 {
 
-bool Load(const FilePath& path, void* baseobject)
+bool Load(const FilePath& path, void* baseobject, const std::string& type)
 {
   std::string ext = GetExtension(path.get());
   if (ext == "xml") {
@@ -547,15 +288,8 @@ bool Load(const FilePath& path, void* baseobject)
       Logger::Error("LR2CSV file load failed: %s", path.get_cstr());
       return false;
     }
-    if (ext == "lr2skin") {
-      LR2CSVExecutor loader(&ctx);
-      loader.set_object("scene", baseobject);
-      loader.Run();
-    }
-    else if (ext == "lr2ss") {
-      LR2SSExecutor ex(&ctx);
-      ex.Run();
-    }
+    LR2CSVExecutor loader(&ctx);
+    loader.Run(baseobject, type);
     return true;
   }
   else {
@@ -564,14 +298,9 @@ bool Load(const FilePath& path, void* baseobject)
   }
 }
 
-bool Load(const std::string &path, void *baseobject)
+bool Load(const std::string &path, void *baseobject, const std::string& type)
 {
-  return Load(FilePath(path), baseobject);
-}
-
-void SetPreloadMode(bool is_preload)
-{
-  MODE_PRELOAD = is_preload;
+  return Load(FilePath(path), baseobject, type);
 }
 
 } /* namespace Script */

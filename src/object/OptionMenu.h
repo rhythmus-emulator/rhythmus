@@ -22,7 +22,7 @@ public:
   std::string value;
 };
 
-class OptionItem : public WheelItem
+class OptionItem : public BaseObject
 {
 public:
   virtual void Load(const MetricGroup &metric);
@@ -32,11 +32,12 @@ private:
   Text option_value;
 };
 
-class OptionMenu : public Wheel
+class OptionMenu : public BaseObject
 {
 public:
   OptionMenu();
   virtual void Load(const MetricGroup &metric);
+  void* GetSelectedMenuData();
 
 #if 0
   void SetAsNavigator(int mode_to_change);
@@ -50,7 +51,6 @@ public:
 #endif
 
 private:
-  virtual WheelItem* CreateMenuItem();
 };
 
 }

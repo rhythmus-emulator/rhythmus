@@ -1,5 +1,5 @@
 #include "Number.h"
-#include "Script.h"
+#include "ScriptLR2.h"
 #include "Util.h"
 #include "KeyPool.h"
 #include "config.h"
@@ -465,5 +465,64 @@ std::string Number::toString() const
   
   return BaseObject::toString() + ss.str();
 }
+
+
+
+#define HANDLERLR2_OBJNAME Number
+REGISTER_LR2OBJECT(Number);
+
+class NumberLR2Handler : public LR2FnClass {
+public:
+  HANDLERLR2(SRC_NUMBER) {
+    // (null),(image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align),(keta)
+    std::string imgname = std::string("image") + args.get_str(2);
+    Rect clip(args.get_int(3), args.get_int(4),
+      args.get_int(5),
+      args.get_int(6)); /* x, y, w, h */
+    const int divx = args.get_int(7);
+    const int divy = args.get_int(8);
+    int digitcount = 10;
+    if ((divx * divy) % 24 == 0) digitcount = 24;
+    else if ((divx * divy) % 11 == 0) digitcount = 11;
+
+    o->SetGlyphFromImage(imgname, clip, divx, divy, digitcount);
+
+    /* alignment (not use LR2 alignment here) */
+    o->SetAlignment(args.get_int(12));
+
+    /* digit (keta) */
+    o->SetDigit(args.get_int(13));
+
+    o->SetLoopCycle(args.get_int(9));
+    o->SetResizeToBox(true);
+
+    /* track change of number table */
+    std::string eventname = format_string("Number%s", args.get_str(11));
+    o->AddCommand(eventname, "refresh");
+    o->SubscribeTo(eventname);
+    std::string resname = format_string("N%s", args.get_str(11));
+    o->SetResourceId(resname);
+  }
+  HANDLERLR2(DST_NUMBER) {
+    // these attributes are only affective for first run
+    if (o->GetAnimation().is_empty()) {
+      const int timer = args.get_int(17);
+
+      // LR2 needs to keep its animation queue, so don't use stop.
+      o->AddCommand(format_string("LR%d", timer), "replay");
+      o->AddCommand(format_string("LR%dOff", timer), "hide");
+      o->SetBlending(args.get_int(12));
+      //o->SetFiltering(ctx->get_int(13));
+    }
+  }
+  NumberLR2Handler() : LR2FnClass(
+    GetTypename<Number>(), GetTypename<BaseObject>()
+  ) {
+    ADDSHANDLERLR2(SRC_NUMBER);
+    ADDSHANDLERLR2(DST_NUMBER);
+  }
+};
+
+NumberLR2Handler _NumberLR2Handler;
 
 }

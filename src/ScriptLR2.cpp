@@ -1,5 +1,6 @@
-#include "Script.h"
+#include "ScriptLR2.h"
 #include "Logger.h"
+#include "KeyPool.h"
 
 // objects
 #include "BaseObject.h"
@@ -12,719 +13,276 @@
 #include "object/OnMouse.h"
 
 #include "scene/SelectScene.h"
+#include "scene/PlayScene.h"
 #include "object/MusicWheel.h"
 
 namespace rhythmus
 {
 
-// ---------------------------------------------------------------------- LR2Object
+// ------------------------------------------------------------------ LR2FnArgs
 
-namespace LR2Object
+static const char* __dummyargs[MAX_CSV_COL];
+
+LR2FnArgs::LR2FnArgs() : cols_(__dummyargs), size_(0) {}
+
+LR2FnArgs::LR2FnArgs(const char* const* cols, unsigned col_size)
+  : cols_(cols), size_(col_size) {}
+
+const char* LR2FnArgs::get_str(unsigned idx) const
 {
-  BaseObject* Create(LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    BaseObject* o = nullptr;
-    const std::string& type = ctx->get_str(0);
-    // create new object
-    if (type == "#SRC_IMAGE") {
-      o = BaseObject::CreateObject("sprite");
-      loader->set_object("#DST_IMAGE", o);
-    }
-    else if (type == "#SRC_TEXT") {
-      o = BaseObject::CreateObject("text");
-      loader->set_object("#DST_TEXT", o);
-    }
-    else if (type == "#SRC_NUMBER") {
-      o = BaseObject::CreateObject("number");
-      loader->set_object("#DST_NUMBER", o);
-    }
-    else if (type == "#SRC_SLIDER") {
-      o = BaseObject::CreateObject("slider");
-      loader->set_object("#DST_SLIDER", o);
-    }
-    else if (type == "#SRC_BARGRAPH") {
-      o = BaseObject::CreateObject("bargraph");
-      loader->set_object("#DST_BARGRAPH", o);
-    }
-    else if (type == "#SRC_ONMOUSE") {
-      o = BaseObject::CreateObject("onmouse");
-      loader->set_object("#DST_ONMOUSE", o);
-    }
-    else if (type == "#SRC_BUTTON") {
-      o = BaseObject::CreateObject("button");
-      loader->set_object("#DST_BUTTON", o);
-    }
-    else if (type == "#BAR_") {
-      /* TODO: starts with BAR_ && is_select_scene
-       * then fetch MusicWheel if exists.
-       * If not exists, then create and get one.
-       * and set command to all related objects. */
-    }
+  if (idx >= size_) return nullptr;
+  return cols_[idx];
+}
 
-    if (o == nullptr) {
-      Logger::Warn("Invalid command in LR2Object::Create (%s)", type.c_str());
-      return nullptr;
-    }
-
-    auto* scene = ((BaseObject*)loader->get_object("scene"));
-    R_ASSERT(scene != nullptr);
-    scene->AddChild(o);
-
-    return o;
-  }
-
-  void SRC_OBJECT(BaseObject *o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    // set debug text if exists
-    o->SetDebug(format_string("LR2SRC-%u", ctx->get_str(21)));
-  }
-
-  void DST_OBJECT(BaseObject* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    const char* args[21];
-
-    for (unsigned i = 0; i < 21; ++i) args[i] = ctx->get_str(i);
-    o->AddFrameByLR2command(args + 1);
-
-    // these attributes are only affective for first run
-    if (loader->get_command_index() == 0) {
-      const int loop = ctx->get_int(16);
-      const int timer = ctx->get_int(17);
-
-      // LR2 needs to keep its animation queue, so don't use stop.
-      o->AddCommand(format_string("LR%d", timer), "replay");
-      o->AddCommand(format_string("LR%dOff", timer), "hide");
-      if (loop >= 0)
-        o->SetLoop(loop);
-
-      // XXX: move this flag to Sprite,
-      // as LR2_TEXT object don't work with this..?
-      o->SetVisibleFlag(
-        format_string("F%s", ctx->get_str(18)),
-        format_string("F%s", ctx->get_str(19)),
-        format_string("F%s", ctx->get_str(20)),
-        std::string()
-      );
-    }
-  }
-
-  void SRC_IMAGE(Sprite* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    Vector4 r{
-      ctx->get_int(3), ctx->get_int(4), ctx->get_int(5), ctx->get_int(6)
-    };
-    // Use whole image if width/height is zero.
-    o->SetImage(format_string("image%s", ctx->get_str(2)));
-    if (r.z < 0 || r.w < 0)
-      o->SetTextureCoord(Vector4{ 0.0f, 0.0f, 1.0f, 1.0f });
-    else
-      o->SetImageCoord(Vector4{ r.x, r.y, r.x + r.z, r.y + r.w });
-    o->SetAnimatedTexture(ctx->get_int(7), ctx->get_int(8), ctx->get_int(9));
-  }
-
-  void DST_IMAGE(Sprite* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    if (loader->get_command_index() == 0) {
-      o->SetBlending(ctx->get_int(12));
-      o->SetFiltering(ctx->get_int(13));
-    }
-  }
-
-  void SRC_TEXT(Text* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o->SetFont(format_string("font%s", ctx->get_str(2)));
-
-    /* track change of text table */
-    std::string eventname = format_string("Text%s", ctx->get_str(3));
-    o->AddCommand(eventname, "refresh");
-    o->SubscribeTo(eventname);
-    std::string resname = format_string("S%s", ctx->get_str(3));
-    o->SetTextResource(resname);
-    o->Refresh();   // manually refresh to fill text vertices
-
-    /* alignment */
-    const int lr2align = ctx->get_int(4);
-    switch (lr2align)
-    {
-    case 0:
-      // topleft
-      o->SetTextFitting(TextFitting::kTextFitMaxSize);
-      o->SetTextAlignment(0.0f, 0.0f);
-      break;
-    case 1:
-      // topcenter
-      o->SetTextFitting(TextFitting::kTextFitMaxSize);
-      o->SetTextAlignment(0.5f, 0.0f);
-      break;
-    case 2:
-      // topright
-      o->SetTextFitting(TextFitting::kTextFitMaxSize);
-      o->SetTextAlignment(1.0f, 0.0f);
-      break;
-    }
-    o->SetLR2StyleText(true);
-
-    /* editable (focusable) */
-    if (ctx->get_int(5) > 0)
-      o->SetFocusable(true);
-
-    /* TODO: panel */
-  }
-
-  void DST_TEXT(Text* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    // these attributes are only affective for first run
-    if (loader->get_command_index() == 0)
-    {
-      const int loop = ctx->get_int(16);
-      const int timer = ctx->get_int(17);
-
-      // LR2 needs to keep its animation queue, so don't use stop.
-      o->AddCommand(format_string("LR%d", timer), "replay");
-      o->AddCommand(format_string("LR%dOff", timer), "hide");
-      //o->SetBlending(ctx->get_int(12));
-      //o->SetFiltering(ctx->get_int(13));
-      if (loop >= 0)
-        o->SetLoop(loop);
-    }
-
-    // TODO: load blending from LR2DST
-    // TODO: fetch font size
-  }
-
-  void SRC_NUMBER(Number* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    // (null),(image),(x),(y),(w),(h),(divx),(divy),(cycle),(timer),(num),(align),(keta)
-    std::string imgname = std::string("image") + ctx->get_str(2);
-    Rect clip(ctx->get_int(3), ctx->get_int(4),
-      ctx->get_int(5),
-      ctx->get_int(6)); /* x, y, w, h */
-    const int divx = ctx->get_int(7);
-    const int divy = ctx->get_int(8);
-    int digitcount = 10;
-    if ((divx * divy) % 24 == 0) digitcount = 24;
-    else if ((divx * divy) % 11 == 0) digitcount = 11;
-
-    o->SetGlyphFromImage(imgname, clip, divx, divy, digitcount);
-
-    /* alignment (not use LR2 alignment here) */
-    o->SetAlignment(ctx->get_int(12));
-
-    /* digit (keta) */
-    o->SetDigit(ctx->get_int(13));
-
-    o->SetLoopCycle(ctx->get_int(9));
-    o->SetResizeToBox(true);
-
-    /* track change of number table */
-    std::string eventname = format_string("Number%s", ctx->get_str(11));
-    o->AddCommand(eventname, "refresh");
-    o->SubscribeTo(eventname);
-    std::string resname = format_string("N%s", ctx->get_str(11));
-    o->SetResourceId(resname);
-  }
-
-  void DST_NUMBER(Number* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    // these attributes are only affective for first run
-    if (loader->get_command_index() == 0)
-    {
-      const int timer = ctx->get_int(17);
-
-      // LR2 needs to keep its animation queue, so don't use stop.
-      o->AddCommand(format_string("LR%d", timer), "replay");
-      o->AddCommand(format_string("LR%dOff", timer), "hide");
-      o->SetBlending(ctx->get_int(12));
-      //o->SetFiltering(ctx->get_int(13));
-    }
-  }
-
-  void SRC_BUTTON(Button* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o->SetFocusable(ctx->get_int(11));
-
-    /* XXX: change clickable by panel opening */
-    int panel = ctx->get_int(12);
-    if (panel >= 0)
-    {
-      o->AddCommand("Panel" + std::to_string(panel), "focusable:1");
-      o->AddCommand("Panel" + std::to_string(panel) + "Off", "focusable:0");
-    }
-
-    /**
-     * create command to execute when clicked
-     * e.g.
-     * Click10  : LR2 click event with name 10
-     * Click10R : LR2 click event with name 10, reverse.
-     */
-    std::string minus;
-    int button_id = ctx->get_int(10);
-    if (ctx->get_int(13) == -1)
-      minus = "R";
-    o->AddCommand("click",
-      format_string("sendevent:Click%d%s", button_id, minus.c_str())
-    );
-    o->SetResourceId("button" + std::to_string(button_id));
-    o->AddCommand(format_string("Number%d", button_id + 1000), "refresh");
-
-    /* Set sprite duration to zero to prevent unexpected sprite animation */
-    o->SetDuration(0);
-  }
-
-  void DST_BUTTON(Button* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-
-  }
-
-  void SRC_SLIDER(Slider* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    // TODO: sprite 'src' attribute
-    /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
-
-    // only load texture path & texture coord for cursor
-    // TODO: set cycle for image
-    o->cursor()->SetImage(std::string("image") + ctx->get_str(2));
-    o->cursor()->SetImageCoord(Rect{
-      ctx->get_float(3), ctx->get_float(4),
-      ctx->get_float(3) + ctx->get_float(5),
-      ctx->get_float(4) + ctx->get_float(6) });
-
-    int direction = ctx->get_int(11);
-    float range = ctx->get_float(12);
-    o->SetRange(direction, range);
-
-    /* track change of text table */
-    int eventid = ctx->get_int(13) + 1500;
-    std::string eventname = "Number" + std::to_string(eventid);
-    o->AddCommand(eventname, "refresh");
-    o->SubscribeTo(eventname);
-
-    /* set ref value for update */
-    o->SetResource("slider" + std::to_string(eventid));
-    o->Refresh();
-
-    /* disabled? */
-    o->SetEditable(ctx->get_int(14) == 0);
-  }
-
-  void DST_SLIDER(Slider* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    // these attributes are only affective for first run
-    if (loader->get_command_index() == 0)
-    {
-      const int timer = ctx->get_int(17);
-
-      // LR2 needs to keep its animation queue, so don't use stop.
-      o->AddCommand(format_string("LR%d", timer), "replay");
-      o->AddCommand(format_string("LR%dOff", timer), "hide");
-      //o->SetBlending(ctx->get_int(12));
-      //o->SetFiltering(ctx->get_int(13));
-
-      // XXX: move this flag to Sprite,
-      // as LR2_TEXT object don't work with this..?
-      o->SetVisibleFlag(
-        format_string("F%s", ctx->get_str(18)),
-        format_string("F%s", ctx->get_str(19)),
-        format_string("F%s", ctx->get_str(20)),
-        std::string()
-      );
-    }
-  }
-
-  void SRC_BARGRAPH(Bargraph* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o->SetDirection(ctx->get_int(9));
-    std::string resname = "bargraph";
-    resname += ctx->get_str(11);
-    o->SetResourceId(resname);
-
-    // Load SRC information to bar_ Sprite.
-    LR2Object::SRC_OBJECT(o->sprite(), loader, ctx);
-    LR2Object::SRC_IMAGE(o->sprite(), loader, ctx);
-    o->sprite()->DeleteAllCommand();
-  }
-
-  void SRC_ONMOUSE(OnMouse* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    int panel = ctx->get_int(10);
-    if (panel > 0 || panel == -1)
-    {
-      if (panel == -1) panel = 0;
-      o->AddCommand("Panel" + std::to_string(panel), "focusable:1");
-      o->AddCommand("Panel" + std::to_string(panel) + "Off", "focusable:0");
-      o->SetVisibleFlag("", "", "", std::to_string(20 + panel));
-    }
-
-    Rect r = Vector4(ctx->get_int(11), ctx->get_int(12),
-      ctx->get_int(13), ctx->get_int(14));
-    o->SetOnmouseRect(r);
-  }
-};
-
-
-class LR2CSVSpriteHandlers
+int LR2FnArgs::get_int(unsigned idx) const
 {
-public:
-  static void src_image(Sprite* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o = (Sprite*)LR2Object::Create(loader, ctx);
-    LR2Object::SRC_OBJECT(o, loader, ctx);
-    LR2Object::SRC_IMAGE(o, loader, ctx);
-  }
+  if (idx >= size_) return 0;
+  const char* c = cols_[idx];
+  if (c[0] == '-') return -atoi(c + 1);
+  else return atoi(c);
+}
 
-  static void dst_image(Sprite* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    R_ASSERT(o != nullptr);
-    LR2Object::DST_OBJECT(o, loader, ctx);
-    LR2Object::DST_IMAGE(o, loader, ctx);
-  }
-
-  LR2CSVSpriteHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_IMAGE", (LR2CSVHandlerFunc)& src_image);
-    LR2CSVExecutor::AddHandler("#DST_IMAGE", (LR2CSVHandlerFunc)& dst_image);
-  }
-};
-
-class LR2CSVTextandlers
+float LR2FnArgs::get_float(unsigned idx) const
 {
-public:
-  static void src_text(Text* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o = (Text*)LR2Object::Create(loader, ctx);
-    LR2Object::SRC_OBJECT(o, loader, ctx);
-    LR2Object::SRC_TEXT(o, loader, ctx);
-  }
+  if (idx >= size_) return .0f;
+  const char* c = cols_[idx];
+  if (c[0] == '-') return -atof(c + 1);
+  else return atof(c);
+}
 
-  static void dst_text(Text* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    R_ASSERT(o != nullptr);
-    LR2Object::DST_OBJECT(o, loader, ctx);
-    LR2Object::DST_TEXT(o, loader, ctx);
-  }
+unsigned LR2FnArgs::size() const { return size_; }
 
-  LR2CSVTextandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_TEXT", (LR2CSVHandlerFunc)& src_text);
-    LR2CSVExecutor::AddHandler("#DST_TEXT", (LR2CSVHandlerFunc)& dst_text);
-  }
-};
 
-class LR2CSVNumberHandlers
+// -------------------------------------------------------------- LR2CSVContext
+
+LR2CSVContext::LR2CSVContext() : enable_include_(true)
 {
-public:
-  static void src_number(Number* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o = (Number*)LR2Object::Create(loader, ctx);
-    LR2Object::SRC_OBJECT(o, loader, ctx);
-    LR2Object::SRC_NUMBER(o, loader, ctx);
-  }
-  static void dst_number(Number* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    R_ASSERT(o != nullptr);
-    LR2Object::DST_OBJECT(o, loader, ctx);
-    LR2Object::DST_NUMBER(o, loader, ctx);
-  }
-  LR2CSVNumberHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_NUMBER", (LR2CSVHandlerFunc)& src_number);
-    LR2CSVExecutor::AddHandler("#DST_NUMBER", (LR2CSVHandlerFunc)& dst_number);
-  }
-};
+}
 
-
-// ------------------------------------------------------------------ Loader/Helper
-
-class LR2CSVButtonHandlers
+LR2CSVContext::~LR2CSVContext()
 {
-public:
-  static void src_button(Button* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o = (Button*)LR2Object::Create(loader, ctx);
-    LR2Object::SRC_OBJECT(o, loader, ctx);
-    LR2Object::SRC_BUTTON(o, loader, ctx);
-  }
-  static void dst_button(Button* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    LR2Object::DST_OBJECT(o, loader, ctx);
-  }
-  LR2CSVButtonHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_BUTTON", (LR2CSVHandlerFunc)& src_button);
-    LR2CSVExecutor::AddHandler("#DST_BUTTON", (LR2CSVHandlerFunc)& dst_button);
-  }
-};
+}
 
-class LR2CSVSliderHandlers
+bool LR2CSVContext::Load(const std::string &path)
 {
-public:
-  static void src_slider(Slider* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o = (Slider*)LR2Object::Create(loader, ctx);
-    LR2Object::SRC_OBJECT(o, loader, ctx);
-    LR2Object::SRC_SLIDER(o, loader, ctx);
-  }
+  return Load(FilePath(path));
+}
 
-  static void dst_slider(Slider* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    R_ASSERT(o != nullptr);
-    LR2Object::DST_OBJECT(o, loader, ctx);
-    LR2Object::DST_SLIDER(o, loader, ctx);
-  }
-
-  LR2CSVSliderHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_SLIDER", (LR2CSVHandlerFunc)& src_slider);
-    LR2CSVExecutor::AddHandler("#DST_SLIDER", (LR2CSVHandlerFunc)& dst_slider);
-  }
-};
-
-class LR2CSVBargraphHandlers
+bool LR2CSVContext::Load(const FilePath& path)
 {
-public:
-  static void src_bargraph(Bargraph* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o = (Bargraph*)LR2Object::Create(loader, ctx);
-    LR2Object::SRC_OBJECT(o, loader, ctx);
-    LR2Object::SRC_BARGRAPH(o, loader, ctx);
-  }
-  static void dst_bargraph(Bargraph* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    LR2Object::DST_OBJECT(o, loader, ctx);
-  }
-  LR2CSVBargraphHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_BARGRAPH", (LR2CSVHandlerFunc)& src_bargraph);
-    LR2CSVExecutor::AddHandler("#DST_BARGRAPH", (LR2CSVHandlerFunc)& dst_bargraph);
-  }
-};
+  ctx.clear();
+  path_ = path.get();
+  folder_ = GetFolderPath(path_);
+  return LoadContextStack(path_);
+}
 
-class LR2CSVOnMouseHandlers
+bool LR2CSVContext::next()
 {
-public:
-  static void src_onmouse(OnMouse* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    o = (OnMouse*)LR2Object::Create(loader, ctx);
-    LR2Object::SRC_OBJECT(o, loader, ctx);
-    LR2Object::SRC_IMAGE(o, loader, ctx);
-    LR2Object::SRC_ONMOUSE(o, loader, ctx);
-  }
-  static void dst_onmouse(OnMouse* o, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    LR2Object::DST_OBJECT(o, loader, ctx);
-  }
-  LR2CSVOnMouseHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_ONMOUSE", (LR2CSVHandlerFunc)& src_onmouse);
-    LR2CSVExecutor::AddHandler("#DST_ONMOUSE", (LR2CSVHandlerFunc)& dst_onmouse);
-  }
-};
-
-LR2CSVSpriteHandlers _LR2CSVSpriteHandlers;
-LR2CSVTextandlers _LR2CSVTextandlers;
-LR2CSVNumberHandlers _LR2CSVNumberHandlers;
-LR2CSVButtonHandlers _LR2CSVButtonHandlers;
-LR2CSVSliderHandlers _LR2CSVSliderHandlers;
-LR2CSVBargraphHandlers _LR2CSVBargraphHandlers;
-LR2CSVOnMouseHandlers _LR2CSVOnMouseHandlers;
-
-
-// ---------------------------------------------------- Special handler: MusicWheel
-
-class LR2CSVMusicWheelHandlers
-{
-public:
-  static MusicWheel* get_musicwheel(LR2CSVExecutor* loader)
-  {
-    auto* wheel = (MusicWheel*)loader->get_object("musicwheel");
-    if (loader->get_object("musicwheel") == NULL)
-    {
-      /* for first-appearence */
-      auto* scene = (Scene*)loader->get_object("scene");
-      if (!scene) return nullptr;
-      wheel = (MusicWheel*)scene->FindChildByName("MusicWheel");
-      if (!wheel) return nullptr;
-      wheel->InitializeLR2();
-      wheel->BringToTop();
-      wheel->SetWheelWrapperCount(30, "LR2");
-      wheel->SetWheelPosMethod(WheelPosMethod::kMenuPosFixed);
-      loader->set_object("musicwheel", wheel);
+  while (!ctx.empty()) {
+    if (!ctx.back().next()) {
+      ctx.pop_back();
+      continue;
     }
-    return wheel;
-  }
 
-  static void src_bar_body(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    auto* wheel = get_musicwheel(loader);
-    unsigned bgtype = 0;
-    if (!wheel) return;
-    bgtype = (unsigned)ctx->get_int(1);
-    for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i) {
-      auto* item = static_cast<MusicWheelItem*>(wheel->GetMenuItemWrapperByIndex(i));
-      auto* bg = item->get_background(bgtype);
-      LR2Object::SRC_OBJECT(bg, loader, ctx);
-      LR2Object::SRC_IMAGE(bg, loader, ctx);
+    auto &c = ctx.back();
+    const char *cmd = c.get_str(0);
+    R_ASSERT(cmd != nullptr);
+
+    // preprocess commands
+    if (cmd[0] == '#') {
+      const char *val = c.get_str(1);
+      if (stricmp("#IF", cmd) == 0) {
+        if (*KEYPOOL->GetInt(val)) AddIfStmtStack(false);
+        else AddIfStmtStack(true);
+        continue; // fetch next line
+      }
+      else if (stricmp("#ELSEIF", cmd) == 0) {
+        if (if_stack_.empty())
+          continue;
+        if (if_stack_.back().cond_is_true ||
+          if_stack_.back().cond_match_count > 0) {
+          if_stack_.back().cond_is_true = false;
+          continue;
+        }
+        if (*KEYPOOL->GetInt(val)) {
+          if_stack_.back().cond_is_true = true;
+          if_stack_.back().cond_match_count++;
+        }
+        continue; // fetch next line
+      }
+      else if (stricmp("#ELSE", cmd) == 0) {
+        if (if_stack_.empty())
+          continue;
+        if (if_stack_.back().cond_is_true ||
+          if_stack_.back().cond_match_count > 0) {
+          if_stack_.back().cond_is_true = false;
+          continue;
+        }
+        if_stack_.back().cond_is_true = true;
+        if_stack_.back().cond_match_count++;
+        continue; // fetch next line
+      }
+      else if (stricmp("#ENDIF", cmd) == 0) {
+        if (if_stack_.empty()) {
+          Logger::Error("LR2CSVContext: #ENDIF without #IF statement, ignored.");
+          break;
+        }
+        if_stack_.pop_back();
+        continue; // fetch next line
+      }
     }
-  }
 
-  static void dst_bar_body_off(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    auto* wheel = get_musicwheel(loader);
-    unsigned itemindex = 0;
-    std::string itemname;
-    if (!wheel) return;
-    itemindex = (unsigned)ctx->get_int(1);
-    itemname = format_string("musicwheelitem%u", itemindex);
-    // XXX: Sprite casting is okay?
-    auto* item = (Sprite*)wheel->GetMenuItemWrapperByIndex(itemindex);
-    LR2Object::DST_OBJECT(item, loader, ctx);
-    LR2Object::DST_IMAGE(item, loader, ctx);
-  }
+    /* if conditional statement failed, cannot pass over it. */
+    if (!if_stack_.empty() && !if_stack_.back().cond_is_true)
+      continue;
 
-  static void dst_bar_body_on(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    // TODO: implement. currently ignored.
-  }
-
-  static void bar_center(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    auto* wheel = get_musicwheel(loader);
-    unsigned center_idx = 0;
-
-    center_idx = (unsigned)ctx->get_int(1);
-    wheel->set_item_center_index(center_idx);
-    wheel->set_item_min_index(center_idx);
-    wheel->set_item_max_index(center_idx);
-  }
-
-  static void bar_available(void*, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    // TODO
-    auto* wheel = get_musicwheel(loader);
-    loader->set_object("musicwheel", wheel);
-    //wheel->set_item_min_index(0);
-    //wheel->set_item_max_index((unsigned)ctx->get_int(1));
-  }
-
-  static void src_bar_title(void*, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    auto* wheel = get_musicwheel(loader);
-    unsigned itemindex = 0;
-    itemindex = (unsigned)ctx->get_int(1);
-    if (itemindex != 0) return; // TODO: bar title for index 1
-    for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i) {
-      auto* item = (MusicWheelItem*)wheel->GetMenuItemWrapperByIndex(i);
-      auto* title = item->get_title();
-      LR2Object::SRC_OBJECT(title, loader, ctx);
-      LR2Object::SRC_TEXT(title, loader, ctx);
+    if (stricmp("#INCLUDE", cmd) == 0 && enable_include_) {
+      LoadContextStack(FilePath(c.get_str(1)));
+      continue; // fetch next line
     }
+
+    break;
   }
 
-  static void dst_bar_title(void*, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-    auto* wheel = get_musicwheel(loader);
-    unsigned itemindex = 0;
-    itemindex = (unsigned)ctx->get_int(1);
-    if (itemindex != 0) return; // TODO: bar title for index 1
-    for (unsigned i = 0; i < wheel->GetMenuItemWrapperCount(); ++i) {
-      auto* item = (MusicWheelItem*)wheel->GetMenuItemWrapperByIndex(i);
-      auto* title = item->get_title();
-      LR2Object::DST_OBJECT(title, loader, ctx);
-      LR2Object::DST_TEXT(title, loader, ctx);
-    }
+  if (ctx.empty()) {
+    args_ = LR2FnArgs();
+    return false;
   }
-
-  static void src_bar_flash(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
+  else {
+    args_ = LR2FnArgs(ctx.back().get_row(), ctx.back().get_col_size());
+    return true;
   }
+}
 
-  static void dst_bar_flash(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void src_bar_level(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void dst_bar_level(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void src_bar_lamp(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void dst_bar_lamp(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void src_my_bar_lamp(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void dst_my_bar_lamp(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void src_rival_bar_lamp(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void dst_rival_bar_lamp(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void src_rival_lamp(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  static void dst_rival_lamp(void* _this, LR2CSVExecutor* loader, LR2CSVContext* ctx)
-  {
-  }
-
-  LR2CSVMusicWheelHandlers()
-  {
-    LR2CSVExecutor::AddHandler("#SRC_BAR_BODY", (LR2CSVHandlerFunc)& src_bar_body);
-    LR2CSVExecutor::AddHandler("#DST_BAR_BODY_OFF", (LR2CSVHandlerFunc)& dst_bar_body_off);
-    LR2CSVExecutor::AddHandler("#DST_BAR_BODY_ON", (LR2CSVHandlerFunc)& dst_bar_body_on);
-    LR2CSVExecutor::AddHandler("#BAR_CENTER", (LR2CSVHandlerFunc)& bar_center);
-    LR2CSVExecutor::AddHandler("#BAR_AVAILABLE", (LR2CSVHandlerFunc)& bar_available);
-    LR2CSVExecutor::AddHandler("#SRC_BAR_TITLE", (LR2CSVHandlerFunc)& src_bar_title);
-    LR2CSVExecutor::AddHandler("#DST_BAR_TITLE", (LR2CSVHandlerFunc)& dst_bar_title);
-    LR2CSVExecutor::AddHandler("#SRC_BAR_FLASH", (LR2CSVHandlerFunc)& src_bar_flash);
-    LR2CSVExecutor::AddHandler("#DST_BAR_FLASH", (LR2CSVHandlerFunc)& dst_bar_flash);
-    LR2CSVExecutor::AddHandler("#SRC_BAR_LEVEL", (LR2CSVHandlerFunc)& src_bar_level);
-    LR2CSVExecutor::AddHandler("#DST_BAR_LEVEL", (LR2CSVHandlerFunc)& dst_bar_level);
-    LR2CSVExecutor::AddHandler("#SRC_BAR_LAMP", (LR2CSVHandlerFunc)& src_bar_lamp);
-    LR2CSVExecutor::AddHandler("#DST_BAR_LAMP", (LR2CSVHandlerFunc)& dst_bar_lamp);
-    LR2CSVExecutor::AddHandler("#SRC_MY_BAR_LAMP", (LR2CSVHandlerFunc)& src_my_bar_lamp);
-    LR2CSVExecutor::AddHandler("#DST_MY_BAR_LAMP", (LR2CSVHandlerFunc)& dst_my_bar_lamp);
-    LR2CSVExecutor::AddHandler("#SRC_RIVAL_BAR_LAMP", (LR2CSVHandlerFunc)& src_rival_bar_lamp);
-    LR2CSVExecutor::AddHandler("#DST_RIVAL_BAR_LAMP", (LR2CSVHandlerFunc)& dst_rival_bar_lamp);
-    LR2CSVExecutor::AddHandler("#SRC_RIVAL_LAMP", (LR2CSVHandlerFunc)& src_rival_lamp);
-    LR2CSVExecutor::AddHandler("#DST_RIVAL_LAMP", (LR2CSVHandlerFunc)& dst_rival_lamp);
-    LR2CSVExecutor::AddHandler("#BAR_CENTER", (LR2CSVHandlerFunc)& bar_center);
-  }
-};
-
-LR2CSVMusicWheelHandlers _LR2CSVMusicWheelHandlers;
-
-
-// ------------------------------------------------------------------ LR2SSHandlers
-class LR2SSHandlers
+const char *LR2CSVContext::get_str(unsigned idx) const
 {
-public:
-  static void INFORMATION(const char *path, LR2CSVContext *ctx)
-  {
-    METRIC->set("SelectSceneBgm", FilePath(path).get());
-  }
-  LR2SSHandlers()
-  {
-    LR2SSExecutor::AddHandler("#SELECT", (LR2SSHandlerFunc)INFORMATION);
-  }
-private:
-};
+  if (ctx.empty()) return nullptr;
+  else return ctx.back().get_str(idx);
+}
 
-LR2SSHandlers _LR2SSHandlers;
+int LR2CSVContext::get_int(unsigned idx) const
+{
+  if (ctx.empty()) return 0;
+  else return ctx.back().get_int(idx);
+}
+
+float LR2CSVContext::get_float(unsigned idx) const
+{
+  if (ctx.empty()) return .0f;
+  else return ctx.back().get_float(idx);
+}
+
+bool LR2CSVContext::LoadContextStack(const FilePath& path)
+{
+  ctx.emplace_back(CSVContext());
+  if (!ctx.back().Load(path)) {
+    ctx.pop_back();
+    return false;
+  }
+  return true;
+}
+
+void LR2CSVContext::AddIfStmtStack(bool cond_is_true)
+{
+  if_stack_.emplace_back(IfStmt{ cond_is_true ? 1 : 0, cond_is_true });
+}
+
+const std::string& LR2CSVContext::get_path()
+{
+  return path_;
+}
+
+const LR2FnArgs& LR2CSVContext::args() const { return args_; }
+
+void LR2CSVContext::SetEnableInclude(bool v) { enable_include_ = v; }
+
+
+// ------------------------------------------------------------- LR2CSVExecutor
+
+static std::map<std::string, LR2FnClass*> &getLR2FnClassMap()
+{
+  static std::map<std::string, LR2FnClass*> gLR2FnClassMap;
+  return gLR2FnClassMap;
+}
+
+LR2CSVExecutor::LR2CSVExecutor(LR2CSVContext *ctx) : ctx_(ctx) {}
+
+LR2CSVExecutor::~LR2CSVExecutor() {}
+
+void LR2CSVExecutor::AddClass(LR2FnClass* fnclass)
+{
+  getLR2FnClassMap()[fnclass->GetClassName()] = fnclass;
+}
+
+LR2FnClass* LR2CSVExecutor::GetClass(const std::string& type)
+{
+  auto i = getLR2FnClassMap().find(type);
+  if (i != getLR2FnClassMap().end()) return i->second;
+  else return nullptr;
+}
+
+bool LR2CSVExecutor::RunMethod(const std::string& type, const std::string& method, void *o, const LR2FnArgs& args)
+{
+  std::string currtype = type;
+  while (!currtype.empty()) {
+    auto* fnClass = GetClass(currtype);
+    if (fnClass == nullptr) break;
+    auto fn = fnClass->GetMethod(method);
+    if (fn) {
+      fn(o, args);
+      return true;
+    }
+    else currtype = fnClass->GetBaseClassName();
+  }
+  return false;
+}
+
+/*
+void LR2CSVExecutor::Cleanup()
+{
+  // static class; DO NOT DELETE
+  for (auto i : getLR2FnClassMap()) {
+    delete i.second;
+  }
+  getLR2FnClassMap().clear();
+}
+*/
+
+void LR2CSVExecutor::Run(void* obj, const std::string& type)
+{
+  while (ctx_->next()) {
+    const char *cmd = ctx_->get_str(0);
+    int index = ctx_->get_int(1);
+    if (!*cmd) continue;
+    LR2CSVExecutor::RunMethod(type, ctx_->get_str(0), obj, ctx_->args());
+  }
+}
+
+// ----------------------------------------------- LR2FnClass
+
+LR2FnClass::LR2FnClass(const std::string& classname) : name_(classname)
+{
+  LR2CSVExecutor::AddClass(this);
+}
+
+LR2FnClass::LR2FnClass(const std::string& classname, const std::string& baseclassname)
+  : name_(classname), basename_(baseclassname)
+{
+  LR2CSVExecutor::AddClass(this);
+}
+
+const std::string& LR2FnClass::GetClassName() const { return name_; }
+
+const std::string& LR2FnClass::GetBaseClassName() const { return basename_; }
+
+void LR2FnClass::AddMethod(const std::string& cmdname, LR2Fn fn) {
+  fnmap_[cmdname] = fn;
+}
+
+LR2Fn LR2FnClass::GetMethod(const std::string& cmdname) {
+  auto i = fnmap_.find(cmdname);
+  if (i == fnmap_.end()) return nullptr;
+  return i->second;
+}
 
 }

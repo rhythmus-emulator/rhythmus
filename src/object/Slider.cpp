@@ -1,5 +1,5 @@
 #include "Slider.h"
-#include "Script.h"
+#include "ScriptLR2.h"
 #include "KeyPool.h"
 #include "Util.h"
 #include "Logger.h"
@@ -40,7 +40,7 @@ void Slider::Refresh()
 void Slider::Load(const MetricGroup &metric)
 {
   cursor_.SetDraggable(true);
-  AddChild(&cursor_);
+  AddStaticChild(&cursor_);
 
   BaseObject::Load(metric);
 
@@ -184,5 +184,71 @@ std::string Slider::toString() const
   ss << "\nCURSOR DESC" << std::endl << cursor_.toString();
   return BaseObject::toString() + ss.str();
 }
+
+
+#define HANDLERLR2_OBJNAME Slider
+REGISTER_LR2OBJECT(Slider);
+
+class SliderLR2Handler : public LR2FnClass {
+public:
+  HANDLERLR2(SRC_SLIDER) {
+    // TODO: sprite 'src' attribute
+    /* (null),imgname,sx,sy,sw,sh,divx,divy,cycle,timer */
+
+    // only load texture path & texture coord for cursor
+    // TODO: set cycle for image
+    o->cursor()->SetImage(std::string("image") + args.get_str(2));
+    o->cursor()->SetImageCoord(Rect{
+      args.get_float(3), args.get_float(4),
+      args.get_float(3) + args.get_float(5),
+      args.get_float(4) + args.get_float(6) });
+
+    int direction = args.get_int(11);
+    float range = args.get_float(12);
+    o->SetRange(direction, range);
+
+    /* track change of text table */
+    int eventid = args.get_int(13) + 1500;
+    std::string eventname = "Number" + std::to_string(eventid);
+    o->AddCommand(eventname, "refresh");
+    o->SubscribeTo(eventname);
+
+    /* set ref value for update */
+    o->SetResource("slider" + std::to_string(eventid));
+    o->Refresh();
+
+    /* disabled? */
+    o->SetEditable(args.get_int(14) == 0);
+  }
+  HANDLERLR2(DST_SLIDER) {
+    // these attributes are only affective for first run
+    if (o->GetAnimation().is_empty()) {
+      const int timer = args.get_int(17);
+
+      // LR2 needs to keep its animation queue, so don't use stop.
+      o->AddCommand(format_string("LR%d", timer), "replay");
+      o->AddCommand(format_string("LR%dOff", timer), "hide");
+      //o->SetBlending(ctx->get_int(12));
+      //o->SetFiltering(ctx->get_int(13));
+
+      // XXX: move this flag to Sprite,
+      // as LR2_TEXT object don't work with this..?
+      o->SetVisibleFlag(
+        format_string("F%s", args.get_str(18)),
+        format_string("F%s", args.get_str(19)),
+        format_string("F%s", args.get_str(20)),
+        std::string()
+      );
+    }
+  }
+  SliderLR2Handler() : LR2FnClass(
+    GetTypename<Slider>(), GetTypename<BaseObject>()
+  ) {
+    ADDSHANDLERLR2(SRC_SLIDER);
+    ADDSHANDLERLR2(DST_SLIDER);
+  }
+};
+
+SliderLR2Handler _SliderLR2Handler;
 
 }

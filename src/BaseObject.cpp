@@ -3,281 +3,19 @@
 #include "Setting.h"
 #include "Util.h"
 #include "Script.h"
+#include "ScriptLR2.h"
 #include "Logger.h"
 #include "KeyPool.h"
 #include "common.h"
 #include "config.h"
 
+static std::map<std::string, void*> _fnLR2CommandMap;
+
 namespace rhythmus
 {
 
-#define TWEEN_ATTRS \
-  TWEEN(pos) \
-  TWEEN(color) \
-  TWEEN(rotate) \
-  TWEEN(align) \
-  TWEEN(scale)
-
-
-void MakeTween(DrawProperty& ti, const DrawProperty& t1, const DrawProperty& t2,
-  float r, int ease_type)
-{
-  switch (ease_type)
-  {
-  case EaseTypes::kEaseLinear:
-  {
-#define TWEEN(attr) \
-  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  case EaseTypes::kEaseIn:
-  {
-    // use cubic function
-    r = r * r * r;
-#define TWEEN(attr) \
-  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  case EaseTypes::kEaseOut:
-  {
-    // use cubic function
-    r = 1 - r;
-    r = r * r * r;
-    r = 1 - r;
-#define TWEEN(attr) \
-  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  case EaseTypes::kEaseInOut:
-  {
-    // use cubic function
-    r = 2 * r - 1;
-    r = r * r * r;
-    r = 0.5f + r / 2;
-#define TWEEN(attr) \
-  ti.attr = t1.attr * (1.0f - r) + t2.attr * r;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  case EaseTypes::kEaseNone:
-  default:
-  {
-#define TWEEN(attr) \
-  ti.attr = t1.attr;
-
-    TWEEN_ATTRS;
-
-#undef TWEEN
-    break;
-  }
-  }
-}
-
-// ---------------------------------------------------------------- class Tween
-
-Animation::Animation(const DrawProperty *initial_state)
-  : current_frame_(-1), current_frame_time_(0), frame_time_(0),
-    is_finished_(false), repeat_(false), paused_(false), repeat_start_time_(0)
-{
-  if (initial_state)
-    AddFrame(*initial_state, 0, EaseTypes::kEaseLinear);
-}
-
-void Animation::Clear()
-{
-  frames_.clear();
-}
-
-void Animation::DuplicateFrame(double duration)
-{
-  if (frames_.empty()) return;
-  if (duration > 0) frames_.push_back(frames_.back());
-  frames_.back().time += duration;
-}
-
-void Animation::AddFrame(const AnimationFrame &frame)
-{
-  if (!frames_.empty() && frames_.back().time >= frame.time)
-    frames_.back() = frame;
-  else
-    frames_.push_back(frame);
-}
-
-void Animation::AddFrame(AnimationFrame &&frame)
-{
-  if (!frames_.empty() && frames_.back().time >= frame.time)
-    frames_.back() = frame;
-  else
-    frames_.emplace_back(frame);
-}
-
-void Animation::AddFrame(const DrawProperty &draw_prop, double time, int ease_type)
-{
-  if (!frames_.empty() && frames_.back().time >= time)
-  {
-    frames_.back().time = time;
-    frames_.back().draw_prop = draw_prop;
-    frames_.back().ease_type = ease_type;
-  }
-  else
-    frames_.emplace_back(AnimationFrame{ draw_prop, time, ease_type });
-}
-
-void Animation::SetCommand(const std::string &cmd)
-{
-  // set command to invoke when animation finished.
-  command = cmd;
-}
-
-void Animation::Update(double &ms, std::string &command_to_invoke, DrawProperty *out)
-{
-  // don't do anything if empty.
-  if (frames_.empty() || paused_) return;
-
-  // find out which frame is it in.
-  frame_time_ += ms;
-  if (repeat_)
-  {
-    const double loop_time = frames_.back().time;
-    const double actual_loop_time = loop_time - (double)repeat_start_time_;
-    if (actual_loop_time <= 0)
-      frame_time_ = std::min(frame_time_, loop_time);
-    else if (frame_time_ > loop_time)
-      frame_time_ = fmod(frame_time_ - loop_time, actual_loop_time) + (double)repeat_start_time_;
-    ms = 0;
-  }
-  for (current_frame_ = -1; current_frame_ < (int)frames_.size() - 1; ++current_frame_)
-  {
-    if (frame_time_ < frames_[current_frame_ + 1].time)
-      break;
-  }
-  if (current_frame_ < 0)
-  {
-    // if not yet to first frame, then exit.
-    current_frame_time_ = 0;
-    ms = 0;
-    return;
-  }
-  else if (!repeat_ && frame_time_ >= frames_.back().time)
-  {
-    // stop animation as it had reached its end.
-    current_frame_ = (unsigned)frames_.size() - 1;
-    current_frame_time_ = 0;
-    ms = frame_time_ - frames_.back().time;
-    command_to_invoke = command;
-    is_finished_ = true;
-  }
-  else
-  {
-    current_frame_time_ = frame_time_ - frames_[current_frame_].time;
-    ms = 0;
-  }
-
-  // return calculated drawproperty.
-  if (out)
-    GetDrawProperty(*out);
-}
-
-void Animation::Replay()
-{
-  current_frame_ = 0;
-  current_frame_time_ = 0;
-  frame_time_ = 0;
-  is_finished_ = false;
-  paused_ = false;
-}
-
-void Animation::Play()
-{
-  paused_ = false;
-}
-
-void Animation::Pause()
-{
-  paused_ = true;
-}
-
-void Animation::HurryTween()
-{
-  R_ASSERT(!frames_.empty());
-  current_frame_ = frames_.size() - 1;
-}
-
-void Animation::GetDrawProperty(DrawProperty &out)
-{
-  if (current_frame_ == frames_.size() - 1)
-    out = frames_.back().draw_prop;
-  else
-    MakeTween(out,
-      frames_[current_frame_].draw_prop,
-      frames_[current_frame_ + 1].draw_prop,
-      (float)(current_frame_time_ / (frames_[current_frame_ + 1].time - frames_[current_frame_].time)),
-      frames_[current_frame_].ease_type);
-}
-
-void Animation::SetEaseType(int ease_type)
-{
-  if (!frames_.empty())
-    frames_.back().ease_type = ease_type;
-}
-
-void Animation::SetLoop(unsigned repeat_start_time)
-{
-  repeat_ = true;
-  repeat_start_time_ = repeat_start_time;
-}
-
-void Animation::DeleteLoop()
-{
-  repeat_ = false;
-  repeat_start_time_ = 0;
-}
-
-const DrawProperty &Animation::LastFrame() const
-{
-  return frames_.back().draw_prop;
-}
-
-DrawProperty &Animation::LastFrame()
-{
-  return frames_.back().draw_prop;
-}
-
-double Animation::GetTweenLength() const
-{
-  if (frames_.empty()) return 0;
-  else return frames_.back().time;
-}
-
-size_t Animation::size() const { return frames_.size(); }
-bool Animation::empty() const { return frames_.empty(); }
-bool Animation::is_finished() const { return is_finished_; }
-
-bool Animation::is_tweening() const
-{
-  return !frames_.empty() && current_frame_ >= 0;
-}
-
-
-// ----------------------------------------------------------- class BaseObject
-
 BaseObject::BaseObject()
-  : parent_(nullptr), is_allocated_(false), propagate_event_(false), draw_order_(0), position_prop_(0),
+  : parent_(nullptr), propagate_event_(false), draw_order_(0), position_prop_(0),
     set_xy_as_center_(false), visible_(true), hide_if_not_tweening_(false),
     ignore_visible_group_(true), is_draggable_(false), is_focusable_(false),
     is_focused_(false), is_hovered_(false), do_clipping_(false)
@@ -293,7 +31,7 @@ BaseObject::BaseObject()
 }
 
 BaseObject::BaseObject(const BaseObject& obj)
-  : name_(obj.name_), is_allocated_(obj.is_allocated_), propagate_event_(obj.propagate_event_),
+  : name_(obj.name_), propagate_event_(obj.propagate_event_),
     parent_(obj.parent_), ani_(obj.ani_), position_prop_(obj.position_prop_),
     draw_order_(obj.draw_order_), set_xy_as_center_(obj.set_xy_as_center_), visible_(obj.visible_),
     hide_if_not_tweening_(obj.hide_if_not_tweening_),
@@ -305,12 +43,12 @@ BaseObject::BaseObject(const BaseObject& obj)
   memcpy(visible_flag_, obj.visible_flag_, sizeof(visible_flag_));
   bg_color_ = obj.bg_color_;
 
-  for (auto *o : obj.children_)
+  for (auto &d : obj.children_)
   {
-    if (o->is_allocated_)
-      AddChild(o->clone());
+    if (d.is_static)
+      AddChild(d.p);
     else
-      AddChild(o);
+      AddChild(d.p->clone());
   }
 }
 
@@ -337,31 +75,38 @@ const std::string& BaseObject::get_name() const
 
 void BaseObject::AddChild(BaseObject* obj)
 {
-  children_.push_back(obj);
+  children_.push_back(ChildData{ obj, false });
+  obj->parent_ = this;
+}
+
+void BaseObject::AddStaticChild(BaseObject* obj)
+{
+  children_.push_back(ChildData{ obj, true });
   obj->parent_ = this;
 }
 
 void BaseObject::RemoveChild(BaseObject* obj)
 {
-  auto it = std::find(children_.begin(), children_.end(), obj);
+  auto it = std::find_if(children_.begin(), children_.end(),
+    [obj](const ChildData& x) { return x.p == obj; });
   if (it != children_.end())
     children_.erase(it);
-  if (obj->is_allocated_) delete obj;
+  if (!it->is_static) delete obj;
   else obj->parent_ = nullptr;
 }
 
 void BaseObject::RemoveAllChild()
 {
-  for (auto *o : children_)
-    if (o->is_allocated_)
-      delete o;
+  for (auto& d : children_)
+    if (!d.is_static)
+      delete d.p;
   children_.clear();
 }
 
 BaseObject* BaseObject::FindChildByName(const std::string& name)
 {
-  for (auto *child : children_)
-    if (child->get_name() == name) return child;
+  for (auto &d : children_)
+    if (d.p->get_name() == name) return d.p;
   return nullptr;
 }
 
@@ -378,15 +123,24 @@ BaseObject* BaseObject::get_parent()
 BaseObject* BaseObject::GetLastChild()
 {
   if (children_.size() > 0)
-    return children_.back();
+    return children_.back().p;
   else return nullptr;
+}
+
+BaseObject* BaseObject::GetLastChildWithName(const std::string& name)
+{
+  for (auto i = children_.rbegin(); i != children_.rend(); ++i) {
+    if (i->p->get_name() == name)
+      return i->p;
+  }
+  return nullptr;
 }
 
 BaseObject *BaseObject::GetChildAtPosition(float x, float y)
 {
   for (auto i = children_.rbegin(); i != children_.rend(); ++i)
   {
-    auto *obj = *i;
+    auto* obj = i->p;
     if (/*obj->IsVisible() &&*/ obj->IsEntered(x, y))
     {
       auto *childobj = obj->GetChildAtPosition(x - obj->GetX(), y - obj->GetY());
@@ -395,11 +149,6 @@ BaseObject *BaseObject::GetChildAtPosition(float x, float y)
     }
   }
   return nullptr;
-}
-
-bool BaseObject::IsHeapAllocated(bool v) const
-{
-  return is_allocated_;
 }
 
 void BaseObject::Load(const MetricGroup &m)
@@ -433,15 +182,15 @@ void BaseObject::LoadFromName()
 
   Load(*m);
 
-  for (auto *o : children_)
-    o->LoadFromName();
+  for (auto &d : children_)
+    d.p->LoadFromName();
 }
 
 void BaseObject::OnReady()
 {
   // propagate OnReady() to children
-  for (auto *o : children_)
-    o->OnReady();
+  for (auto &d : children_)
+    d.p->OnReady();
 }
 
 void BaseObject::RunCommandByName(const std::string &event_name)
@@ -493,8 +242,8 @@ void BaseObject::RunCommand(const std::string &command, const std::string& value
   }
   if (propagate_event_)
   {
-    for (auto *obj : children_)
-      obj->RunCommand(command, value);
+    for (auto &d : children_)
+      d.p->RunCommand(command, value);
   }
 }
 
@@ -514,16 +263,7 @@ void BaseObject::DeleteAllCommand()
 
 void BaseObject::QueueCommand(const std::string &command)
 {
-  if (ani_.empty())
-  {
-    //std::cerr << "Warning: tried to queue command without tween.";
-    //return;
-    RunCommand(command);
-  }
-  else
-  {
-    ani_.back().SetCommand(command);
-  }
+  qani_.SetCommand(command);
 }
 
 void BaseObject::AddCommand(const std::string &name, const std::string &command)
@@ -561,28 +301,6 @@ void BaseObject::LoadCommand(const MetricGroup& metric)
   }
 }
 
-void BaseObject::LoadCommandWithPrefix(const std::string &prefix, const MetricGroup& metric)
-{
-  for (auto it = metric.cbegin(); it != metric.cend(); ++it)
-  {
-    if (strnicmp(it->first.c_str(), prefix.c_str(), prefix.size()) == 0)
-    {
-      AddCommand(it->first.substr(prefix.size()), it->second);
-    }
-  }
-}
-
-void BaseObject::HurryTween()
-{
-  if (!ani_.empty())
-  {
-    ani_.back().HurryTween();
-    ani_.back().GetDrawProperty(frame_);
-    ani_.clear();
-    OnAnimation(frame_);
-  }
-}
-
 bool BaseObject::OnEvent(const EventMessage& msg)
 {
   RunCommandByName(msg.GetEventName());
@@ -591,16 +309,20 @@ bool BaseObject::OnEvent(const EventMessage& msg)
 
 DrawProperty& BaseObject::GetLastFrame()
 {
-  if (ani_.empty())
+  if (ani_.is_empty())
     return frame_;
   else
-    return ani_.back().LastFrame();
+    return ani_.LastFrame();
 }
 
 DrawProperty& BaseObject::GetCurrentFrame()
 {
   return frame_;
 }
+
+Animation& BaseObject::GetAnimation() { return ani_; }
+
+QueuedAnimation& BaseObject::GetQueuedAnimation() { return qani_; }
 
 void BaseObject::SetX(float x)
 {
@@ -646,8 +368,6 @@ void BaseObject::SetPos(const Vector4& pos)
 {
   auto &p = GetLastFrame().pos;
   p = pos;
-  p.z += p.x;
-  p.w += p.y;
 }
 
 void BaseObject::MovePos(int x, int y)
@@ -715,18 +435,15 @@ void BaseObject::SetRotationAsDegree(float x, float y, float z)
 
 void BaseObject::SetRepeat(bool repeat)
 {
-  if (!ani_.empty())
-  {
-    if (repeat)
-      ani_.back().SetLoop(0);
-    else
-      ani_.back().DeleteLoop();
-  }
+  if (repeat)
+    ani_.SetLoop(0);
+  else
+    ani_.DeleteLoop();
 }
 
 void BaseObject::SetLoop(unsigned loop_start_time)
 {
-  ani_.back().SetLoop(loop_start_time);
+  ani_.SetLoop(loop_start_time);
 }
 
 void BaseObject::SetCenter(float x, float y)
@@ -755,9 +472,8 @@ void BaseObject::SetCenter(int type)
 
 void BaseObject::SetAcceleration(int acc)
 {
-  if (ani_.empty())
-    return;
-  ani_.back().SetEaseType(acc);
+  if (ani_.is_empty()) return;
+  ani_.SetEase(acc);
 }
 
 float BaseObject::GetX() const
@@ -783,76 +499,11 @@ void BaseObject::BringToTop()
   if (!parent_) return;
   auto b = parent_->children_.begin();
   auto e = parent_->children_.end();
-  auto it = std::find(b, e, this);
+  auto it = std::find_if(b, e,
+    [this](const ChildData& x) { return x.p == this; });
   if (it != e) {
     std::rotate(it, it + 1, e);
   }
-}
-
-void BaseObject::AddFrameByLR2command(const std::string &cmd)
-{
-  CommandArgs params(cmd, 20, true);
-  const char *args[20];
-  for (unsigned i = 0; i < 20; ++i)
-    args[i] = params.Get_str(i);
-  AddFrameByLR2command(args);
-}
-
-static inline int _atoi_n(const char *v)
-{
-  return v[0] == '-' ? -atoi(v + 1) : atoi(v);
-}
-
-void BaseObject::AddFrameByLR2command(const char **argv)
-{
-  if (ani_.empty()) ani_.emplace_back(Animation(nullptr));
-  Animation &ani = ani_.back();
-
-  int time = _atoi_n(argv[1]);
-  int x = _atoi_n(argv[2]);
-  int y = _atoi_n(argv[3]);
-  int w = _atoi_n(argv[4]);
-  int h = _atoi_n(argv[5]);
-  int lr2acc = _atoi_n(argv[6]);
-  int a = _atoi_n(argv[7]);
-  int r = _atoi_n(argv[8]);
-  int g = _atoi_n(argv[9]);
-  int b = _atoi_n(argv[10]);
-  //int blend = params.Get<int>(11);
-  //int filter = params.Get<int>(12);
-  int angle = _atoi_n(argv[13]);
-  int center = _atoi_n(argv[14]);
-  //int loop = _atoi_n(argv[15]);
-  int acc = 0;
-  // timer/op code is ignored here.
-
-  // set attributes
-  DrawProperty f;
-  f.pos = Vector4{ x, y, x + w, y + h };
-  f.color = Vector4{ r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f };
-  f.rotate = Vector3{ 0.0f, 0.0f, glm::radians((float)angle) };
-  f.scale = Vector2{ 1.0f, 1.0f };
-
-  switch (lr2acc)
-  {
-  case 0:
-    acc = EaseTypes::kEaseLinear;
-    break;
-  case 1:
-    acc = EaseTypes::kEaseIn;
-    break;
-  case 2:
-    acc = EaseTypes::kEaseOut;
-    break;
-  case 3:
-    acc = EaseTypes::kEaseInOut;
-    break;
-  }
-
-  // add new animation
-  ani.AddFrame(f, time, acc);
-
-  SetCenter(center);
 }
 
 void BaseObject::SetVisibleFlag(const std::string& group0, const std::string& group1,
@@ -1012,15 +663,35 @@ void BaseObject::OnAnimation(DrawProperty &frame)
 {
 }
 
+void BaseObject::Stop()
+{
+  ani_.Stop();
+}
+
+void BaseObject::Replay()
+{
+  ani_.Replay();
+}
+
+void BaseObject::Pause()
+{
+  ani_.Pause();
+}
+
+bool BaseObject::IsTweening() const
+{
+  return ani_.is_tweening();
+}
+
 bool BaseObject::IsVisible() const
 {
   if (!ignore_visible_group_ && (*visible_flag_[0] == 0
-                              || *visible_flag_[1] == 0
-                              || *visible_flag_[2] == 0
-                              || *visible_flag_[3] == 0))
+    || *visible_flag_[1] == 0
+    || *visible_flag_[2] == 0
+    || *visible_flag_[3] == 0))
     return false;
 
-  if (hide_if_not_tweening_ && (ani_.empty() || !ani_.front().is_tweening()))
+  if (hide_if_not_tweening_ && ani_.is_tweening())
     return false;
 
   return visible_/* &&
@@ -1030,61 +701,18 @@ bool BaseObject::IsVisible() const
     current_prop_.aTR > 0*/;
 }
 
-void BaseObject::SetDeltaTime(double time_msec)
-{
-  ani_.back().DuplicateFrame(time_msec);
-}
-
-void BaseObject::Stop()
-{
-  ani_.clear();
-}
-
-void BaseObject::Replay()
-{
-  if (ani_.empty()) return;
-  ani_.back().Replay();
-}
-
-void BaseObject::Pause()
-{
-  if (ani_.empty()) return;
-  ani_.back().Pause();
-}
-
-double BaseObject::GetTweenLength() const
-{
-  if (ani_.empty()) return 0;
-  else return ani_.back().GetTweenLength();
-}
-
-bool BaseObject::IsTweening() const
-{
-  return ani_.size() > 0;
-}
-
-
 // milisecond
 void BaseObject::Update(double delta)
 {
-  // update tweening
-  double t = delta;
-  std::string cmd;
-  if (!ani_.empty())
-  {
-    while (!ani_.empty() && t > 0)
-    {
-      auto &ani = ani_.front();
-      ani.Update(t, cmd, &frame_);
-      if (ani.is_finished())
-        ani_.pop_front();
-    }
+  bool is_tweening = ani_.is_tweening();
+  ani_.Update(delta);
+  if (is_tweening) {
+    ani_.GetDrawProperty(frame_);
     OnAnimation(frame_);
   }
-
   doUpdate(delta);
-  for (auto* p : children_)
-    p->Update(delta);
+  for (auto& d : children_)
+    d.p->Update(delta);
   doUpdateAfter();
 }
 
@@ -1161,8 +789,8 @@ void BaseObject::Render()
   // render vertices
   doRender();
 
-  for (auto* p : children_)
-    p->Render();
+  for (auto& d : children_)
+    d.p->Render();
 
   doRenderAfter();
 
@@ -1171,6 +799,14 @@ void BaseObject::Render()
     GRAPHIC->ResetViewArea();
 
   GRAPHIC->PopMatrix();
+}
+
+void BaseObject::SortChildren()
+{
+  std::stable_sort(children_.begin(), children_.end(),
+    [](const ChildData& o1, const ChildData& o2) {
+      return o1.p->GetDrawOrder() < o2.p->GetDrawOrder();
+    });
 }
 
 void BaseObject::FillVertexInfo(VertexInfo *vi)
@@ -1259,7 +895,7 @@ const CommandFnMap& BaseObject::GetCommandFnMap()
       }
     };
     static auto fn_time = [](void *o, CommandArgs& args, const std::string &) {
-      static_cast<BaseObject*>(o)->SetDeltaTime(args.Get<int>(0));
+      static_cast<BaseObject*>(o)->GetAnimation().DuplicateFrame(args.Get<int>(0));
     };
     static auto fn_stop = [](void *o, CommandArgs& args, const std::string &) {
       static_cast<BaseObject*>(o)->Stop();
@@ -1392,10 +1028,6 @@ BaseObject* BaseObject::CreateObject(const std::string &type)
 
   }
 
-  if (object) {
-    object->is_allocated_ = true;
-  }
-
   return object;
 }
 
@@ -1422,8 +1054,6 @@ std::string BaseObject::toString() const
     ss << "debug message: " << debug_ << std::endl;
   return ss.str();
 }
-
-bool BaseObject::is_dynamic() const { return is_allocated_; }
 
 // ------------------------------------------------------------------ Loader/Helper
 
@@ -1467,5 +1097,51 @@ public:
 
 // register handler
 XMLObjectHandlers _XMLObjectHandlers;
+
+
+
+#define HANDLERLR2_OBJNAME BaseObject
+REGISTER_LR2OBJECT(BaseObject);
+
+class BaseObjectLR2Handler : public LR2FnClass {
+public:
+  HANDLERLR2(SRC) {
+    o->SetDebug(format_string("LR2SRC-%u", args.get_str(21)));
+  }
+  HANDLERLR2(DST) {
+    const bool is_first_run = o->GetAnimation().is_empty();
+
+    // these attributes are only affective for first run
+    if (is_first_run) {
+      const int center = args.get_int(15);
+      const int loop = args.get_int(16);
+      const int timer = args.get_int(17);
+
+      o->SetCenter(center);
+
+      // LR2 needs to keep its animation queue, so don't use stop.
+      o->AddCommand(format_string("LR%d", timer), "replay");
+      o->AddCommand(format_string("LR%dOff", timer), "hide");
+      if (loop >= 0)
+        o->SetLoop(loop);
+
+      // XXX: LR2_TEXT object should not apply this attribute.
+      o->SetVisibleFlag(
+        format_string("F%s", args.get_str(18)),
+        format_string("F%s", args.get_str(19)),
+        format_string("F%s", args.get_str(20)),
+        std::string()
+      );
+    }
+
+    o->GetAnimation().AddFrame(args);
+  }
+  BaseObjectLR2Handler() : LR2FnClass( GetTypename<BaseObject>() ) {
+    ADDSHANDLERLR2(SRC);
+    ADDSHANDLERLR2(DST);
+  }
+};
+
+BaseObjectLR2Handler _BaseObjectLR2Handler;
 
 }

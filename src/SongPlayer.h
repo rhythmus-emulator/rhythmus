@@ -52,6 +52,8 @@ public:
   /* @brief Add song to play. */
   void AddSongtoPlaylist(const std::string &songpath, const std::string &chartpath);
 
+  void AddSongtoPlaylistFromId(const std::string& id);
+
   /* @brief Load next song to play. return if next song exists.
    * @warn If PlaySession is not created, then autoplay playsession is created. */
   bool LoadNext();
