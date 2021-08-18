@@ -88,7 +88,7 @@ public:
   void AddImageSymbolLink(const std::string& path);
   void AddFontSymbolLink(const std::string& path);
 
-  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
+  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
 
   /* @brief Event processing for scene specific action */
   virtual void ProcessInputEvent(const InputEvent& e);

@@ -685,18 +685,18 @@ public:
     for (unsigned i = 0; i < o->items_.size(); ++i) {
       auto* item = o->items_[i];
       auto* bg = item->GetBackground(bgtype);
-      bg->RunLR2Command("#SRC_IMAGE", args);
+      bg->RunCommand("#SRC_IMAGE", args);
     }
   }
   HANDLERLR2(DST_BAR_BODY_OFF) {
     unsigned i = (unsigned)args.get_int(1);
     auto* item = o->pos_off_[i];
-    item->RunLR2Command("#DST", args);
+    item->RunCommand("#DST", args);
   }
   HANDLERLR2(DST_BAR_BODY_ON) {
     unsigned i = (unsigned)args.get_int(1);
     auto* item = o->pos_on_[i];
-    item->RunLR2Command("#DST", args);
+    item->RunCommand("#DST", args);
   }
   HANDLERLR2(BAR_CENTER) {
     o->bar_center_ = args.get_int(1);
@@ -709,15 +709,15 @@ public:
     for (unsigned i = 0; i < o->items_.size(); ++i) {
       auto* item = o->items_[i];
       auto* text = item->GetText();
-      text->RunLR2Command("#SRC_TEXT", args);
+      text->RunCommand("#SRC_TEXT", args);
     }
   }
   HANDLERLR2(DST_BAR_TITLE) {
     for (unsigned i = 0; i < o->items_.size(); ++i) {
       auto* item = o->items_[i];
       auto* text = item->GetText();
-      text->RunLR2Command("#DST_TEXT", args);
-      text->RunLR2Command("#DST", args);
+      text->RunCommand("#DST_TEXT", args);
+      text->RunCommand("#DST", args);
     }
   }
   HANDLERLR2(SRC_BAR_FLASH) {

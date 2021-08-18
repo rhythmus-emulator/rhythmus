@@ -32,7 +32,8 @@ public:
 
   virtual void Load(const MetricGroup &metric);
   virtual void OnReady();
-  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
+  using BaseObject::RunCommand;
+  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
 
   /* Set sprite's image by path */
   void SetImage(const std::string &path);

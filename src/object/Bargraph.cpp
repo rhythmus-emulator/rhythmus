@@ -68,7 +68,7 @@ public:
     std::string resname = "bargraph";
     resname += args.get_str(11);
     o->SetResourceId(resname);
-    o->sprite()->RunLR2Command("#SRC_IMAGE", args);
+    o->sprite()->RunCommand("#SRC_IMAGE", args);
     o->sprite()->DeleteAllCommand();  // XXX
   }
   HANDLERLR2(DST_BARGRAPH) {

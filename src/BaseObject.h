@@ -98,7 +98,6 @@ public:
    * So, commands has more limitation than metric property.
    */
   void RunCommandByName(const std::string &name);
-  void RunCommand(std::string command);
   void ClearCommand(const std::string &name);
   void DeleteAllCommand();
   void QueueCommand(const std::string &command);
@@ -113,10 +112,12 @@ public:
    * in GetCommandFnMap() function, which is refered by this procedure.
    */
   void RunCommand(const std::string &commandname, const std::string& value);
+  void RunCommand(std::string command);
 
   /* Execute LR2 command for this object
    * @comment implementation is written in macro. */
-  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
+  virtual void RunCommand(const LR2FnArgs& args);
+  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
 
   /* @brief Inherited from EventReceiver */
   virtual bool OnEvent(const EventMessage& msg);

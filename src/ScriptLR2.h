@@ -100,7 +100,7 @@ const char* GetTypename();
 
 #define REGISTER_LR2OBJECT(classname) \
   template <> const char* GetTypename<classname>() { return #classname; } \
-  void classname::RunLR2Command(const std::string& command, const LR2FnArgs& args) { \
+  void classname::RunCommand(const std::string& command, const LR2FnArgs& args) { \
     LR2CSVExecutor::RunMethod(#classname, command, this, args); \
   }
 

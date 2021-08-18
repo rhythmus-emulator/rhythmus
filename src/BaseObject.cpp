@@ -247,6 +247,11 @@ void BaseObject::RunCommand(const std::string &command, const std::string& value
   }
 }
 
+void BaseObject::RunCommand(const LR2FnArgs& args)
+{
+  RunCommand(args.get_str(0), args);
+}
+
 /* just clear out command, without event unregister. */
 void BaseObject::ClearCommand(const std::string &name)
 {

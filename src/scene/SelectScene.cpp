@@ -152,7 +152,7 @@ class SelectSceneLR2Handler : public LR2FnClass {
 public:
   static void PropagateToMusicWheel(SelectScene *scene, const LR2FnArgs &args) {
     auto* wheel = scene->GetLR2WheelObject();
-    wheel->RunLR2Command(args.get_str(0), args);
+    wheel->RunCommand(args);
   }
 
   HANDLERLR2(SRC_BAR_BODY) {

@@ -18,7 +18,7 @@ public:
   virtual void StartScene();
   virtual void CloseScene(bool next);
   virtual void ProcessInputEvent(const InputEvent& e);
-  virtual void RunLR2Command(const std::string& command, const LR2FnArgs& args);
+  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
 
   Wheel* GetWheelObject();
   LR2MusicWheel* GetLR2WheelObject();
