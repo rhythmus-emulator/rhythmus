@@ -64,40 +64,21 @@ void SelectScene::ProcessInputEvent(const InputEvent& e)
 
   Scene::ProcessInputEvent(e);
 
-  if (e.type() == InputEvents::kOnKeyDown || e.type() == InputEvents::kOnKeyPress)
-  {
+  if (e.type() == InputEvents::kOnKeyDown || e.type() == InputEvents::kOnKeyPress) {
     switch (e.KeyCode()) {
     case RI_KEY_UP:
-      EVENTMAN->SendEvent("MusicWheelUp");
+      wheel_->MoveUp();
       break;
     case RI_KEY_DOWN:
-      EVENTMAN->SendEvent("MusicWheelDown");
+      wheel_->MoveDown();
       break;
     case RI_KEY_RIGHT:
-      EVENTMAN->SendEvent("MusicWheelExpand");
+      wheel_->Expand();
       break;
     case RI_KEY_LEFT:
-      EVENTMAN->SendEvent("MusicWheelCollapse");
+      wheel_->Collapse();
       break;
     }
-    /*
-    if (e.KeyCode() == RI_KEY_UP)
-    {
-      wheel_.NavigateUp();
-    }
-    else if (e.KeyCode() == RI_KEY_DOWN)
-    {
-      wheel_.NavigateDown();
-    }
-    else if (e.KeyCode() == RI_KEY_RIGHT)
-    {
-      wheel_.NavigateRight();
-    }
-    else if (e.KeyCode() == RI_KEY_LEFT)
-    {
-      wheel_.NavigateLeft();
-    }
-    */
   }
 
   if (e.type() == InputEvents::kOnKeyUp)
