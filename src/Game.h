@@ -56,6 +56,8 @@ public:
   void PollEvent();
 
   void CenterWindow();
+  void SetTitle(const std::string& s);
+  void ResetTitle();
 
   /* Generally low-level API handler. */
   void *handler();
@@ -66,6 +68,9 @@ public:
 
   /* Load execute argument */
   void LoadArgument(const std::string& argv);
+
+  /* Run special command */
+  void RunCommand(const std::string& cmd);
 
   void MessageBox(const std::string &title, const std::string &text);
   void AlertMessageBox(const std::string &title, const std::string &text);

@@ -76,6 +76,9 @@ int InputEvent::GetY() const { return argv_[1]; }
 int InputEvent::GetButton() const { return argv_[2]; }
 uint32_t InputEvent::Codepoint() const { return *(uint32_t*)argv_; }
 
+std::string s_cmd;
+bool s_cmd_mode = false;
+
 void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
 {
   int eventid = 0;
@@ -85,6 +88,53 @@ void on_keyevent(GLFWwindow *w, int key, int scancode, int action, int mode)
     eventid = InputEvents::kOnKeyUp;
   else if (action == GLFW_REPEAT)
     eventid = InputEvents::kOnKeyPress;
+
+  /* process for special command */
+  if (action == GLFW_RELEASE) {
+    if (!s_cmd_mode && key == GLFW_KEY_TAB && (mode & GLFW_MOD_CONTROL) && (mode & GLFW_MOD_SHIFT)) {
+      s_cmd_mode = true;
+      GAME->SetTitle("Command Mode Entered");
+      return;
+    }
+    else if (s_cmd_mode) {
+      if (key == GLFW_KEY_V && (mode & GLFW_MOD_CONTROL)) {
+        s_cmd = glfwGetClipboardString(w);
+        GAME->RunCommand(s_cmd);
+        s_cmd.clear();
+        s_cmd_mode = false;
+      }
+      else if (key == GLFW_KEY_BACKSPACE || key == GLFW_KEY_DELETE) {
+        if (!s_cmd.empty()) s_cmd.pop_back();
+      }
+      else if (key == GLFW_KEY_ESCAPE) {
+        s_cmd.clear();
+        s_cmd_mode = false;
+      }
+      else if (key == GLFW_KEY_ENTER) {
+        GAME->RunCommand(s_cmd);
+        s_cmd.clear();
+        s_cmd_mode = false;
+      }
+      else if (key <= 0xFF) {
+        s_cmd.push_back((char)key);
+      }
+
+      if (s_cmd_mode) {
+        GAME->SetTitle("Command: " + s_cmd);
+      }
+      else {
+        GAME->ResetTitle();
+      }
+
+      return;
+    }
+  }
+
+#if 0
+  /* TODO: if paste, then override text to OnText */
+  if (key == GLFW_KEY_V && (mode & GLFW_MOD_CONTROL)) {
+  }
+#endif
 
   InputEvent msg(eventid);
   msg.SetKeyCode(key);

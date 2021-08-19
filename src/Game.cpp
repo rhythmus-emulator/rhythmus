@@ -284,6 +284,18 @@ void Game::CenterWindow()
     monitorY + (mode->height - windowHeight) / 2);
 }
 
+void Game::SetTitle(const std::string& s)
+{
+  GLFWwindow* window = (GLFWwindow*)handler_;
+  glfwSetWindowTitle(window, s.c_str());
+}
+
+void Game::ResetTitle()
+{
+  GLFWwindow* window = (GLFWwindow*)handler_;
+  glfwSetWindowTitle(window, get_window_title().c_str());
+}
+
 void *Game::handler() { return handler_; }
 void Game::set_handler(void *p) { handler_ = p; }
 
@@ -360,6 +372,11 @@ void Game::LoadArgument(const std::string& argv)
     cmd = cmd.substr(2);
     gMetricTemp[cmd] = v;
   }
+}
+
+void Game::RunCommand(const std::string& cmd)
+{
+  // TODO
 }
 
 void Game::MessageBox(const std::string &title, const std::string &text)
