@@ -17,7 +17,7 @@ public:
   virtual void StartScene();
   virtual void CloseScene(bool next);
   virtual void ProcessInputEvent(const InputEvent& e);
-  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
+  virtual void RunCommandLR2(const std::string& command, const LR2FnArgs& args);
 
   void SetPlayer(int player);
   void SetMinimumLoadingTime(int time);

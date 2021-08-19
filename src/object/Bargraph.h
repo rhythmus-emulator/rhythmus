@@ -12,8 +12,8 @@ public:
   Bargraph();
   virtual ~Bargraph();
   virtual void Load(const MetricGroup &metric);
-  using BaseObject::RunCommand;
-  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
+  using BaseObject::RunCommandLR2;
+  virtual void RunCommandLR2(const std::string& command, const LR2FnArgs& args);
   void SetResourceId(const std::string &id);
   void SetDirection(int direction);
   Sprite* sprite();

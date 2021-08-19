@@ -11,8 +11,8 @@ class OnMouse : public Sprite
 public:
   OnMouse();
   virtual ~OnMouse();
-  using Sprite::RunCommand;
-  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
+  using Sprite::RunCommandLR2;
+  virtual void RunCommandLR2(const std::string& command, const LR2FnArgs& args);
   virtual bool IsEntered(float x, float y);
   virtual const char* type() const;
 

@@ -116,8 +116,8 @@ public:
 
   /* Execute LR2 command for this object
    * @comment implementation is written in macro. */
-  virtual void RunCommand(const LR2FnArgs& args);
-  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
+  void RunCommandLR2(const LR2FnArgs& args);
+  virtual void RunCommandLR2(const std::string& command, const LR2FnArgs& args);
 
   /* @brief Inherited from EventReceiver */
   virtual bool OnEvent(const EventMessage& msg);

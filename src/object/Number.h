@@ -18,8 +18,8 @@ public:
 
   virtual void Load(const MetricGroup &metric);
   virtual void OnReady();
-  using BaseObject::RunCommand;
-  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
+  using BaseObject::RunCommandLR2;
+  virtual void RunCommandLR2(const std::string& command, const LR2FnArgs& args);
 
   virtual void SetGlyphFromFont(const MetricGroup &m);
   virtual void SetGlyphFromImage(const std::string &path, const Rect &clip,

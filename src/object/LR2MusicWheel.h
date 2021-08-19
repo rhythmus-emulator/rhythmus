@@ -19,8 +19,8 @@ public:
   ~LR2MusicWheel();
 
   virtual void OnReady();
-  using Wheel::RunCommand;
-  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
+  using Wheel::RunCommandLR2;
+  virtual void RunCommandLR2(const std::string& command, const LR2FnArgs& args);
   virtual void OnSelectChange(const void* data, int direction);
   virtual void OnSelectChanged();
   virtual void MoveDown();

@@ -16,8 +16,8 @@ public:
   virtual void Refresh();
 
   virtual void Load(const MetricGroup &metric);
-  using BaseObject::RunCommand;
-  virtual void RunCommand(const std::string& command, const LR2FnArgs& args);
+  using BaseObject::RunCommandLR2;
+  virtual void RunCommandLR2(const std::string& command, const LR2FnArgs& args);
 
   void SetRange(int direction, float range);
   void SetResource(const std::string &resourcename);

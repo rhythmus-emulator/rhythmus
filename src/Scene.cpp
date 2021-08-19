@@ -457,8 +457,8 @@ public:
   HANDLERLR2(SRC_IMAGE) {
     auto* obj = new Sprite();
     obj->set_name("#IMAGE");
-    obj->RunCommand(args);
-    obj->RunCommand("#SRC", args);
+    obj->RunCommandLR2(args);
+    obj->RunCommandLR2("#SRC", args);
     o->AddChild(obj);
   }
   HANDLERLR2(DST_IMAGE) {
@@ -467,14 +467,14 @@ public:
       Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
       return;
     }
-    obj->RunCommand("#DST_IMAGE", args);
-    obj->RunCommand("#DST", args);
+    obj->RunCommandLR2("#DST_IMAGE", args);
+    obj->RunCommandLR2("#DST", args);
   }
   HANDLERLR2(SRC_TEXT) {
     auto* obj = new Text();
     obj->set_name("#TEXT");
-    obj->RunCommand(args);
-    obj->RunCommand("#SRC", args);
+    obj->RunCommandLR2(args);
+    obj->RunCommandLR2("#SRC", args);
     o->AddChild(obj);
   }
   HANDLERLR2(DST_TEXT) {
@@ -483,14 +483,14 @@ public:
       Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
       return;
     }
-    obj->RunCommand("#DST_TEXT", args);
-    obj->RunCommand("#DST", args);
+    obj->RunCommandLR2("#DST_TEXT", args);
+    obj->RunCommandLR2("#DST", args);
   }
   HANDLERLR2(SRC_NUMBER) {
     auto* obj = new Number();
     obj->set_name("#NUMBER");
-    obj->RunCommand(args);
-    obj->RunCommand("#SRC", args);
+    obj->RunCommandLR2(args);
+    obj->RunCommandLR2("#SRC", args);
     o->AddChild(obj);
   }
   HANDLERLR2(DST_NUMBER) {
@@ -499,14 +499,14 @@ public:
       Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
       return;
     }
-    obj->RunCommand("#DST_NUMBER", args);
-    obj->RunCommand("#DST", args);
+    obj->RunCommandLR2("#DST_NUMBER", args);
+    obj->RunCommandLR2("#DST", args);
   }
   HANDLERLR2(SRC_BUTTON) {
     auto* obj = new Button();
     obj->set_name("#BUTTON");
-    obj->RunCommand(args);
-    obj->RunCommand("#SRC", args);
+    obj->RunCommandLR2(args);
+    obj->RunCommandLR2("#SRC", args);
     o->AddChild(obj);
   }
   HANDLERLR2(DST_BUTTON) {
@@ -515,14 +515,14 @@ public:
       Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
       return;
     }
-    //obj->RunCommand("#DST_BUTTON", args);
-    obj->RunCommand("#DST", args);
+    //obj->RunCommandLR2("#DST_BUTTON", args);
+    obj->RunCommandLR2("#DST", args);
   }
   HANDLERLR2(SRC_SLIDER) {
     auto* obj = new Slider();
     obj->set_name("#SLIDER");
-    obj->RunCommand(args);
-    obj->RunCommand("#SRC", args);
+    obj->RunCommandLR2(args);
+    obj->RunCommandLR2("#SRC", args);
     o->AddChild(obj);
   }
   HANDLERLR2(DST_SLIDER) {
@@ -531,14 +531,14 @@ public:
       Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
       return;
     }
-    obj->RunCommand("#DST_SLIDER", args);
-    obj->RunCommand("#DST", args);
+    obj->RunCommandLR2("#DST_SLIDER", args);
+    obj->RunCommandLR2("#DST", args);
   }
   HANDLERLR2(SRC_BARGRAPH) {
     auto* obj = new Bargraph();
     obj->set_name("#BARGRAPH");
-    obj->RunCommand(args);
-    obj->RunCommand("#SRC", args);
+    obj->RunCommandLR2(args);
+    obj->RunCommandLR2("#SRC", args);
     o->AddChild(obj);
   }
   HANDLERLR2(DST_BARGRAPH) {
@@ -547,15 +547,15 @@ public:
       Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
       return;
     }
-    //obj->RunCommand("#DST_BARGRAPH", args);
-    obj->RunCommand("#DST", args);
+    //obj->RunCommandLR2("#DST_BARGRAPH", args);
+    obj->RunCommandLR2("#DST", args);
   }
   HANDLERLR2(SRC_ONMOUSE) {
     auto* obj = new OnMouse();
     obj->set_name("#ONMOUSE");
-    obj->RunCommand(args);
-    obj->RunCommand("#SRC_IMAGE", args);
-    obj->RunCommand("#SRC", args);
+    obj->RunCommandLR2(args);
+    obj->RunCommandLR2("#SRC_IMAGE", args);
+    obj->RunCommandLR2("#SRC", args);
     o->AddChild(obj);
   }
   HANDLERLR2(DST_ONMOUSE) {
@@ -564,8 +564,8 @@ public:
       Logger::Warn("[Warn] Invalid %s tag", args.get_str(0));
       return;
     }
-    //obj->RunCommand("#DST_ONMOUSE", args);
-    obj->RunCommand("#DST", args);
+    //obj->RunCommandLR2("#DST_ONMOUSE", args);
+    obj->RunCommandLR2("#DST", args);
   }
   BaseSceneHandler() : LR2FnClass(GetTypename<Scene>())
   {
